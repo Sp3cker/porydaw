@@ -1,0 +1,163 @@
+diff --git a/src/checks/automation/domain/gestures.cpp b/src/checks/automation/domain/gestures.cpp
+index 45578da6..8dcfe9fc 100644
+--- a/src/checks/automation/domain/gestures.cpp
++++ b/src/checks/automation/domain/gestures.cpp
+@@ -8,14 +8,17 @@
+ 
+ #include <QtTest>
+ 
++#include "core/timedefaults.h"
+ #include "ui/editordrawer/automationprojection.h"
+ #include "ui/editordrawer/cclanes.h"
++#include "ui/editordrawer/nodelane/batchcommit.h"
+ #include "ui/editordrawer/nodelane/gesture.h"
+ 
+ namespace {
+ 
+ constexpr int kTrack = 0;
+ constexpr uint8_t kPan = 10;
++constexpr uint8_t kCcController = 11;
+ 
+ NodeDrag laneNode(const DocLanePoint &point, NodePoint current)
+ {
+@@ -165,6 +168,76 @@ void AutomationDomainTest::nodeDragAndPhantomOutcomes()
+         QVERIFY(hasPoint(gesture.points[0].current, 30, 70));
+         QVERIFY(hasPoint(gesture.points[1].current, 54, 90));
+     }
++    {
++        // Lower edge preserved: a leftward drag past the earliest sibling's
++        // zero headroom clamps the common delta, so the group keeps its
++        // spacing instead of collapsing onto tick zero.
++        NodeDragGesture gesture;
++        const DocLanePoint original0{kTrack, 7, 24, 60};
++        const DocLanePoint original1{kTrack, 7, 48, 80};
++        gesture.points = {laneNode(original0, {24, 60}), laneNode(original1, {48, 80})};
++        gesture.grabbedPoint = 1;
++        gesture.drag.press({100.0, 100.0}, false);
++        gesture.drag.dragSlop.markExceeded({105.0, 100.0});
++        gesture.update({PointDragUpdate::Phase::Dragging, {}, AxisLock::None}, {0, 80});
++        QVERIFY(hasPoint(gesture.points[0].current, 0, 60));
++        QVERIFY(hasPoint(gesture.points[1].current, 24, 80));
++        const NodeDragFinish finish = gesture.finish();
++        QCOMPARE(finish.release, PointDragRelease::Move);
++        QVERIFY(finish.changed);
++        QCOMPARE(finish.dTick, int64_t{-24});
++    }
++    {
++        // Upper edge: the grabbed point asks for more than the latest
++        // sibling's headroom, so the common delta clamps once and every
++        // original point shifts through the helper — the latest lands
++        // exactly on kMaxTick and the inter-point distance survives.
++        constexpr Tick kFirstOriginal = CoreTimeDefaults::kMaxTick - 20;
++        constexpr Tick kLastOriginal = CoreTimeDefaults::kMaxTick - 5;
++        setLane(document(), kTrack, kCcController, {{kFirstOriginal, 60}, {kLastOriginal, 80}});
++
++        NodeDragGesture gesture;
++        const DocLanePoint original0{kTrack, 7, kFirstOriginal, 60};
++        const DocLanePoint original1{kTrack, 7, kLastOriginal, 80};
++        gesture.points = {laneNode(original0, {kFirstOriginal, 60}),
++                          laneNode(original1, {kLastOriginal, 80})};
++        gesture.grabbedPoint = 0;
++        gesture.drag.press({100.0, 100.0}, false);
++        gesture.drag.dragSlop.markExceeded({105.0, 100.0});
++        gesture.preparePreview(1, {{{kFirstOriginal, 60}, {kLastOriginal, 80}}});
++        gesture.update({PointDragUpdate::Phase::Dragging, {}, AxisLock::None},
++                       {CoreTimeDefaults::kMaxTick, 60});
++        QVERIFY(hasPoint(gesture.points[0].current, CoreTimeDefaults::kMaxTick - 15, 60));
++        QVERIFY(hasPoint(gesture.points[1].current, CoreTimeDefaults::kMaxTick, 80));
++        QCOMPARE(gesture.points[1].current.tick - gesture.points[0].current.tick,
++                 kLastOriginal - kFirstOriginal);
++        QCOMPARE(gesture.previewPoints.size(), std::size_t{1});
++        QVERIFY(samePoints(gesture.previewPoints[0], {{CoreTimeDefaults::kMaxTick - 15, 60},
++                                                      {CoreTimeDefaults::kMaxTick, 80}}));
++        const NodeDragFinish finish = gesture.finish();
++        QCOMPARE(finish.release, PointDragRelease::Move);
++        QVERIFY(finish.changed);
++        QCOMPARE(finish.dTick, int64_t{5});
++
++        // Committing the resolved moves through the production CC path lands
++        // the document on the same destinations the preview showed.
++        std::vector<NodePointMove> moves;
++        for (const NodeDrag &point : gesture.points)
++            moves.push_back({point.original.tick, point.current});
++        const auto resolved = nodelane::resolveCcMoves(document(), kTrack, kCcController, moves);
++        QVERIFY(resolved.has_value());
++        SongDocument::RangeEdit edit;
++        nodelane::appendResolvedCcMoves(edit, *resolved);
++        QVERIFY(!edit.empty());
++        document().applyRangeEdit(QStringLiteral("automation domain move"), edit);
++        DocLanePoint landed;
++        QVERIFY(document().findLanePoint(kTrack, kCcController, CoreTimeDefaults::kMaxTick - 15,
++                                         &landed));
++        QCOMPARE(landed.value, 60);
++        QVERIFY(
++            document().findLanePoint(kTrack, kCcController, CoreTimeDefaults::kMaxTick, &landed));
++        QCOMPARE(landed.value, 80);
++    }
+     {
+         const DocLanePoint original{kTrack, 7, 24, 60};
+         PhantomGesture gesture;
+diff --git a/src/ui/editordrawer/nodelane/gesture.cpp b/src/ui/editordrawer/nodelane/gesture.cpp
+index 3167959b..46266869 100644
+--- a/src/ui/editordrawer/nodelane/gesture.cpp
++++ b/src/ui/editordrawer/nodelane/gesture.cpp
+@@ -5,6 +5,7 @@
+ 
+ #include <QApplication>
+ 
++#include "core/timedefaults.h"
+ #include "ui/editordrawer/automationprojection.h"
+ #include "ui/editordrawer/linearramp.h"
+ 
+@@ -190,12 +191,20 @@ void NodeDragGesture::applyDrag(const NodePoint &grabCurrent)
+     const NodePoint grabOriginal = points[grabbedPoint].original;
+     const int64_t requestedTickDelta = int64_t(grabCurrent.tick) - int64_t(grabOriginal.tick);
+     Tick earliestTick = points.front().original.tick;
+-    for (const NodeDrag &point : points)
++    Tick latestTick = earliestTick;
++    for (const NodeDrag &point : points) {
+         earliestTick = std::min<Tick>(earliestTick, point.original.tick);
+-    const int64_t dTick = std::max<int64_t>(requestedTickDelta, -int64_t(earliestTick));
++        latestTick = std::max<Tick>(latestTick, point.original.tick);
++    }
++    // One common delta for the whole group: the earliest point bounds the
++    // lower edge at zero and the latest bounds the upper headroom, so
++    // inter-point spacing survives a clamp at either domain edge.
++    const int64_t upperHeadroom =
++        std::max<int64_t>(0, int64_t(CoreTimeDefaults::kMaxTick) - int64_t(latestTick));
++    const int64_t dTick = std::clamp(requestedTickDelta, -int64_t(earliestTick), upperHeadroom);
+     const int dValue = grabCurrent.value - grabOriginal.value;
+     for (NodeDrag &point : points) {
+-        point.current.tick = Tick(int64_t(point.original.tick) + dTick);
++        point.current.tick = CoreTimeDefaults::shiftTickClamped(point.original.tick, dTick);
+         point.current.value =
+             std::clamp(point.original.value + dValue, point.minimumValue, point.maximumValue);
+     }
+diff --git a/src/ui/songview/pianoroll_commands.cpp b/src/ui/songview/pianoroll_commands.cpp
+index be6abf0e..49654fc5 100644
+--- a/src/ui/songview/pianoroll_commands.cpp
++++ b/src/ui/songview/pianoroll_commands.cpp
+@@ -208,13 +208,21 @@ void PianoRoll::nudgeSelectedNotes(bool right)
+     if (dTick == 0)
+         return;
+     const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
++    const uint64_t revision = doc->revision();
+     doc->moveNotes(notes, dTick, 0, /*mergeable=*/true);
++    // A rejected or no-op move leaves the revision untouched; there is no
++    // accepted destination to reveal.
++    if (doc->revision() == revision)
++        return;
+     // Keep the moved notes in sight, scrolling just enough.
+     Tick lo = CoreTimeDefaults::kNoTick, hi = 0;
+     for (const DocNote &note : notes) {
+-        const Tick tick = Tick(int64_t(note.tick) + dTick);
++        const Tick tick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
+         lo = std::min(lo, tick);
+-        hi = Tick(std::max(uint64_t(hi), uint64_t(tick) + note.duration));
++        // The mathematical end can pass the display domain; saturate at the
++        // checked Tick conversion instead of narrowing into a wrap.
++        const uint64_t end = uint64_t(tick) + note.duration;
++        hi = std::max(hi, Tick(std::min<uint64_t>(end, CoreTimeDefaults::kMaxTick)));
+     }
+     m_sv->ensureRangeVisible(lo, hi, right);
+     // Only note pixels changed here; the ensureRangeVisible reveal above

@@ -1,0 +1,838 @@
+diff --git a/src/checks/eventviews/viewbuckets_grid.cpp b/src/checks/eventviews/viewbuckets_grid.cpp
+index 2e617483..09cf46c7 100644
+--- a/src/checks/eventviews/viewbuckets_grid.cpp
++++ b/src/checks/eventviews/viewbuckets_grid.cpp
+@@ -121,23 +121,27 @@ void ViewBucketsGridTest::quirkProjection()
+     SmfFile smf = opened.fixture->document().smf();
+     smf.tracks[0].events.push_back(channelEvent(100, 0x90, 72, 100));
+     smf.tracks[0].events.push_back(channelEvent(110, 0x80, 73, 0));
+     sortTrack(smf.tracks[0]);
+     const std::unique_ptr<MidiTimeline> timeline =
+         MidiTimeline::build(smf, opened.fixture->document().tempoPoints(), 48000.0);
+     QVERIFY(timeline);
+     const SongViewModel model = buildSongViewModel(*timeline);
+     QCOMPARE(model.unpairedNoteOns, size_t(1));
+     QCOMPARE(model.orphanNoteOffs, size_t(1));
+-    QVERIFY(std::any_of(model.notes.begin(), model.notes.end(),
+-                        [](const ViewNote &note) { return note.unterminated; }));
++    QVERIFY(std::any_of(model.notes.begin(), model.notes.end(), [](const ViewNote &note) {
++        return note.key == 72 && note.startTick == 100 && note.duration == 0 &&
++               note.endTick() == 100;
++    }));
+ 
++    // The dropped-tracks clamp below is the quirk this test still guards; the
++    // UINT32_MAX last-tick span the old endTick field modeled no longer exists.
+     SmfFile overfull;
+     overfull.format = 1;
+     overfull.division = 24;
+     for (int track = 0; track < 17; ++track)
+         overfull.tracks.push_back(
+             SmfTrack{{channelEvent(0, uint8_t(0xc0 | (track & 0x0f)), 1, 0)}, 1});
+     const std::unique_ptr<MidiTimeline> dropped = MidiTimeline::build(overfull, 48000.0);
+     QVERIFY(dropped);
+     QCOMPARE(dropped->droppedTracks, 1);
+ }
+diff --git a/src/checks/host/tst_rulergridmenu.cpp b/src/checks/host/tst_rulergridmenu.cpp
+index 2472847f..7a1bd892 100644
+--- a/src/checks/host/tst_rulergridmenu.cpp
++++ b/src/checks/host/tst_rulergridmenu.cpp
+@@ -398,21 +398,21 @@ class RulerGridMenuTest final : public QObject
+         view.selectionModel().setTimeSelection(range);
+         const checks::rollcheck::SnappedRows rows{view, *rollInput};
+         int emptyKey = -1;
+         for (int key = 0; key < 128 && emptyKey < 0; ++key) {
+             const int y = rows.centerY(key);
+             if (y < 0 || y >= rollInput->height())
+                 continue;
+             const bool occupied =
+                 std::any_of(view.model().notes.cbegin(), view.model().notes.cend(),
+                             [key](const ViewNote &note) {
+-                                return note.key == key && note.startTick <= 6 && 6 < note.endTick;
++                                return note.key == key && note.startTick <= 6 && 6 < note.endTick();
+                             });
+             if (!occupied)
+                 emptyKey = key;
+         }
+         QVERIFY2(emptyKey >= 0, "the fixture left no empty roll row for the foreign menu");
+         const QPointF foreignMenuPoint(qRound(view.camera().displayX(6.0, 0.0, rows.dpr())),
+                                        rows.centerY(emptyKey));
+         checks::events::sendMouse(*rollInput, QEvent::MouseButtonPress, foreignMenuPoint,
+                                   Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+         checks::events::sendMouse(*rollInput, QEvent::MouseButtonRelease, foreignMenuPoint,
+diff --git a/src/checks/rollcheck/identity.cpp b/src/checks/rollcheck/identity.cpp
+index 914b567c..c2d46726 100644
+--- a/src/checks/rollcheck/identity.cpp
++++ b/src/checks/rollcheck/identity.cpp
+@@ -124,22 +124,22 @@ void PianoRollTest::timelineProjection()
+     ordinaryTimeline.events = {
+         {0, 240, 0x9, 2, 65, 83, NoteId{}},
+         {0, 288, 0x8, 2, 65, 0, NoteId{}},
+     };
+     const SongViewModel ordinary = buildSongViewModel(ordinaryTimeline);
+     if (ordinary.notes.size() != 1) {
+         QFAIL("ordinary unassigned timeline note did not project");
+     }
+ 
+     const ViewNote &note = ordinary.notes.front();
+-    if (note.noteId.isAssigned() || note.startTick != 240 || note.endTick != 288 ||
+-        note.key != 65 || note.velocity != 83 || note.track != 2 || note.unterminated) {
++    if (note.noteId.isAssigned() || note.startTick != 240 || note.endTick() != 288 ||
++        note.key != 65 || note.velocity != 83 || note.track != 2) {
+         QFAIL("ordinary unassigned timeline note changed during projection");
+     }
+ }
+ 
+ void PianoRollTest::viewStateRoundTrip()
+ {
+     SongView &view = m_fixture->view();
+     songview::TimelineInputItem &rollInput = m_fixture->rollInput();
+     const SongView::ViewState before = view.viewState();
+     const int track = m_fixture->track();
+diff --git a/src/checks/rollcheck/keyboard.cpp b/src/checks/rollcheck/keyboard.cpp
+index 14b562e9..42166ac6 100644
+--- a/src/checks/rollcheck/keyboard.cpp
++++ b/src/checks/rollcheck/keyboard.cpp
+@@ -192,21 +192,21 @@ void PianoRollTest::timelineRulerScope()
+                  view.selectionModel().timeSelection().startTick == startTick &&
+                  view.selectionModel().timeSelection().endTick == endTick &&
+                  view.selectionModel().storedTrackScope() == (uint32_t{1} << track),
+              "plain ruler drag did not create a primary-only time selection");
+ 
+     uint32_t expectedScope = uint32_t{1} << track;
+     const ViewNote *scopedGhost = nullptr;
+     for (const ViewNote &note : view.model().notes) {
+         if (note.startTick >= endTick)
+             break;
+-        if (startTick < note.endTick) {
++        if (startTick < note.endTick()) {
+             expectedScope |= uint32_t{1} << note.track;
+             if (note.track != track && !scopedGhost)
+                 scopedGhost = &note;
+         }
+     }
+     const std::optional<int> secondaryRecord =
+         scopedGhost ? trackheaders_test::rowForTrack(*headers, scopedGhost->track) : std::nullopt;
+     const QColor plainOverlay = secondaryRecord
+                                     ? headers
+                                           ->data(headers->index(*secondaryRecord, 0),
+@@ -227,21 +227,21 @@ void PianoRollTest::timelineRulerScope()
+              "modified ruler drag did not derive the overlapping note-track scope");
+     QVERIFY2(scopedGhost, "modified ruler drag fixture has no overlapping secondary-track note");
+     const SongView::ViewState priorViewState = view.viewState();
+     SongView::ViewState ghostViewState = priorViewState;
+     ghostViewState.scrollY = std::max(
+         0.0, (127.5 - double(scopedGhost->key)) * ghostViewState.keyHeight - roll.height() / 2.0);
+     view.applyViewState(ghostViewState);
+     const SnappedRows ghostRows{view, roll};
+     const QRectF ghostPlotBox = ghostRows.noteBox(ghostRows.noteRect(
+         view.camera().displayX(double(scopedGhost->startTick), 0.0, ghostRows.dpr()),
+-        view.camera().displayX(double(scopedGhost->endTick), 0.0, ghostRows.dpr()),
++        view.camera().displayX(double(scopedGhost->endTick()), 0.0, ghostRows.dpr()),
+         scopedGhost->key));
+     const QRectF ghostBandBox = ghostPlotBox.translated(pianoKeyboardWidth, 0.0);
+     const QRectF visibleGhostBox = ghostBandBox.intersected(
+         QRectF(pianoKeyboardWidth, 0.0, qreal(roll.width()), qreal(roll.height())));
+     const QImage scopedImage = check.captureQuickFramebuffer();
+     QVERIFY2(!visibleGhostBox.isEmpty(),
+              "time-scoped ghost note is outside the horizontal viewport");
+     const qreal scopedDpr = scopedImage.devicePixelRatio();
+     const int centerX = qRound(visibleGhostBox.center().x() * scopedDpr);
+     const int bottomY = qRound(visibleGhostBox.bottom() * scopedDpr) - 1;
+@@ -439,21 +439,21 @@ void PianoRollTest::keyboardTimeSelectionShortcuts()
+     const uint64_t emptyTick = band.startTick + (band.endTick - band.startTick) / 2;
+     int emptyKey = -1;
+     for (int key = 0; key < 128 && emptyKey < 0; ++key) {
+         const int y = rows.centerY(key);
+         if (y < 0 || y >= roll.height())
+             continue;
+         const bool occupied = std::any_of(view.model().notes.cbegin(), view.model().notes.cend(),
+                                           [track, key, emptyTick](const ViewNote &note) {
+                                               return note.track == track && note.key == key &&
+                                                      note.startTick <= emptyTick &&
+-                                                     emptyTick < note.endTick;
++                                                     emptyTick < note.endTick();
+                                           });
+         if (!occupied)
+             emptyKey = key;
+     }
+     QVERIFY2(emptyKey >= 0, "could not find empty roll space inside the time selection");
+     const QPoint emptyInside(qRound(view.camera().displayX(double(emptyTick), 0.0, rows.dpr())),
+                              rows.centerY(emptyKey));
+     click(roll, emptyInside);
+     QVERIFY2(!view.selectionModel().timeSelection().active(),
+              "left-clicking empty space inside the time selection did not clear it");
+diff --git a/src/checks/rollcheck/timemenu.cpp b/src/checks/rollcheck/timemenu.cpp
+index 176f25f2..a4609d25 100644
+--- a/src/checks/rollcheck/timemenu.cpp
++++ b/src/checks/rollcheck/timemenu.cpp
+@@ -45,21 +45,21 @@ SharedTimeMenu openSharedTimeMenu(PianoRollFixture &check, const SnappedRows &ro
+     SharedTimeMenu menu;
+     const uint64_t midTick = startTick + (endTick - startTick) / 2;
+     int emptyKey = -1;
+     for (int key = 0; key < 128 && emptyKey < 0; ++key) {
+         const int y = rows.centerY(key);
+         if (y < 0 || y >= check.rollInput().height())
+             continue;
+         const bool occupied = std::any_of(
+             check.view().model().notes.cbegin(), check.view().model().notes.cend(),
+             [midTick, key](const ViewNote &note) {
+-                return note.key == key && note.startTick <= midTick && midTick < note.endTick;
++                return note.key == key && note.startTick <= midTick && midTick < note.endTick();
+             });
+         if (!occupied)
+             emptyKey = key;
+     }
+     if (emptyKey < 0) {
+         menu.diagnostic = QStringLiteral("could not find empty roll space inside the band");
+         return menu;
+     }
+     const QPoint inside(qRound(check.view().camera().displayX(double(midTick), 0.0, rows.dpr())),
+                         rows.centerY(emptyKey));
+diff --git a/src/ui/songview/pianoroll.h b/src/ui/songview/pianoroll.h
+index ff2d43b0..98eaa9a3 100644
+--- a/src/ui/songview/pianoroll.h
++++ b/src/ui/songview/pianoroll.h
+@@ -46,22 +46,20 @@ enum class NoteMenuAction : int {
+ 
+ struct PianoRollGeometry {
+     int minimumVisiblePianoRollHeight;
+     int pianoKeyboardWidth;
+     int midiCursorExtent;
+     int pianoRollNoteMinimumWidth;
+     int pianoRollNoteMinimumHeight;
+     qreal pianoRollNoteEdgeGripReach;
+     qreal pianoRollNoteMoveZoneMinimumWidth;
+     qreal selectionRingDipWidth;
+-    int noteBorderDashLength;
+-    int noteBorderDashGap;
+     int keyboardHoverChipHorizontalPadding;
+     int keyboardHoverChipVerticalPadding;
+     int keyboardHoverChipRightInset;
+     int velocityLabelFitAllowance;
+     int keyboardHoverChipCornerRadius;
+     int pianoKeyboardLabelRightInset;
+ 
+     static PianoRollGeometry resolve(int pianoKeyboardWidth);
+ };
+ 
+diff --git a/src/ui/songview/pianoroll_geometry.cpp b/src/ui/songview/pianoroll_geometry.cpp
+index 79e6593f..d11ee4d9 100644
+--- a/src/ui/songview/pianoroll_geometry.cpp
++++ b/src/ui/songview/pianoroll_geometry.cpp
+@@ -26,22 +26,20 @@ PianoRollGeometry PianoRollGeometry::resolve(int pianoKeyboardWidth)
+ {
+     return {
+         .minimumVisiblePianoRollHeight = lyt::fontPx(10.0),
+         .pianoKeyboardWidth = pianoKeyboardWidth,
+         .midiCursorExtent = lyt::fontPx(2.0),
+         .pianoRollNoteMinimumWidth = lyt::fontPx(1.0 / 6.0),
+         .pianoRollNoteMinimumHeight = lyt::fontPx(1.0 / 6.0),
+         .pianoRollNoteEdgeGripReach = lyt::fontPxF(0.25),
+         .pianoRollNoteMoveZoneMinimumWidth = lyt::fontPxF(0.5),
+         .selectionRingDipWidth = lyt::fontPxF(1.0 / 8.0),
+-        .noteBorderDashLength = lyt::fontPx(1.0 / 3.0),
+-        .noteBorderDashGap = lyt::fontPx(1.0 / 6.0),
+         .keyboardHoverChipHorizontalPadding = lyt::fontPx(2.0 / 3.0),
+         .keyboardHoverChipVerticalPadding = lyt::fontPx(1.0 / 6.0),
+         .keyboardHoverChipRightInset = lyt::fontPx(1.0 / 6.0),
+         .velocityLabelFitAllowance = lyt::fontPx(1.0 / 2.0),
+         .keyboardHoverChipCornerRadius = lyt::fontPx(0.25),
+         .pianoKeyboardLabelRightInset = lyt::fontPx(0.25),
+     };
+ }
+ 
+ QCursor centeredCursor(const QPixmap &pm)
+@@ -202,23 +200,25 @@ QRectF PianoRoll::noteRect(qreal x0, qreal x1, int key) const
+     const qreal pixel = physicalPixel();
+     const std::array<qreal, PitchProjection::cMaxRows + 1> &edges = rowEdges();
+     return QRectF(x0, edges[row] + pixel,
+                   std::max<qreal>(m_geometry.pianoRollNoteMinimumWidth, x1 - x0),
+                   std::max(m_geometry.pianoRollNoteMinimumHeight * pixel,
+                            edges[row + 1] - edges[row] - pixel));
+ }
+ 
+ QRectF PianoRoll::noteRect(const ViewNote &note) const
+ {
++    if (note.duration == 0)
++        return {};
+     const qreal dpr = devicePixelRatio();
+     return noteRect(m_camera.displayX(double(note.startTick), 0.0, dpr),
+-                    m_camera.displayX(double(note.endTick), 0.0, dpr), note.key);
++                    m_camera.displayX(double(note.endTick()), 0.0, dpr), note.key);
+ }
+ 
+ QRectF PianoRoll::noteBox(const QRectF &rect) const
+ {
+     return rect.adjusted(lyt::space(Space::Zero), lyt::space(Space::Zero), lyt::space(Space::Zero),
+                          -physicalPixel());
+ }
+ 
+ int PianoRoll::velocityLabelHeight() const
+ {
+@@ -294,25 +294,25 @@ void PianoRoll::refreshHoverCursor(QPointF pos, Qt::KeyboardModifiers modifiers)
+ QRectF PianoRoll::displayedNoteRect(const ViewNote &note) const
+ {
+     const bool dragging = m_leftDrag == LeftDrag::Move || m_leftDrag == LeftDrag::Resize ||
+                           m_leftDrag == LeftDrag::ResizeLeft;
+     if (!dragging || note.track != m_sv->selectionModel().primaryTrack() ||
+         !note.noteId.isAssigned() || !m_sv->selectionModel().isNoteSelected(note.noteId))
+         return noteRect(note);
+     int64_t tick, endTick;
+     if (m_leftDrag == LeftDrag::ResizeLeft) {
+         // The note-off pins the gesture; only the start moves.
+-        endTick = int64_t(note.endTick);
++        endTick = int64_t(note.endTick());
+         tick = std::clamp<int64_t>(int64_t(note.startTick) + m_dTick, 0, endTick - 1);
+     } else {
+         tick = std::max<int64_t>(0, int64_t(note.startTick) + m_dTick);
+-        endTick = std::max<int64_t>(tick + 1, int64_t(note.endTick) + m_dTick + m_dDur);
++        endTick = std::max<int64_t>(tick + 1, int64_t(note.endTick()) + m_dTick + m_dDur);
+     }
+     const int key = displayedNoteKey(note);
+     const qreal dpr = devicePixelRatio();
+     const qreal x0 = m_camera.displayX(double(tick), 0.0, dpr);
+     const qreal x1 = m_camera.displayX(double(endTick), 0.0, dpr);
+     return noteRect(x0, x1, key);
+ }
+ 
+ int PianoRoll::displayedNoteKey(const ViewNote &note) const
+ {
+diff --git a/src/ui/songview/pianoroll_gestures.cpp b/src/ui/songview/pianoroll_gestures.cpp
+index 70024d2b..ce208109 100644
+--- a/src/ui/songview/pianoroll_gestures.cpp
++++ b/src/ui/songview/pianoroll_gestures.cpp
+@@ -173,26 +173,26 @@ void PianoRoll::applyNotePressSelection(const ViewNote &note, bool onEdge,
+ bool PianoRoll::noteRequiresSelectionUpdate(const ViewNote &note) const
+ {
+     return note.track != m_sv->selectionModel().primaryTrack() || !note.noteId.isAssigned() ||
+            !m_sv->selectionModel().isNoteSelected(note.noteId);
+ }
+ 
+ void PianoRoll::armNoteDrag(const ViewNote &note, QPointF position)
+ {
+     if (nearRightEdge(note, position)) {
+         activateLeftDrag(LeftDrag::Resize);
+-        m_gripTick = note.endTick;
++        m_gripTick = note.endTick();
+         m_gripOpposite = note.startTick;
+     } else if (nearLeftEdge(note, position)) {
+         activateLeftDrag(LeftDrag::ResizeLeft);
+         m_gripTick = note.startTick;
+-        m_gripOpposite = note.endTick;
++        m_gripOpposite = note.endTick();
+     } else {
+         activateLeftDrag(LeftDrag::Move);
+     }
+ }
+ 
+ void PianoRoll::beginVelocityPress(const ViewNote &note)
+ {
+     m_velAnchor = note;
+     m_velAudEff = mid2agbEffectiveVelocity(note.velocity);
+     m_sv->announceNote(note);
+@@ -258,21 +258,21 @@ void PianoRoll::beginDraw()
+         return;
+     }
+     m_drawAnchor = m_grid.snapTickDown(m_pressTick);
+     m_drawTick = m_drawAnchor;
+     m_drawDur = int64_t(m_grid.gridTicksAt(m_drawAnchor));
+     m_drawKey = m_pressKey;
+     activateLeftDrag(LeftDrag::Draw);
+     m_sv->selectionModel().clearNoteSelection();
+     ViewNote pending{};
+     pending.startTick = uint32_t(m_drawTick);
+-    pending.endTick = uint32_t(m_drawTick + uint64_t(m_drawDur));
++    pending.duration = uint32_t(m_drawDur);
+     pending.key = uint8_t(m_drawKey);
+     pending.velocity = m_lastVelocity;
+     pending.track = uint8_t(m_sv->selectionModel().primaryTrack());
+     m_sv->announceNote(pending);
+     // The empty-space press already sounds this row; don't re-attack it.
+     if (m_soundingKey != m_drawKey)
+         auditionKey(m_drawKey, m_lastVelocity);
+     m_auditioned = true;
+     requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection |
+                        PianoRollQuickDirty::DrawPreviewFill | PianoRollQuickDirty::Overlay |
+@@ -282,21 +282,22 @@ void PianoRoll::beginDraw()
+ void PianoRoll::auditionBandEntrants(const QRectF &band)
+ {
+     std::vector<ViewNote> inBand;
+     for (const ViewNote &note : m_sv->model().notes) {
+         if (note.track != m_sv->selectionModel().primaryTrack() || !noteRect(note).intersects(band))
+             continue;
+         const auto found =
+             std::find_if(m_bandAud.begin(), m_bandAud.end(),
+                          [&](const ViewNote &old) { return old.noteId == note.noteId; });
+         if (found == m_bandAud.end())
+-            m_sv->auditionTimed(note.track, note.key, note.velocity, note.startTick, note.endTick);
++            m_sv->auditionTimed(note.track, note.key, note.velocity, note.startTick,
++                                note.endTick());
+         inBand.push_back(note);
+     }
+     for (const ViewNote &old : m_bandAud) {
+         const auto found = std::find_if(inBand.begin(), inBand.end(), [&](const ViewNote &note) {
+             return note.noteId == old.noteId;
+         });
+         if (found != inBand.end())
+             continue;
+         // Previews are one-per-key: keep the key sounding while the band
+         // still covers another note of the same pitch.
+diff --git a/src/ui/songview/quick/timelinequickview_pianoroll.cpp b/src/ui/songview/quick/timelinequickview_pianoroll.cpp
+index 74358830..3856565c 100644
+--- a/src/ui/songview/quick/timelinequickview_pianoroll.cpp
++++ b/src/ui/songview/quick/timelinequickview_pianoroll.cpp
+@@ -38,98 +38,65 @@ using timeline_quick::addRect;
+ using timeline_quick::addVerticalLine;
+ using timeline_quick::resetLayer;
+ 
+ int fittedFrameThickness(const QRectF &rect, int requestedPixels, int insetPixels, qreal dpr)
+ {
+     const int minDimPixels = qRound((std::min)(rect.width(), rect.height()) * dpr);
+     return std::clamp((minDimPixels - lyt::singlePixel()) / 2 - insetPixels,
+                       lyt::space(Space::Zero), requestedPixels);
+ }
+ 
+-int addFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
+-             const QColor &color, int requestedPixels, int insetPixels, qreal dpr,
+-             const QRectF &clip)
++void addFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
++              const QColor &color, int thicknessPixels, int insetPixels, qreal dpr,
++              const QRectF &clip)
+ {
+-    const int thicknessPixels = fittedFrameThickness(rect, requestedPixels, insetPixels, dpr);
+-    if (thicknessPixels <= 0)
+-        return 0;
+     const qreal pixel = logicalPhysicalPixel(dpr);
+     const qreal inset = insetPixels * pixel;
+     const qreal thickness = thicknessPixels * pixel;
+     const QRectF frame = rect.adjusted(inset, inset, -inset, -inset);
+     addRect(scene.layer(layer), QRectF(frame.left(), frame.top(), frame.width(), thickness), color,
+             clip);
+     addRect(scene.layer(layer),
+             QRectF(frame.left(), frame.bottom() - thickness, frame.width(), thickness), color,
+             clip);
+     const qreal sideHeight = (std::max)(0.0, frame.height() - 2.0 * thickness);
+     addRect(scene.layer(layer),
+             QRectF(frame.left(), frame.top() + thickness, thickness, sideHeight), color, clip);
+     addRect(scene.layer(layer),
+             QRectF(frame.right() - thickness, frame.top() + thickness, thickness, sideHeight),
+             color, clip);
+-    return thicknessPixels;
+ }
+ 
+ void addDashedFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
+                     const QColor &color, qreal width, qreal dash, qreal gap, const QRectF &clip)
+ {
+     addDashedHorizontal(scene.layer(layer), rect.left(), rect.right(), rect.top(), width, dash, gap,
+                         color, clip);
+     addDashedHorizontal(scene.layer(layer), rect.left(), rect.right(), rect.bottom(), width, dash,
+                         gap, color, clip);
+     addDashedVertical(scene.layer(layer), rect.left(), rect.top(), rect.bottom(), width, dash, gap,
+                       color, clip);
+     addDashedVertical(scene.layer(layer), rect.right(), rect.top(), rect.bottom(), width, dash, gap,
+                       color, clip);
+ }
+ 
+ void addNoteBorder(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &noteBox,
+-                   bool unterminated, int dashLength, int dashGap, int insetPixels, qreal dpr,
+-                   const QRectF &clip)
++                   int insetPixels, qreal dpr, const QRectF &clip)
+ {
+     const int requested = noteBorderPixels(dpr);
+     const int fitted = fittedFrameThickness(noteBox, requested, insetPixels, dpr);
+     const qreal pixel = logicalPhysicalPixel(dpr);
+-    if (fitted > 0 && !unterminated) {
+-        addFrame(scene, layer, noteBox, Qt::black, requested, insetPixels, dpr, clip);
+-        return;
+-    }
+-    if (fitted > 0) {
+-        for (int framePixel = 0; framePixel < fitted; ++framePixel) {
+-            const qreal inset = (insetPixels + framePixel) * pixel;
+-            const QRectF frame =
+-                noteBox.adjusted(0, 0, -pixel, -pixel).adjusted(inset, inset, -inset, -inset);
+-            addDashedFrame(scene, layer, frame, Qt::black, pixel, dashLength, dashGap, clip);
+-        }
+-        return;
+-    }
+     QColor color(Qt::black);
+-    color.setAlphaF(
+-        std::clamp((std::min)(noteBox.width(), noteBox.height()) / (3.0 * pixel), 0.25, 0.85));
+-    const qreal inset = insetPixels * pixel;
+-    const QRectF frame = noteBox.adjusted(inset, inset, -inset, -inset);
+-    if (unterminated) {
+-        addDashedFrame(scene, layer, frame, color, pixel, dashLength, dashGap, clip);
+-    } else {
+-        addRect(scene.layer(layer), QRectF(frame.left(), frame.top(), frame.width(), pixel), color,
+-                clip);
+-        addRect(scene.layer(layer),
+-                QRectF(frame.left(), frame.bottom() - pixel, frame.width(), pixel), color, clip);
+-        addRect(scene.layer(layer),
+-                QRectF(frame.left(), frame.top() + pixel, pixel, frame.height() - 2.0 * pixel),
+-                color, clip);
+-        addRect(
+-            scene.layer(layer),
+-            QRectF(frame.right() - pixel, frame.top() + pixel, pixel, frame.height() - 2.0 * pixel),
+-            color, clip);
+-    }
++    if (fitted == 0)
++        color.setAlphaF(
++            std::clamp((std::min)(noteBox.width(), noteBox.height()) / (3.0 * pixel), 0.25, 0.85));
++    addFrame(scene, layer, noteBox, color, std::max(1, fitted), insetPixels, dpr, clip);
+ }
+ 
+ void addLoopGlow(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
+                  bool fadesRight, const QRectF &clip)
+ {
+     auto strong = themes::color(themes::Role::song_view_loop_marker);
+     auto weak = strong;
+     auto clear = strong;
+     strong.setAlpha(150);
+     weak.setAlpha(18);
+@@ -299,30 +266,29 @@ void TimelineQuickView::rebuildNoteBordersAndSelection()
+     const auto &selection = roll.m_sv->selectionModel();
+     const int selectedTrack = selection.primaryTrack();
+     const auto &timeSelection = selection.timeSelection();
+     const SongDocument::TimeRange timeRange{timeSelection.startTick, timeSelection.endTick};
+     const uint32_t usedTracks = usedTrackMask(roll.m_sv->timeline());
+     const uint32_t timeSelectedTracks =
+         timeSelection.active() && timeSelection.scope == EditorSelectionModel::TimeSelection::Tracks
+             ? selection.resolvedTrackScope(usedTracks)
+             : 0;
+ 
+-    const auto addSelectionRing = [&](const QRectF &box, const ViewNote &note) {
++    const auto addSelectionRing = [&](const QRectF &box) {
+         const int requested =
+             (std::max)(lyt::singlePixel(), qRound(roll.m_geometry.selectionRingDipWidth * dpr));
+-        const int ring = addFrame(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box,
+-                                  themes::color(themes::Role::item_selected_background), requested,
+-                                  0, dpr, plot);
++        const int ring = fittedFrameThickness(box, requested, 0, dpr);
+         if (ring > 0) {
+-            addNoteBorder(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box,
+-                          note.unterminated, roll.m_geometry.noteBorderDashLength,
+-                          roll.m_geometry.noteBorderDashGap, ring, dpr, plot);
++            addFrame(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box,
++                     themes::color(themes::Role::item_selected_background), ring, 0, dpr, plot);
++            addNoteBorder(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box, ring, dpr,
++                          plot);
+         } else {
+             addRect(scene.layer(TimelineQuickLayer::PianoNoteBordersAndSelection), box,
+                     themes::color(themes::Role::item_selected_background), plot);
+         }
+     };
+ 
+     for (int pass = 0; pass < 2; ++pass) {
+         const bool ghostPass = pass == 0;
+         for (const ViewNote &note : roll.m_sv->model().notes) {
+             const bool ghost = note.track != selectedTrack;
+@@ -330,39 +296,38 @@ void TimelineQuickView::rebuildNoteBordersAndSelection()
+                 continue;
+             if (ghost && roll.m_sv->scaleFold() &&
+                 projection.rowForPitch(note.key) == PitchProjection::cHiddenRow) {
+                 continue;
+             }
+             const QRectF noteRect = roll.displayedNoteRect(note);
+             if (!noteRect.intersects(plot))
+                 continue;
+             const QRectF box = roll.noteBox(noteRect);
+             const bool timeSelected = (timeSelectedTracks & (1u << note.track)) &&
+-                                      timeRange.overlaps(note.startTick, note.endTick);
++                                      timeRange.overlaps(note.startTick, note.endTick());
+             if (ghost) {
+                 if (timeSelected)
+-                    addSelectionRing(box, note);
++                    addSelectionRing(box);
+                 continue;
+             }
+             const bool selected =
+                 timeSelected ||
+                 (note.noteId.isAssigned() && selection.isNoteSelected(note.noteId)) ||
+                 (roll.m_rightDrag == PianoRoll::RightDrag::Band &&
+                  std::any_of(
+                      roll.m_bandAud.begin(), roll.m_bandAud.end(),
+                      [&](const ViewNote &covered) { return covered.noteId == note.noteId; }));
+             if (selected) {
+-                addSelectionRing(box, note);
++                addSelectionRing(box);
+             } else {
+-                addNoteBorder(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box,
+-                              note.unterminated, roll.m_geometry.noteBorderDashLength,
+-                              roll.m_geometry.noteBorderDashGap, 0, dpr, plot);
++                addNoteBorder(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box, 0, dpr,
++                              plot);
+             }
+         }
+     }
+ }
+ 
+ void TimelineQuickView::rebuildOverlay()
+ {
+     PianoRoll &roll = *m_roll;
+     TimelineQuickScene &scene = *m_scene;
+     if (!roll.m_sv->timeline())
+@@ -372,23 +337,21 @@ void TimelineQuickView::rebuildOverlay()
+     const qreal pixel = logicalPhysicalPixel(dpr);
+     const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
+     const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
+ 
+     if (roll.m_leftDrag == PianoRoll::LeftDrag::Draw) {
+         const qreal x0 = roll.m_camera.displayX(double(roll.m_drawTick), 0.0, dpr);
+         const qreal x1 =
+             roll.m_camera.displayX(double(roll.m_drawTick + uint64_t(roll.m_drawDur)), 0.0, dpr);
+         const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
+         const QRectF box = roll.noteBox(previewRect);
+-        addNoteBorder(scene, TimelineQuickLayer::PianoOverlay, box, false,
+-                      roll.m_geometry.noteBorderDashLength, roll.m_geometry.noteBorderDashGap, 0,
+-                      dpr, plot);
++        addNoteBorder(scene, TimelineQuickLayer::PianoOverlay, box, 0, dpr, plot);
+     }
+ 
+     const auto &selection = roll.m_sv->selectionModel();
+     const auto &timeSelection = selection.timeSelection();
+     const uint32_t usedTracks = usedTrackMask(roll.m_sv->timeline());
+     if (roll.m_rightDrag == PianoRoll::RightDrag::Band) {
+         const QRectF band = QRectF(roll.m_pressPos, roll.m_curPos).normalized().intersected(plot);
+         QColor fill = themes::color(themes::Role::song_view_selection_fill);
+         fill.setAlpha(30);
+         addRect(scene.layer(TimelineQuickLayer::PianoOverlay), band, fill, plot);
+diff --git a/src/ui/songview/rangeedit.cpp b/src/ui/songview/rangeedit.cpp
+index 2fda3f23..eb5c7491 100644
+--- a/src/ui/songview/rangeedit.cpp
++++ b/src/ui/songview/rangeedit.cpp
+@@ -931,19 +931,19 @@ void SongView::cancelTimeSelectionMenuWithoutFocus()
+             session && session->owns(m_timeSelectionMenuHost))
+             session->cancel(/*restoreFocus=*/false);
+     }
+ }
+ void SongView::announceNote(const ViewNote &note)
+ {
+     if (!m_timeline)
+         return;
+     const bool ext = m_document && m_document->cfg().extendedClocks;
+     const bool exact = m_document && m_document->cfg().exactGate;
+-    const int64_t ticks = int64_t(note.endTick) - int64_t(note.startTick);
++    const int64_t ticks = note.duration;
+     emit statusMessage(
+         tr("%1 · velocity %2 → plays %3 · length %4 ticks → %5 clocks")
+             .arg(keyName(note.key))
+             .arg(note.velocity)
+             .arg(mid2agbEffectiveVelocity(note.velocity))
+             .arg(ticks)
+             .arg(mid2agbEffectiveDuration(ticks, m_timeline->ticksPerBeat, ext, exact)));
+ }
+diff --git a/src/ui/songview/timeruler_interaction.cpp b/src/ui/songview/timeruler_interaction.cpp
+index 2386bba3..964ba8c1 100644
+--- a/src/ui/songview/timeruler_interaction.cpp
++++ b/src/ui/songview/timeruler_interaction.cpp
+@@ -104,21 +104,22 @@ bool TimeRuler::pointerMove(const TimelinePointerInput &input)
+         if (m_selSweep) {
+             const uint64_t tick = dragTick();
+             EditorSelectionModel::TimeSelection selection;
+             selection.startTick = std::min(m_selAnchor, tick);
+             selection.endTick = std::max(m_selAnchor, tick);
+             TrackMask trackMask = 1u << m_owner.selectionModel().primaryTrack();
+             if (m_multiTrackSweep) {
+                 for (const ViewNote &note : m_owner.model().notes) {
+                     if (note.startTick >= selection.endTick)
+                         break;
+-                    if (note.track >= 0 && note.track < 16 && selection.startTick < note.endTick) {
++                    if (note.track >= 0 && note.track < 16 &&
++                        selection.startTick < note.endTick()) {
+                         trackMask |= 1u << note.track;
+                     }
+                 }
+             }
+             m_owner.selectionModel().setTimeSelectionAndTrackScope(std::move(selection), trackMask);
+         }
+         return true;
+     }
+     if (m_dragMarker >= 0 || m_dragTimeSig) {
+         m_dragTick = dragTick();
+diff --git a/src/ui/songview/trackvoiceops.cpp b/src/ui/songview/trackvoiceops.cpp
+index dd5b29ce..2626466f 100644
+--- a/src/ui/songview/trackvoiceops.cpp
++++ b/src/ui/songview/trackvoiceops.cpp
+@@ -40,27 +40,27 @@ void SongView::transitionSelectedTrack(int newTrack, bool trackIdentityChanged)
+     if (m_roll)
+         m_roll->cancelPitchBendPopup();
+     cancelActiveInteractions();
+     m_selectionModel.applyPrimaryTrackTransition(newTrack);
+ }
+ bool SongView::revealNote(int track, uint8_t key, uint64_t tick)
+ {
+     if (track < 0 || track > 15)
+         return false;
+     selectTrack(track);
+-    // Notes are sorted by startTick, so the last match is the note that was
+-    // sounding (or had just finished fading) at the event's position.
++    // Last spanning note on this key wins (notes sorted by startTick).
+     const ViewNote *found = nullptr;
+     for (const ViewNote &note : m_model.notes) {
+         if (note.startTick > tick)
+             break;
+-        if (note.track == track && note.key == key)
++        if (note.track == track && note.key == key && note.startTick <= tick &&
++            tick < note.endTick())
+             found = &note;
+     }
+     if (!found)
+         return false;
+     m_selectionModel.setNoteSelection({found->noteId});
+     ensureKeyVisible(key);
+     return true;
+ }
+ void SongView::trackHeaderClicked(int track, Qt::KeyboardModifiers modifiers)
+ {
+@@ -448,18 +448,17 @@ void SongView::onTracksRemapped(const TrackRemap &remap)
+     if (muteChanged)
+         emit muteMaskChanged(m_muteMask);
+     if (soloChanged)
+         emit soloMaskChanged(m_soloMask);
+ }
+ void SongView::auditionTimed(int track, int key, int velocity, uint64_t startTick, uint64_t endTick)
+ {
+     if (!m_timeline || endTick <= startTick)
+         return;
+     uint64_t dur = m_timeline->sampleForTick(endTick) - m_timeline->sampleForTick(startTick);
+-    // Safety cap: an unterminated note's span runs to the end of the song,
+-    // which is not a useful audition length.
++    // Keep long notes from producing an excessive audition length.
+     const uint64_t cap = uint64_t(m_timeline->sampleRate * 10.0);
+     if (cap > 0)
+         dur = std::min(dur, cap);
+     if (dur > 0)
+         emit auditionNoteTimed(track, key, velocity, quint32(std::min<uint64_t>(dur, UINT32_MAX)));
+ }
+diff --git a/src/ui/songviewmodel.cpp b/src/ui/songviewmodel.cpp
+index 223a42a0..737594b8 100644
+--- a/src/ui/songviewmodel.cpp
++++ b/src/ui/songviewmodel.cpp
+@@ -68,44 +68,42 @@ SongViewModel buildSongViewModel(const MidiTimeline &tl)
+ 
+     for (size_t eventIndex = 0; eventIndex < tl.events.size(); ++eventIndex) {
+         const TimelineEvent &ev = tl.events[eventIndex];
+         if (eventIndex < xcmdConsumed.size() && xcmdConsumed[eventIndex])
+             continue;
+         switch (ev.type) {
+         case 0x9: { // note on
+             ViewNote note;
+             note.noteId = ev.noteId;
+             note.startTick = ev.tick;
+-            note.endTick = ev.tick;
++            note.duration = 0;
+             note.key = ev.data0 & 0x7F;
+             note.velocity = ev.data1;
+             note.track = ev.track;
+-            note.unterminated = true;
+             open[ev.track * 128 + note.key].push_back(model.notes.size());
+             model.notes.push_back(note);
+             model.minNoteKey = std::min(model.minNoteKey, int(note.key));
+             model.maxNoteKey = std::max(model.maxNoteKey, int(note.key));
+             break;
+         }
+         case 0x8: { // note off
+             std::vector<size_t> &stack = open[ev.track * 128 + (ev.data0 & 0x7F)];
+             if (stack.empty()) {
+                 model.orphanNoteOffs++;
+                 model.strip.push_back(
+                     {ev.tick, ev.track,
+                      QStringLiteral("Note off (key %1) without a note on").arg(ev.data0)});
+                 break;
+             }
+             for (size_t idx : stack) {
+                 ViewNote &note = model.notes[idx];
+-                note.endTick = ev.tick;
+-                note.unterminated = false;
++                note.duration = ev.tick >= note.startTick ? ev.tick - note.startTick : 0;
+             }
+             stack.clear();
+             break;
+         }
+         case 0xB: { // control change (XCMD traffic already projected)
+             const M4aCcInfo info = m4aClassifyCc(ev.data0);
+             if (info.eventClass == M4aEventClass::AudibleLane) {
+                 laneFor(model, ev.track, ev.data0, info.lane, QString::fromLatin1(info.display))
+                     .points.push_back({ev.tick, int(ev.data1)});
+             } else {
+@@ -128,24 +126,20 @@ SongViewModel buildSongViewModel(const MidiTimeline &tl)
+         default:
+             model.strip.push_back(
+                 {ev.tick, ev.track,
+                  QStringLiteral("Unhandled event type 0x%1").arg(ev.type, 0, 16)});
+             break;
+         }
+     }
+ 
+     for (const auto &stack : open)
+         model.unpairedNoteOns += stack.size();
+-    // Unterminated notes stay visible: extend them to the end of the song.
+-    for (ViewNote &note : model.notes)
+-        if (note.unterminated)
+-            note.endTick = uint32_t(tl.lengthTicks);
+     for (const OtherEvent &oe : tl.otherEvents)
+         model.strip.push_back({oe.tick, oe.track, oe.label});
+ 
+     std::stable_sort(model.strip.begin(), model.strip.end(),
+                      [](const StripItem &a, const StripItem &b) { return a.tick < b.tick; });
+     std::stable_sort(model.voices.begin(), model.voices.end(),
+                      [](const VoiceChange &a, const VoiceChange &b) { return a.tick < b.tick; });
+ 
+     // Stable lane order: by track, then §4.2 table order via CC number
+     // (bend sorts last as 0xFF, which matches the table's row order).
+diff --git a/src/ui/songviewmodel.h b/src/ui/songviewmodel.h
+index f9ac9d77..b7fdea2b 100644
+--- a/src/ui/songviewmodel.h
++++ b/src/ui/songviewmodel.h
+@@ -10,25 +10,26 @@
+ #include "core/timedefaults.h"
+ 
+ // Presentation model derived from a MidiTimeline: notes paired from on/off
+ // events, automation lane curves per (track, parameter), voice changes, and a
+ // strip of everything else. Every timeline event lands in exactly one of
+ // these buckets — the M1 guarantee that no event is silently invisible.
+ 
+ struct ViewNote {
+     NoteId noteId; // source document identity; unassigned for ordinary timeline notes
+     uint32_t startTick;
+-    uint32_t endTick;
++    uint32_t duration; // 0 = unpaired note-on or same-tick pair
+     uint8_t key;
+     uint8_t velocity;
+     uint8_t track;
+-    bool unterminated; // note-on with no matching note-off; drawn to song end
++
++    uint64_t endTick() const { return uint64_t(startTick) + duration; }
+ };
+ 
+ struct LanePoint {
+     uint32_t tick;
+     int value;
+ };
+ 
+ constexpr uint8_t LANE_CC_BEND = CoreTimeDefaults::kLaneCcBend;
+ 
+ struct CcLane {
+@@ -52,22 +53,21 @@ struct StripItem {
+ };
+ 
+ struct SongViewModel {
+     std::vector<ViewNote> notes;     // sorted by startTick
+     std::vector<CcLane> lanes;       // grouped by track, lane order per §4.2
+     std::vector<VoiceChange> voices; // sorted by tick
+     std::vector<StripItem> strip;    // sorted by tick; advanced CCs + parser leftovers
+     int minNoteKey = 127;
+     int maxNoteKey = 0;
+ 
+-    // Coverage stats for --viewcheck.
+-    size_t unpairedNoteOns = 0; // rendered anyway (unterminated), but reported
++    size_t unpairedNoteOns = 0; // duration 0, still in notes
+     size_t orphanNoteOffs = 0;  // shown in the strip
+ 
+     const CcLane *findLane(int track, uint8_t cc) const
+     {
+         for (const CcLane &l : lanes)
+             if (l.track == track && l.cc == cc)
+                 return &l;
+         return nullptr;
+     }
+ };

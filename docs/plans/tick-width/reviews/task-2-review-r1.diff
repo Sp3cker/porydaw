@@ -1,0 +1,1796 @@
+diff --git a/src/checks/automation/automationnodedrag.cpp b/src/checks/automation/automationnodedrag.cpp
+index 223deddb..9bea393a 100644
+--- a/src/checks/automation/automationnodedrag.cpp
++++ b/src/checks/automation/automationnodedrag.cpp
+@@ -43,22 +43,22 @@ EditorAutomationRowId rowId(int adapter)
+                : EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 0, kController};
+ }
+ 
+ void setPoints(SongDocument &document, int adapter, const std::vector<NodePoint> &points)
+ {
+     if (adapter == kTempo) {
+         TempoEdit edit;
+         edit.remove = document.tempoPoints();
+         edit.add.reserve(points.size());
+         for (const NodePoint &point : points) {
+-            edit.add.push_back(
+-                {point.tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
++            edit.add.push_back({Tick(point.tick),
++                                CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
+         }
+         if (edit.remove != edit.add)
+             document.applyTempoEdit(edit);
+         return;
+     }
+ 
+     std::vector<SongDocument::LanePointValue> values;
+     values.reserve(points.size());
+     for (const NodePoint &point : points)
+         values.push_back({point.tick, point.value});
+diff --git a/src/checks/automation/automationparity.cpp b/src/checks/automation/automationparity.cpp
+index 35fd5d1f..69c803bc 100644
+--- a/src/checks/automation/automationparity.cpp
++++ b/src/checks/automation/automationparity.cpp
+@@ -38,22 +38,22 @@ EditorAutomationRowId rowId(int adapter)
+                : EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 0, kController};
+ }
+ 
+ void setPoints(SongDocument &document, int adapter, const std::vector<NodePoint> &points)
+ {
+     if (adapter == kTempo) {
+         TempoEdit edit;
+         edit.remove = document.tempoPoints();
+         edit.add.reserve(points.size());
+         for (const NodePoint &point : points) {
+-            edit.add.push_back(
+-                {point.tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
++            edit.add.push_back({Tick(point.tick),
++                                CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
+         }
+         if (edit.remove != edit.add)
+             document.applyTempoEdit(edit);
+         return;
+     }
+ 
+     std::vector<SongDocument::LanePointValue> values;
+     values.reserve(points.size());
+     for (const NodePoint &point : points)
+         values.push_back({point.tick, point.value});
+diff --git a/src/checks/automation/domain/tst_automationdomain.cpp b/src/checks/automation/domain/tst_automationdomain.cpp
+index 562578be..cdc22629 100644
+--- a/src/checks/automation/domain/tst_automationdomain.cpp
++++ b/src/checks/automation/domain/tst_automationdomain.cpp
+@@ -20,21 +20,21 @@ namespace {
+ 
+ constexpr int kTempo = 0;
+ constexpr int kCc = 1;
+ constexpr int kTrack = 0;
+ constexpr uint8_t kController = 11;
+ constexpr uint32_t kPreservedTempoUs = 499999;
+ constexpr uint32_t kFractionalTempoUs = 398406;
+ 
+ TempoPoint tempoPoint(uint64_t tick, int bpm)
+ {
+-    return {tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(bpm)};
++    return {Tick(tick), CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(bpm)};
+ }
+ 
+ } // namespace
+ 
+ void AutomationDomainTest::init()
+ {
+     m_document = std::make_unique<SongDocument>();
+     SmfFile smf;
+     smf.format = 1;
+     smf.division = 24;
+diff --git a/src/checks/automation/presentation/tst_automationpresentation.cpp b/src/checks/automation/presentation/tst_automationpresentation.cpp
+index a82344ed..8aa01dde 100644
+--- a/src/checks/automation/presentation/tst_automationpresentation.cpp
++++ b/src/checks/automation/presentation/tst_automationpresentation.cpp
+@@ -114,21 +114,21 @@ songview::TimelinePointerInput plotPointerInput(QPointF position, songview::Time
+         .button = Qt::NoButton,
+         .buttons = Qt::NoButton,
+         .modifiers = Qt::NoModifier,
+         .surface = songview::TimelineInputSurface::Plot,
+         .host = &host,
+     };
+ }
+ 
+ SmfEvent programChange(uint64_t tick, uint8_t program)
+ {
+-    return {.tick = tick, .status = 0xC0, .data0 = program};
++    return {.tick = Tick(tick), .status = 0xC0, .data0 = program};
+ }
+ 
+ } // namespace
+ 
+ SmfFile AutomationPresentationTest::presentationSmf()
+ {
+     SmfFile smf;
+     smf.format = 1;
+     smf.division = 24;
+     SmfTrack track;
+diff --git a/src/checks/clipboard/clipmime_test.cpp b/src/checks/clipboard/clipmime_test.cpp
+index 37a808c5..8c95fcc2 100644
+--- a/src/checks/clipboard/clipmime_test.cpp
++++ b/src/checks/clipboard/clipmime_test.cpp
+@@ -36,21 +36,21 @@ Clip rescaleInput(RescaleFamily family)
+     case RescaleFamily::DownWithCoalescing:
+         clip.span = 1;
+         clip.tracks = {{2, {{1, 60, 1, 100}, {3, 61, 0, 80}}}};
+         clip.lanes = {{2, kCcVolume, {{2, 20}, {1, 10}, {3, 30}}}};
+         clip.tempo = {{2, 500000}, {1, 600000}, {3, 700000}};
+         return clip;
+     case RescaleFamily::Saturation:
+         clip.span = UINT64_MAX;
+         clip.tracks = {{0, {{UINT32_MAX, 127, UINT32_MAX, 255}}}};
+         clip.lanes = {{0, kCcModulation, {{UINT32_MAX, std::numeric_limits<int>::min()}}}};
+-        clip.tempo = {{UINT64_MAX, UINT32_MAX}};
++        clip.tempo = {{Tick(UINT64_MAX), UINT32_MAX}};
+         return clip;
+     case RescaleFamily::Identity:
+         clip.tracks = {{7, {{9, 72, 5, 44}}}};
+         clip.lanes = {{7, kCcModulation, {{4, 1}, {4, 2}, {2, 3}}}};
+         clip.tempo = {{4, 500000}, {4, 600000}, {2, 700000}};
+         return clip;
+     }
+     Q_UNREACHABLE();
+ }
+ 
+diff --git a/src/checks/drawerpresentation/fixtures.cpp b/src/checks/drawerpresentation/fixtures.cpp
+index 60df8562..1691c8f2 100644
+--- a/src/checks/drawerpresentation/fixtures.cpp
++++ b/src/checks/drawerpresentation/fixtures.cpp
+@@ -24,21 +24,21 @@
+ #include "ui/songtab.h"
+ #include "ui/songview.h"
+ #include "ui/songview/quick/timelineinputitem.h"
+ #include "ui/songview/quick/timelinequickscene.h"
+ #include "ui/songview/quick/timelinequickview.h"
+ 
+ namespace {
+ 
+ SmfEvent noteEvent(uint8_t status, uint64_t tick, uint8_t key, uint8_t velocity)
+ {
+-    return {.tick = tick, .status = status, .data0 = key, .data1 = velocity};
++    return {.tick = Tick(tick), .status = status, .data0 = key, .data1 = velocity};
+ }
+ 
+ SmfFile voiceSmf()
+ {
+     SmfFile smf;
+     smf.format = 1;
+     smf.division = 24;
+     smf.tracks.resize(3);
+     smf.tracks[0].events.push_back(
+         {.tick = 0, .status = 0xFF, .metaType = 0x51, .blob = QByteArray("\x07\xA1\x20", 3)});
+diff --git a/src/checks/editcheck/tst_songdocument_songtime.cpp b/src/checks/editcheck/tst_songdocument_songtime.cpp
+index 9e4456a0..13b1d948 100644
+--- a/src/checks/editcheck/tst_songdocument_songtime.cpp
++++ b/src/checks/editcheck/tst_songdocument_songtime.cpp
+@@ -69,21 +69,21 @@ void EditCheckTest::songWholeSongRemove()
+     const uint64_t base = songdocument_test::distantBase(document);
+     const uint32_t step = document.ticksPerClock();
+ 
+     // Globals travel too: a signature and a tempo inside the range
+     // survive at the seam, later notes shift, loop markers stay put,
+     // and every chunk's end-of-track closes the gap so the song is
+     // exactly 4 steps shorter.
+     const auto maxEnd = [&document] {
+         uint64_t end = 0;
+         for (const SmfTrack &chunk : document.smf().tracks)
+-            end = std::max(end, chunk.endTick);
++            end = std::max(end, uint64_t(chunk.endTick));
+         return end;
+     };
+     const TempoPoint originalTempo = songdocument_test::tempo(base + step * 63, 150);
+     document.setTimeSig(base + step * 62, 3, 2);
+     document.applyTempoEdit({{}, {originalTempo}});
+     document.addNote(track, base + step * 66, 65, step, 90);
+     const QByteArray bytesBefore = document.smf().write();
+     const uint64_t endBefore = maxEnd();
+     const uint64_t loopStart = document.loopTick(false);
+     const uint64_t loopEnd = document.loopTick(true);
+diff --git a/src/checks/editcheck/tst_songdocument_support.cpp b/src/checks/editcheck/tst_songdocument_support.cpp
+index 38a5bfac..d1d71f73 100644
+--- a/src/checks/editcheck/tst_songdocument_support.cpp
++++ b/src/checks/editcheck/tst_songdocument_support.cpp
+@@ -49,21 +49,21 @@ SmfEvent meta(uint8_t type, uint64_t tick, const QByteArray &blob)
+ SmfTrack conductor()
+ {
+     SmfTrack track;
+     track.events.push_back(meta(0x01, 0, QByteArrayLiteral("contract fixture")));
+     track.endTick = 48;
+     return track;
+ }
+ 
+ TempoPoint tempo(uint64_t tick, uint32_t bpm)
+ {
+-    return {tick, 60'000'000U / bpm};
++    return {Tick(tick), 60'000'000U / bpm};
+ }
+ 
+ bool containsTempo(const SongDocument &document, const TempoPoint &point)
+ {
+     return std::find(document.tempoPoints().begin(), document.tempoPoints().end(), point) !=
+            document.tempoPoints().end();
+ }
+ 
+ bool tracksSorted(const SmfFile &smf)
+ {
+@@ -131,15 +131,15 @@ int firstEditableTrack(const SongDocument &document)
+         if (!document.notesForTrack(track).empty())
+             return track;
+     }
+     return -1;
+ }
+ 
+ uint64_t distantBase(const SongDocument &document)
+ {
+     uint64_t endTick = 0;
+     for (const SmfTrack &track : document.smf().tracks)
+-        endTick = std::max(endTick, track.endTick);
++        endTick = std::max(endTick, uint64_t(track.endTick));
+     return endTick + uint64_t(document.ticksPerClock()) * 100;
+ }
+ 
+ } // namespace songdocument_test
+diff --git a/src/checks/eventviews/edits.cpp b/src/checks/eventviews/edits.cpp
+index a3d53ba5..2fe2e28c 100644
+--- a/src/checks/eventviews/edits.cpp
++++ b/src/checks/eventviews/edits.cpp
+@@ -295,23 +295,23 @@ void EventViewsEditsTest::rawTempoAtomic()
+         std::copy_if(track.events.begin(), track.events.end(), std::back_inserter(events),
+                      [](const SmfEvent &event) { return event.tick == 0 && event.isMeta(); });
+         return events;
+     };
+     const std::vector<SmfEvent> originalTickZeroMeta = tickZeroMeta(document.smf().tracks[0]);
+     QVERIFY(!originalTickZeroMeta.empty());
+     QVERIFY(widgets.model->tempoRowForExactTick(0) >= 0);
+ 
+     uint64_t conversionTick = document.smf().tracks[0].endTick;
+     for (const SmfEvent &event : document.smf().tracks[0].events)
+-        conversionTick = std::max(conversionTick, event.tick);
++        conversionTick = std::max(conversionTick, uint64_t(event.tick));
+     for (const TempoPoint &point : document.tempoPoints())
+-        conversionTick = std::max(conversionTick, point.tick);
++        conversionTick = std::max(conversionTick, uint64_t(point.tick));
+     conversionTick++;
+ 
+     SmfEvent conversionEvent;
+     conversionEvent.tick = conversionTick;
+     conversionEvent.status = 0xff;
+     conversionEvent.metaType = 0x06;
+     conversionEvent.blob = QByteArrayLiteral("eventviews conversion");
+     const int beforeInsertIndex = document.undoStack()->index();
+     document.insertRawEvent(0, conversionEvent);
+     QCoreApplication::processEvents();
+diff --git a/src/checks/onboardcheck/import.cpp b/src/checks/onboardcheck/import.cpp
+index 1844009e..20b0ff64 100644
+--- a/src/checks/onboardcheck/import.cpp
++++ b/src/checks/onboardcheck/import.cpp
+@@ -1,20 +1,21 @@
+ #include "checks/onboardcheck/onboardingtest.h"
+ 
+ #include <QCheckBox>
+ #include <QComboBox>
+ #include <QLabel>
+ #include <QLineEdit>
+ 
+ #include "checks/support/songfixture.h"
+ #include "core/midiimport.h"
+ #include "core/songdocument.h"
++#include "core/timedefaults.h"
+ #include "ui/newsongwizard.h"
+ #include "ui/songsettingsdialog.h"
+ 
+ void OnboardingTest::importAnalysis_data()
+ {
+     QTest::addColumn<int>("budget");
+     QTest::newRow("default") << 16;
+     QTest::newRow("tight") << 1;
+     QTest::newRow("unknown") << -1;
+ }
+@@ -55,21 +56,21 @@ void OnboardingTest::importAnalysis()
+     QVERIFY(modAudible);
+     QVERIFY(reverbInert);
+ }
+ 
+ void OnboardingTest::importRescale()
+ {
+     QString error;
+     SmfFile imported;
+     QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), imported, error),
+              qPrintable(error));
+-    rescaleDivision(&imported, 24);
++    QVERIFY2(rescaleDivision(&imported, 24, &error), qPrintable(error));
+     QCOMPARE(imported.division, 24);
+     QCOMPARE(imported.tracks[1].events[4].tick, uint64_t(28));
+     QCOMPARE(imported.tracks[1].events[11].tick, uint64_t(57));
+     QCOMPARE(imported.tracks[1].endTick, uint64_t(230));
+     QCOMPARE(imported.tracks[2].events[0].tick, uint64_t(0));
+     for (const SmfTrack &track : imported.tracks) {
+         uint64_t previous = 0;
+         for (const SmfEvent &event : track.events) {
+             QVERIFY(event.tick >= previous);
+             previous = event.tick;
+@@ -133,39 +134,110 @@ void OnboardingTest::importDedup()
+         }
+         if (event.typeNibble() == 0x9 && firstNote < 0)
+             firstNote = i;
+     }
+     QVERIFY(program && cc7 && bend);
+     QCOMPARE(labelCount, 2);
+     QCOMPARE(previousLabel, 3);
+     QVERIFY(programIndex >= 0 && firstNote > programIndex);
+ }
+ 
++// In-memory SMF at the 32-bit tick boundary: rescaling to 48 clocks would
++// roughly double every tick past kMaxTick, so the preflight rejects the whole
++// operation and the file is left untouched (division included).
++void OnboardingTest::importRescaleOverflow()
++{
++    QString error;
++    SmfFile smf;
++    smf.format = 1;
++    smf.division = 24;
++    smf.tracks.resize(1);
++    SmfEvent ev;
++    ev.tick = CoreTimeDefaults::kMaxTick;
++    ev.status = 0x90;
++    ev.data0 = 60;
++    ev.data1 = 100;
++    smf.tracks[0].events.push_back(ev);
++    smf.tracks[0].endTick = smf.tracks[0].events.back().tick;
++
++    QVERIFY(!rescaleDivision(&smf, 48, &error));
++    QCOMPARE(smf.division, 24);
++    QCOMPARE(smf.tracks[0].events[0].tick, CoreTimeDefaults::kMaxTick);
++    QVERIFY2(
++        error.contains(QStringLiteral("Tick rescale to division 48 exceeds 32-bit tick range")),
++        qPrintable(error));
++}
++
++// The import wizard must fail closed on that same overflow: no song is
++// handed to the caller, and the error carries the rescale text. Division 12
++// (not a multiple of 24) is what makes the wizard offer the rescale checkbox
++// at all; rescaling 12 -> 48 multiplies ticks by 4, so the boundary SMF
++// overflows exactly as the 24 -> 48 case above.
++void OnboardingTest::importWizardOverflow()
++{
++    QString error;
++    std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
++    QVERIFY2(fixture, qPrintable(error));
++    DecompProject project;
++    QVERIFY2(project.open(fixture->root(), &error), qPrintable(error));
++    SmfFile smf;
++    smf.format = 1;
++    smf.division = 12;
++    smf.tracks.resize(1);
++    SmfEvent ev;
++    ev.tick = CoreTimeDefaults::kMaxTick;
++    ev.status = 0x90;
++    ev.data0 = 60;
++    ev.data1 = 100;
++    smf.tracks[0].events.push_back(ev);
++    smf.tracks[0].endTick = smf.tracks[0].events.back().tick;
++    const QStringList voicegroups = SongRegistry::voicegroupArgs(fixture->root());
++    NewSongWizard wizard(&project, smf, QStringLiteral("overflow.mid"), voicegroups);
++    QCheckBox *rescale = wizard.page(0)->findChild<QCheckBox *>();
++    QVERIFY(rescale && rescale->isChecked());
++    QCheckBox *extended = nullptr;
++    for (QCheckBox *candidate : wizard.findChildren<QCheckBox *>())
++        if (candidate->text().contains(QStringLiteral("48 clocks per beat")))
++            extended = candidate;
++    QVERIFY(extended);
++    extended->setChecked(true);
++    SmfFile out;
++    QVERIFY(!wizard.songFile(&out, &error));
++    QVERIFY(out.tracks.empty());
++    QVERIFY2(
++        error.contains(QStringLiteral("Tick rescale to division 48 exceeds 32-bit tick range")),
++        qPrintable(error));
++}
++
+ void OnboardingTest::importWizard()
+ {
+     QString error;
+     std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
+     QVERIFY2(fixture, qPrintable(error));
+     DecompProject project;
+     QVERIFY2(project.open(fixture->root(), &error), qPrintable(error));
+     SmfFile external;
+     QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), external, error),
+              qPrintable(error));
+     const QStringList voicegroups = SongRegistry::voicegroupArgs(fixture->root());
+     QVERIFY(!voicegroups.isEmpty());
+     NewSongWizard wizard(&project, external, QStringLiteral("ext.mid"), voicegroups);
+     QCheckBox *rescale = wizard.page(0)->findChild<QCheckBox *>();
+     QVERIFY(rescale);
+     QVERIFY(rescale->isChecked());
+-    QCOMPARE(wizard.songFile().division, 24);
++    SmfFile rescaledSmf;
++    QVERIFY2(wizard.songFile(&rescaledSmf, &error), qPrintable(error));
++    QCOMPARE(rescaledSmf.division, 24);
+     rescale->setChecked(false);
+-    QCOMPARE(wizard.songFile().division, 400);
++    SmfFile unrescaledSmf;
++    QVERIFY2(wizard.songFile(&unrescaledSmf, &error), qPrintable(error));
++    QCOMPARE(unrescaledSmf.division, 400);
+     QLineEdit *name = nullptr;
+     for (QLineEdit *edit : wizard.findChildren<QLineEdit *>())
+         if (edit->placeholderText() == QStringLiteral("mus_my_song"))
+             name = edit;
+     QVERIFY(name);
+     name->clear();
+     name->insert(QStringLiteral("MUS_Loud_3"));
+     QCOMPARE(name->text(), QStringLiteral("mus_loud_3"));
+     name->clear();
+     name->insert(QStringLiteral("mus 3!"));
+@@ -191,21 +263,22 @@ void OnboardingTest::importWizard()
+         for (const QLabel *notice : wizard.page(0)->findChildren<QLabel *>())
+             muteWarning = muteWarning || notice->text().contains(QStringLiteral("mute track 2"));
+         QVERIFY(muteWarning);
+         QCOMPARE(wizard.player(), player.name);
+         break;
+     }
+     SmfFile duplicateSetters;
+     QVERIFY2(midiFixture(QStringLiteral("duplicate_setters.mid"), duplicateSetters, error),
+              qPrintable(error));
+     NewSongWizard dedupWizard(&project, duplicateSetters, QStringLiteral("dups.mid"), voicegroups);
+-    const SmfFile cleaned = dedupWizard.songFile();
++    SmfFile cleaned;
++    QVERIFY2(dedupWizard.songFile(&cleaned, &error), qPrintable(error));
+     QCOMPARE(cleaned.tracks.size(), qsizetype{2});
+     int cc7 = 0;
+     int programs = 0;
+     for (const SmfEvent &event : cleaned.tracks[1].events) {
+         cc7 += event.isChannel() && event.typeNibble() == 0xb && event.data0 == 7;
+         programs += event.isChannel() && event.typeNibble() == 0xc;
+     }
+     QCOMPARE(cc7, 3);
+     QCOMPARE(programs, 2);
+     identity->setCurrentIndex(0);
+@@ -214,21 +287,21 @@ void OnboardingTest::importWizard()
+ 
+ void OnboardingTest::importRoundtrip()
+ {
+     QString error;
+     std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
+     QVERIFY2(fixture, qPrintable(error));
+     const QString root = fixture->root();
+     SmfFile imported;
+     QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), imported, error),
+              qPrintable(error));
+-    rescaleDivision(&imported, 24);
++    QVERIFY2(rescaleDivision(&imported, 24, &error), qPrintable(error));
+     SongCfg cfg;
+     QVERIFY2(defaultCfg(root, cfg, error), qPrintable(error));
+     const QString label = QStringLiteral("mus_onboardcheck_import");
+     const QString mid = midiDirectory(root) + QStringLiteral("/") + label + QStringLiteral(".mid");
+     QVERIFY2(imported.writeFile(mid, &error), qPrintable(error));
+     QVERIFY2(SongRegistry::writeMidiCfgLine(midiDirectory(root), label, cfg.rawFlags, &error),
+              qPrintable(error));
+     const QByteArray serialized = readFile(mid, error);
+     QVERIFY2(error.isEmpty(), qPrintable(error));
+     SmfFile reread;
+@@ -270,15 +343,15 @@ void OnboardingTest::compilesThroughMid2agb()
+     SongCfg cfg;
+     QVERIFY2(defaultCfg(root, cfg, error), qPrintable(error));
+     const QString label = QStringLiteral("mus_onboardcheck_compile_") + kind;
+     SmfFile midi;
+     if (kind == QStringLiteral("blank"))
+         midi = SongRegistry::blankSong();
+     else
+         QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), midi, error),
+                  qPrintable(error));
+     if (kind == QStringLiteral("imported"))
+-        rescaleDivision(&midi, 24);
++        QVERIFY2(rescaleDivision(&midi, 24, &error), qPrintable(error));
+     const QString mid = midiDirectory(root) + QStringLiteral("/") + label + QStringLiteral(".mid");
+     QVERIFY2(midi.writeFile(mid, &error), qPrintable(error));
+     QVERIFY2(compile(root, mid, cfg.rawFlags, error), qPrintable(error));
+ }
+diff --git a/src/checks/onboardcheck/onboardingtest.h b/src/checks/onboardcheck/onboardingtest.h
+index c3133b23..9a4bd390 100644
+--- a/src/checks/onboardcheck/onboardingtest.h
++++ b/src/checks/onboardcheck/onboardingtest.h
+@@ -45,22 +45,24 @@ class OnboardingTest final : public QObject
+     void debugLayouts_data();
+     void debugLayouts();
+     void regionedValueLayouts_data();
+     void regionedValueLayouts();
+     void regionedAliasLayouts_data();
+     void regionedAliasLayouts();
+ 
+     void importAnalysis_data();
+     void importAnalysis();
+     void importRescale();
++    void importRescaleOverflow();
+     void importDedup();
+     void importWizard();
++    void importWizardOverflow();
+     void importRoundtrip();
+     void compilesThroughMid2agb_data();
+     void compilesThroughMid2agb();
+ 
+     void songDeletion_data();
+     void songDeletion();
+     void voicegroupDeletion_data();
+     void voicegroupDeletion();
+     void registerAction();
+     void deleteAction_data();
+diff --git a/src/checks/project/save.cpp b/src/checks/project/save.cpp
+index cb4c8700..15b7ad81 100644
+--- a/src/checks/project/save.cpp
++++ b/src/checks/project/save.cpp
+@@ -34,21 +34,21 @@ int firstNonemptyTrack(const SongDocument &document)
+ 
+ struct EditWindow {
+     int track = -1;
+     uint64_t base = 0;
+ };
+ 
+ std::optional<EditWindow> emptyTailWindow(const SongDocument &document, int track)
+ {
+     uint64_t lastEnd = 0;
+     for (const SmfTrack &smfTrack : document.smf().tracks)
+-        lastEnd = std::max(lastEnd, smfTrack.endTick);
++        lastEnd = std::max(lastEnd, uint64_t(smfTrack.endTick));
+     constexpr uint64_t kRequiredTail = 96 + 528;
+     if (lastEnd > std::numeric_limits<uint64_t>::max() - kRequiredTail)
+         return std::nullopt;
+ 
+     const uint64_t base = lastEnd + 96;
+     const uint64_t windowEnd = base + 528;
+     for (const DocNote &note : document.notesForTrack(track))
+         if (note.tick < windowEnd && document.noteEndTick(note) > base)
+             return std::nullopt;
+     return EditWindow{track, base};
+diff --git a/src/checks/rollcheck/identity.cpp b/src/checks/rollcheck/identity.cpp
+index c2d46726..8cde882e 100644
+--- a/src/checks/rollcheck/identity.cpp
++++ b/src/checks/rollcheck/identity.cpp
+@@ -180,21 +180,22 @@ void PianoRollTest::viewStateRoundTrip()
+         std::max(0.0, double(m_fixture->timeline().lengthTicks) * expected.pxPerBeat / tpb + 100.0 -
+                           std::max<qreal>(50, rollInput.width()));
+     expected.scrollPx = std::clamp(perturbed.scrollPx, 0.0, maxHScroll);
+     const double maxRollScroll = std::max(0.0, 128.0 * expected.keyHeight - rollInput.height());
+     expected.scrollY = std::clamp(perturbed.scrollY, 0.0, maxRollScroll);
+     expected.selectedTrack = snapshot.selectedTrack;
+     if (perturbed.selectedTrack >= 0 && perturbed.selectedTrack < 16 &&
+         m_fixture->timeline().tracks[perturbed.selectedTrack].used) {
+         expected.selectedTrack = perturbed.selectedTrack;
+     }
+-    expected.editCursorTick = std::min(perturbed.editCursorTick, m_fixture->timeline().lengthTicks);
++    expected.editCursorTick =
++        std::min(perturbed.editCursorTick, uint64_t(m_fixture->timeline().lengthTicks));
+     expected.gridMinDenom = perturbed.gridMinDenom == 4 || perturbed.gridMinDenom == 8 ||
+                                     perturbed.gridMinDenom == 16 || perturbed.gridMinDenom == 32
+                                 ? perturbed.gridMinDenom
+                                 : 0;
+     view.applyViewState(perturbed);
+     const SongView::ViewState applied = view.viewState();
+     const auto sameViewState = [](const SongView::ViewState &lhs, const SongView::ViewState &rhs) {
+         return lhs.valid == rhs.valid && std::abs(lhs.pxPerBeat - rhs.pxPerBeat) <= 1e-12 &&
+                std::abs(lhs.keyHeight - rhs.keyHeight) <= 1e-12 &&
+                std::abs(lhs.scrollPx - rhs.scrollPx) <= 1e-12 &&
+diff --git a/src/checks/voicegroupsave/savecore.cpp b/src/checks/voicegroupsave/savecore.cpp
+index 3c5a12a9..aad19cd5 100644
+--- a/src/checks/voicegroupsave/savecore.cpp
++++ b/src/checks/voicegroupsave/savecore.cpp
+@@ -27,21 +27,21 @@ namespace {
+ 
+ int adjacentRelease(int value)
+ {
+     return value < 255 ? value + 1 : value - 1;
+ }
+ 
+ uint64_t appendTick(const SongDocument &document)
+ {
+     uint64_t end = 0;
+     for (const SmfTrack &track : document.smf().tracks)
+-        end = std::max(end, track.endTick);
++        end = std::max(end, uint64_t(track.endTick));
+     return end + 96;
+ }
+ 
+ } // namespace
+ 
+ void VoicegroupSaveTest::failedRebindRetainsBinding()
+ {
+     const LoadedVoiceGroup *const retainedLease = m_tab->voicegroupLease().get();
+     const QStringList retainedRow = m_browser->slotRowText(m_dsSlot);
+     const QSize retainedMinimum = m_browser->browserMinimumSizeHint();
+diff --git a/src/checks/workspace/selftest_transport.cpp b/src/checks/workspace/selftest_transport.cpp
+index 35d96712..f2eb3cde 100644
+--- a/src/checks/workspace/selftest_transport.cpp
++++ b/src/checks/workspace/selftest_transport.cpp
+@@ -168,21 +168,21 @@ void WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport()
+     const uint64_t beforeResume = window.m_audio.playheadSamples();
+     window.startPlayback();
+     QTRY_VERIFY(window.m_audio.transport() == Transport::Playing &&
+                 window.m_audio.playheadSamples() > beforeResume);
+ 
+     LoopRestore restoreLoop(window.m_audio);
+     Q_UNUSED(restoreLoop);
+     window.m_audio.setLoopEnabled(false);
+     QVERIFY(startObserved(window, *tab, *view));
+     const uint64_t seekTick =
+-        (std::min)(timeline->lengthTicks / 2, uint64_t(timeline->ticksPerBeat) * 16);
++        (std::min)(uint64_t(timeline->lengthTicks) / 2, uint64_t(timeline->ticksPerBeat) * 16);
+     const uint64_t seekSample = timeline->sampleForTick(seekTick);
+     view->commitEditCursor(seekTick);
+     QTRY_VERIFY(window.m_audio.transport() == Transport::Playing &&
+                 window.m_audio.playheadSamples() >= seekSample);
+     window.stopPlayback();
+     QTRY_COMPARE(window.m_audio.transport(), Transport::Stopped);
+     window.startPlayback();
+     QTRY_VERIFY(window.m_audio.transport() == Transport::Playing &&
+                 window.m_audio.playheadSamples() >=
+                     seekSample + uint64_t(window.m_audio.sampleRate() * 0.25));
+diff --git a/src/checks/workspace/tabs_lifecycle.cpp b/src/checks/workspace/tabs_lifecycle.cpp
+index 1505e67e..36875f5f 100644
+--- a/src/checks/workspace/tabs_lifecycle.cpp
++++ b/src/checks/workspace/tabs_lifecycle.cpp
+@@ -187,21 +187,21 @@ void WorkspaceTabsTest::editUndoIsPerTab()
+     SongTab *first = open(window, m_songA);
+     SongTab *second = open(window, m_songB, true);
+     QVERIFY(first);
+     QVERIFY(second);
+ 
+     workspace->selectSongTab(first);
+     SongDocument &document = first->document();
+     QVERIFY(document.engineTrackCount() > 0);
+     uint64_t end = 0;
+     for (const SmfTrack &track : document.smf().tracks)
+-        end = (std::max)(end, track.endTick);
++        end = (std::max)(end, uint64_t(track.endTick));
+     document.addNote(0, end + 96, 72, 24, 93);
+     QVERIFY(first->document().isDirty());
+     QVERIFY(!second->document().isDirty());
+     auto *tabs = window.findChild<QTabWidget *>();
+     QVERIFY(tabs);
+     QVERIFY(tabs->tabText(tabs->indexOf(first)).endsWith(QLatin1Char('*')));
+     QVERIFY(!tabs->tabText(tabs->indexOf(second)).endsWith(QLatin1Char('*')));
+ 
+     window.m_audio.play();
+     QTRY_COMPARE(window.m_audio.transport(), Transport::Playing);
+@@ -229,21 +229,21 @@ void WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt()
+     QVERIFY(workspace);
+     workspace->requestProjectOpenAt(m_project.root());
+     QVERIFY(workspace_test::waitForProject(*workspace));
+     SongTab *tab = open(window, m_songB);
+     QVERIFY(tab);
+     const SongView::ViewState canonical = tab->view().viewState();
+ 
+     SongDocument &document = tab->document();
+     uint64_t end = 0;
+     for (const SmfTrack &track : document.smf().tracks)
+-        end = (std::max)(end, track.endTick);
++        end = (std::max)(end, uint64_t(track.endTick));
+     document.addNote(0, end + 96, 72, 24, 93);
+     workspace->requestUndo();
+     QVERIFY(!document.isDirty());
+     QVERIFY(document.undoStack()->count() > 0);
+ 
+     const std::shared_ptr<const MidiTimeline> oldTimeline = tab->timeline();
+     SongView::ViewState seeded = canonical;
+     seeded.valid = true;
+     seeded.pxPerBeat = canonical.pxPerBeat * 2.0;
+     seeded.keyHeight = canonical.keyHeight + 9.0;
+@@ -310,21 +310,21 @@ void WorkspaceTabsTest::dirtyCloseUsesProductionGate()
+     QVERIFY(tab->document().engineTrackCount() > 0);
+ 
+     const QString midPath = tab->document().midPath();
+     QFile originalFile(midPath);
+     QVERIFY2(originalFile.open(QIODevice::ReadOnly), qPrintable(originalFile.errorString()));
+     const QByteArray originalBytes = originalFile.readAll();
+     originalFile.close();
+ 
+     uint64_t end = 0;
+     for (const SmfTrack &track : tab->document().smf().tracks)
+-        end = (std::max)(end, track.endTick);
++        end = (std::max)(end, uint64_t(track.endTick));
+     const uint64_t insertedTick = end + 96;
+     tab->document().addNote(0, insertedTick, 72, 24, 93);
+     QVERIFY(tab->document().isDirty());
+     QVERIFY(tab->history().canUndo());
+ 
+     bool handled = false;
+     QString dialogError;
+     QTimer chooser;
+     chooser.setInterval(0);
+     connect(&chooser, &QTimer::timeout, &window, [&] {
+diff --git a/src/core/midiimport.cpp b/src/core/midiimport.cpp
+index e82576ca..05b179d4 100644
+--- a/src/core/midiimport.cpp
++++ b/src/core/midiimport.cpp
+@@ -1,18 +1,19 @@
+ #include "midiimport.h"
+ 
+ #include <QMap>
+ #include <QObject>
+ #include <algorithm>
+ #include <map>
+ 
+ #include "core/m4asemantics.h"
++#include "core/timedefaults.h"
+ #include "core/tracklimits.h"
+ 
+ namespace {
+ 
+ constexpr int kDefaultPcmBudget = 5; // pokeemerald m4aSoundInit maxChans
+ 
+ } // namespace
+ 
+ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget, const QString &playerName)
+ {
+@@ -248,24 +249,38 @@ int removeRedundantSetterEvents(SmfFile *smf)
+         size_t out = 0;
+         for (size_t i = 0; i < evs.size(); i++) {
+             if (!drop[i])
+                 evs[out++] = std::move(evs[i]);
+         }
+         evs.resize(out);
+     }
+     return removed;
+ }
+ 
+-void rescaleDivision(SmfFile *smf, uint16_t newDivision)
++bool rescaleDivision(SmfFile *smf, uint16_t newDivision, QString *error)
+ {
+     if (newDivision == 0 || smf->division == 0 || smf->division == newDivision)
+-        return;
++        return true;
+     // Floor scaling is monotonic, so each track's non-decreasing tick order
+     // (and same-tick event order) survives the rescale.
+     const uint64_t oldDivision = smf->division;
++    // Preflight the largest tick before touching anything: reject, never clamp.
++    uint64_t maxTick = 0;
++    for (const SmfTrack &track : smf->tracks) {
++        for (const SmfEvent &ev : track.events)
++            maxTick = std::max(maxTick, uint64_t(ev.tick));
++        maxTick = std::max(maxTick, uint64_t(track.endTick));
++    }
++    if (maxTick * newDivision / oldDivision > CoreTimeDefaults::kMaxTick) {
++        if (error)
++            *error = QObject::tr("Tick rescale to division %1 exceeds 32-bit tick range")
++                         .arg(newDivision);
++        return false;
++    }
+     for (SmfTrack &track : smf->tracks) {
+         for (SmfEvent &ev : track.events)
+-            ev.tick = ev.tick * newDivision / oldDivision;
+-        track.endTick = track.endTick * newDivision / oldDivision;
++            ev.tick = Tick(uint64_t(ev.tick) * newDivision / oldDivision);
++        track.endTick = Tick(uint64_t(track.endTick) * newDivision / oldDivision);
+     }
+     smf->division = newDivision;
++    return true;
+ }
+diff --git a/src/core/midiimport.h b/src/core/midiimport.h
+index 9b8eb5b8..474fbfa9 100644
+--- a/src/core/midiimport.h
++++ b/src/core/midiimport.h
+@@ -69,21 +69,23 @@ QString concurrencyNoticeText(int peakNotes, int sampleNoteLimit);
+ QString instrumentFallbackNoticeText();
+ 
+ // Rescale every event tick (and each track's end-of-track tick) onto a new
+ // division, using the same floor arithmetic as mid2agb's event conversion
+ // (`24 * clocksPerBeat * time / division`, tools/mid2agb/midi.cpp). With
+ // newDivision equal to the song's clocks per beat (24, or 48 under -X), every
+ // onset lands on the exact tick mid2agb would have played it at, and the
+ // editor grid becomes exact. Note durations may still differ from an as-is
+ // import by one clock, because mid2agb floors onset and duration
+ // independently while a tick rescale floors onset and note-off.
+-void rescaleDivision(SmfFile *smf, uint16_t newDivision);
++// Fails closed: when any rescaled tick would exceed the Tick range the
++// caller gets false with *error set and the file is left untouched.
++bool rescaleDivision(SmfFile *smf, uint16_t newDivision, QString *error);
+ 
+ // Drop same-tick duplicate state-setters, keeping the last of each run in
+ // place. Exporters commonly emit a channel-init block several times over
+ // (duplicate tick-0 program/volume/pan/bend), and since both mid2agb's output
+ // and the engine apply a tick's events in order, only the last of a same-slot
+ // run is ever audible — the rest just shadow it from every editing surface.
+ // Events where every occurrence acts (notes, text/marker metas, and the
+ // coupled-protocol CCs: MEMACC plumbing, XCMD, the loop Label) are never
+ // touched. Returns the number of events removed.
+ int removeRedundantSetterEvents(SmfFile *smf);
+diff --git a/src/core/miditimeline.cpp b/src/core/miditimeline.cpp
+index c997d44a..15e23035 100644
+--- a/src/core/miditimeline.cpp
++++ b/src/core/miditimeline.cpp
+@@ -1,33 +1,34 @@
+ #include "miditimeline.h"
+ 
+ #include <algorithm>
+ 
+ #include "smf.h"
++#include "timedefaults.h"
+ 
+ namespace {
+ 
+ struct RawEvent {
+-    uint64_t tick;
++    Tick tick;
+     uint16_t smfTrack;
+     uint8_t type;
+     uint8_t data0;
+     uint8_t data1;
+     NoteId noteId;
+     int origIndex; // insertion order: stable-sort tiebreaker so setup events
+                    // (program change, CC) stay ahead of note-ons at the same tick
+ };
+ 
+ // Parsed-but-not-played data destined for MidiTimeline::otherEvents; the
+ // engine track is resolved after all tracks are mapped.
+ struct RawOther {
+-    uint64_t tick;
++    Tick tick;
+     uint16_t smfTrack;
+     QString label;
+ };
+ 
+ // True when buf is exactly the single character `marker` after stripping
+ // leading/trailing ASCII whitespace.
+ bool textIsLoopMarker(const char *buf, uint32_t len, char marker)
+ {
+     uint32_t s = 0, e = len;
+     while (s < e && (buf[s] == ' ' || buf[s] == '\t' || buf[s] == '\r' || buf[s] == '\n'))
+@@ -81,27 +82,27 @@ uint64_t quantizedSampleForTick(uint64_t tick, const std::vector<TempoMapPoint>
+     for (const TempoMapPoint &p : tempoMap) {
+         if (p.tick > tick)
+             break;
+         tp = &p;
+     }
+     const double segment = double(tick - tp->tick) * double(tp->microsecondsPerQuarterNote) /
+                            double(tpqn) / 1000000.0 * sampleRate;
+     return uint64_t(tp->samplePos + segment + 0.5);
+ }
+ 
+-TimelineEvent makeTempoEvent(uint64_t samplePos, uint64_t tick, double bpm)
++TimelineEvent makeTempoEvent(uint64_t samplePos, Tick tick, double bpm)
+ {
+     int b = static_cast<int>(bpm + 0.5);
+     b = std::clamp(b, 1, 0x3FFF);
+     TimelineEvent ev;
+     ev.samplePos = samplePos;
+-    ev.tick = static_cast<uint32_t>(tick);
++    ev.tick = tick;
+     ev.type = TIMELINE_EVT_TEMPO;
+     ev.track = 0;
+     ev.data0 = static_cast<uint8_t>(b & 0x7F);
+     ev.data1 = static_cast<uint8_t>((b >> 7) & 0x7F);
+     return ev;
+ }
+ 
+ } // namespace
+ 
+ std::unique_ptr<MidiTimeline> MidiTimeline::load(const QString &path, double sampleRate,
+@@ -137,31 +138,31 @@ std::vector<TempoPoint> extractTempoPoints(const SmfFile &smf)
+ std::unique_ptr<MidiTimeline>
+ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, double sampleRate)
+ {
+     const uint32_t tpqn = smf.division;
+     const int numTracks = int(smf.tracks.size());
+ 
+     std::vector<RawEvent> rawEvents;
+     std::vector<TimeSigPoint> timeSigs;
+     std::vector<RawOther> rawOthers;
+     std::vector<QString> trackNames(numTracks);
+-    uint64_t loopStartTick = UINT64_MAX;
+-    uint64_t loopEndTick = UINT64_MAX;
++    Tick loopStartTick = CoreTimeDefaults::kNoTick;
++    Tick loopEndTick = CoreTimeDefaults::kNoTick;
+ 
+     for (int t = 0; t < numTracks; t++) {
+         // Channel Prefix scoping (SmfChannelPrefix, the shared rule):
+         // format 0's per-track naming mechanism — conversion rewrites
+         // those, but a foreign format-1 file may still carry prefixed
+         // 0x03s, and they are never the chunk's name.
+         SmfChannelPrefix prefix;
+         for (const SmfEvent &sev : smf.tracks[t].events) {
+-            const uint64_t tick = sev.tick;
++            const Tick tick = sev.tick;
+             prefix.observe(sev);
+ 
+             if (sev.isChannel()) {
+                 const uint8_t type = sev.typeNibble();
+                 auto push = [&](uint8_t playType) {
+                     RawEvent ev;
+                     ev.tick = tick;
+                     ev.smfTrack = uint16_t(t);
+                     ev.type = playType;
+                     ev.data0 = sev.data0;
+@@ -213,24 +214,24 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
+                     // A channel-scoped name: not this chunk's. Marker text
+                     // is exempt — mid2agb reads markers regardless of the
+                     // prefix, so it falls through to the marker check.
+                 } else if (metaType == 0x03 && prefix.channel < 0 && trackNames[t].isEmpty()) {
+                     const int len = std::min<int>(blob.size(), 64);
+                     trackNames[t] = QString::fromLatin1(blob.constData(), len).trimmed();
+                 } else if (metaType >= 0x01 && metaType <= 0x07) {
+                     // Text-type meta: check for loop markers ('[' / ']').
+                     const uint32_t len = uint32_t(std::min<int>(blob.size(), 32));
+                     if (textIsLoopMarker(blob.constData(), len, '[') &&
+-                        loopStartTick == UINT64_MAX) {
++                        loopStartTick == CoreTimeDefaults::kNoTick) {
+                         loopStartTick = tick;
+                     } else if (textIsLoopMarker(blob.constData(), len, ']') &&
+-                               loopEndTick == UINT64_MAX) {
++                               loopEndTick == CoreTimeDefaults::kNoTick) {
+                         loopEndTick = tick;
+                     } else {
+                         static const char *const kTextMetaNames[] = {
+                             "Text",  "Copyright", "Track name", "Instrument",
+                             "Lyric", "Marker",    "Cue point"};
+                         const QString text =
+                             QString::fromLatin1(blob.constData(), int(len)).trimmed();
+                         if (!text.isEmpty())
+                             rawOthers.push_back(
+                                 {tick, uint16_t(t),
+@@ -279,21 +280,21 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
+ 
+     std::vector<TimelineEvent> noteEvents;
+     noteEvents.reserve(rawEvents.size());
+     for (const RawEvent &re : rawEvents) {
+         const int engineTrack = smfToEngine[re.smfTrack];
+         if (engineTrack < 0)
+             continue; // beyond 16 usable tracks
+ 
+         TimelineEvent ev;
+         ev.samplePos = quantizedSampleForTick(re.tick, timeline->tempoMap, tpqn, sampleRate);
+-        ev.tick = static_cast<uint32_t>(re.tick);
++        ev.tick = re.tick;
+         ev.type = re.type;
+         ev.track = static_cast<uint8_t>(engineTrack);
+         ev.data0 = re.data0;
+         ev.data1 = re.data1;
+         ev.noteId = re.noteId;
+         noteEvents.push_back(ev);
+ 
+         TimelineTrack &ti = timeline->tracks[engineTrack];
+         if (ev.type == 0x9)
+             ti.noteCount++;
+@@ -313,34 +314,33 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
+     }
+ 
+     // Merge, tempo first at equal positions so it takes effect before notes.
+     std::merge(
+         tempoEvents.begin(), tempoEvents.end(), noteEvents.begin(), noteEvents.end(),
+         std::back_inserter(timeline->events),
+         [](const TimelineEvent &a, const TimelineEvent &b) { return a.samplePos < b.samplePos; });
+ 
+     for (const TimelineEvent &ev : timeline->events) {
+         timeline->lengthSamples = std::max(timeline->lengthSamples, ev.samplePos);
+-        timeline->lengthTicks = std::max(timeline->lengthTicks, uint64_t(ev.tick));
++        timeline->lengthTicks = std::max(timeline->lengthTicks, ev.tick);
+     }
+ 
+     timeline->loopStartTick = loopStartTick;
+     timeline->loopEndTick = loopEndTick;
+-    if (loopStartTick != UINT64_MAX)
++    if (loopStartTick != CoreTimeDefaults::kNoTick)
+         timeline->loopStartSample =
+             quantizedSampleForTick(loopStartTick, timeline->tempoMap, tpqn, sampleRate);
+-    if (loopEndTick != UINT64_MAX)
++    if (loopEndTick != CoreTimeDefaults::kNoTick)
+         timeline->loopEndSample =
+             quantizedSampleForTick(loopEndTick, timeline->tempoMap, tpqn, sampleRate);
+-    if (timeline->loopEndTick != UINT64_MAX)
++    if (timeline->loopEndTick != CoreTimeDefaults::kNoTick)
+         timeline->lengthTicks = std::max(timeline->lengthTicks, timeline->loopEndTick);
+-
+     // stable: the bar grid honors the last same-tick signature in file order.
+     std::stable_sort(timeSigs.begin(), timeSigs.end(),
+                      [](const TimeSigPoint &a, const TimeSigPoint &b) { return a.tick < b.tick; });
+     timeline->timeSigs = std::move(timeSigs);
+ 
+     // Map the not-played events onto engine tracks (metas keep -1 unless their
+     // SMF chunk got an engine slot) and time them for display.
+     // stable: keeps same-tick strip entries in file order for display.
+     std::stable_sort(rawOthers.begin(), rawOthers.end(),
+                      [](const RawOther &a, const RawOther &b) { return a.tick < b.tick; });
+@@ -364,21 +364,21 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
+     return buildTimeline(smf, tempoPoints, sampleRate);
+ }
+ 
+ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf,
+                                                   const std::vector<TempoPoint> &tempoPoints,
+                                                   double sampleRate)
+ {
+     return buildTimeline(smf, tempoPoints, sampleRate);
+ }
+ 
+-uint64_t MidiTimeline::sampleForTick(uint64_t tick) const
++uint64_t MidiTimeline::sampleForTick(Tick tick) const
+ {
+     return quantizedSampleForTick(tick, tempoMap, ticksPerBeat, sampleRate);
+ }
+ 
+ double MidiTimeline::tickForSample(uint64_t samplePos) const
+ {
+     // tempoMap always starts at tick 0. Use unrounded origins for both
+     // segment selection and inversion.
+     const TempoMapPoint *tp = &tempoMap.front();
+     for (const TempoMapPoint &p : tempoMap) {
+diff --git a/src/core/miditimeline.h b/src/core/miditimeline.h
+index 54a7c0af..25c60649 100644
+--- a/src/core/miditimeline.h
++++ b/src/core/miditimeline.h
+@@ -1,31 +1,32 @@
+ #pragma once
+ 
+ #include <QString>
+ #include <cstdint>
+ #include <memory>
+ #include <vector>
+ 
+ #include "noteid.h"
+ #include "tempo.h"
++#include "timedefaults.h"
+ #include "tracklimits.h"
+ 
+ // Event type codes: MIDI status nibbles 0x8 (note off), 0x9 (note on),
+ // 0xB (CC), 0xC (program change), 0xE (pitch bend), plus a synthetic tempo
+ // change. Real channel-voice events use nibbles 0x8..0xE, so 0x1 is free.
+ // A tempo event carries the target BPM as a 14-bit value across data0 (low
+ // 7 bits) and data1 (high 7 bits).
+ constexpr uint8_t TIMELINE_EVT_TEMPO = 0x1;
+ 
+ struct TimelineEvent {
+     uint64_t samplePos;
+-    uint32_t tick; // absolute SMF tick (viewer grid position)
++    Tick tick; // absolute SMF tick (viewer grid position)
+     uint8_t type;
+     uint8_t track; // engine track index (0-15), already mapped from SMF track/channel
+     uint8_t data0;
+     uint8_t data1;
+     NoteId noteId; // transient source note identity; invalid for non-note-ons
+ };
+ 
+ struct TimelineTrack {
+     QString name;      // from SMF track name meta event, if any
+     bool used = false; // its SMF chunk carries channel events (aftertouch counts)
+@@ -39,39 +40,40 @@ struct TimelineTrack {
+ // samplePos is the segment's UNROUNDED sample origin: exact segment lengths
+ // (double(deltaTicks) * microsecondsPerQuarterNote / tpqn / 1000000.0 *
+ // sampleRate, straight from the FF 51 payload) accumulated in double from
+ // tick 0. Every consumer — events, loop endpoints, otherEvents,
+ // sampleForTick — adds its own segment and rounds once
+ // (uint64_t(total + 0.5)); rounding each boundary instead drifts by up to
+ // half a sample per tempo change. bpm is the human-facing value for the UI;
+ // the length math must use microsecondsPerQuarterNote, not a value derived
+ // from bpm.
+ struct TempoMapPoint {
+-    uint64_t tick;
++    Tick tick;
+     double samplePos; // unrounded; see above
+     double bpm;
+     uint32_t microsecondsPerQuarterNote;
+ };
+ 
+ // Time signature change from SMF meta 0x58 (viewer grid data; 4/4 assumed
+ // when absent).
+ struct TimeSigPoint {
+-    uint64_t tick;
++    Tick tick;
+     uint8_t numerator;
+     uint8_t denomPow2; // denominator = 1 << denomPow2
+ };
++static_assert(sizeof(TimeSigPoint) == 8);
+ 
+ // Anything parsed out of the file that playback ignores (aftertouch, channel
+ // pressure, sysex, non-loop text metas, ...). Kept so the viewer can show
+ // every event: nothing in the file is silently invisible.
+ struct OtherEvent {
+-    uint64_t tick;
++    Tick tick;
+     uint64_t samplePos;
+     int track; // engine track (0-15), or -1 for file-level metas
+     QString label;
+ };
+ 
+ // An immutable, sample-positioned event timeline parsed from a Standard MIDI
+ // File. Sample positions are computed against a fixed sample rate using the
+ // file's tempo map (following poryaaaa_render's approach). Once built, the
+ // timeline is read-only and safe to hand to the audio thread.
+ //
+@@ -108,30 +110,30 @@ class MidiTimeline
+     // (see TimelinePlayer). Set by the owner right after build(); the default
+     // matches mid2agb's default 24 clocks/beat.
+     bool extendedClocks = false;
+     uint64_t lengthSamples = 0; // sample position of the last event
+     uint64_t loopStartSample = UINT64_MAX;
+     uint64_t loopEndSample = UINT64_MAX;
+     int droppedTracks = 0; // SMF tracks beyond the 16 engine tracks
+ 
+     // Viewer data (never touched by the audio thread).
+     uint32_t ticksPerBeat = 24;
+-    uint64_t lengthTicks = 0;
+-    uint64_t loopStartTick = UINT64_MAX;
+-    uint64_t loopEndTick = UINT64_MAX;
++    Tick lengthTicks = 0;
++    Tick loopStartTick = CoreTimeDefaults::kNoTick;
++    Tick loopEndTick = CoreTimeDefaults::kNoTick;
+     std::vector<TempoMapPoint> tempoMap; // sorted by tick, first entry at tick 0
+     std::vector<TimeSigPoint> timeSigs;  // sorted by tick, may be empty
+     std::vector<OtherEvent> otherEvents; // sorted by tick
+ 
+     bool hasLoop() const
+     {
+         return loopStartSample != UINT64_MAX && loopEndSample != UINT64_MAX &&
+                loopEndSample > loopStartSample;
+     }
+ 
+     // Tick <-> sample conversion through the canonical tempo map
+     // (viewer/UI thread). sampleForTick rounds once after the segment's
+     // unrounded origin plus its exact length; tickForSample is the inverse
+     // in fractional ticks against the same unrounded origins.
+-    uint64_t sampleForTick(uint64_t tick) const;
++    uint64_t sampleForTick(Tick tick) const;
+     double tickForSample(uint64_t samplePos) const;
+ };
+diff --git a/src/core/smf.cpp b/src/core/smf.cpp
+index 085ed95f..8d2c7a22 100644
+--- a/src/core/smf.cpp
++++ b/src/core/smf.cpp
+@@ -1,17 +1,19 @@
+ #include "smf.h"
+ 
+ #include <QFile>
+ #include <algorithm>
+ #include <array>
+ #include <cstring>
+ 
++#include "timedefaults.h"
++
+ namespace {
+ 
+ struct Reader {
+     const uint8_t *data;
+     size_t size;
+     size_t pos = 0;
+ 
+     bool readByte(uint8_t *out)
+     {
+         if (pos >= size)
+@@ -78,21 +80,21 @@ bool parseTrack(Reader &r, size_t end, int trackIndex, SmfTrack *track, QString
+ {
+     uint64_t tick = 0;
+     uint8_t runningStatus = 0;
+     bool sawEot = false;
+ 
+     while (r.pos < end) {
+         uint32_t delta;
+         if (!r.readVlq(&delta))
+             return fail(error, QStringLiteral("Track %1: truncated delta time").arg(trackIndex));
+         tick += delta;
+-        if (tick >= UINT32_MAX)
++        if (tick >= CoreTimeDefaults::kNoTick)
+             return fail(error, QStringLiteral("Track %1: tick position exceeds 32-bit tick range")
+                                    .arg(trackIndex));
+ 
+         uint8_t b;
+         if (!r.readByte(&b))
+             return fail(error, QStringLiteral("Track %1: truncated event").arg(trackIndex));
+ 
+         if (b == 0xFF) {
+             runningStatus = 0;
+             uint8_t metaType;
+@@ -269,21 +271,21 @@ QByteArray SmfFile::write() const
+ {
+     QByteArray out;
+     out.append("MThd");
+     writeU32(out, 6);
+     writeU16(out, format);
+     writeU16(out, uint16_t(tracks.size()));
+     writeU16(out, division);
+ 
+     for (const SmfTrack &track : tracks) {
+         QByteArray body;
+-        uint64_t tick = 0;
++        Tick tick = 0;
+         uint8_t runningStatus = 0;
+         for (const SmfEvent &ev : track.events) {
+             writeVlq(body, uint32_t(ev.tick - tick));
+             tick = ev.tick;
+             if (ev.isMeta()) {
+                 body.append(char(0xFF));
+                 body.append(char(ev.metaType));
+                 writeVlq(body, uint32_t(ev.blob.size()));
+                 body.append(ev.blob);
+                 runningStatus = 0;
+@@ -349,21 +351,21 @@ void convertToFormat1(SmfFile *smf)
+ {
+     if (smf->format != 0)
+         return;
+     smf->format = 1;
+     smf->wasFormat0 = true;
+     if (smf->tracks.empty())
+         return;
+ 
+     SmfTrack conductor;
+     std::array<SmfTrack, 16> channels;
+-    uint64_t endTick = 0;
++    Tick endTick = 0;
+ 
+     // A format-0 file has one chunk; out-of-spec extras get the same
+     // treatment, merged into the shared buckets.
+     for (const SmfTrack &track : smf->tracks) {
+         endTick = std::max(endTick, track.endTick);
+         SmfChannelPrefix prefix; // the readers' exact scoping rule
+         for (const SmfEvent &ev : track.events) {
+             prefix.observe(ev);
+             if (ev.isChannel()) {
+                 channels[ev.channel()].events.push_back(ev);
+diff --git a/src/core/smf.h b/src/core/smf.h
+index 97d452b0..27c69ba2 100644
+--- a/src/core/smf.h
++++ b/src/core/smf.h
+@@ -1,34 +1,35 @@
+ #pragma once
+ 
+ #include <QByteArray>
+ #include <QString>
+ #include <array>
+ #include <cstdint>
+ #include <vector>
+ 
+ #include "noteid.h"
++#include "timedefaults.h"
+ #include "tracklimits.h"
+ 
+ // Full-fidelity Standard MIDI File model. Unlike MidiTimeline (a lossy,
+ // playback-oriented view), this preserves every event and its in-file order
+ // so that a load -> save with no edits is semantically identical through
+ // mid2agb (SPEC.md §8 M2). It is the storage layer under SongDocument.
+ 
+ // One event in an MTrk chunk at an absolute tick. Channel-voice events keep
+ // their original status byte — a note-on with velocity 0 is NOT rewritten as
+ // a note-off — and meta/sysex events keep their full payload bytes.
+ // End-of-track metas are not stored as events; SmfTrack::endTick carries
+ // their position (mid2agb uses the EOT tick when merging tracks, so it must
+ // survive a round-trip).
+ struct SmfEvent {
+-    uint64_t tick = 0;
++    Tick tick = 0;
+     uint8_t status = 0;   // 0x80-0xEF channel voice; 0xF0/0xF7 sysex; 0xFF meta
+     uint8_t metaType = 0; // valid when status == 0xFF
+     uint8_t data0 = 0;    // channel-voice data bytes
+     uint8_t data1 = 0;
+     QByteArray blob; // meta/sysex payload
+     NoteId noteId;   // transient document identity; not serialized as MIDI data
+ 
+     bool isMeta() const { return status == 0xFF; }
+     bool isSysEx() const { return status == 0xF0 || status == 0xF7; }
+     bool isChannel() const { return status >= 0x80 && status < 0xF0; }
+@@ -46,21 +47,21 @@ inline bool isTempoMeta(const SmfEvent &event)
+ }
+ 
+ inline bool operator==(const SmfEvent &a, const SmfEvent &b)
+ {
+     return a.tick == b.tick && a.status == b.status && a.metaType == b.metaType &&
+            a.data0 == b.data0 && a.data1 == b.data1 && a.blob == b.blob;
+ }
+ 
+ struct SmfTrack {
+     std::vector<SmfEvent> events; // non-decreasing ticks, original in-file order
+-    uint64_t endTick = 0;         // tick of the End-of-track meta
++    Tick endTick = 0;
+ };
+ 
+ // The marker vocabulary mid2agb reads from ANY text meta (0x01-0x07) in the
+ // seq chunk — loop start/end and the segment separators — Channel Prefix
+ // notwithstanding. porydaw carves out one exception mid2agb doesn't: a
+ // chunk's first unprefixed 0x03 is its NAME even with marker text (imported
+ // files can carry such names; renameTrack refuses creating them). A
+ // PREFIXED 0x03 with marker text has no name position at all, so every
+ // reader classifies it as a marker, agreeing with mid2agb.
+ bool smfTextIsMarker(const QString &text);
+diff --git a/src/core/songdocument_timeeditor.cpp b/src/core/songdocument_timeeditor.cpp
+index 31731fe3..c903285a 100644
+--- a/src/core/songdocument_timeeditor.cpp
++++ b/src/core/songdocument_timeeditor.cpp
+@@ -22,37 +22,37 @@ std::vector<TempoPoint> removeTempoPoints(const std::vector<TempoPoint> &src,
+         if (src[size_t(i)].tick >= s && src[size_t(i)].tick < e)
+             winner = i;
+     }
+     std::vector<TempoPoint> out;
+     out.reserve(src.size());
+     for (int i = 0; i < int(src.size()); i++) {
+         const TempoPoint &point = src[size_t(i)];
+         if (point.tick < s)
+             out.push_back(point);
+         else if (point.tick >= e)
+-            out.push_back({point.tick - span, point.microsecondsPerQuarterNote});
++            out.push_back({Tick(point.tick - span), point.microsecondsPerQuarterNote});
+         else if (i == winner && !seamCovered)
+-            out.push_back({s, point.microsecondsPerQuarterNote});
++            out.push_back({Tick(s), point.microsecondsPerQuarterNote});
+     }
+     return out;
+ }
+ 
+ std::vector<TempoPoint> insertBlankTempoPoints(const std::vector<TempoPoint> &src,
+                                                const SongDocument::TimeRange &range)
+ {
+     const uint64_t s = range.startTick;
+     const uint64_t span = range.span();
+     std::vector<TempoPoint> out;
+     out.reserve(src.size());
+     for (const TempoPoint &point : src) {
+         if (point.tick >= s)
+-            out.push_back({point.tick + span, point.microsecondsPerQuarterNote});
++            out.push_back({Tick(point.tick + span), point.microsecondsPerQuarterNote});
+         else
+             out.push_back(point);
+     }
+     return out;
+ }
+ 
+ std::vector<TempoPoint> duplicateTempoPoints(const std::vector<TempoPoint> &src,
+                                              const SongDocument::TimeRange &range)
+ {
+     const uint64_t s = range.startTick;
+@@ -63,31 +63,31 @@ std::vector<TempoPoint> duplicateTempoPoints(const std::vector<TempoPoint> &src,
+     for (const TempoPoint &point : src) {
+         if (point.tick <= s)
+             atStart = &point;
+         else if (point.tick < e && firstInside == nullptr)
+             firstInside = &point;
+     }
+     std::vector<TempoPoint> out;
+     out.reserve(src.size() + 2);
+     for (const TempoPoint &point : src) {
+         if (point.tick >= e)
+-            out.push_back({point.tick + span, point.microsecondsPerQuarterNote});
++            out.push_back({Tick(point.tick + span), point.microsecondsPerQuarterNote});
+         else
+             out.push_back(point);
+     }
+     if (atStart)
+-        out.push_back({e, atStart->microsecondsPerQuarterNote});
++        out.push_back({Tick(e), atStart->microsecondsPerQuarterNote});
+     else if (firstInside)
+-        out.push_back({e, CoreTimeDefaults::kDefaultTempoUspqn});
++        out.push_back({Tick(e), CoreTimeDefaults::kDefaultTempoUspqn});
+     for (const TempoPoint &point : src) {
+         if (point.tick > s && point.tick < e)
+-            out.push_back({e + (point.tick - s), point.microsecondsPerQuarterNote});
++            out.push_back({Tick(e + (point.tick - s)), point.microsecondsPerQuarterNote});
+     }
+     return out;
+ }
+ 
+ } // namespace time_edit_detail
+ 
+ SongDocument::TimeEditor::TimeEditor(SongDocument &document, const TimeRange &range,
+                                      const TimeScope &scope)
+     : m_document(document)
+     , m_range(range)
+@@ -326,21 +326,21 @@ std::vector<SongDocument::EditOp> SongDocument::TimeEditor::timeEditShiftRightTr
+ {
+     std::vector<SongDocument::EditOp> trackEnds;
+     const uint64_t span = m_range.span();
+     for (size_t t = 0; t < m_document.m_smf.tracks.size(); t++) {
+         const uint64_t end = m_document.m_smf.tracks[t].endTick;
+         uint64_t newEnd = end;
+         if (affectedTracks[t] && end >= threshold)
+             newEnd = end + span;
+         for (const SongDocument::EditOp &insert : inserts) {
+             if (insert.smfTrack == int(t))
+-                newEnd = std::max(newEnd, insert.event.tick);
++                newEnd = std::max(newEnd, uint64_t(insert.event.tick));
+         }
+         if (newEnd == end)
+             continue;
+         SongDocument::EditOp op;
+         op.type = SongDocument::EditOp::SetTrackEnd;
+         op.smfTrack = int(t);
+         op.event.tick = newEnd;
+         trackEnds.push_back(op);
+     }
+     return trackEnds;
+diff --git a/src/core/tempo.h b/src/core/tempo.h
+index 1cf76811..076ffe43 100644
+--- a/src/core/tempo.h
++++ b/src/core/tempo.h
+@@ -1,15 +1,16 @@
+ #pragma once
+-
++#include "timedefaults.h"
+ #include <cstdint>
+ 
+ // A global MIDI tempo change. The value is the exact SMF FF 51 payload rather
+ // than a derived BPM, so the document can preserve MIDI tempo precision.
+ struct TempoPoint {
+-    uint64_t tick = 0;
++    Tick tick = 0;
+     uint32_t microsecondsPerQuarterNote = 0;
+ };
++static_assert(sizeof(TempoPoint) == 8);
+ 
+ inline bool operator==(const TempoPoint &a, const TempoPoint &b)
+ {
+     return a.tick == b.tick && a.microsecondsPerQuarterNote == b.microsecondsPerQuarterNote;
+ }
+diff --git a/src/core/timedefaults.h b/src/core/timedefaults.h
+index 1c20d618..1b3963d4 100644
+--- a/src/core/timedefaults.h
++++ b/src/core/timedefaults.h
+@@ -1,17 +1,26 @@
+ #pragma once
+ 
+ #include <algorithm>
+ #include <cstdint>
++#include <limits>
+ #include <optional>
+ 
++// Canonical musical position. A position is always a Tick — content streams
++// (DocNote, TempoPoint, timeline events), SMF storage, and viewer fields all
++// share it. Not a strong type: ticks mix with uint32_t durations, int64_t
++// deltas, and start + duration sums that can exceed the Tick range.
++using Tick = uint32_t;
++
+ namespace CoreTimeDefaults {
++inline constexpr Tick kNoTick = std::numeric_limits<Tick>::max(); // absent loop; parse bound
++inline constexpr Tick kMaxTick = Tick(kNoTick - 1);               // highest representable tick
+ 
+ inline constexpr int kTempoBpm = 120;
+ inline constexpr int kMinTempoBpm = 20;
+ inline constexpr int kMaxTempoBpm = 255;
+ inline constexpr uint32_t kMicrosecondsPerMinute = 60'000'000;
+ inline constexpr uint32_t kDefaultTempoUspqn = 500000;
+ 
+ struct ControllerDefault {
+     uint8_t cc;
+     uint8_t value;
+diff --git a/src/ui/editordrawer/nodelane/batchcommit.cpp b/src/ui/editordrawer/nodelane/batchcommit.cpp
+index 5a8c5bde..6bac95fd 100644
+--- a/src/ui/editordrawer/nodelane/batchcommit.cpp
++++ b/src/ui/editordrawer/nodelane/batchcommit.cpp
+@@ -31,21 +31,21 @@ const TempoPoint *tempoAtTick(const std::vector<TempoPoint> &points, uint64_t ti
+     for (const TempoPoint &point : points) {
+         if (point.tick == tick)
+             return &point;
+     }
+     return nullptr;
+ }
+ 
+ TempoPoint tempoDestination(const TempoPoint &source, const NodePoint &to)
+ {
+     const int currentBpm = qRound(CoreTimeDefaults::tempoBpm(source.microsecondsPerQuarterNote));
+-    TempoPoint destination{to.tick, source.microsecondsPerQuarterNote};
++    TempoPoint destination{Tick(to.tick), source.microsecondsPerQuarterNote};
+     if (to.value != currentBpm)
+         destination.microsecondsPerQuarterNote =
+             CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(to.value);
+     return destination;
+ }
+ 
+ } // namespace
+ 
+ std::optional<TempoEdit> resolveTempoMoves(const SongDocument &document,
+                                            const std::vector<NodePointMove> &moves)
+@@ -97,36 +97,36 @@ std::optional<CcResolvedMoves> resolveCcMoves(const SongDocument &document, int
+     std::vector<std::optional<size_t>> rawIdByPoint;
+     rawIdByPoint.reserve(raw.size() + 1);
+     std::map<uint64_t, std::vector<size_t>> idsByTick;
+     if (const auto synthetic = CoreTimeDefaults::syntheticTickZero(controller, raw)) {
+         idsByTick[0].push_back(existing.size());
+         existing.push_back({0, *synthetic});
+         rawIdByPoint.push_back(std::nullopt);
+     }
+     for (size_t rawId = 0; rawId < raw.size(); ++rawId) {
+         idsByTick[raw[rawId].tick].push_back(existing.size());
+-        existing.push_back({raw[rawId].tick, raw[rawId].value});
++        existing.push_back({Tick(raw[rawId].tick), raw[rawId].value});
+         rawIdByPoint.push_back(rawId);
+     }
+     for (const NodePointMove &move : moves) {
+         const auto found = idsByTick.find(move.fromTick);
+         if (found == idsByTick.end() || found->second.empty())
+             return std::nullopt;
+     }
+     std::vector<LaneMoveRequest> requests;
+     for (const NodePointMove &move : moves) {
+         const auto &group = idsByTick[move.fromTick];
+         const int newValue = CoreTimeDefaults::clampLaneValue(controller, move.to.value);
+         for (size_t index = 0; index < group.size(); ++index) {
+             const size_t id = group[index];
+             const int value = index + 1 == group.size() ? newValue : existing[id].value;
+-            requests.push_back({id, move.to.tick, value});
++            requests.push_back({id, Tick(move.to.tick), value});
+         }
+     }
+     const auto plan = planLaneMoves(existing, requests);
+     if (!plan)
+         return std::nullopt;
+     std::set<size_t> removed;
+     const auto removeId = [&](size_t id) {
+         if (!removed.insert(id).second || !rawIdByPoint[id])
+             return;
+         resolved.removePoints.push_back(raw[*rawIdByPoint[id]]);
+diff --git a/src/ui/editordrawer/nodelane/tempoadapter.cpp b/src/ui/editordrawer/nodelane/tempoadapter.cpp
+index 26f1ed79..012239eb 100644
+--- a/src/ui/editordrawer/nodelane/tempoadapter.cpp
++++ b/src/ui/editordrawer/nodelane/tempoadapter.cpp
+@@ -57,13 +57,13 @@ void TempoLane::replaceSpan(uint64_t first, uint64_t last, const std::vector<Nod
+         return;
+     const auto &tempoPoints = document->tempoPoints();
+     TempoEdit edit;
+     for (const TempoPoint &point : tempoPoints) {
+         if (point.tick >= first && point.tick <= last)
+             edit.remove.push_back(point);
+     }
+     edit.add.reserve(points.size());
+     for (const NodePoint &point : points)
+         edit.add.push_back(
+-            {point.tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
++            {Tick(point.tick), CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
+     document->applyTempoEdit(edit);
+ }
+diff --git a/src/ui/eventtablemodeledit.cpp b/src/ui/eventtablemodeledit.cpp
+index 738b29f2..cf17d988 100644
+--- a/src/ui/eventtablemodeledit.cpp
++++ b/src/ui/eventtablemodeledit.cpp
+@@ -10,21 +10,21 @@
+ #include "core/songdocument.h"
+ #include "eventtabletypes.h"
+ #include "ui/songview.h"
+ 
+ namespace eventlist {
+ 
+ namespace {
+ 
+ TempoPoint tempoPointForBpm(uint64_t tick, int bpm)
+ {
+-    return {tick, uint32_t(std::lround(60000000.0 / bpm))};
++    return {Tick(tick), uint32_t(std::lround(60000000.0 / bpm))};
+ }
+ 
+ } // namespace
+ struct EventTableModel::PendingRawEdit {
+     QPointer<SongDocument> document;
+     int chunk = -1;
+     size_t index = 0;
+     SmfEvent projected;
+     SmfEvent applied;
+     uint64_t revision = 0;
+@@ -52,21 +52,21 @@ void EventTableModel::queueTempoEdit(const TempoEdit &edit, uint64_t selectTick)
+             doc->applyTempoEdit(edit);
+             if (select)
+                 select(chunk, selectTick);
+         },
+         Qt::QueuedConnection);
+ }
+ 
+ bool EventTableModel::handleTempoTick(const TempoPoint &point, const QVariant &value)
+ {
+     const auto tick = uint64_t(value.toULongLong());
+-    queueTempoEdit({{point}, {{tick, point.microsecondsPerQuarterNote}}}, tick);
++    queueTempoEdit({{point}, {{Tick(tick), point.microsecondsPerQuarterNote}}}, tick);
+     return true;
+ }
+ 
+ bool EventTableModel::handleTempoTypeChange(const TempoPoint &point, const QVariant &value)
+ {
+     const auto kind = value.toInt();
+     if (kind == TypeTempo)
+         return true;
+     if (kind < 0 || kind >= TypeKindCount)
+         return false;
+diff --git a/src/ui/newsongwizard.cpp b/src/ui/newsongwizard.cpp
+index a391d09b..379a3623 100644
+--- a/src/ui/newsongwizard.cpp
++++ b/src/ui/newsongwizard.cpp
+@@ -593,23 +593,28 @@ QString NewSongWizard::player() const
+ SongCfg NewSongWizard::cfg() const
+ {
+     return m_sound->cfg();
+ }
+ 
+ QString NewSongWizard::newVoicegroupName() const
+ {
+     return m_sound->newVoicegroupSelected() ? m_identity->label() : QString();
+ }
+ 
+-SmfFile NewSongWizard::songFile() const
++bool NewSongWizard::songFile(SmfFile *out, QString *error) const
+ {
+-    if (!m_importMode)
+-        return SongRegistry::blankSong();
++    if (!m_importMode) {
++        *out = SongRegistry::blankSong();
++        return true;
++    }
+     SmfFile smf = m_imported;
+     // Before the rescale, so only duplicates present in the source collapse —
+     // tick collisions the floor rescale itself creates were distinct points
+     // the author drew, and they play the same either way.
+     removeRedundantSetterEvents(&smf);
+-    if (m_analysisPage->rescaleSelected())
+-        rescaleDivision(&smf, m_sound->cfg().extendedClocks ? 48 : 24);
+-    return smf;
++    if (m_analysisPage->rescaleSelected() &&
++        !rescaleDivision(&smf, m_sound->cfg().extendedClocks ? 48 : 24, error)) {
++        return false; // caller keeps the source division instead of a half-rescaled file
++    }
++    *out = std::move(smf);
++    return true;
+ }
+diff --git a/src/ui/newsongwizard.h b/src/ui/newsongwizard.h
+index 4a08fc0d..c27328d6 100644
+--- a/src/ui/newsongwizard.h
++++ b/src/ui/newsongwizard.h
+@@ -44,23 +44,24 @@ class NewSongWizard : public QWizard
+     // already-cached values. They do not read the project root.
+     NewSongWizard(DecompProject *project, const QStringList &voicegroupArgs,
+                   QWidget *parent = nullptr);
+     NewSongWizard(DecompProject *project, SmfFile imported, const QString &sourcePath,
+                   const QStringList &voicegroupArgs, QWidget *parent = nullptr);
+ 
+     QString label() const;
+     QString constant() const;
+     QString player() const;
+     SongCfg cfg() const;
+-    // The song to write: the blank template, or the import with the
+-    // optional division rescale applied.
+-    SmfFile songFile() const;
++    // The song to write: the blank template, or the import with the optional
++    // division rescale applied. On failure *out is untouched and *error (when
++    // non-null) carries the reason; the song that would be created is not.
++    bool songFile(SmfFile *out, QString *error) const;
+     // Non-empty when the user chose "(create a new voicegroup for this song)"
+     // on the Sound page: the voicegroup to create (named after the song; cfg()
+     // already carries its -G arg). Empty for an existing voicegroup.
+     QString newVoicegroupName() const;
+ 
+   private:
+     void buildPages(const QString &sourcePath);
+ 
+     ProjectData m_projectData;
+     bool m_importMode = false;
+diff --git a/src/ui/songview/clipmime.cpp b/src/ui/songview/clipmime.cpp
+index 2b7f679a..5cb45ed5 100644
+--- a/src/ui/songview/clipmime.cpp
++++ b/src/ui/songview/clipmime.cpp
+@@ -163,21 +163,21 @@ std::optional<TempoPoint> decodeTempo(const QJsonValue &value)
+     if (!value.isObject())
+         return std::nullopt;
+     const auto object = value.toObject();
+     if (!hasKeys(object, {QStringLiteral("relTick"), QStringLiteral("microsecondsPerQuarterNote")}))
+         return std::nullopt;
+     uint64_t relTick = 0;
+     uint64_t microseconds = 0;
+     if (!requireUint(object, "relTick", UINT64_MAX, relTick) ||
+         !requireUint(object, "microsecondsPerQuarterNote", UINT32_MAX, microseconds))
+         return std::nullopt;
+-    return TempoPoint{relTick, uint32_t(microseconds)};
++    return TempoPoint{Tick(relTick), uint32_t(microseconds)};
+ }
+ 
+ uint64_t scaleTick(uint64_t tick, uint32_t sourceTicksPerBeat, uint32_t destinationTicksPerBeat,
+                    uint64_t maximum)
+ {
+     const auto quotient = tick / sourceTicksPerBeat;
+     const auto remainder = tick % sourceTicksPerBeat;
+     if (quotient > maximum / destinationTicksPerBeat)
+         return maximum;
+     const auto whole = quotient * destinationTicksPerBeat;
+diff --git a/src/ui/songview/quick/eventlistcontroller.cpp b/src/ui/songview/quick/eventlistcontroller.cpp
+index 995b060c..46564ff8 100644
+--- a/src/ui/songview/quick/eventlistcontroller.cpp
++++ b/src/ui/songview/quick/eventlistcontroller.cpp
+@@ -603,21 +603,22 @@ void EventListController::filterToggled(int bit)
+     updatePlayRow();
+ }
+ 
+ void EventListController::addEvent()
+ {
+     const int currentChunk = m_currentChunk;
+     if (!hasChunk(m_document, currentChunk) || !m_songView)
+         return;
+     if (currentChunk == 0) {
+         if (const auto tempo = m_model->tempoPointForRow(m_currentRow)) {
+-            const TempoPoint copy{m_songView->editCursorTick(), tempo->microsecondsPerQuarterNote};
++            const TempoPoint copy{Tick(m_songView->editCursorTick()),
++                                  tempo->microsecondsPerQuarterNote};
+             m_document->applyTempoEdit({{}, {copy}});
+             selectRowAtTick(currentChunk, copy.tick);
+             return;
+         }
+     }
+     const auto &events = m_document->smf().tracks[currentChunk].events;
+     SmfEvent event;
+     const auto source = m_model->rawEventIndexForRow(m_currentRow);
+     if (source && *source < events.size()) {
+         event = events[*source];
+diff --git a/src/ui/songview/rangeedit.cpp b/src/ui/songview/rangeedit.cpp
+index eb5c7491..8d68a8a6 100644
+--- a/src/ui/songview/rangeedit.cpp
++++ b/src/ui/songview/rangeedit.cpp
+@@ -454,21 +454,22 @@ void SongView::copyTimeSelection()
+     for (const TimeRangeContents::TrackLane &lane : contents.lanes) {
+         ClipLane clipLane{lane.track, lane.cc, {}};
+         for (const DocLanePoint &pt : lane.points)
+             clipLane.points.push_back({uint32_t(pt.tick - range.startTick), pt.value});
+         pointCount += int(clipLane.points.size());
+         // Empty segments remain part of the copied shape. Merge paste treats
+         // them as no-ops, so they never silence destination points.
+         clip.lanes.push_back(std::move(clipLane));
+     }
+     for (const TempoPoint &point : contents.tempo) {
+-        clip.tempo.push_back({point.tick - range.startTick, point.microsecondsPerQuarterNote});
++        clip.tempo.push_back(
++            {Tick(point.tick - range.startTick), point.microsecondsPerQuarterNote});
+         ++pointCount;
+     }
+     writeClipboard(clip, m_timeline->ticksPerBeat);
+     announce(tr("Copied range: %1 note(s), %2 automation point(s)").arg(noteCount).arg(pointCount));
+ }
+ void SongView::deleteTimeSelection()
+ {
+     const auto &selection = m_selectionModel.timeSelection();
+     if (!m_document || !selection.active())
+         return;
+@@ -709,21 +710,21 @@ void SongView::pasteRangeAtEditCursor(const Clip &clip)
+             std::max(edit.minimumEngineTrackCount, *destinationTrack + 1);
+         SongDocument::RangeEdit::LaneWrite write{*destinationTrack, lane.cc, {}};
+         for (const auto &[relativeTick, value] : lane.points)
+             write.points.push_back({s + relativeTick, value});
+         appendExactTickRemovals(m_document->lanePoints(*destinationTrack, lane.cc), write.points,
+                                 edit.removePoints);
+         edit.addPoints.push_back(std::move(write));
+     }
+     if (!clip.tempo.empty()) {
+         for (const auto &point : clip.tempo)
+-            edit.addTempo.push_back({s + point.tick, point.microsecondsPerQuarterNote});
++            edit.addTempo.push_back({Tick(s + point.tick), point.microsecondsPerQuarterNote});
+         appendExactTickRemovals(m_document->tempoPoints(), edit.addTempo, edit.removeTempo);
+     }
+     if (edit.empty()) {
+         announce(tr("Nothing useful to paste"));
+         return;
+     }
+     m_document->applyRangeEdit(tr("paste range"), edit);
+ 
+     // Set up for tiling: advance to the clip's end while keeping the newly
+     // merged content, rather than the advanced cursor, in view.
+diff --git a/src/ui/workspaceui_samples.cpp b/src/ui/workspaceui_samples.cpp
+index 0be1fd58..b3444ab4 100644
+--- a/src/ui/workspaceui_samples.cpp
++++ b/src/ui/workspaceui_samples.cpp
+@@ -67,22 +67,28 @@ void WorkspaceUi::runMidiImport()
+     NewSongWizard wizard(data, std::move(smf), path, &m_host);
+     if (wizard.exec() != QDialog::Accepted)
+         return;
+     submitCreateSong(wizard);
+ }
+ 
+ void WorkspaceUi::submitCreateSong(NewSongWizard &wizard)
+ {
+     if (!m_state.snapshot.isOpen() || projectBusy() || m_dialogOps > 0)
+         return;
++    SmfFile smf;
++    QString error;
++    if (!wizard.songFile(&smf, &error)) {
++        QMessageBox::warning(&m_host, tr("Import MIDI"), error);
++        return;
++    }
+     CreateSongInput input{wizard.label(), wizard.constant(),          wizard.player(),
+-                          wizard.cfg(),   wizard.newVoicegroupName(), wizard.songFile()};
++                          wizard.cfg(),   wizard.newVoicegroupName(), std::move(smf)};
+     m_pendingCreatedLabel = input.label;
+     m_pendingCreatedNewVoicegroup = !input.newVoicegroup.isEmpty();
+     m_dialogOps++;
+     updateOpenGate();
+     emit projectOperationRequested(ProjectOperation{std::move(input)});
+ }
+ 
+ // ---- Audition sample set ------------------------------------------------------
+ 
+ void WorkspaceUi::ensureSampleSet()

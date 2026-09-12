@@ -1,0 +1,214 @@
+diff --git a/src/checks/rollcheck/static/camera.cpp b/src/checks/rollcheck/static/camera.cpp
+index 242e0ff2..27241eda 100644
+--- a/src/checks/rollcheck/static/camera.cpp
++++ b/src/checks/rollcheck/static/camera.cpp
+@@ -124,6 +124,113 @@ void PianoRollStaticTest::tickRangeWalksFractionalLattice()
+         songview::detail::tickRange(std::numeric_limits<double>::quiet_NaN(), 100.0), 1,
+         [&rejected](Tick tick, int) { rejected.push_back(tick); });
+     QVERIFY(rejected.empty());
++    // Boundary scenarios on a coarser lattice: gridMinDenom=32 keeps the
++    // drawn sub-grid above the clock floor at any cell-width threshold, so
++    // the stride is a nontrivial divisor of the 24-tick beat.
++    SongView::ViewState coarse = original;
++    coarse.pxPerBeat = 192.0;
++    coarse.gridMinDenom = 32;
++    view.applyViewState(coarse);
++    const Tick latticeG = view.grid().gridTicksAt(0);
++    const Tick snapG = view.grid().snapTicksAt(0);
++    QVERIFY(latticeG > 1);
++    QVERIFY(latticeG < segment.beatTicks);
++    QVERIFY(96 % latticeG == 0);
++    QVERIFY(snapG >= 3);
++    QVERIFY(segment.beatTicks % snapG == 0);
++    QCOMPARE(view.grid().fineGridTicks(), Tick(1));
++    // Collects the walked ticks; a callback outside the half-open range
++    // aborts the walk so a wrapped candidate cannot accumulate callbacks
++    // (a missing advancement stays bounded by the harness timeout).
++    struct OutOfRangeTick {};
++    const auto walk = [&view](Tick begin, Tick end) {
++        std::vector<Tick> ticks;
++        songview::detail::forEachSubGridLine(view.grid(), view.camera(),
++                                             songview::detail::TickRange{begin, end}, 1,
++                                             [&ticks, begin, end](Tick tick, int) {
++                                                 if (tick < begin || tick >= end)
++                                                     throw OutOfRangeTick{};
++                                                 ticks.push_back(tick);
++                                             });
++        return ticks;
++    };
++    // Independent membership expectation: every in-range tick on its
++    // governing segment's sub-beat lattice that is not a beat line.
++    const auto expectedLines = [&view](Tick begin, Tick end) {
++        std::vector<Tick> ticks;
++        for (Tick tick = begin; tick < end; ++tick) {
++            const songview::Grid::Segment s = view.grid().segmentAt(tick);
++            const Tick step = view.grid().gridTicksAt(tick);
++            if (step > 0 && step < s.beatTicks && (tick - s.start) % step == 0 &&
++                (tick - s.start) % s.beatTicks != 0 &&
++                view.camera().pxPerTick() * double(s.beatTicks) >= 1)
++                ticks.push_back(tick);
++        }
++        return ticks;
++    };
++    // The first ceiling-aligned candidate (96 + latticeG) already lies at
++    // or beyond the range end: the segment contributes nothing.
++    const std::vector<Tick> firstOutside = walk(97, 98);
++    QVERIFY2(firstOutside.empty(), "a first aligned candidate past the range end must be skipped");
++    // The first candidate is the beat line at 96: only its callback is
++    // skipped; the walk still advances through the rest of the range.
++    QCOMPARE(walk(95, 110), expectedLines(95, 110));
++    // The terminal range ends mid-cell (kMaxTick is not on the lattice):
++    // the last advancement must break instead of striding past the end.
++    QCOMPARE(walk(CoreTimeDefaults::kMaxTick - 9, CoreTimeDefaults::kMaxTick),
++             expectedLines(CoreTimeDefaults::kMaxTick - 9, CoreTimeDefaults::kMaxTick));
++    const std::vector<Tick> ceilingCell =
++        walk(CoreTimeDefaults::kMaxTick - 1, CoreTimeDefaults::kMaxTick);
++    QVERIFY2(ceilingCell.empty(), "a ceiling-aligned candidate past kMaxTick must not wrap");
++    // Snap inputs: NaN and non-positive values map to 0, infinities clamp
++    // to the corresponding endpoint.
++    const double nan = std::numeric_limits<double>::quiet_NaN();
++    const double infinity = std::numeric_limits<double>::infinity();
++    QCOMPARE(view.grid().snapTick(nan), Tick(0));
++    QCOMPARE(view.grid().snapTickDown(nan), Tick(0));
++    QCOMPARE(view.grid().snapTickUp(nan), Tick(0));
++    QCOMPARE(view.grid().snapTick(-infinity), Tick(0));
++    QCOMPARE(view.grid().snapTick(infinity), CoreTimeDefaults::kMaxTick);
++    QCOMPARE(view.grid().snapTickDown(infinity), CoreTimeDefaults::kMaxTick);
++    QCOMPARE(view.grid().snapTickUp(infinity), CoreTimeDefaults::kMaxTick);
++    QCOMPARE(view.grid().snapTick(infinity, true), CoreTimeDefaults::kMaxTick);
++    // Fractional nearest tie on either side of the midpoint: the lower
++    // candidate wins exactly at the tie.
++    QCOMPARE(view.grid().snapTick(96.0 + snapG / 2.0), Tick(96));
++    QCOMPARE(view.grid().snapTick(96.0 + snapG / 2.0 - 0.25), Tick(96));
++    QCOMPARE(view.grid().snapTick(96.0 + snapG / 2.0 + 0.25), Tick(96 + snapG));
++    QCOMPARE(view.grid().snapTickDown(96.0 + snapG / 2.0 + 0.25), Tick(96));
++    QCOMPARE(view.grid().snapTickUp(96.0 + snapG / 2.0 - 0.25), Tick(96 + snapG));
++    // Coarse up/nearest at the domain edge saturate at kMaxTick instead of
++    // wrapping the lo + g candidate; down stays on the lattice.
++    QCOMPARE(view.grid().snapTickUp(double(CoreTimeDefaults::kMaxTick) - 0.5),
++             CoreTimeDefaults::kMaxTick);
++    QCOMPARE(view.grid().snapTick(double(CoreTimeDefaults::kMaxTick) - 0.5),
++             CoreTimeDefaults::kMaxTick);
++    QCOMPARE(view.grid().snapTickDown(double(CoreTimeDefaults::kMaxTick) - 0.5),
++             Tick((CoreTimeDefaults::kMaxTick - 1) / snapG * snapG));
++    // Fine snap rounds on the clock grid; a rounded result past the domain
++    // saturates through tickFromDouble instead of producing the sentinel.
++    QCOMPARE(view.grid().snapTick(double(CoreTimeDefaults::kMaxTick) + 0.6, true),
++             CoreTimeDefaults::kMaxTick);
++    QCOMPARE(view.grid().snapTick(double(CoreTimeDefaults::kMaxTick) - 0.4, true),
++             CoreTimeDefaults::kMaxTick);
++    QCOMPARE(view.grid().snapTick(1e30, true), CoreTimeDefaults::kMaxTick);
++    // A mid-cell signature change re-anchors the lattice: the first
++    // segment's walk stops at the seam (its next candidate lies at the
++    // segment end), and the new segment restarts its own lattice and
++    // beat-line omission from its start.
++    fixture.tab()->document().setTimeSig(102, 4, 2);
++    QTRY_VERIFY(view.grid().segmentAt(102).start == 102);
++    QCOMPARE(view.grid().segmentAt(101).next, Tick(102));
++    QCOMPARE(walk(95, 130), expectedLines(95, 130));
++    QCOMPARE(walk(100, 110), expectedLines(100, 110));
++    QCOMPARE(view.grid().snapTickDown(103.5), Tick(102));
++    QCOMPARE(view.grid().snapTickUp(101.5), Tick(102));
++    QCOMPARE(view.grid().snapTick(103.5), Tick(102));
++    QCOMPARE(view.grid().snapTick(103.5 + double(snapG)), Tick(102 + snapG));
++    fixture.tab()->document().deleteTimeSig(102);
++    QTRY_VERIFY(view.grid().segmentAt(102).start == 0);
+     view.applyViewState(original);
+ }
+ 
+diff --git a/src/ui/songview/detail.h b/src/ui/songview/detail.h
+index 0fc041d1..b16531a7 100644
+--- a/src/ui/songview/detail.h
++++ b/src/ui/songview/detail.h
+@@ -73,10 +73,21 @@ void forEachSubGridLine(const Grid &grid, const TimeCamera &camera, TickRange ra
+         if (g > 0 && g < seg.beatTicks &&
+             camera.pxPerTick() * double(seg.beatTicks) >= timelineDetailMinimumPixelsPerBeat) {
+             const uint64_t k = at > seg.start ? (uint64_t(at) - seg.start + g - 1) / g : 0;
+-            for (Tick tick = seg.start + Tick(k * g); tick < segEnd; tick += g) {
+-                if ((tick - seg.start) % seg.beatTicks == 0)
+-                    continue; // beat/bar lines are drawn separately
+-                fn(tick, subGridLevel(Tick(tick - seg.start), seg.beatTicks, triplet));
++            // The ceiling-aligned first candidate is computed wide: it can
++            // land at or beyond segEnd (and past the Tick range), in which
++            // case this segment contributes no lines at all.
++            const uint64_t first = uint64_t(seg.start) + k * g;
++            if (first < segEnd) {
++                for (Tick tick = Tick(first);;) {
++                    if ((tick - seg.start) % seg.beatTicks != 0)
++                        fn(tick, subGridLevel(Tick(tick - seg.start), seg.beatTicks, triplet));
++                    // Beat/bar lines are drawn separately; they skip only
++                    // the callback. Break before the increment so the
++                    // stride can never carry tick past segEnd or wrap.
++                    if (g >= segEnd - tick)
++                        break;
++                    tick += g;
++                }
+             }
+         }
+         if (seg.next >= range.end)
+diff --git a/src/ui/songview/grid.cpp b/src/ui/songview/grid.cpp
+index 2c99a6e1..3b7797dd 100644
+--- a/src/ui/songview/grid.cpp
++++ b/src/ui/songview/grid.cpp
+@@ -129,40 +129,50 @@ Tick Grid::fineGridTicks() const
+ }
+ Tick Grid::snapTick(double tick, bool fine) const
+ {
+-    tick = std::max(0.0, tick);
++    // Clamp the raw input to the valid position domain without truncating
++    // its fraction: NaN and non-positive values map to 0, +inf and anything
++    // at or beyond kMaxTick clamp to kMaxTick.
++    tick = std::min(std::max(0.0, tick), double(CoreTimeDefaults::kMaxTick));
+     if (fine) {
+         // The clock grid is the document's absolute resolution; it does not
+         // restart at time-signature changes.
+         const double g = double(fineGridTicks());
+-        return Tick(std::round(tick / g) * g);
++        return CoreTimeDefaults::tickFromDouble(std::round(tick / g) * g);
+     }
+-    const Segment seg = segmentAt(Tick(tick));
++    const Segment seg = segmentAt(CoreTimeDefaults::tickFromDouble(tick));
+     const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
+     const Tick k = Tick((tick - double(seg.start)) / double(g));
+     const Tick lo = seg.start + Tick(k * g);
+     // The next signature's tick is itself a grid position (the grid
+-    // restarts there), so the upper candidate never crosses it.
+-    const Tick hi = std::min(lo + g, seg.next);
++    // restarts there), so the upper candidate never crosses it; at the
++    // domain edge kMaxTick is the saturating terminal candidate even when
++    // it is not on the grid. Headroom is checked before the addition so
++    // lo + g never wraps.
++    const Tick ceiling = std::min(seg.next, CoreTimeDefaults::kMaxTick);
++    const Tick hi = lo < ceiling && g <= ceiling - lo ? Tick(lo + g) : ceiling;
+     return tick - double(lo) <= double(hi) - tick ? lo : hi;
+ }
+ Tick Grid::snapTickDown(double tick) const
+ {
+-    tick = std::max(0.0, tick);
+-    const Segment seg = segmentAt(Tick(tick));
++    tick = std::min(std::max(0.0, tick), double(CoreTimeDefaults::kMaxTick));
++    const Segment seg = segmentAt(CoreTimeDefaults::tickFromDouble(tick));
+     const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
+     return seg.start + Tick(Tick((tick - double(seg.start)) / double(g)) * g);
+ }
+ Tick Grid::snapTickUp(double tick) const
+ {
+-    tick = std::max(0.0, tick);
+-    const Segment seg = segmentAt(Tick(tick));
++    tick = std::min(std::max(0.0, tick), double(CoreTimeDefaults::kMaxTick));
++    const Segment seg = segmentAt(CoreTimeDefaults::tickFromDouble(tick));
+     const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
+     const Tick lo = seg.start + Tick(Tick((tick - double(seg.start)) / double(g)) * g);
+     if (double(lo) >= tick)
+         return lo;
+     // The next signature's tick is itself a grid position, so the upper
+-    // candidate never crosses it.
+-    return std::min(lo + g, seg.next);
++    // candidate never crosses it; at the domain edge kMaxTick is the
++    // saturating terminal candidate. Headroom is checked before the
++    // addition so lo + g never wraps.
++    const Tick ceiling = std::min(seg.next, CoreTimeDefaults::kMaxTick);
++    return lo < ceiling && g <= ceiling - lo ? Tick(lo + g) : ceiling;
+ }
+ 
+ // --- SongView: host setters and axis iteration ---

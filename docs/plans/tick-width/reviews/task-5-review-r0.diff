@@ -1,0 +1,3511 @@
+diff --git a/src/ui/songview.cpp b/src/ui/songview.cpp
+index 8c591d52..a12a8d0a 100644
+--- a/src/ui/songview.cpp
++++ b/src/ui/songview.cpp
+@@ -886,21 +886,21 @@ void SongView::applyViewState(const ViewState &state)
+     m_roll->refreshTextLayout();
+     setGridMinDenom(gridMinDenom);
+     setGridFeel(state.gridTriplet ? GridFeel::Triplet : GridFeel::Straight);
+     if (state.selectedTrack >= 0 && state.selectedTrack < 16 &&
+         m_timeline->tracks[state.selectedTrack].used)
+         selectTrack(state.selectedTrack);
+     updateScrollbars();
+     setHScroll(state.scrollPx); // setHScroll clamps to the camera's range
+     setVScroll(state.scrollY);
+     setEventListVisible(state.eventList);
+-    m_editCursorTick = std::min<uint64_t>(state.editCursorTick, m_timeline->lengthTicks);
++    m_editCursorTick = std::min<Tick>(state.editCursorTick, m_timeline->lengthTicks);
+     // Whole view-state applied: every roll domain may differ.
+     refreshTimelineViews(PianoRollQuickDirty::All);
+ }
+ 
+ void SongView::setVoicegroup(const LoadedVoiceGroup *voicegroup)
+ {
+     if (m_voicegroup == voicegroup)
+         return;
+     cancelActiveInteractions();
+     m_voicegroup = voicegroup;
+@@ -1077,21 +1077,21 @@ void SongView::requestAutomationQuickUpdate(songview::AutomationRefreshSet refre
+ 
+ void SongView::syncTimelineQuickAppearance()
+ {
+     if (m_quickView)
+         m_quickView->syncAppearance();
+     // The event page's theme map and menu-host styles ride the same
+     // appearance republish as every other Quick surface.
+     m_events->syncAppearance();
+ }
+ 
+-void SongView::publishTimelineQuickHover(songview::TimelineQuickHoverOwner owner, uint64_t tick)
++void SongView::publishTimelineQuickHover(songview::TimelineQuickHoverOwner owner, Tick tick)
+ {
+     if (m_quickView && m_timeline)
+         m_quickView->publishHover(owner, tick, timelineSplitX() + m_camera.contentX(tick));
+ }
+ 
+ void SongView::clearTimelineQuickHover(songview::TimelineQuickHoverOwner owner)
+ {
+     if (m_quickView)
+         m_quickView->clearHover(owner);
+ }
+@@ -1104,31 +1104,31 @@ void SongView::syncTimelineIndicators()
+         editRootContentX = rootOriginX + m_camera.contentX(m_editCursorTick);
+ 
+     if (m_playheadOverlay)
+         m_playheadOverlay->setPlayhead(m_camera.contentX(m_playheadTick), m_timeline != nullptr,
+                                        m_playing);
+     if (m_quickView) {
+         m_quickView->synchronizeGuides(rootOriginX, editRootContentX);
+     }
+ }
+ 
+-void SongView::setEditCursorTick(uint64_t tick)
++void SongView::setEditCursorTick(Tick tick)
+ {
+     if (m_editCursorTick == tick)
+         return;
+     m_editCursorTick = tick;
+     m_headers->syncVoices();
+     syncTimelineIndicators();
+     refreshDrawerPages();
+ }
+ 
+-void SongView::commitEditCursor(uint64_t tick)
++void SongView::commitEditCursor(Tick tick)
+ {
+     setEditCursorTick(tick);
+     emit editCursorMoved(tick);
+ }
+ 
+ void SongView::goToStart()
+ {
+     // Home shows the pre-roll pad so tick 0 sits inside the viewport, not
+     // flush against its edge.
+     setHScroll(minHScroll());
+diff --git a/src/ui/songview.h b/src/ui/songview.h
+index ee7b2a42..258532ef 100644
+--- a/src/ui/songview.h
++++ b/src/ui/songview.h
+@@ -165,21 +165,21 @@ class SongView : public QObject
+     // Transient per-tab camera, selection, grid, and event-list state. It is
+     // never persisted or propagated between tabs.
+     struct ViewState {
+         ViewState();
+         bool valid = false;
+         double pxPerBeat = 0.0;
+         double keyHeight = 0.0;
+         double scrollPx = 0.0;
+         double scrollY = 0.0;
+         int selectedTrack = 0;
+-        uint64_t editCursorTick = 0;
++        Tick editCursorTick = 0;
+         int gridMinDenom = 0;     // drawn-grid floor as a note denominator
+                                   // (4/8/16/32); 0 = down to the clock grid
+         bool gridTriplet = false; // triplet vs straight beat subdivisions
+         bool eventList = false;   // raw MIDI event list instead of the roll
+     };
+     ViewState viewState() const;
+     // Call after setSong (and setDocument); a default-constructed (invalid)
+     // state is a no-op.
+     void applyViewState(const ViewState &state);
+ 
+@@ -246,21 +246,21 @@ class SongView : public QObject
+     const MidiTimeline *timeline() const { return m_timeline; }
+     // The always-valid musical axis (fallback before any song binds);
+     // painters read signatures and loop markers here instead of the
+     // optional timeline.
+     const songview::TimeAxis &timeAxis() const { return m_timeAxis; }
+     const SongViewModel &model() const { return m_model; }
+     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
+     int trackHeaderWidth() const noexcept { return m_geometry.trackHeaderWidth; }
+     int pianoKeyboardWidth() const noexcept { return m_geometry.pianoKeyboardWidth; }
+     int timelineSplitX() const noexcept { return m_geometry.timelineSplitX; }
+-    void publishTimelineQuickHover(songview::TimelineQuickHoverOwner owner, uint64_t tick);
++    void publishTimelineQuickHover(songview::TimelineQuickHoverOwner owner, Tick tick);
+     void clearTimelineQuickHover(songview::TimelineQuickHoverOwner owner);
+     // Widget-owned migrated bands route retained-scene invalidation through this seam.
+     void requestTimelineQuickUpdate(songview::TimelineQuickDirtySet dirty);
+     // Retained automation scenes repaint through the dedicated refresh channel.
+     void requestAutomationQuickUpdate(songview::AutomationRefreshSet refresh);
+ 
+     const songview::TimeCamera &camera() const noexcept { return m_camera; }
+     const songview::Grid &grid() const noexcept { return m_grid; }
+ 
+     // Derived from the canonical beat scale: a resolution change can only
+@@ -274,25 +274,25 @@ class SongView : public QObject
+     // Fold projection updates wait for a pointer gesture to commit, so the
+     // row geometry remains stable while its note edit is in progress.
+     void setProjectionLocked(bool locked);
+     void flushProjectionIfDirty();
+     double playheadTick() const { return m_playheadTick; }
+ 
+     // Edit cursor (Reaper-style): placed by clicking the ruler or empty
+     // roll space (with a document, dragging or double-clicking there draws
+     // a note instead), distinct from the moving playback cursor. Playback
+     // starts here, and paste anchors here.
+-    uint64_t editCursorTick() const { return m_editCursorTick; }
++    Tick editCursorTick() const { return m_editCursorTick; }
+     // Visual placement only (ruler drag preview); commit emits
+     // editCursorMoved so playback can follow.
+-    void setEditCursorTick(uint64_t tick);
+-    void commitEditCursor(uint64_t tick);
++    void setEditCursorTick(Tick tick);
++    void commitEditCursor(Tick tick);
+     // Transport "go to start": edit cursor to tick 0 and scroll home.
+     void goToStart();
+     void resetScrollPosition();
+ 
+     void selectTrack(int track);
+ 
+     // Scale controls are independent per-tab runtime toggles; neither is
+     // persisted with a song or propagated between tabs. State and classification
+     // live in the ScaleController component; SongView is the only surface
+     // that mutates it, and the UI side effects (signals, roll repaint, the
+@@ -316,21 +316,21 @@ class SongView : public QObject
+                                  std::vector<uint8_t> &destinations) const
+     {
+         return m_scaleController.resolveFoldDestinations(notes, degreeDelta, destinations);
+     }
+     void foldTransposeSelection(int degreeDelta);
+     // Reveal a polyphony-overflow event's note: select its track, select the
+     // last note on (track, key) starting at or before tick — the lost note (a
+     // dropped note starts exactly there, a stolen one spans it, a cut tail
+     // ended just before) — and scroll the key into view. Returns whether a
+     // note was found and selected (the track selection sticks either way).
+-    bool revealNote(int track, uint8_t key, uint64_t tick);
++    bool revealNote(int track, uint8_t key, Tick tick);
+     void trackHeaderClicked(int track, Qt::KeyboardModifiers modifiers);
+     bool trackMuted(int track) const { return m_muteMask & (1u << track); }
+     bool trackSoloed(int track) const { return m_soloMask & (1u << track); }
+     // Full masks, for re-applying to the audio engine on a tab switch.
+     uint32_t muteMask() const { return m_muteMask; }
+     uint32_t soloMask() const { return m_soloMask; }
+     void setTrackMute(int track, bool on);
+     void setTrackSolo(int track, bool on);
+     // Keyboard face of the header buttons, over the multi-track scope:
+     // mixed state resolves toward on (mute/solo everything in the scope),
+@@ -422,34 +422,34 @@ class SongView : public QObject
+     // TimelineBand: while it holds focus focusedTimelineBand reports
+     // nullopt, and eventListSurfaceFocused distinguishes that from "nothing
+     // focused".
+     bool focusTimelineBand(songview::TimelineBand band, Qt::FocusReason reason);
+     std::optional<songview::TimelineBand> focusedTimelineBand() const;
+     bool eventListSurfaceFocused() const;
+ 
+     // Bar/beat grid over [tickBegin, tickEnd): calls fn(tick, isBarStart,
+     // barNumber, beatNumber) for every beat, honoring the song's time
+     // signature changes.
+-    void forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
+-                         const std::function<void(uint64_t, bool, int, int)> &fn) const;
++    void forEachGridLine(Tick tickBegin, Tick tickEnd,
++                         const std::function<void(Tick, bool, int, int)> &fn) const;
+ 
+     // --- editing support for the child widgets ---
+     // Grid feel and floor (the ruler's grid controls): the zoom-adaptive
+     // grid subdivides beats by powers of two (straight) or by threes
+     // (triplet), and the minimum subdivision — a note denominator, quarter =
+     // one beat — stops the DRAWN grid from refining past the note value the
+     // user cares about (display only; snapping still steps one rung finer).
+     // 0 keeps the default clock-grid floor. Per-song view state.
+     void setGridFeel(songview::GridFeel feel);
+     void setGridMinDenom(int denom); // 4/8/16/32; anything else means 0
+ 
+-    DrawerPageVoiceContext voiceContext(uint64_t tick) const;
++    DrawerPageVoiceContext voiceContext(Tick tick) const;
+     // Shared deferred velocity gesture; document mutation happens only when
+     // commitVelocityGesture() accepts the captured revision.
+     enum class VelocityCommitResult { NoGesture, Unchanged, Committed, Rejected };
+     bool beginVelocityGesture(const std::vector<DocNote> &notes);
+     bool updateVelocityGesture(const std::vector<NoteVelocity> &updates);
+     bool updateVelocityGestureByDelta(int delta);
+     void cancelVelocityGesture();
+     VelocityCommitResult commitVelocityGesture();
+     std::optional<uint8_t> previewVelocity(NoteId noteId) const;
+ 
+@@ -539,42 +539,42 @@ class SongView : public QObject
+     // "velocity 93 → plays 96 · length 25 → 24 clocks" for the status bar.
+     void announceNote(const ViewNote &note);
+ 
+     // Child-widget entry point for the auditionNote signal.
+     void audition(int track, int key, int velocity) { emit auditionNote(track, key, velocity); }
+ 
+     // Fixed-length audition for the band-sweep chord preview: the note's tick
+     // span converts to samples through the display timeline, so the preview
+     // lasts at most as long as the note does in the song (tempo changes
+     // included).
+-    void auditionTimed(int track, int key, int velocity, uint64_t startTick, uint64_t endTick);
++    void auditionTimed(int track, int key, int velocity, Tick startTick, Tick endTick);
+ 
+     // Early release for a timed audition (the band no longer covers the
+     // note); the velocity-0 form of the same signal.
+     void auditionTimedOff(int track, int key) { emit auditionNoteTimed(track, key, 0, 0); }
+ 
+     // Child-widget entry point for the statusMessage signal.
+     void announce(const QString &text) { emit statusMessage(text); }
+     void setEditorHorizontalScroll(double px);
+     void setEditorTimeZoom(double pxPerBeat);
+     void setFollowScrollPaused(bool paused);
+     void showDrawerPageTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequest &request);
+     void showDrawerPageNoteStatus(std::optional<DrawerPageNoteStatus> status);
+     void requestDrawerPageUndo();
+     void requestDrawerPageRedo();
+     DrawerPageLiveState drawerPageLiveState() const;
+     void cancelActiveInteractions();
+     // Public observation of live pointer ownership. Follow-scroll state and
+     // popup focus deliberately remain separate from command ownership.
+     bool userGestureActive() const;
+     // Child-widget request to toggle transport from a specific song tick.
+-    void requestPlayPauseFrom(uint64_t tick) { emit playPauseFromRequested(tick); }
++    void requestPlayPauseFrom(Tick tick) { emit playPauseFromRequested(tick); }
+ 
+     // Interaction from children.
+     void zoomTimelineAtWheel(const songview::TimelineWheelInput &wheel, qreal anchorContentX);
+     void zoomAroundContentX(double factor, qreal anchorContentX);
+     // Vertical roll zoom (key height) from Ctrl+wheel, pinning the key under
+     // the cursor. The normalized wheel input supplies continuous deltas.
+     void zoomKeyHeight(const songview::TimelineWheelInput &input);
+     void scrollByPx(double dx);
+     void scrollRollBy(double dy);
+ 
+@@ -585,27 +585,27 @@ class SongView : public QObject
+     void setVScroll(double y);
+     // Fractional-DIP viewport the camera is bound to; the QML scrollbars'
+     // page steps read the same values updateScrollbars() pushes.
+     int viewportWidth() const;
+     int rollViewportHeight() const;
+ 
+     // Scrolls horizontally so the tick sits a third of the way into the
+     // viewport if it is currently off-screen; on-screen ticks are left
+     // alone. Pastes anchor at the edit cursor, which can be scrolled out
+     // of view — without this the paste looks like a no-op.
+-    void ensureTickVisible(uint64_t tick);
++    void ensureTickVisible(Tick tick);
+     // Minimal-scroll companion for the keyboard transpose/nudge moves:
+     // shifts the view just enough to bring the tick span back inside,
+     // instead of ensureTickVisible's jump-to-a-third anchoring. A span
+     // wider than the viewport keeps the edge the move headed toward
+     // (the end when preferEnd, else the start).
+-    void ensureRangeVisible(uint64_t startTick, uint64_t endTick, bool preferEnd);
++    void ensureRangeVisible(Tick startTick, Tick endTick, bool preferEnd);
+     // Vertical counterpart: scrolls the roll just enough for the key's
+     // row to be fully visible.
+     void ensureKeyVisible(int key);
+     // Ruler, strip, playhead, and roll refresh; the roll repaint is limited
+     // to the caller's semantic dirty set (see PianoRollQuickDirty). Every
+     // caller names the narrowest set its change justifies.
+     void refreshTimelineViews(songview::PianoRollQuickDirtySet dirty);
+     // Refresh every concrete drawer page from the current live SongView state.
+     // Public refresh seam for the standalone drawer pages after they commit a
+     // document edit. This endpoint does not proactively cancel interaction.
+@@ -625,24 +625,24 @@ class SongView : public QObject
+     // AudioEngine::previewNoteTimed, which sends the note-off itself.
+     // velocity 0 releases the track+key's preview early.
+     void auditionNoteTimed(int track, int key, int velocity, quint32 durationSamples);
+     // Voicegroup-entry audition from the voice picker; routed to
+     // AudioEngine::previewVoice like the voicegroup browser's signal.
+     void auditionVoice(int voice, int key, int velocity);
+     void statusMessage(const QString &text);
+     void insertTimePromptChanged();
+     // Edit cursor committed to a new position (click released); the main
+     // window seeks playback here when not stopped.
+-    void editCursorMoved(uint64_t tick);
++    void editCursorMoved(Tick tick);
+     // Popup/editor audition: start from tick when stopped or paused; when
+     // playing, pause and return the transport to tick for the next audition.
+-    void playPauseFromRequested(uint64_t tick);
++    void playPauseFromRequested(Tick tick);
+     // Roll/event-list swap (user toggle or applyViewState); the main window
+     // mirrors it into the View-menu checkbox.
+     void eventListVisibilityChanged(bool visible);
+     // Jump-from-context voice navigation: the main window raises the
+     // voicegroup dock and selects this slot.
+     void revealVoiceRequested(int program);
+     // Complete application-wide editor state changed in this view.
+     void editorViewStateChanged(const EditorViewState &state);
+ 
+   protected:
+@@ -802,28 +802,28 @@ class SongView : public QObject
+     // The TimeScope a range command gathers over: the selection's lane list
+     // for a Lanes selection, or the scoped tracks with their full per-track
+     // lane list (model lanes + voice) for a Tracks selection, with the tempo
+     // row gated exactly as the copy/delete/nudge commands always gated it.
+     // Nullopt when the selection resolves to nothing (no lanes/tempo, or no
+     // document-mapped tracks).
+     std::optional<SongDocument::TimeScope> timeSelectionScope() const;
+     struct PendingInsertTimePrompt {
+         QPointer<SongDocument> document;
+         uint64_t documentRevision = 0;
+-        uint64_t cursorTick = 0;
+-        uint64_t beatTicks = 1;
+-        uint64_t beatsPerBar = 4;
++        Tick cursorTick = 0;
++        uint32_t beatTicks = 1;
++        uint32_t beatsPerBar = 4;
+         int initialBars = 1;
+         int initialBeats = 0;
+         int initialBeatFractions = 0;
+     };
+-    void openInsertTimePrompt(uint64_t cursorTick, const songview::Grid::Segment &segment);
++    void openInsertTimePrompt(Tick cursorTick, const songview::Grid::Segment &segment);
+     void clearInsertTimePrompt(bool restoreFocus);
+     void cancelInsertTimePromptWithoutFocus();
+     struct PendingVoicePicker {
+         QPointer<QObject> context;
+         // The session this picker's form lives on; disposal always targets
+         // this pinned owner, never the session current at dispose time.
+         QPointer<songview::QuickPopupSession> session;
+         QPointer<SongDocument> document;
+         uint64_t documentRevision = 0;
+         std::function<void(int)> accepted;
+@@ -881,21 +881,21 @@ class SongView : public QObject
+     songview::PitchProjection m_projection;
+     songview::ScaleController m_scaleController;
+     bool m_projectionLocked = false; // pointer gesture holds fold row geometry stable
+     bool m_projectionDirty = false;  // fold-relevant change deferred by the lock
+     // Consumed by the next updateSong; installed by DocumentSwapHintScope.
+     std::optional<songview::PianoRollQuickDirtySet> m_documentSwapHint;
+ 
+     songview::TimeCamera m_camera; // zoom/scroll state over m_timeAxis + m_projection
+     songview::Grid m_grid;         // zoom-adaptive grid state over m_timeAxis + m_camera
+     double m_playheadTick = 0.0;
+-    uint64_t m_editCursorTick = 0;
++    Tick m_editCursorTick = 0;
+     bool m_playing = false;
+     std::optional<PendingInsertTimePrompt> m_pendingInsertTimePrompt;
+     QMetaObject::Connection m_insertTimePromptCancellation;
+     uint32_t m_muteMask = 0;
+     uint32_t m_soloMask = 0;
+     bool m_velocityColorMode = false; // velocityNoteColor fills (View menu)
+     bool m_noteNameMode = false;      // pitch labels on notes (View menu)
+     bool m_followPlayhead = true;     // playback follow-scroll (transport bar)
+     TrackActivity m_trackActivity;
+ 
+diff --git a/src/ui/songview/camera.cpp b/src/ui/songview/camera.cpp
+index 9fe6bbda..9c7676b0 100644
+--- a/src/ui/songview/camera.cpp
++++ b/src/ui/songview/camera.cpp
+@@ -135,24 +135,24 @@ int SongView::viewportWidth() const
+     return std::max(m_geometry.timelineViewportMinimumWidth, width);
+ }
+ int SongView::rollViewportHeight() const
+ {
+     // The canonical roll rect already excludes the EditorDrawer overlay.
+     const std::optional<songview::TimelineBandGeometry> &roll =
+         m_timelineBandLayout.geometry(songview::TimelineBand::Roll);
+     const int height = roll ? roll->rect.height() : 0;
+     return std::max(0, height);
+ }
+-void SongView::ensureTickVisible(uint64_t tick)
++void SongView::ensureTickVisible(Tick tick)
+ {
+     const qreal dpr = m_quickView ? m_quickView->quickDevicePixelRatio() : 1.0;
+     syncHorizontalCamera(m_camera.ensureTickVisible(tick, dpr));
+ }
+-void SongView::ensureRangeVisible(uint64_t startTick, uint64_t endTick, bool preferEnd)
++void SongView::ensureRangeVisible(Tick startTick, Tick endTick, bool preferEnd)
+ {
+     const qreal dpr = m_quickView ? m_quickView->quickDevicePixelRatio() : 1.0;
+     syncHorizontalCamera(m_camera.ensureRangeVisible(startTick, endTick, preferEnd, dpr));
+ }
+ void SongView::ensureKeyVisible(int key)
+ {
+     syncVerticalCamera(m_camera.ensureKeyVisible(key));
+ }
+diff --git a/src/ui/songview/clip.h b/src/ui/songview/clip.h
+index a74cbdf7..8db31a14 100644
+--- a/src/ui/songview/clip.h
++++ b/src/ui/songview/clip.h
+@@ -1,13 +1,14 @@
+ #pragma once
+ 
+ #include "core/tempo.h"
++#include "core/timedefaults.h"
+ 
+ #include <cstdint>
+ #include <utility>
+ #include <vector>
+ 
+ namespace songview {
+ 
+ struct ClipNote {
+     uint32_t relTick = 0;
+     uint8_t key = 0;
+@@ -20,19 +21,19 @@ struct ClipTrack {
+     std::vector<ClipNote> notes;
+ };
+ 
+ struct ClipLane {
+     int track = 0; // source engine track
+     uint8_t cc = 0;
+     std::vector<std::pair<uint32_t, int>> points; // (relative tick, value)
+ };
+ 
+ struct Clip {
+-    uint64_t span = 0; // ticks covered; 0 = plain note clip
++    Tick span = 0; // ticks covered; 0 = plain note clip
+     std::vector<ClipTrack> tracks;
+     std::vector<ClipLane> lanes;
+     std::vector<TempoPoint> tempo; // relative ticks, microseconds per quarter note
+ 
+     bool empty() const { return tracks.empty() && lanes.empty() && tempo.empty(); }
+ };
+ 
+ } // namespace songview
+diff --git a/src/ui/songview/clipmime.cpp b/src/ui/songview/clipmime.cpp
+index 5cb45ed5..9fdfb570 100644
+--- a/src/ui/songview/clipmime.cpp
++++ b/src/ui/songview/clipmime.cpp
+@@ -160,42 +160,42 @@ std::optional<ClipLane> decodeLane(const QJsonValue &value)
+ 
+ std::optional<TempoPoint> decodeTempo(const QJsonValue &value)
+ {
+     if (!value.isObject())
+         return std::nullopt;
+     const auto object = value.toObject();
+     if (!hasKeys(object, {QStringLiteral("relTick"), QStringLiteral("microsecondsPerQuarterNote")}))
+         return std::nullopt;
+     uint64_t relTick = 0;
+     uint64_t microseconds = 0;
+-    if (!requireUint(object, "relTick", UINT64_MAX, relTick) ||
++    if (!requireUint(object, "relTick", CoreTimeDefaults::kMaxTick, relTick) ||
+         !requireUint(object, "microsecondsPerQuarterNote", UINT32_MAX, microseconds))
+         return std::nullopt;
+     return TempoPoint{Tick(relTick), uint32_t(microseconds)};
+ }
+ 
+-uint64_t scaleTick(uint64_t tick, uint32_t sourceTicksPerBeat, uint32_t destinationTicksPerBeat,
+-                   uint64_t maximum)
++Tick scaleTick(uint64_t tick, uint32_t sourceTicksPerBeat, uint32_t destinationTicksPerBeat,
++               Tick maximum)
+ {
+     const auto quotient = tick / sourceTicksPerBeat;
+     const auto remainder = tick % sourceTicksPerBeat;
+     if (quotient > maximum / destinationTicksPerBeat)
+         return maximum;
+     const auto whole = quotient * destinationTicksPerBeat;
+     const auto scaledRemainder = remainder * uint64_t(destinationTicksPerBeat);
+     auto fractional = scaledRemainder / sourceTicksPerBeat;
+     const auto residual = scaledRemainder % sourceTicksPerBeat;
+     if (residual * 2 >= sourceTicksPerBeat)
+         fractional++;
+     if (fractional > maximum - whole)
+         return maximum;
+-    return whole + fractional;
++    return Tick(whole + fractional);
+ }
+ // Stable-sorts by tick and coalesces same-tick entries, the later entry
+ // winning — the collision policy rescaleClip relies on for both lane points
+ // (std::pair, .first) and tempo points (.tick).
+ template <class Point>
+ void dedupLastWinsByTick(std::vector<Point> &points)
+ {
+     const auto tickOf = [](const Point &point) -> uint64_t {
+         if constexpr (requires { point.tick; })
+             return point.tick;
+@@ -216,42 +216,44 @@ void dedupLastWinsByTick(std::vector<Point> &points)
+ 
+ } // namespace
+ 
+ Clip rescaleClip(Clip result, uint32_t sourceTicksPerBeat, uint32_t destinationTicksPerBeat)
+ {
+     assert(sourceTicksPerBeat != 0);
+     assert(destinationTicksPerBeat != 0);
+     if (sourceTicksPerBeat == destinationTicksPerBeat)
+         return result;
+     if (result.span != 0)
+-        result.span = std::max(uint64_t{1}, scaleTick(result.span, sourceTicksPerBeat,
+-                                                      destinationTicksPerBeat, UINT64_MAX));
++        result.span =
++            Tick(std::max<Tick>(1, scaleTick(result.span, sourceTicksPerBeat,
++                                             destinationTicksPerBeat, CoreTimeDefaults::kMaxTick)));
+     for (auto &track : result.tracks) {
+         for (auto &note : track.notes) {
+             note.relTick = uint32_t(
+                 scaleTick(note.relTick, sourceTicksPerBeat, destinationTicksPerBeat, UINT32_MAX));
+             if (note.duration != 0)
+                 note.duration =
+                     std::max(uint32_t{1}, uint32_t(scaleTick(note.duration, sourceTicksPerBeat,
+                                                              destinationTicksPerBeat, UINT32_MAX)));
+         }
+     }
+     for (auto &lane : result.lanes) {
+         for (auto &[tick, value] : lane.points) {
+             (void)value;
+             tick =
+                 uint32_t(scaleTick(tick, sourceTicksPerBeat, destinationTicksPerBeat, UINT32_MAX));
+         }
+         dedupLastWinsByTick(lane.points);
+     }
+     for (auto &point : result.tempo)
+-        point.tick = scaleTick(point.tick, sourceTicksPerBeat, destinationTicksPerBeat, UINT64_MAX);
++        point.tick = scaleTick(point.tick, sourceTicksPerBeat, destinationTicksPerBeat,
++                               CoreTimeDefaults::kMaxTick);
+     dedupLastWinsByTick(result.tempo);
+     return result;
+ }
+ 
+ QByteArray encodeClip(const Clip &clip, uint32_t ticksPerBeat)
+ {
+     auto tracks = QJsonArray{};
+     for (const auto &track : clip.tracks)
+         tracks.append(encodeTrack(track));
+     auto lanes = QJsonArray{};
+@@ -281,21 +283,21 @@ std::optional<DecodedClip> decodeClip(const QByteArray &payload)
+     const auto object = document.object();
+     if (!hasKeys(object,
+                  {QStringLiteral("format"), QStringLiteral("ticksPerBeat"), QStringLiteral("span"),
+                   QStringLiteral("tracks"), QStringLiteral("lanes"), QStringLiteral("tempo")}))
+         return std::nullopt;
+     uint64_t format = 0;
+     uint64_t ticksPerBeat = 0;
+     uint64_t span = 0;
+     if (!requireUint(object, "format", 1, format) || format != 1 ||
+         !requireUint(object, "ticksPerBeat", UINT32_MAX, ticksPerBeat) || ticksPerBeat == 0 ||
+-        !requireUint(object, "span", UINT64_MAX, span) ||
++        !requireUint(object, "span", CoreTimeDefaults::kMaxTick, span) ||
+         !object.value(QStringLiteral("tracks")).isArray() ||
+         !object.value(QStringLiteral("lanes")).isArray() ||
+         !object.value(QStringLiteral("tempo")).isArray())
+         return std::nullopt;
+     auto decoded = DecodedClip{};
+     decoded.ticksPerBeat = uint32_t(ticksPerBeat);
+     decoded.clip.span = span;
+     for (const auto &trackValue : object.value(QStringLiteral("tracks")).toArray()) {
+         auto track = decodeTrack(trackValue);
+         if (!track)
+diff --git a/src/ui/songview/detail.cpp b/src/ui/songview/detail.cpp
+index b57a0aaf..28c4e72d 100644
+--- a/src/ui/songview/detail.cpp
++++ b/src/ui/songview/detail.cpp
+@@ -169,42 +169,42 @@ QColor ghostNoteColor(int track, bool accidentalRow)
+                          (identity.b - backgrounds[background].b) * kIdentityWeight});
+             }
+         }
+     }
+     return colors[trackIdentityIndex(track)][accidentalRow ? 1 : 0];
+ }
+ 
+ // Subdivision level of a sub-beat grid tick (relative to its segment's
+ // start): 1 = the beat's first split (half beat, or a third in triplet
+ // feel), 2 = the next, 3 = finer. Cosmetic only (drives the line fade).
+-int subGridLevel(uint64_t relTick, uint64_t beatTicks, bool triplet)
++int subGridLevel(Tick relTick, uint32_t beatTicks, bool triplet)
+ {
+-    if (relTick % std::max<uint64_t>(1, beatTicks / (triplet ? 3 : 2)) == 0)
++    if (relTick % std::max<uint32_t>(1, beatTicks / (triplet ? 3 : 2)) == 0)
+         return 1;
+-    if (relTick % std::max<uint64_t>(1, beatTicks / (triplet ? 6 : 4)) == 0)
++    if (relTick % std::max<uint32_t>(1, beatTicks / (triplet ? 6 : 4)) == 0)
+         return 2;
+     return 3;
+ }
+ 
+-// Strictly below 2^64, where double -> uint64 conversion is defined; the
+-// largest representable double below it (2^64 - 2^11) still converts
+-// exactly, and anything at or above the ceiling is out of tick range.
+-constexpr double kUint64TickCeiling = 0x1p64;
++// Strictly below kNoTick, where double -> tick conversion is defined; the
++// largest representable double below it still converts exactly, and anything
++// at or above the ceiling is out of tick range.
++constexpr double kTickCeiling = double(CoreTimeDefaults::kNoTick);
+ 
+ TickRange tickRange(const double begin, const double end) noexcept
+ {
+     if (!std::isfinite(begin) || !std::isfinite(end))
+         return {};
+     const double first = std::max(0.0, begin);
+-    if (end <= first || end >= kUint64TickCeiling)
++    if (end <= first || end >= kTickCeiling)
+         return {};
+-    return {uint64_t(first), uint64_t(end)};
++    return {Tick(first), Tick(end)};
+ }
+ 
+ QColor gridLineColor(int alpha)
+ {
+     auto color = themes::color(themes::Role::song_view_grid);
+     color.setAlpha((color.alpha() * alpha + 127) / 255);
+     return color;
+ }
+ 
+ } // namespace songview::detail
+diff --git a/src/ui/songview/detail.h b/src/ui/songview/detail.h
+index a86e05f0..0fc041d1 100644
+--- a/src/ui/songview/detail.h
++++ b/src/ui/songview/detail.h
+@@ -31,59 +31,59 @@ QString keyName(int key);
+ QString contextShortcutText(const QString &commandId);
+ QString timeSigLabel(int numerator, int denomPow2);
+ QColor loopEdge();
+ QColor pianoRollAccidentalLaneColor();
+ QColor pianoRollScaleHighlightColor();
+ QColor trackHeaderAlsoSelectedColor();
+ QColor mixTowardOklabImpl(const QColor &color, const QColor &backdrop, double t);
+ std::size_t trackIdentityIndex(int track);
+ QColor contrastingTextColor(const QColor &backdrop);
+ QColor ghostNoteColor(int track, bool accidentalRow);
+-int subGridLevel(uint64_t relTick, uint64_t beatTicks, bool triplet);
++int subGridLevel(Tick relTick, uint32_t beatTicks, bool triplet);
+ 
+ // Half-open tick bounds for grid iteration, resolved from the fractional
+ // tick interval a viewport covers. empty() unless the interval is finite,
+ // non-empty once a negative begin clips to the song start, and strictly
+-// below 2^64, where double -> uint64 conversion stays defined.
++// below kNoTick, where double -> tick conversion stays defined.
+ struct TickRange {
+-    uint64_t begin = 0;
+-    uint64_t end = 0;
++    Tick begin = 0;
++    Tick end = 0;
+ 
+     bool empty() const noexcept { return begin == end; }
+ };
+ 
+ TickRange tickRange(double begin, double end) noexcept;
+ 
+ // Calls fn(tick, level) for every sub-beat visible-grid position in
+ // [range.begin, range.end) that is not a beat line, at the current zoom's
+ // drawn resolution (Grid::gridTicksAt, which bottoms out at the mid2agb
+ // clock grid; the snap grid runs one ladder step finer between these
+ // lines). Walks time-signature segments so the positions stay snappable
+ // and match the beat lines. No callbacks in segments whose grid is at (or
+ // coarser than) whole beats.
+ template <typename F>
+ void forEachSubGridLine(const Grid &grid, const TimeCamera &camera, TickRange range,
+                         int timelineDetailMinimumPixelsPerBeat, F &&fn)
+ {
+     const bool triplet = grid.feel() == GridFeel::Triplet;
+-    uint64_t at = range.begin;
++    Tick at = range.begin;
+     while (at < range.end) {
+         const Grid::Segment seg = grid.segmentAt(at);
+-        const uint64_t segEnd = std::min(seg.next, range.end);
+-        const uint64_t g = grid.gridTicksAt(at);
++        const Tick segEnd = std::min(seg.next, range.end);
++        const Tick g = grid.gridTicksAt(at);
+         if (g > 0 && g < seg.beatTicks &&
+             camera.pxPerTick() * double(seg.beatTicks) >= timelineDetailMinimumPixelsPerBeat) {
+-            const uint64_t k = at > seg.start ? (at - seg.start + g - 1) / g : 0;
+-            for (uint64_t tick = seg.start + k * g; tick < segEnd; tick += g) {
++            const uint64_t k = at > seg.start ? (uint64_t(at) - seg.start + g - 1) / g : 0;
++            for (Tick tick = seg.start + Tick(k * g); tick < segEnd; tick += g) {
+                 if ((tick - seg.start) % seg.beatTicks == 0)
+                     continue; // beat/bar lines are drawn separately
+-                fn(tick, subGridLevel(tick - seg.start, seg.beatTicks, triplet));
++                fn(tick, subGridLevel(Tick(tick - seg.start), seg.beatTicks, triplet));
+             }
+         }
+         if (seg.next >= range.end)
+             break;
+         at = seg.next;
+     }
+ }
+ 
+ QColor gridLineColor(int alpha = 255);
+ 
+diff --git a/src/ui/songview/editorselectionmodel.h b/src/ui/songview/editorselectionmodel.h
+index 439930ee..3b5bee78 100644
+--- a/src/ui/songview/editorselectionmodel.h
++++ b/src/ui/songview/editorselectionmodel.h
+@@ -1,54 +1,55 @@
+ #pragma once
+ 
+ #include <cstdint>
+ #include <functional>
+ #include <optional>
+ #include <span>
+ #include <utility>
+ #include <vector>
+ 
+ #include "core/noteid.h"
++#include "core/timedefaults.h"
+ 
+ struct TrackRemap;
+ 
+ namespace songview {
+ 
+ using TrackMask = uint32_t;
+ inline constexpr uint32_t kTrackMask = (uint32_t{1} << 16) - 1;
+ 
+ class EditorSelectionModel
+ {
+   public:
+     struct TimeSelection {
+         enum Scope { Tracks, Lanes };
+ 
+-        uint64_t startTick = 0;
+-        uint64_t endTick = 0;
++        Tick startTick = 0;
++        Tick endTick = 0;
+         Scope scope = Tracks;
+         std::vector<std::pair<int, uint8_t>> lanes;
+         bool tempo = false;
+ 
+         bool active() const noexcept { return endTick > startTick; }
+     };
+ 
+     enum class SelectionChange : uint32_t {
+         None = 0,
+         PrimaryTrack = 1u << 0,
+         TrackScope = 1u << 1,
+         NoteSelection = 1u << 2,
+         TimeSelection = 1u << 3,
+     };
+ 
+     struct TrackTimeSelection {
+-        uint64_t startTick = 0;
+-        uint64_t endTick = 0;
++        Tick startTick = 0;
++        Tick endTick = 0;
+         TrackMask trackScope = 0;
+ 
+         bool active() const noexcept { return trackScope != 0 && endTick > startTick; }
+     };
+ 
+     struct SelectionTransition {
+         SelectionChange changes = SelectionChange::None;
+         TrackTimeSelection previousTrackTime;
+         TrackTimeSelection trackTime;
+     };
+diff --git a/src/ui/songview/grid.cpp b/src/ui/songview/grid.cpp
+index 860670b2..d27a6423 100644
+--- a/src/ui/songview/grid.cpp
++++ b/src/ui/songview/grid.cpp
+@@ -31,137 +31,134 @@ void Grid::setMinDenom(int denom) noexcept
+ void Grid::setTicksPerClock(uint32_t ticksPerClock) noexcept
+ {
+     m_clock = ticksPerClock;
+ }
+ void Grid::setThresholds(int timelineDetailMinimumPixelsPerBeat,
+                          int automationGridMinimumCellWidth) noexcept
+ {
+     m_timelineDetailMinimumPixelsPerBeat = timelineDetailMinimumPixelsPerBeat;
+     m_automationGridMinimumCellWidth = automationGridMinimumCellWidth;
+ }
+-Grid::Segment Grid::segmentAt(uint64_t tick) const
++Grid::Segment Grid::segmentAt(Tick tick) const
+ {
+     return m_axis.segmentAt(tick);
+ }
+-GridCell Grid::visibleGridCellContaining(uint64_t tick) const
++GridCell Grid::visibleGridCellContaining(Tick tick) const
+ {
+     const Segment seg = segmentAt(tick);
+     const bool drawBeats = m_camera.pxPerBeat() >= m_timelineDetailMinimumPixelsPerBeat;
+     uint64_t grid = seg.beatTicks;
+     if (!drawBeats) {
+         // The retained scene draws only bars at this zoom.
+         grid *= seg.beatsPerBar;
+     } else if (m_camera.pxPerTick() * double(seg.beatTicks) >=
+                m_timelineDetailMinimumPixelsPerBeat) {
+         // The retained scene also draws the current visible sub-grid in this segment.
+         grid = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/false);
+     }
+     grid = std::max<uint64_t>(1, grid);
+-    const uint64_t start = seg.start + ((tick - seg.start) / grid) * grid;
+-    const uint64_t next = start > UINT64_MAX - grid ? UINT64_MAX : start + grid;
++    const Tick start = seg.start + Tick(Tick((uint64_t(tick) - seg.start) / grid) * grid);
++    const Tick next = tick > CoreTimeDefaults::kMaxTick - Tick(grid) ? CoreTimeDefaults::kNoTick
++                                                                     : start + Tick(grid);
+     return {start, std::min(next, seg.next)};
+ }
+-uint64_t Grid::visibleGridTickDown(uint64_t tick) const
++Tick Grid::visibleGridTickDown(Tick tick) const
+ {
+     return visibleGridCellContaining(tick).start;
+ }
+-uint64_t Grid::visibleGridTickUp(uint64_t tick) const
++Tick Grid::visibleGridTickUp(Tick tick) const
+ {
+     return visibleGridCellContaining(tick).end;
+ }
+-uint64_t Grid::gridTicksAt(uint64_t tick) const
++Tick Grid::gridTicksAt(Tick tick) const
+ {
+     return gridTicksIn(segmentAt(tick), m_camera.pxPerTick());
+ }
+-uint64_t Grid::gridTicksAtScale(uint64_t tick, double pixelsPerTick) const
++Tick Grid::gridTicksAtScale(Tick tick, double pixelsPerTick) const
+ {
+     return gridTicksIn(segmentAt(tick), pixelsPerTick);
+ }
+-uint64_t Grid::snapTicksAt(uint64_t tick) const
++Tick Grid::snapTicksAt(Tick tick) const
+ {
+     return gridTicksIn(segmentAt(tick), m_camera.pxPerTick(), /*snap=*/true);
+ }
+-uint64_t Grid::gridTicksIn(const Segment &seg, double pixelsPerTick, bool snap) const
++Tick Grid::gridTicksIn(const Segment &seg, double pixelsPerTick, bool snap) const
+ {
+-    const uint64_t clock = m_clock == 0 ? 1 : m_clock;
++    const uint32_t clock = m_clock == 0 ? 1 : m_clock;
+     // Finest visible subdivision at least automationGridMinimumCellWidth() wide from the
+     // feel's ladder
+     // (divisions per beat), floored at the mid2agb clock grid and at the
+     // user's minimum note value. The floor is one division per beat of the
+     // governing signature (1/4 = the beat); triplet feel fits three notes
+     // where straight fits two, so the same denominator allows 3/2 the
+     // divisions.
+     static constexpr uint64_t kStraight[] = {32, 16, 8, 4, 2, 1};
+     static constexpr uint64_t kTriplet[] = {48, 24, 12, 6, 3, 1};
+     const bool triplet = m_feel == GridFeel::Triplet;
+-    const uint64_t maxDiv =
+-        m_minDenom == 0 ? UINT64_MAX
+-                        : std::max<uint64_t>(1, uint64_t(m_minDenom) * (triplet ? 3 : 2) / 8);
++    constexpr int kSteps = 6;
++    const int ladderBound = m_minDenom == 0 ? int(kSteps) : kSteps;
+     const double pxPerSegBeat = pixelsPerTick * double(seg.beatTicks);
+     const uint64_t *ladder = triplet ? kTriplet : kStraight;
+-    constexpr int kSteps = 6;
+     int step = kSteps - 1; // whole beats when even one-per-beat cells are
+                            // too narrow (ladder[kSteps - 1] == 1)
+-    for (int i = 0; i < kSteps; i++) {
+-        if (ladder[i] > maxDiv)
+-            continue;
+-        if (pxPerSegBeat / double(ladder[i]) >= m_automationGridMinimumCellWidth) {
+-            step = i;
++    for (int last = 0; last < ladderBound; last++) {
++        if (pxPerSegBeat / double(ladder[last]) >= m_automationGridMinimumCellWidth) {
++            step = int(last);
+             break;
+         }
+     }
+     // Snapping runs one ladder step finer than the drawn grid, so edits
+     // aren't limited to visible lines. The minimum subdivision is a display
+     // floor only — snapping steps past it too. gcd keeps the snap grid a
+     // divisor of the drawn grid when a beat's ticks don't split evenly, so
+     // every drawn line stays snappable.
+-    const uint64_t vis = std::max(seg.beatTicks / ladder[step], clock);
++    const uint32_t vis = std::max(uint32_t(seg.beatTicks / ladder[step]), clock);
+     if (!snap || step == 0)
+         return vis;
+-    const uint64_t fine = std::max<uint64_t>(1, seg.beatTicks / ladder[step - 1]);
+-    return std::max(std::gcd(vis, fine), clock);
++    const uint32_t fine = std::max<uint32_t>(1, seg.beatTicks / ladder[step - 1]);
++    return std::max(uint32_t(std::gcd(vis, fine)), clock);
+ }
+-uint64_t Grid::fineGridTicks() const
++Tick Grid::fineGridTicks() const
+ {
+     return m_clock == 0 ? gridTicksAt(0) : std::max<uint32_t>(1, m_clock);
+ }
+-uint64_t Grid::snapTick(double tick, bool fine) const
++Tick Grid::snapTick(double tick, bool fine) const
+ {
+     tick = std::max(0.0, tick);
+     if (fine) {
+         // The clock grid is the document's absolute resolution; it does not
+         // restart at time-signature changes.
+         const double g = double(fineGridTicks());
+-        return uint64_t(std::round(tick / g) * g);
++        return Tick(std::round(tick / g) * g);
+     }
+-    const Segment seg = segmentAt(uint64_t(tick));
+-    const uint64_t g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
+-    const uint64_t k = uint64_t((tick - double(seg.start)) / double(g));
+-    const uint64_t lo = seg.start + k * g;
++    const Segment seg = segmentAt(Tick(tick));
++    const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
++    const Tick k = Tick((tick - double(seg.start)) / double(g));
++    const Tick lo = seg.start + Tick(k * g);
+     // The next signature's tick is itself a grid position (the grid
+     // restarts there), so the upper candidate never crosses it.
+-    const uint64_t hi = std::min(lo + g, seg.next);
++    const Tick hi = std::min(lo + g, seg.next);
+     return tick - double(lo) <= double(hi) - tick ? lo : hi;
+ }
+-uint64_t Grid::snapTickDown(double tick) const
++Tick Grid::snapTickDown(double tick) const
+ {
+     tick = std::max(0.0, tick);
+-    const Segment seg = segmentAt(uint64_t(tick));
+-    const uint64_t g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
+-    return seg.start + uint64_t((tick - double(seg.start)) / double(g)) * g;
++    const Segment seg = segmentAt(Tick(tick));
++    const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
++    return seg.start + Tick(Tick((tick - double(seg.start)) / double(g)) * g);
+ }
+-uint64_t Grid::snapTickUp(double tick) const
++Tick Grid::snapTickUp(double tick) const
+ {
+     tick = std::max(0.0, tick);
+-    const Segment seg = segmentAt(uint64_t(tick));
+-    const uint64_t g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
+-    const uint64_t lo = seg.start + uint64_t((tick - double(seg.start)) / double(g)) * g;
++    const Segment seg = segmentAt(Tick(tick));
++    const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
++    const Tick lo = seg.start + Tick(Tick((tick - double(seg.start)) / double(g)) * g);
+     if (double(lo) >= tick)
+         return lo;
+     // The next signature's tick is itself a grid position, so the upper
+     // candidate never crosses it.
+     return std::min(lo + g, seg.next);
+ }
+ 
+ // --- SongView: host setters and axis iteration ---
+ 
+ void SongView::setGridFeel(songview::GridFeel feel)
+@@ -180,15 +177,15 @@ void SongView::setGridMinDenom(int denom)
+     denom = Grid::normalizeMinDenom(denom);
+     if (m_grid.minDenom() == denom)
+         return;
+     if (m_editorDrawer)
+         m_editorDrawer->cancelVisiblePageInteraction();
+     m_grid.setMinDenom(denom);
+     m_ruler->syncGridControls();
+     refreshTimelineViews(PianoRollQuickDirty::GridTime);
+     refreshDrawerPages();
+ }
+-void SongView::forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
+-                               const std::function<void(uint64_t, bool, int, int)> &fn) const
++void SongView::forEachGridLine(Tick tickBegin, Tick tickEnd,
++                               const std::function<void(Tick, bool, int, int)> &fn) const
+ {
+     m_timeAxis.forEachGridLine(tickBegin, tickEnd, fn);
+ }
+diff --git a/src/ui/songview/grid.h b/src/ui/songview/grid.h
+index d1635131..e6a330c7 100644
+--- a/src/ui/songview/grid.h
++++ b/src/ui/songview/grid.h
+@@ -8,22 +8,22 @@
+ namespace songview {
+ 
+ // Grid feel: which subdivision ladder the visible grid and the snap grid
+ // walk. Straight fits two divisions per ladder step; triplet fits three
+ // where straight fits two.
+ enum class GridFeel : uint8_t { Straight, Triplet };
+ 
+ // One painted visible-grid cell. Cells are half-open [start, end): a
+ // tick exactly at an end belongs to the next cell.
+ struct GridCell {
+-    uint64_t start = 0;
+-    uint64_t end = 0;
++    Tick start = 0;
++    Tick end = 0;
+ };
+ 
+ // Pure zoom- and editor-dependent grid math for the song view: the visible
+ // subdivision, the snap grid, and fine placement. It reads the camera scale
+ // and the axis segments live and holds only scalar state — the grid feel,
+ // the user's minimum note denominator, the document's clock floor, and the
+ // two detail thresholds. No widgets, no document pointer, no notifications,
+ // no allocations; the SongView host pushes state and owns every side
+ // effect.
+ class Grid final
+@@ -42,56 +42,56 @@ class Grid final
+     static int normalizeMinDenom(int denom) noexcept;
+     void setMinDenom(int denom) noexcept; // normalizes
+     // The document's clock floor in ticks; 0 = no document (unbound).
+     void setTicksPerClock(uint32_t ticksPerClock) noexcept;
+     void setThresholds(int timelineDetailMinimumPixelsPerBeat,
+                        int automationGridMinimumCellWidth) noexcept;
+ 
+     // Time-signature segment governing a tick (the axis's GridSegment).
+     // The grid — beats, snap positions, sub-beat lines — restarts at every
+     // signature change and scales the beat by the signature's denominator.
+-    Segment segmentAt(uint64_t tick) const;
+-    GridCell visibleGridCellContaining(uint64_t tick) const;
+-    uint64_t visibleGridTickDown(uint64_t tick) const;
+-    uint64_t visibleGridTickUp(uint64_t tick) const;
++    Segment segmentAt(Tick tick) const;
++    GridCell visibleGridCellContaining(Tick tick) const;
++    Tick visibleGridTickDown(Tick tick) const;
++    Tick visibleGridTickUp(Tick tick) const;
+ 
+     // Every tick-spacing accessor below returns a value >= 1 (floored at
+     // the clock base), so callers may divide by them or use them as loop
+     // strides without clamping.
+     // Zoom-adaptive subdivision selected for the grid before the retained
+     // scene suppresses sub-beat or beat lines at low detail.
+     // It is not the painted-cell spacing; use visibleGridCellContaining().
+     // The subdivision follows the governing segment's beat at the current
+     // feel, floored at the minimum and never finer than the clock base.
+-    uint64_t gridTicksAt(uint64_t tick) const;
++    Tick gridTicksAt(Tick tick) const;
+     // Visible grid at an explicit pixels-per-tick scale, using the
+     // time-signature segment governing tick.
+-    uint64_t gridTicksAtScale(uint64_t tick, double pixelsPerTick) const;
++    Tick gridTicksAtScale(Tick tick, double pixelsPerTick) const;
+     // Snap grid in ticks at a position: one feel-ladder step finer than the
+     // visible grid, so edits can land halfway between drawn lines (thirds
+     // stepping from beats in triplet feel). The minimum subdivision is a
+     // display floor only — snapping steps past it too.
+-    uint64_t snapTicksAt(uint64_t tick) const;
++    Tick snapTicksAt(Tick tick) const;
+     // Fine placement (Alt-drag in the lanes): the clock grid — the
+     // document's real resolution — regardless of the zoom-dependent grid.
+     // Unbound (no document), it falls back to the grid at tick 0.
+-    uint64_t fineGridTicks() const;
++    Tick fineGridTicks() const;
+     // Nearest / previous snap-grid position, anchored at the governing
+     // time-signature segment (fine snap stays on the absolute clock grid).
+-    uint64_t snapTick(double tick, bool fine = false) const;
+-    uint64_t snapTickDown(double tick) const;
+-    uint64_t snapTickUp(double tick) const;
++    Tick snapTick(double tick, bool fine = false) const;
++    Tick snapTickDown(double tick) const;
++    Tick snapTickUp(double tick) const;
+ 
+   private:
+     // Both exits floor at the clock base: the result is >= 1 for any
+     // segment, so snap math may divide by it unchecked.
+-    uint64_t gridTicksIn(const Segment &seg, double pixelsPerTick, bool snap = false) const;
++    Tick gridTicksIn(const Segment &seg, double pixelsPerTick, bool snap = false) const;
+ 
+     const TimeAxis &m_axis;
+     const TimeCamera &m_camera;
+     GridFeel m_feel = GridFeel::Straight;
+     int m_minDenom = 0;   // note denominator; 0 = clock-grid floor
+     uint32_t m_clock = 0; // clock floor in ticks; 0 = no document
+     int m_timelineDetailMinimumPixelsPerBeat = 0;
+     int m_automationGridMinimumCellWidth = 0;
+ };
+ 
+diff --git a/src/ui/songview/pianoroll.h b/src/ui/songview/pianoroll.h
+index 98eaa9a3..a4fc3a1f 100644
+--- a/src/ui/songview/pianoroll.h
++++ b/src/ui/songview/pianoroll.h
+@@ -218,21 +218,21 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
+     void resolveRightPress(const TimelinePointerInput &input);
+     void resolveDrawPress(const TimelinePointerInput &input);
+     bool resolveVelocityPress(const TimelinePointerInput &input);
+     void applyVelocityDragSelection();
+     void updateMoveDrag(const TimelinePointerInput &input);
+     void auditionMovedSelection();
+     void updateResizeDrag(const TimelinePointerInput &input);
+     void updateVelocityDrag(const TimelinePointerInput &input);
+     void updateDrawDrag(const TimelinePointerInput &input);
+     bool isDrawableKey(int key) const;
+-    void drawSpanAt(double tick, uint64_t grid, uint64_t &start, int64_t &dur) const;
++    void drawSpanAt(double tick, Tick grid, Tick &start, int64_t &dur) const;
+     void updateTimeSelDrag(const TimelinePointerInput &input);
+     void updateBandDrag();
+     void updateLeftDragMove(const TimelinePointerInput &input);
+     void dispatchLiveDragMove(const TimelinePointerInput &input);
+     void releaseRightPress(const TimelinePointerInput &input);
+     void releasePendingMenu(const TimelinePointerInput &input, SongDocument *doc);
+     bool releasePendingLeftPress(const TimelinePointerInput &input);
+     void releasePendingDrawClick(const TimelinePointerInput &input);
+     void releasePendingVelocityClick();
+     bool finishReleaseWithoutCommit(const TimelinePointerInput &input);
+@@ -314,32 +314,32 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
+     mutable qreal m_rowEdgesScrollY = 0.0;
+     mutable uint64_t m_rowEdgesProjectionRevision = 0;
+     mutable bool m_rowEdgesValid = false;
+     LeftDrag m_leftDrag = LeftDrag::None;
+     RightDrag m_rightDrag = RightDrag::None;
+     QPointF m_pressPos;
+     QPointF m_curPos;           // last plot-local pointer position
+     bool m_curPosValid = false; // valid while the pointer is inside the plot
+     double m_pressTick = 0.0;
+     int m_pressKey = 0;
+-    uint64_t m_gripTick = 0;     // edge tick grabbed by a resize drag
+-    uint64_t m_gripOpposite = 0; // the note's other edge (the pivot)
++    Tick m_gripTick = 0;     // edge tick grabbed by a resize drag
++    Tick m_gripOpposite = 0; // the note's other edge (the pivot)
+     int64_t m_dTick = 0;
+     int m_dKey = 0; // semitones, or scale degrees during a Fold move
+     int64_t m_dDur = 0;
+     int m_dVel = 0;
+-    uint64_t m_drawTick = 0; // pending note of a draw gesture
++    Tick m_drawTick = 0; // pending note of a draw gesture
+     int64_t m_drawDur = 0;
+     int m_drawKey = 0;               // follows the cursor vertically mid-draw
+-    uint64_t m_drawAnchor = 0;       // grid cell pressed; drags pivot around it
++    Tick m_drawAnchor = 0;           // grid cell pressed; drags pivot around it
+     bool m_rightShift = false;       // …with Shift: drag sweeps a time selection
+-    uint64_t m_rightAnchorTick = 0;  // snapped tick of the right press
++    Tick m_rightAnchorTick = 0;      // snapped tick of the right press
+     bool m_rightHit = false;         // that press landed on a note…
+     NoteId m_rightHitId{};           // …this one
+     std::vector<ViewNote> m_bandAud; // notes the band currently covers; entrants audition
+     ViewNote m_velAnchor{};          // pressed note of a velocity drag (a copy)
+     int m_velAudEff = -1;            // last effective velocity auditioned mid-drag
+     Qt::KeyboardModifiers m_velModMods = Qt::NoModifier; // that press's chord
+     int m_kbdKey = -1;         // key sounding from a keyboard-column press
+     int m_soundingKey = -1;    // auditioned key highlighted on the keyboard
+     int m_hoverKey = -1;       // key row under the cursor; -1 = no mark
+     bool m_auditioned = false; // a drag/draw preview note is sounding
+diff --git a/src/ui/songview/pianoroll_commands.cpp b/src/ui/songview/pianoroll_commands.cpp
+index 51192965..be6abf0e 100644
+--- a/src/ui/songview/pianoroll_commands.cpp
++++ b/src/ui/songview/pianoroll_commands.cpp
+@@ -192,36 +192,36 @@ void PianoRoll::transposeSelectedNotes(int semitones)
+     else
+         transposeSelection(semitones);
+ }
+ 
+ void PianoRoll::nudgeSelectedNotes(bool right)
+ {
+     SongDocument *doc = m_sv->document();
+     const std::vector<DocNote> notes = resolveSelection();
+     if (!doc || notes.empty())
+         return;
+-    uint64_t anchor = UINT64_MAX;
++    Tick anchor = CoreTimeDefaults::kNoTick;
+     for (const DocNote &note : notes)
+         anchor = std::min(anchor, note.tick);
+-    const uint64_t snapped =
++    const Tick snapped =
+         right ? m_grid.snapTickUp(double(anchor) + 1.0) : m_grid.snapTickDown(double(anchor) - 1.0);
+     const int64_t dTick = int64_t(snapped) - int64_t(anchor);
+     if (dTick == 0)
+         return;
+     const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+     doc->moveNotes(notes, dTick, 0, /*mergeable=*/true);
+     // Keep the moved notes in sight, scrolling just enough.
+-    uint64_t lo = UINT64_MAX, hi = 0;
++    Tick lo = CoreTimeDefaults::kNoTick, hi = 0;
+     for (const DocNote &note : notes) {
+-        const uint64_t tick = uint64_t(int64_t(note.tick) + dTick);
++        const Tick tick = Tick(int64_t(note.tick) + dTick);
+         lo = std::min(lo, tick);
+-        hi = std::max(hi, tick + note.duration);
++        hi = Tick(std::max(uint64_t(hi), uint64_t(tick) + note.duration));
+     }
+     m_sv->ensureRangeVisible(lo, hi, right);
+     // Only note pixels changed here; the ensureRangeVisible reveal above
+     // queues its own camera request when it actually scrolls.
+     requestQuickUpdate(cNoteMutationDirty);
+ }
+ 
+ void PianoRoll::copySelectedNotes()
+ {
+     const std::vector<DocNote> notes = resolveSelection();
+@@ -247,21 +247,21 @@ void PianoRoll::deleteSelectedNotes()
+     SongDocument *doc = m_sv->document();
+     if (!doc || notes.empty())
+         return;
+     const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+     doc->deleteNotes(notes);
+     m_sv->selectionModel().clearNoteSelection();
+ }
+ 
+ void PianoRoll::copyNotes(const std::vector<DocNote> &notes)
+ {
+-    uint64_t base = UINT64_MAX;
++    Tick base = CoreTimeDefaults::kNoTick;
+     for (const DocNote &note : notes)
+         base = std::min(base, note.tick);
+     Clip clip;
+     ClipTrack ct{m_sv->selectionModel().primaryTrack(), {}};
+     for (const DocNote &note : notes)
+         ct.notes.push_back({uint32_t(note.tick - base), note.key,
+                             note.duration ? note.duration : uint32_t(m_grid.gridTicksAt(note.tick)),
+                             note.velocity});
+     clip.tracks.push_back(std::move(ct));
+     writeClipboard(clip, m_sv->timeline()->ticksPerBeat);
+diff --git a/src/ui/songview/pianoroll_gestures_active.cpp b/src/ui/songview/pianoroll_gestures_active.cpp
+index e4354fda..60c3458f 100644
+--- a/src/ui/songview/pianoroll_gestures_active.cpp
++++ b/src/ui/songview/pianoroll_gestures_active.cpp
+@@ -11,21 +11,21 @@
+ #include <algorithm>
+ #include <cmath>
+ #include <utility>
+ #include <vector>
+ 
+ namespace songview {
+ 
+ void PianoRoll::updateMoveDrag(const TimelinePointerInput &input)
+ {
+     const double tick = m_camera.tickAtContentX(input.position.x());
+-    const int64_t grid = int64_t(m_grid.snapTicksAt(uint64_t(std::max(0.0, m_pressTick))));
++    const int64_t grid = int64_t(m_grid.snapTicksAt(Tick(std::max(0.0, m_pressTick))));
+     const int64_t snappedD = int64_t(std::llround((tick - m_pressTick) / double(grid))) * grid;
+     const int dKey = m_sv->scaleFold() ? foldDegreeDeltaForPointer(input.position.y())
+                                        : yToKey(input.position.y()) - m_pressKey;
+     if (snappedD != m_dTick || dKey != m_dKey) {
+         m_dTick = snappedD;
+         if (dKey != m_dKey) {
+             m_dKey = dKey;
+             auditionMovedSelection();
+         }
+         requestQuickUpdate(cNoteMutationDirty);
+@@ -44,21 +44,21 @@ void PianoRoll::auditionMovedSelection()
+             auditionKey(key, notes.front().velocity);
+             m_auditioned = true;
+         }
+     }
+ }
+ 
+ void PianoRoll::updateResizeDrag(const TimelinePointerInput &input)
+ {
+     const double tick = m_camera.tickAtContentX(input.position.x());
+     const double desired = double(m_gripTick) + (tick - m_pressTick);
+-    const uint64_t snapped =
++    const Tick snapped =
+         m_leftDrag == LeftDrag::Resize
+             ? std::max(m_grid.snapTick(desired), m_grid.snapTickUp(double(m_gripOpposite) + 1.0))
+             : std::min(m_grid.snapTick(desired), m_grid.snapTickDown(double(m_gripOpposite) - 1.0));
+     const int64_t delta =
+         std::abs(desired - double(m_gripTick)) < std::abs(desired - double(snapped))
+             ? 0
+             : int64_t(snapped) - int64_t(m_gripTick);
+     int64_t &target = m_leftDrag == LeftDrag::Resize ? m_dDur : m_dTick;
+     if (delta != target) {
+         target = delta;
+@@ -82,22 +82,22 @@ void PianoRoll::updateVelocityDrag(const TimelinePointerInput &input)
+             m_auditioned = true;
+         }
+         requestQuickUpdate(cVelocityMutationDirty);
+         m_sv->updateVelocityGestureByDelta(m_dVel);
+     }
+ }
+ 
+ void PianoRoll::updateDrawDrag(const TimelinePointerInput &input)
+ {
+     const double tick = m_camera.tickAtContentX(input.position.x());
+-    const uint64_t grid = m_grid.snapTicksAt(uint64_t(std::max(0.0, m_pressTick)));
+-    uint64_t start;
++    const Tick grid = m_grid.snapTicksAt(Tick(std::max(0.0, m_pressTick)));
++    Tick start;
+     int64_t dur;
+     drawSpanAt(tick, grid, start, dur);
+     const int key = yToKey(input.position.y());
+     const bool isScaleKey = isDrawableKey(key);
+     if (start != m_drawTick || dur != m_drawDur || (isScaleKey && key != m_drawKey)) {
+         m_drawTick = start;
+         m_drawDur = dur;
+         if (isScaleKey && key != m_drawKey) {
+             m_drawKey = key;
+             auditionKey(m_drawKey, m_lastVelocity);
+@@ -107,37 +107,37 @@ void PianoRoll::updateDrawDrag(const TimelinePointerInput &input)
+                            PianoRollQuickDirty::NoteText);
+     }
+ }
+ 
+ bool PianoRoll::isDrawableKey(int key) const
+ {
+     return !m_sv->scaleFold() ||
+            (key >= 0 && porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), key));
+ }
+ 
+-void PianoRoll::drawSpanAt(double tick, uint64_t grid, uint64_t &start, int64_t &dur) const
++void PianoRoll::drawSpanAt(double tick, Tick grid, Tick &start, int64_t &dur) const
+ {
+-    const uint64_t anchor = m_drawAnchor;
++    const Tick anchor = m_drawAnchor;
+     start = anchor;
+     if (tick >= double(anchor)) {
+-        const uint64_t end = std::max(anchor + grid, m_grid.snapTickUp(tick));
++        const Tick end = std::max(anchor + grid, m_grid.snapTickUp(tick));
+         dur = int64_t(end - anchor);
+     } else {
+         start = m_grid.snapTickDown(tick);
+         dur = int64_t(anchor + grid - start);
+     }
+ }
+ 
+ void PianoRoll::updateTimeSelDrag(const TimelinePointerInput &input)
+ {
+     const double tick = m_camera.tickAtContentX(input.position.x());
+-    const uint64_t t = m_grid.snapTick(tick);
++    const Tick t = m_grid.snapTick(tick);
+     EditorSelectionModel::TimeSelection sel;
+     sel.startTick = std::min(m_rightAnchorTick, t);
+     sel.endTick = std::max(m_rightAnchorTick, t);
+     m_sv->selectionModel().setTimeSelection(sel);
+ }
+ 
+ void PianoRoll::updateBandDrag()
+ {
+     auditionBandEntrants(QRectF(m_pressPos, m_curPos).normalized());
+     requestQuickUpdate(PianoRollQuickDirty::Overlay | PianoRollQuickDirty::NoteBordersAndSelection);
+diff --git a/src/ui/songview/quick/automationnodelanequick.cpp b/src/ui/songview/quick/automationnodelanequick.cpp
+index e4b54b04..82bcf49a 100644
+--- a/src/ui/songview/quick/automationnodelanequick.cpp
++++ b/src/ui/songview/quick/automationnodelanequick.cpp
+@@ -47,21 +47,21 @@ std::optional<PointReplacement> pointReplacement(const NodeLaneQuickPaint::Conte
+         const NodeDrag &point = context.nodeDrag->points[context.nodeDrag->grabbedPoint];
+         return PointReplacement{point.original, point.current};
+     }
+     if (context.phantomGesture && context.phantomGesture->lane == context.handle) {
+         const NodeDrag &point = context.phantomGesture->point;
+         return PointReplacement{point.original, point.current};
+     }
+     return std::nullopt;
+ }
+ 
+-bool pointSelected(const NodeLaneQuickPaint::Context &context, uint64_t tick)
++bool pointSelected(const NodeLaneQuickPaint::Context &context, Tick tick)
+ {
+     if (context.selectedNodesLane && context.selectedTickRange) {
+         const auto [firstTick, lastTick] = *context.selectedTickRange;
+         if (tick >= firstTick && tick < lastTick)
+             return true;
+     }
+     return context.bandLane && tick >= context.bandFirstTick && tick < context.bandLastTick;
+ }
+ 
+ void addNode(TimelineQuickScene &scene, TimelineQuickLayer layer,
+@@ -88,21 +88,21 @@ void addNode(TimelineQuickScene &scene, TimelineQuickLayer layer,
+     addEllipseRing(scene.layer(layer), center, context.geometry.nodePaintRadius,
+                    context.geometry.nodePaintRadius, context.geometry.nodeOutlineDipWidth * 2.0,
+                    color, context.overflow);
+ }
+ 
+ qreal nodeY(const NodeLaneQuickPaint::Context &context, int value)
+ {
+     return nodelane::valueY(context.lane, context.body, context.geometry, value);
+ }
+ 
+-qreal tickX(const NodeLaneQuickPaint::Context &context, uint64_t tick)
++qreal tickX(const NodeLaneQuickPaint::Context &context, Tick tick)
+ {
+     return context.projection.displayX(tick, context.devicePixelRatio);
+ }
+ 
+ void addStepCurve(const NodeLaneQuickPaint::Context &context, TimelineQuickLayer layer,
+                   std::span<const NodePoint> points, const QColor &color,
+                   const std::optional<PointReplacement> &replacement)
+ {
+     if (points.empty())
+         return;
+@@ -166,21 +166,21 @@ void addNodes(const NodeLaneQuickPaint::Context &context, TimelineQuickLayer lay
+     };
+     addPass(false);
+     addPass(true);
+ }
+ 
+ void addPhantomCurvePreview(const NodeLaneQuickPaint::Context &context, TimelineQuickLayer layer,
+                             std::span<const NodePoint> points, const OriginPhantom &phantom)
+ {
+     const auto next =
+         std::upper_bound(points.begin(), points.end(), phantom.point.tick,
+-                         [](uint64_t tick, const NodePoint &point) { return tick < point.tick; });
++                         [](Tick tick, const NodePoint &point) { return tick < point.tick; });
+     const qreal y =
+         AutomationProjection::valueY(context.body, context.geometry, phantom.minimumValue,
+                                      phantom.maximumValue, phantom.point.value);
+     const qreal nextX = next == points.end() ? context.plot.right() : tickX(context, next->tick);
+     const QColor preview = themes::color(themes::Role::song_view_edit_preview_outline);
+     addLine(context.scene.layer(layer), QPointF(context.plot.left(), y), QPointF(nextX, y),
+             layout::singlePixel(), preview, context.plot);
+     if (next != points.end()) {
+         addLine(context.scene.layer(layer), QPointF(nextX, y),
+                 QPointF(nextX, AutomationProjection::valueY(context.body, context.geometry,
+@@ -349,71 +349,71 @@ void addSweepPreview(const NodeLaneQuickPaint::Context &context,
+             preview);
+     addPreviewLabel(context, outputs);
+ }
+ 
+ void addPencilPreview(const NodeLaneQuickPaint::Context &context,
+                       const NodeLaneQuickPaint::Outputs &outputs, const PencilGesture &gesture)
+ {
+     if (gesture.lane != context.handle)
+         return;
+     const NodeLaneEdit::Completion &preview = gesture.stroke.preview();
+-    const auto addHeld = [&](uint64_t first, uint64_t last, int value, const QColor &color) {
++    const auto addHeld = [&](Tick first, Tick last, int value, const QColor &color) {
+         if (first >= last)
+             return;
+         addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient),
+                 QPointF(tickX(context, first), nodeY(context, value)),
+                 QPointF(tickX(context, last), nodeY(context, value)),
+                 layout::singlePixel() + layout::singlePixel(), color, context.plot);
+     };
+     std::optional<int> heldBefore;
+     const NodePoint *nextAfterRange = nullptr;
+     for (const NodePoint &point : context.points) {
+         if (point.tick < preview.tickBegin)
+             heldBefore = point.value;
+         if (point.tick > preview.tickEnd) {
+             nextAfterRange = &point;
+             break;
+         }
+     }
+     for (std::size_t index = 0; index < context.points.size(); ++index) {
+         const NodePoint &point = context.points[index];
+-        const uint64_t nextTick =
++        const Tick nextTick =
+             index + 1 < context.points.size() ? context.points[index + 1].tick : preview.tickBegin;
+         if (point.tick < preview.tickBegin) {
+             addHeld(point.tick, std::min(nextTick, preview.tickBegin), point.value, context.color);
+             if (nextTick < preview.tickBegin) {
+                 addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient),
+                         QPointF(tickX(context, nextTick), nodeY(context, point.value)),
+                         QPointF(tickX(context, nextTick),
+                                 nodeY(context, context.points[index + 1].value)),
+                         layout::singlePixel() + layout::singlePixel(), context.color, context.plot);
+             }
+         } else if (point.tick > preview.tickEnd) {
+             if (index + 1 < context.points.size()) {
+-                const uint64_t last = context.points[index + 1].tick;
++                const Tick last = context.points[index + 1].tick;
+                 addHeld(point.tick, last, point.value, context.color);
+                 addLine(
+                     context.scene.layer(TimelineQuickLayer::AutomationTransient),
+                     QPointF(tickX(context, last), nodeY(context, point.value)),
+                     QPointF(tickX(context, last), nodeY(context, context.points[index + 1].value)),
+                     layout::singlePixel() + layout::singlePixel(), context.color, context.plot);
+             } else {
+                 addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient),
+                         QPointF(tickX(context, point.tick), nodeY(context, point.value)),
+                         QPointF(context.plot.right(), nodeY(context, point.value)),
+                         layout::singlePixel() + layout::singlePixel(), context.color, context.plot);
+             }
+         }
+     }
+     const QColor previewColor = themes::color(themes::Role::song_view_edit_preview_outline);
+     std::optional<int> previewValue = heldBefore;
+-    uint64_t cursor = preview.tickBegin;
++    Tick cursor = preview.tickBegin;
+     for (const NodePoint &point : preview.points) {
+         if (point.tick < preview.tickBegin || point.tick > preview.tickEnd)
+             continue;
+         if (previewValue)
+             addHeld(cursor, point.tick, *previewValue, previewColor);
+         if (previewValue && *previewValue != point.value) {
+             addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient),
+                     QPointF(tickX(context, point.tick), nodeY(context, *previewValue)),
+                     QPointF(tickX(context, point.tick), nodeY(context, point.value)),
+                     layout::singlePixel(), previewColor, context.plot);
+@@ -554,22 +554,22 @@ void NodeLaneQuickPaint::composeTransient(const Context &context, bool transient
+         }
+     }
+ }
+ 
+ void NodeLaneQuickPaint::composeHover(const Context &context, bool hover, const Outputs &outputs)
+ {
+     if (!hover || context.hoverState.hover.lane != context.handle)
+         return;
+     const NodeLaneHoverState::HoverState &hoverState = context.hoverState.hover;
+     const qreal x =
+-        tickX(context, uint64_t(std::max(0.0, context.hoverState.insertionTick(
+-                                                  context.projection, context.pencilMode))));
++        tickX(context, Tick(std::max(0.0, context.hoverState.insertionTick(context.projection,
++                                                                           context.pencilMode))));
+     const QString &text = context.hoverState.hoverTextCache.text;
+     const auto &label = context.hoverState.hoverValueLabel;
+     if (hoverState.hasPoint) {
+         const qreal displayX =
+             hoverState.originPhantom ? context.plot.left() : tickX(context, hoverState.point.tick);
+         addEllipseRing(context.scene.layer(TimelineQuickLayer::AutomationHover),
+                        QPointF(displayX, nodeY(context, hoverState.point.value)),
+                        nodelane::hoverRingRadius(context.geometry),
+                        nodelane::hoverRingRadius(context.geometry), 2 * layout::singlePixel(),
+                        themes::color(themes::Role::song_view_edit_preview_outline), context.plot);
+diff --git a/src/ui/songview/quick/automationnodelanequick.h b/src/ui/songview/quick/automationnodelanequick.h
+index f2f53120..b16040b4 100644
+--- a/src/ui/songview/quick/automationnodelanequick.h
++++ b/src/ui/songview/quick/automationnodelanequick.h
+@@ -3,20 +3,21 @@
+ #include <cstdint>
+ #include <optional>
+ #include <span>
+ #include <utility>
+ #include <vector>
+ 
+ #include <QColor>
+ #include <QRect>
+ #include <QRectF>
+ 
++#include "core/timedefaults.h"
+ #include "ui/editordrawer/automationprojection.h"
+ #include "ui/editordrawer/nodelane/gesture.h"
+ #include "ui/editordrawer/nodelane/hover.h"
+ #include "ui/editordrawer/nodelane/nodelane.h"
+ #include "ui/songview/quick/timelinequickscene.h"
+ 
+ namespace songview {
+ 
+ class NodeLaneQuickPaint final
+ {
+@@ -30,26 +31,26 @@ class NodeLaneQuickPaint final
+         qreal contentYOffset = 0.0;
+         QRectF overflow;
+         const AutomationGeometry &geometry;
+         const AutomationProjection &projection;
+         const NodeLaneHoverState &hoverState;
+         LaneHandle handle;
+         QColor color;
+         QColor selectedColor;
+         QColor dimmedColor;
+         qreal devicePixelRatio = 1.0;
+-        std::optional<std::pair<uint64_t, uint64_t>> selectedTickRange;
++        std::optional<std::pair<Tick, Tick>> selectedTickRange;
+         bool selectedLane = false;
+         bool selectedNodesLane = false;
+         bool bandLane = false;
+-        uint64_t bandFirstTick = 0;
+-        uint64_t bandLastTick = 0;
++        Tick bandFirstTick = 0;
++        Tick bandLastTick = 0;
+         bool multipleSelectedNodes = false;
+         bool pencilMode = false;
+         const NodeDragGesture *nodeDrag = nullptr;
+         const PhantomGesture *phantomGesture = nullptr;
+         const SweepGesture *sweep = nullptr;
+         const PencilGesture *pencil = nullptr;
+         std::optional<OriginPhantom> phantom;
+     };
+ 
+     struct Outputs {
+diff --git a/src/ui/songview/quick/automationquick.cpp b/src/ui/songview/quick/automationquick.cpp
+index 84dab5ce..56e18dd1 100644
+--- a/src/ui/songview/quick/automationquick.cpp
++++ b/src/ui/songview/quick/automationquick.cpp
+@@ -77,32 +77,34 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
+         if (hover)
+             scene.setAutomationHoverTextRecords({});
+         return;
+     }
+     const auto &bandGeometry =
+         m_page.m_owner.timelineBandLayout().geometry(TimelineBand::Automation);
+     const QRect gutter = bandGeometry ? bandGeometry->gutterRect() : QRect{};
+     const QRectF gutterViewport(0.0, 0.0, gutter.width(), gutter.height());
+     const qreal dpr = m_inputHost->devicePixelRatio();
+     const AutomationProjection projection = this->projection();
+-    const auto selectedTickRange = [this]() -> std::optional<std::pair<uint64_t, uint64_t>> {
++    const auto selectedTickRange = [this]() -> std::optional<std::pair<Tick, Tick>> {
+         if (m_band.active) {
+-            const uint64_t first = std::min(m_band.startTick, m_band.endTick);
+-            const uint64_t last = std::max(m_band.startTick, m_band.endTick);
++            const Tick first = std::min(m_band.startTick, m_band.endTick);
++            const Tick last = std::max(m_band.startTick, m_band.endTick);
+             if (first != last)
+                 return std::pair{first, last};
+             return std::nullopt;
+         }
+-        return m_laneSelection.activeTickRange();
++        const auto range = m_laneSelection.activeTickRange();
++        return range ? std::optional{std::pair{Tick(range->first), Tick(range->second)}}
++                     : std::nullopt;
+     }();
+-    const uint64_t bandFirst = std::min(m_band.startTick, m_band.endTick);
+-    const uint64_t bandLast = std::max(m_band.startTick, m_band.endTick);
++    const Tick bandFirst = std::min(m_band.startTick, m_band.endTick);
++    const Tick bandLast = std::max(m_band.startTick, m_band.endTick);
+     const NodeDragGesture *nodeDrag = nullptr;
+     const PhantomGesture *phantomGesture = nullptr;
+     const SweepGesture *sweep = nullptr;
+     const PencilGesture *pencil = nullptr;
+     if (m_activeGesture) {
+         nodeDrag = std::get_if<NodeDragGesture>(&*m_activeGesture);
+         phantomGesture = std::get_if<PhantomGesture>(&*m_activeGesture);
+         sweep = std::get_if<SweepGesture>(&*m_activeGesture);
+         pencil = std::get_if<PencilGesture>(&*m_activeGesture);
+     }
+@@ -144,21 +146,24 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
+                              .overflow =
+                                  nodelane::nodeOverflowClip(body, m_geometry).intersected(viewport),
+                              .tempo = slot->isTempo(),
+                              .selectedLane = m_laneSelection.coversLane(slot->id) || bandLane,
+                              .selectedNodesLane = m_laneSelection.coversNodes(slot->id) || bandLane,
+                              .bandLane = bandLane,
+                              .points = content || needsTransientPoints || needsHoverPoints
+                                            ? slot->lane->points()
+                                            : std::vector<NodePoint>{}};
+     }
+-    const bool multipleSelectedNodes = hasMultipleSelectedNodes(selectedTickRange);
++    const bool multipleSelectedNodes = hasMultipleSelectedNodes(
++        selectedTickRange ? std::optional{std::pair{uint64_t(selectedTickRange->first),
++                                                    uint64_t(selectedTickRange->second)}}
++                          : std::nullopt);
+ 
+     std::vector<TimelineQuickTextModel::Record> hoverTextRecords;
+     std::vector<TimelineQuickTextModel::Record> transientTextRecords;
+ 
+     if (hover)
+         hoverTextRecords.reserve(1);
+     if (transient)
+         transientTextRecords.reserve(1);
+     const NodeLaneQuickPaint::Outputs outputs;
+     const QColor background = opaqueColor(themes::Role::song_view_piano_roll_background);
+diff --git a/src/ui/songview/quick/eventlistcontroller.cpp b/src/ui/songview/quick/eventlistcontroller.cpp
+index 46564ff8..df9250dd 100644
+--- a/src/ui/songview/quick/eventlistcontroller.cpp
++++ b/src/ui/songview/quick/eventlistcontroller.cpp
+@@ -58,22 +58,21 @@ bool hasChunk(const SongDocument *document, int chunk)
+     return document && chunk >= 0 && chunk < int(document->smf().tracks.size());
+ }
+ 
+ } // namespace
+ 
+ EventListController::EventListController(SongView *songView, QObject *parent)
+     : QObject(parent)
+     , m_songView(songView)
+     , m_model(new eventlist::EventTableModel(songView, this))
+ {
+-    m_model->setSelectionHandler(
+-        [this](int chunk, uint64_t tick) { selectRowAtTick(chunk, tick); });
++    m_model->setSelectionHandler([this](int chunk, Tick tick) { selectRowAtTick(chunk, tick); });
+     m_menuHost = new songview::QuickMenuHost(this);
+     m_chunkMenu = new songview::QuickMenuModel(this);
+     m_filterMenu = new songview::QuickMenuModel(this);
+     m_rowMenu = new songview::QuickMenuModel(this);
+     m_typeMenu = new songview::QuickMenuModel(this);
+     connect(m_menuHost, &songview::QuickMenuHost::isOpenChanged, this,
+             [this] { updateMenuOpen(m_menuHost->isOpen()); });
+     if (m_songView) {
+         connect(m_songView, &SongView::selectedTrackChanged, this,
+                 [this](int) { syncTrackSelection(); });
+@@ -559,21 +558,21 @@ void EventListController::clearEditing()
+ void EventListController::setPointerDown(bool pointerDown)
+ {
+     m_pointerDown = pointerDown;
+ }
+ 
+ void EventListController::jumpCursorToRow(int row)
+ {
+     if (!hasChunk(m_document, m_model->chunk()) || !m_songView)
+         return;
+     const auto rowTick = m_model->exactTickForRow(row);
+-    uint64_t tick = 0;
++    Tick tick = 0;
+     if (rowTick) {
+         tick = *rowTick;
+     } else {
+         if (row != int(m_model->shownEvents()))
+             return;
+         tick = m_document->smf().tracks[m_model->chunk()].endTick;
+     }
+     if (tick != m_songView->editCursorTick()) {
+         m_songView->commitEditCursor(tick);
+         m_songView->ensureTickVisible(tick);
+@@ -1113,21 +1112,21 @@ void EventListController::openRowMenu(const QPointF &scenePosition)
+ void EventListController::openTypeMenu(const QPointF &scenePosition)
+ {
+     const QModelIndex typeIndex = m_model->index(m_currentRow, eventlist::EventTableModel::ColType);
+     if (!typeIndex.isValid() || !m_model->flags(typeIndex).testFlag(Qt::ItemIsEditable))
+         return;
+     m_menuRow = m_currentRow;
+     rebuildTypeMenu();
+     openMenu(m_typeMenu, scenePosition);
+ }
+ 
+-void EventListController::selectRowAtTick(int chunk, uint64_t tick)
++void EventListController::selectRowAtTick(int chunk, Tick tick)
+ {
+     if (!m_document || m_model->chunk() != chunk)
+         return;
+     int row = m_model->tempoRowForExactTick(tick);
+     if (row < 0) {
+         for (int candidate = 0; candidate < m_model->rowCount(); ++candidate) {
+             if (!m_model->rawEventIndexForRow(candidate))
+                 continue;
+             const auto candidateTick = m_model->exactTickForRow(candidate);
+             if (candidateTick && *candidateTick == tick) {
+diff --git a/src/ui/songview/quick/eventlistcontroller.h b/src/ui/songview/quick/eventlistcontroller.h
+index 6aa80cbc..a280dbb9 100644
+--- a/src/ui/songview/quick/eventlistcontroller.h
++++ b/src/ui/songview/quick/eventlistcontroller.h
+@@ -137,21 +137,21 @@ class EventListController : public QObject
+   private:
+     friend class songview::EventListInteraction;
+ 
+     void rebuildAppearance();
+     void rebuildChunks();
+     void setChunk(int chunk, bool followTrack);
+     void updateCountText();
+     void updatePlayRow();
+     void setCurrentRow(int row);
+     void setSelectedRows(QList<int> rows);
+-    void selectRowAtTick(int chunk, uint64_t tick);
++    void selectRowAtTick(int chunk, Tick tick);
+     void jumpCursorToRow(int row);
+     void selectEventRow(int chunk, const SmfEvent &event);
+     bool editValueFor(int row, int column, const QString &text, QVariant *value) const;
+     void clearEditing();
+     bool isLegalRawMove(size_t source, size_t destination) const;
+     void reorderRawEvent(size_t from, size_t destination);
+     bool handleLocalKey(int key, Qt::KeyboardModifiers modifiers);
+     bool dropDestinationForGap(int fromRow, int gap, size_t *source, size_t *destination) const;
+     qlonglong moveDestForRow(int row, int delta, QString *why) const;
+     void openMenu(songview::QuickMenuModel *model, const QPointF &scenePosition);
+diff --git a/src/ui/songview/quick/timelinequickscene.cpp b/src/ui/songview/quick/timelinequickscene.cpp
+index e7ad8b18..44d75c6e 100644
+--- a/src/ui/songview/quick/timelinequickscene.cpp
++++ b/src/ui/songview/quick/timelinequickscene.cpp
+@@ -636,27 +636,27 @@ void composeBandedGrid(TimelineQuickScene &scene, TimelineQuickLayer layer, cons
+     const detail::TickRange range = detail::tickRange(t0, t1);
+     if (range.empty())
+         return;
+     const std::array<QColor, 6> gridColors = {
+         detail::gridLineColor(125), detail::gridLineColor(100), detail::gridLineColor(75),
+         detail::gridLineColor(160), detail::gridLineColor(200), detail::gridLineColor()};
+     // Match SongView's geometry metrics, including timelineDetailMinimumPixelsPerBeat.
+     const int detailMinimumPixelsPerBeat = ::layout::fontPx(5.0 / 6.0);
+     const qreal gridWidth = ::layout::fontPx(1.0 / 6.0) * physicalPixel;
+     detail::forEachSubGridLine(
+-        grid, camera, range, detailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
++        grid, camera, range, detailMinimumPixelsPerBeat, [&](Tick tick, int level) {
+             const qreal x = camera.displayX(double(tick), origin, dpr);
+             addVerticalLine(scene.layer(layer), x, plot.top(), plot.bottom(), gridWidth,
+                             gridColors[std::size_t(level - 1)], plot);
+         });
+     const bool drawBeats = camera.pxPerBeat() >= detailMinimumPixelsPerBeat;
+-    owner.forEachGridLine(range.begin, range.end, [&](uint64_t tick, bool isBar, int, int) {
++    owner.forEachGridLine(range.begin, range.end, [&](Tick tick, bool isBar, int, int) {
+         if (!isBar && !drawBeats)
+             return;
+         const bool finest = owner.document() && grid.gridTicksAt(tick) == grid.fineGridTicks();
+         const std::size_t color = isBar ? 5u : finest ? 4u : 3u;
+         const qreal x = camera.displayX(double(tick), origin, dpr);
+         addVerticalLine(scene.layer(layer), x, plot.top(), plot.bottom(), gridWidth,
+                         gridColors[color], plot);
+     });
+ }
+ 
+diff --git a/src/ui/songview/quick/timelinequickview.cpp b/src/ui/songview/quick/timelinequickview.cpp
+index e7f7cd7f..16dedd2d 100644
+--- a/src/ui/songview/quick/timelinequickview.cpp
++++ b/src/ui/songview/quick/timelinequickview.cpp
+@@ -557,21 +557,21 @@ void TimelineQuickView::notifyScrollbarsChanged()
+ }
+ 
+ void TimelineQuickView::synchronizeGuides(qreal songViewSplitX,
+                                           std::optional<qreal> editSongViewContentX)
+ {
+     setEditChrome(editSongViewContentX);
+     if (m_hoverOwner != TimelineQuickHoverOwner::None && m_songView)
+         setHoverChrome(songViewSplitX + m_camera.contentX(m_hoverTick));
+ }
+ 
+-void TimelineQuickView::publishHover(TimelineQuickHoverOwner owner, uint64_t tick,
++void TimelineQuickView::publishHover(TimelineQuickHoverOwner owner, Tick tick,
+                                      qreal songViewContentX)
+ {
+     if (owner == TimelineQuickHoverOwner::None)
+         return;
+     const std::optional<qreal> visibleContentX =
+         guideSongViewContentXAtOrAfterStart(songViewContentX);
+     if (!visibleContentX) {
+         clearHover(owner);
+         return;
+     }
+diff --git a/src/ui/songview/quick/timelinequickview.h b/src/ui/songview/quick/timelinequickview.h
+index 1b97d30c..eaeb60be 100644
+--- a/src/ui/songview/quick/timelinequickview.h
++++ b/src/ui/songview/quick/timelinequickview.h
+@@ -1,12 +1,13 @@
+ #pragma once
+ 
++#include "core/timedefaults.h"
+ #include "ui/songview/quick/pianorollquick.h"
+ #include "ui/songview/quick/timelineinput.h"
+ #include "ui/songview/quick/timelinequickchrome.h"
+ #include "ui/songview/quick/timelinequickscene.h"
+ #include "ui/songview/timelinebandlayout.h"
+ 
+ #include <QColor>
+ #include <QEvent>
+ #include <QPointer>
+ #include <QQuickItem>
+@@ -168,21 +169,21 @@ class TimelineQuickView final : public QObject
+     // vary with the playing flag, the rest are static per theme.
+     qreal playheadGlowLeft() const noexcept;
+     qreal playheadGlowRight() const noexcept;
+     qreal playheadPeakAlpha() const noexcept;
+     qreal playheadLineWidthPx() const noexcept;
+     int playheadTriangleHalfWidthPx() const noexcept;
+     int playheadTriangleHeightPx() const noexcept;
+     void setPlayhead(qreal localX, bool effectiveVisible, bool playing, bool trianglePointsUp);
+     void setPlayheadColor(const QColor &color);
+     void synchronizeGuides(qreal songViewSplitX, std::optional<qreal> editSongViewContentX);
+-    void publishHover(TimelineQuickHoverOwner owner, uint64_t tick, qreal songViewContentX);
++    void publishHover(TimelineQuickHoverOwner owner, Tick tick, qreal songViewContentX);
+     void clearHover(TimelineQuickHoverOwner owner);
+     // Live QML borrows. rootObject() is the cached scene root; both return
+     // null after detachWindow() or once an external container destroyed a
+     // transferred window.
+     QQuickItem *rootObject() const;
+     QQuickWindow *quickWindow() const;
+     // Shared canvas popup owner for typed menus and forms; null after
+     // detachWindow().
+     QuickPopupSession *popupSession() const noexcept;
+ 
+@@ -395,21 +396,21 @@ class TimelineQuickView final : public QObject
+     QRectF m_publishedHorizontalScrollbarRect;
+     QRectF m_publishedVerticalScrollbarRect;
+     std::optional<qreal> m_hoverSongViewContentX;
+     std::optional<qreal> m_editSongViewContentX;
+     qreal m_playheadLocalX = 0.0;
+     bool m_playheadEffectiveVisible = false;
+     bool m_playheadPlaying = false;
+     bool m_playheadTrianglePointsUp = false;
+     QColor m_playheadColor;
+     TimelineQuickHoverOwner m_hoverOwner = TimelineQuickHoverOwner::None;
+-    uint64_t m_hoverTick = 0;
++    Tick m_hoverTick = 0;
+     PianoRollQuickDirtySet m_pendingDirty = {PianoRollQuickDirty::None};
+     TimelineQuickDirtySet m_pendingTimelineDirty = {TimelineQuickDirty::None};
+     AutomationRefreshSet m_pendingAutomationRefresh = {AutomationRefresh::None};
+     QTimer m_layoutTimer;
+     QTimer m_flushTimer;
+     std::vector<TimelineQuickTextModel::Record> m_noteTextRecords;
+     std::vector<TimelineQuickTextModel::Record> m_loadingTextRecords;
+     std::vector<TimelineQuickTextModel::Record> m_keyboardTextRecords;
+ };
+ 
+diff --git a/src/ui/songview/quick/timelinequickview_pianoroll.cpp b/src/ui/songview/quick/timelinequickview_pianoroll.cpp
+index 3856565c..f54e2a65 100644
+--- a/src/ui/songview/quick/timelinequickview_pianoroll.cpp
++++ b/src/ui/songview/quick/timelinequickview_pianoroll.cpp
+@@ -238,42 +238,43 @@ void TimelineQuickView::rebuildDrawPreviewFill()
+     PianoRoll &roll = *m_roll;
+     TimelineQuickScene &scene = *m_scene;
+     if (!roll.m_sv->timeline() || roll.m_leftDrag != PianoRoll::LeftDrag::Draw)
+         return;
+ 
+     const qreal dpr = roll.devicePixelRatio();
+     const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
+     const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
+     const qreal x0 = roll.m_camera.displayX(double(roll.m_drawTick), 0.0, dpr);
+     const qreal x1 =
+-        roll.m_camera.displayX(double(roll.m_drawTick + uint64_t(roll.m_drawDur)), 0.0, dpr);
++        roll.m_camera.displayX(double(roll.m_drawTick + Tick(roll.m_drawDur)), 0.0, dpr);
+     const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
+     const QRectF box = roll.noteBox(previewRect);
+     const QColor fill = roll.m_sv->noteFillColor(selectedTrack, roll.m_lastVelocity);
+     addRect(scene.layer(TimelineQuickLayer::PianoDrawPreviewFill), box, fill, plot);
+ }
+ 
+ void TimelineQuickView::rebuildNoteBordersAndSelection()
+ {
+     PianoRoll &roll = *m_roll;
+     TimelineQuickScene &scene = *m_scene;
+     if (!roll.m_sv->timeline())
+         return;
+ 
+     const qreal dpr = roll.devicePixelRatio();
+     const qreal pixel = logicalPhysicalPixel(dpr);
+     const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
+     const PitchProjection &projection = roll.m_sv->pitchProjection();
+     const auto &selection = roll.m_sv->selectionModel();
+     const int selectedTrack = selection.primaryTrack();
+     const auto &timeSelection = selection.timeSelection();
+-    const SongDocument::TimeRange timeRange{timeSelection.startTick, timeSelection.endTick};
++    const SongDocument::TimeRange timeRange{Tick(timeSelection.startTick),
++                                            Tick(timeSelection.endTick)};
+     const uint32_t usedTracks = usedTrackMask(roll.m_sv->timeline());
+     const uint32_t timeSelectedTracks =
+         timeSelection.active() && timeSelection.scope == EditorSelectionModel::TimeSelection::Tracks
+             ? selection.resolvedTrackScope(usedTracks)
+             : 0;
+ 
+     const auto addSelectionRing = [&](const QRectF &box) {
+         const int requested =
+             (std::max)(lyt::singlePixel(), qRound(roll.m_geometry.selectionRingDipWidth * dpr));
+         const int ring = fittedFrameThickness(box, requested, 0, dpr);
+@@ -334,21 +335,21 @@ void TimelineQuickView::rebuildOverlay()
+         return;
+ 
+     const qreal dpr = roll.devicePixelRatio();
+     const qreal pixel = logicalPhysicalPixel(dpr);
+     const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
+     const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
+ 
+     if (roll.m_leftDrag == PianoRoll::LeftDrag::Draw) {
+         const qreal x0 = roll.m_camera.displayX(double(roll.m_drawTick), 0.0, dpr);
+         const qreal x1 =
+-            roll.m_camera.displayX(double(roll.m_drawTick + uint64_t(roll.m_drawDur)), 0.0, dpr);
++            roll.m_camera.displayX(double(roll.m_drawTick + Tick(roll.m_drawDur)), 0.0, dpr);
+         const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
+         const QRectF box = roll.noteBox(previewRect);
+         addNoteBorder(scene, TimelineQuickLayer::PianoOverlay, box, 0, dpr, plot);
+     }
+ 
+     const auto &selection = roll.m_sv->selectionModel();
+     const auto &timeSelection = selection.timeSelection();
+     const uint32_t usedTracks = usedTrackMask(roll.m_sv->timeline());
+     if (roll.m_rightDrag == PianoRoll::RightDrag::Band) {
+         const QRectF band = QRectF(roll.m_pressPos, roll.m_curPos).normalized().intersected(plot);
+@@ -369,23 +370,24 @@ void TimelineQuickView::rebuildOverlay()
+                 QRectF(x0, plot.top(), x1 - x0, plot.height()), fill, plot);
+         addVerticalLine(scene.layer(TimelineQuickLayer::PianoOverlay), x0, plot.top(),
+                         plot.bottom(), pixel, themes::color(themes::Role::song_view_selection_edge),
+                         plot);
+         addVerticalLine(scene.layer(TimelineQuickLayer::PianoOverlay), x1, plot.top(),
+                         plot.bottom(), pixel, themes::color(themes::Role::song_view_selection_edge),
+                         plot);
+     }
+ 
+     const MidiTimeline *timeline = roll.m_sv->timeline();
+-    if (timeline->loopStartTick != UINT64_MAX || timeline->loopEndTick != UINT64_MAX) {
+-        const bool hasStart = timeline->loopStartTick != UINT64_MAX;
+-        const bool hasEnd = timeline->loopEndTick != UINT64_MAX;
++    if (timeline->loopStartTick != CoreTimeDefaults::kNoTick ||
++        timeline->loopEndTick != CoreTimeDefaults::kNoTick) {
++        const bool hasStart = timeline->loopStartTick != CoreTimeDefaults::kNoTick;
++        const bool hasEnd = timeline->loopEndTick != CoreTimeDefaults::kNoTick;
+         const qreal x0 = hasStart
+                              ? roll.m_camera.displayX(double(timeline->loopStartTick), 0.0, dpr)
+                              : plot.left();
+         const qreal x1 =
+             hasEnd ? roll.m_camera.displayX(double(timeline->loopEndTick), 0.0, dpr) : plot.right();
+         if (x1 > plot.left() && x0 < plot.right()) {
+             const qreal glowWidth = std::min<qreal>(lyt::space(Space::Eight), x1 - x0);
+             if (hasStart && glowWidth > 0)
+                 addLoopGlow(scene, TimelineQuickLayer::PianoOverlay,
+                             QRectF(x0, plot.top(), glowWidth, plot.height()), true, plot);
+@@ -530,21 +532,21 @@ void TimelineQuickView::synchronizeNoteText()
+                     text, *roll.m_velocityLabelFont, contrastingTextColor(fill), Qt::AlignHCenter,
+                     Qt::AlignVCenter);
+             }
+         }
+     }
+ 
+     if (roll.m_leftDrag == PianoRoll::LeftDrag::Draw && velocityShortcut &&
+         roll.m_velocityLabelFont) {
+         const qreal x0 = roll.m_camera.displayX(double(roll.m_drawTick), 0.0, dpr);
+         const qreal x1 =
+-            roll.m_camera.displayX(double(roll.m_drawTick + uint64_t(roll.m_drawDur)), 0.0, dpr);
++            roll.m_camera.displayX(double(roll.m_drawTick + Tick(roll.m_drawDur)), 0.0, dpr);
+         const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
+         const QRectF box = roll.noteBox(previewRect);
+         const QString text = QString::number(roll.m_lastVelocity);
+         const QColor fill = roll.m_sv->noteFillColor(selectedTrack, roll.m_lastVelocity);
+         if (previewRect.width() >=
+             velocityMetrics->horizontalAdvance(text) + roll.m_geometry.velocityLabelFitAllowance) {
+             appendTextRecord(records, drawPreviewTextKey, box, text, *roll.m_velocityLabelFont,
+                              contrastingTextColor(fill), Qt::AlignHCenter, Qt::AlignVCenter);
+         }
+     }
+diff --git a/src/ui/songview/quick/timerulerquick.cpp b/src/ui/songview/quick/timerulerquick.cpp
+index 7dda8c1b..b55009bc 100644
+--- a/src/ui/songview/quick/timerulerquick.cpp
++++ b/src/ui/songview/quick/timerulerquick.cpp
+@@ -98,22 +98,22 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan)
+                 addRect(scene.layer(chromeLayer), QRectF(x0, area.top(), x1 - x0, area.height()),
+                         fill, area);
+                 const QColor edge = themes::color(themes::Role::song_view_selection_edge);
+                 addVerticalLine(scene.layer(chromeLayer), x0, area.top(), area.bottom(),
+                                 lyt::singlePixel(), edge, area);
+                 addVerticalLine(scene.layer(chromeLayer), x1, area.top(), area.bottom(),
+                                 lyt::singlePixel(), edge, area);
+             }
+         }
+ 
+-        const bool hasLoopStart = timeline->loopStartTick != UINT64_MAX;
+-        const bool hasLoopEnd = timeline->loopEndTick != UINT64_MAX;
++        const bool hasLoopStart = timeline->loopStartTick != CoreTimeDefaults::kNoTick;
++        const bool hasLoopEnd = timeline->loopEndTick != CoreTimeDefaults::kNoTick;
+         if (hasLoopStart || hasLoopEnd) {
+             const qreal x0 = hasLoopStart
+                                  ? m_camera.displayX(double(timeline->loopStartTick), 0.0, dpr)
+                                  : area.left();
+             const qreal x1 = hasLoopEnd ? m_camera.displayX(double(timeline->loopEndTick), 0.0, dpr)
+                                         : area.right();
+             if (x1 > area.left() && x0 < area.right()) {
+                 const qreal glowWidth = std::min<qreal>(lyt::space(Space::Eight), x1 - x0);
+                 QColor strong = detail::loopEdge();
+                 strong.setAlpha(150);
+@@ -175,45 +175,45 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan)
+     const int tickBaseline = ticks.top() + tickMetrics.ascent();
+     const int barCapWidth = lyt::space(Space::Half);
+     const int indicatorRise = lyt::space(Space::Half);
+     const int labelGap = lyt::singlePixel();
+     const int beatDetailReserve = lyt::space(Space::Two);
+     const bool drawBeatTicks =
+         m_camera.pxPerBeat() >= m_geometry.timelineDetailMinimumPixelsPerBeat;
+ 
+     detail::forEachSubGridLine(
+         m_owner.grid(), m_camera, range, m_geometry.timelineDetailMinimumPixelsPerBeat,
+-        [&](uint64_t tick, int level) {
++        [&](Tick tick, int level) {
+             const qreal x = m_camera.displayX(double(tick), 0.0, dpr);
+             const int tickHeight = level == 1 ? lyt::space(Space::Half) : lyt::singlePixel();
+             addVerticalLine(scene.layer(marksLayer), x,
+                             tickBottom - tickHeight + lyt::singlePixel(), tickBottom,
+                             lyt::singlePixel(), indicatorColor, area);
+         });
+ 
+     int widestDetailWidth = 0;
+     if (m_camera.pxPerBeat() >= m_geometry.timeRulerBeatLabelZoomFactor *
+                                     (barCapWidth + 2 * labelGap + beatDetailReserve)) {
+         m_owner.forEachGridLine(
+-            range.begin, range.end, [&](uint64_t, bool, int barNumber, int beatNumber) {
++            range.begin, range.end, [&](Tick, bool, int barNumber, int beatNumber) {
+                 widestDetailWidth = std::max(
+                     widestDetailWidth, beatMetrics.horizontalAdvance(
+                                            QStringLiteral("%1.%2").arg(barNumber).arg(beatNumber)));
+             });
+     }
+     const bool showBeatLabels = m_camera.pxPerBeat() >= m_geometry.timeRulerBeatLabelZoomFactor *
+                                                             (barCapWidth + 2 * labelGap +
+                                                              beatDetailReserve + widestDetailWidth);
+     std::vector<TimelineQuickTextModel::Record> labels;
+     qreal lastLabelRight = area.left() - labelGap;
+     m_owner.forEachGridLine(
+-        range.begin, range.end, [&](uint64_t tick, bool isBar, int barNumber, int beatNumber) {
++        range.begin, range.end, [&](Tick tick, bool isBar, int barNumber, int beatNumber) {
+             const qreal x = m_camera.displayX(double(tick), 0.0, dpr);
+             if (!isBar && !showBeatLabels) {
+                 if (drawBeatTicks) {
+                     addVerticalLine(scene.layer(marksLayer), x, ticks.center().y() - indicatorRise,
+                                     tickBottom, lyt::singlePixel(), indicatorColor, area);
+                 }
+                 return;
+             }
+             const QFont &font = isBar ? m_rulerFont : m_beatFont;
+             const qreal labelX = x + barCapWidth;
+@@ -260,30 +260,30 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan)
+             const QString label = detail::timeSigLabel(chip.numerator, chip.denomPow2);
+             appendTextRecord(labels, (quint64(1) << 63) | chip.tick,
+                              QRectF(chip.labelX, markerBaseline - markerMetrics.ascent(),
+                                     chip.labelW, markerMetrics.height()),
+                              label, m_boldRulerFont, color);
+         }
+     }
+ 
+     if (m_owner.timeline()) {
+         const TimeAxis &axis = m_owner.timeAxis();
+-        if (axis.loopStartTick() != UINT64_MAX) {
++        if (axis.loopStartTick() != CoreTimeDefaults::kNoTick) {
+             const QString label = QStringLiteral("[");
+             const qreal x =
+                 m_camera.displayX(double(axis.loopStartTick()), 0.0, dpr) + lyt::space(Space::Half);
+             appendTextRecord(labels, (quint64(3) << 62),
+                              QRectF(x, markerBaseline - markerMetrics.ascent(),
+                                     markerMetrics.horizontalAdvance(label), markerMetrics.height()),
+                              label, m_boldRulerFont, detail::loopEdge());
+         }
+-        if (axis.loopEndTick() != UINT64_MAX) {
++        if (axis.loopEndTick() != CoreTimeDefaults::kNoTick) {
+             const QString label = QStringLiteral("]");
+             const qreal x =
+                 m_camera.displayX(double(axis.loopEndTick()), 0.0, dpr) + lyt::space(Space::Half);
+             appendTextRecord(labels, (quint64(3) << 62) | 1,
+                              QRectF(x, markerBaseline - markerMetrics.ascent(),
+                                     markerMetrics.horizontalAdvance(label), markerMetrics.height()),
+                              label, m_boldRulerFont, detail::loopEdge());
+         }
+         const int markerStroke = lyt::space(Space::Half);
+         if (m_dragMarker >= 0 || m_dragTimeSig) {
+diff --git a/src/ui/songview/quick/velocityquick.cpp b/src/ui/songview/quick/velocityquick.cpp
+index b10bf339..ff982241 100644
+--- a/src/ui/songview/quick/velocityquick.cpp
++++ b/src/ui/songview/quick/velocityquick.cpp
+@@ -141,29 +141,29 @@ void VelocityArea::rebuildQuickGrid(songview::TimelineQuickScene &scene, const Q
+ {
+     songview::timeline_quick::composeBandedGrid(scene, songview::TimelineQuickLayer::VelocityGrid,
+                                                 m_owner, plot, origin, dpr);
+ }
+ 
+ void VelocityArea::rebuildQuickPsgBands(songview::TimelineQuickScene &scene, const QRectF &plot)
+ {
+     using namespace songview;
+     constexpr TimelineQuickLayer bandsLayer = TimelineQuickLayer::VelocityBands;
+     if (m_owner.timeline()) {
+-        const uint64_t firstTick =
+-            uint64_t(std::max(0.0, std::floor(m_camera.tickAtContentX(plot.left()))));
+-        const uint64_t lastTick =
+-            std::max(firstTick + 1,
+-                     uint64_t(std::max(0.0, std::ceil(m_camera.tickAtContentX(plot.right())))));
+-        uint64_t sectionTick = firstTick;
++        const Tick firstTick =
++            Tick(std::max(0.0, std::floor(m_camera.tickAtContentX(plot.left()))));
++        const Tick lastTick =
++            std::max(Tick(firstTick + 1),
++                     Tick(std::max(0.0, std::ceil(m_camera.tickAtContentX(plot.right())))));
++        Tick sectionTick = firstTick;
+         while (sectionTick < lastTick) {
+             const DrawerPageVoiceContext context = m_owner.voiceContext(sectionTick);
+-            const uint64_t sectionEnd = std::min(lastTick, context.endTick);
++            const Tick sectionEnd = Tick(std::min<uint64_t>(lastTick, context.endTick));
+             if (sectionEnd <= sectionTick)
+                 break;
+             const VelocityMap map = VelocityMap::resolve(context.voice, std::nullopt);
+             if (map.isPsg()) {
+                 const qreal left =
+                     std::clamp<qreal>(xForTick(sectionTick), plot.left(), plot.right());
+                 const qreal right =
+                     std::clamp<qreal>(xForTick(sectionEnd), plot.left(), plot.right());
+                 for (std::size_t level = 0; level + 1 < map.levelCount(); ++level) {
+                     addHorizontalLine(scene.layer(bandsLayer), left, right,
+diff --git a/src/ui/songview/quick/voicechangequick.cpp b/src/ui/songview/quick/voicechangequick.cpp
+index 5e5e529e..db1989c2 100644
+--- a/src/ui/songview/quick/voicechangequick.cpp
++++ b/src/ui/songview/quick/voicechangequick.cpp
+@@ -19,21 +19,21 @@
+ 
+ namespace lyt = ::layout;
+ using Space = lyt::Space;
+ 
+ namespace {
+ 
+ constexpr quint64 kVoiceTitleTextKey = std::numeric_limits<quint64>::max();
+ constexpr quint64 kVoiceSummaryTextKey = kVoiceTitleTextKey - 1;
+ constexpr quint64 kVoiceReadoutTextKey = kVoiceTitleTextKey - 2;
+ 
+-QRectF heldSpanRect(uint64_t beginTick, uint64_t endTick, const songview::TimeCamera &camera,
++QRectF heldSpanRect(Tick beginTick, Tick endTick, const songview::TimeCamera &camera,
+                     const QRectF &plot)
+ {
+     const qreal left = std::max<qreal>(0.0, camera.contentX(double(beginTick)));
+     const qreal right = std::min<qreal>(plot.width(), camera.contentX(double(endTick)));
+     if (right <= left)
+         return {};
+     return QRectF(left, 0.0, right - left, plot.height());
+ }
+ 
+ void appendText(std::vector<songview::TimelineQuickTextModel::Record> &records, quint64 ordinal,
+@@ -171,41 +171,41 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene, boo
+         return VoicePaintEntry{point.tick, point.value};
+     };
+ 
+     timeline_quick::composeBandedGrid(scene, TimelineQuickLayer::VoiceChangesGrid, m_owner, plot, 0,
+                                       dpr);
+     const QColor trackColor =
+         themes::trackIdentityColor(std::size_t(track % themes::trackIdentityColorCount));
+     QColor heldColor = trackColor;
+     heldColor.setAlpha(18);
+     int program = timeline->tracks[track].firstProgram;
+-    uint64_t spanStart = 0;
++    Tick spanStart = 0;
+     for (std::size_t index = 0; index < paintEntryCount; ++index) {
+         const VoicePaintEntry entry = paintEntryAt(index);
+         if (program >= 0 && entry.tick > spanStart) {
+             timeline_quick::addRect(scene.layer(TimelineQuickLayer::VoiceChangesSpans),
+                                     heldSpanRect(spanStart, entry.tick, m_camera, plot), heldColor,
+                                     plot);
+         }
+         program = entry.program;
+         spanStart = entry.tick;
+     }
+     if (program >= 0 && timeline->lengthTicks > spanStart) {
+         timeline_quick::addRect(scene.layer(TimelineQuickLayer::VoiceChangesSpans),
+                                 heldSpanRect(spanStart, timeline->lengthTicks, m_camera, plot),
+                                 heldColor, plot);
+     }
+ 
+     static const QString noVoiceText = tr("No voice");
+     const double contextTick =
+         m_live.playback.playing ? m_live.playback.playheadTick : m_live.editCursorTick;
+-    const int contextSlot = voiceSlotAt(uint64_t(std::round(std::max(0.0, contextTick))));
++    const int contextSlot = voiceSlotAt(Tick(std::round(std::max(0.0, contextTick))));
+     const QString &contextText = contextSlot >= 0 && contextSlot < VOICEGROUP_SIZE
+                                      ? paintTextFor(contextSlot).label
+                                      : noVoiceText;
+     appendText(plotTextRecords, kVoiceReadoutTextKey,
+                plot.adjusted(lyt::space(Space::One), lyt::space(Space::Zero),
+                              -lyt::space(Space::One), -lyt::space(Space::Zero)),
+                contextText, secondaryText, m_captionFont, Qt::AlignRight, Qt::AlignVCenter);
+ 
+     const qreal pad = lyt::space(Space::One);
+     const qreal gap = std::max<qreal>(m_geometry.hoverPaintPadding, lyt::space(Space::One));
+diff --git a/src/ui/songview/rangeedit.cpp b/src/ui/songview/rangeedit.cpp
+index 8d68a8a6..7d005cfc 100644
+--- a/src/ui/songview/rangeedit.cpp
++++ b/src/ui/songview/rangeedit.cpp
+@@ -62,21 +62,21 @@ void appendExactTickRemovals(std::span<const TempoPoint> destination,
+                              std::span<const TempoPoint> added, std::vector<TempoPoint> &removed)
+ {
+     for (const TempoPoint &point : destination) {
+         if (std::any_of(added.begin(), added.end(), [&](const TempoPoint &addedPoint) {
+                 return addedPoint.tick == point.tick;
+             }))
+             removed.push_back(point);
+     }
+ }
+ 
+-bool inRange(uint64_t tick, const SongDocument::TimeRange &range)
++bool inRange(Tick tick, const SongDocument::TimeRange &range)
+ {
+     return tick >= range.startTick && tick < range.endTick;
+ }
+ 
+ // Contents of a half-open time range gathered from the document over a
+ // resolved TimeScope — the scan shared by the time-selection copy, delete,
+ // and nudge commands, so every path collects exactly the same notes, lane
+ // points, and tempo. Notes are grouped per engine track and lane points per
+ // (track, cc), both in scope order; groups stay in the result even when
+ // empty, so callers that preserve the copied shape (Clip tracks/lanes) keep
+@@ -197,21 +197,21 @@ int SongView::insertTimePromptMaximumBeats() const noexcept
+ QString SongView::insertTimePromptTitle() const
+ {
+     return tr("Insert Time");
+ }
+ 
+ QVariantMap SongView::insertTimePromptAppearance() const
+ {
+     return promptDialogAppearance(QGuiApplication::font());
+ }
+ 
+-void SongView::openInsertTimePrompt(uint64_t cursorTick, const songview::Grid::Segment &segment)
++void SongView::openInsertTimePrompt(Tick cursorTick, const songview::Grid::Segment &segment)
+ {
+     songview::TimelineQuickView *const quick = quickView();
+     songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+     if (!m_document || !session)
+         return;
+ 
+     // Replacement ends the active shared-popup session before this bridge
+     // publishes a new guarded target.
+     session->cancel(/*restoreFocus=*/false);
+     if (m_pendingInsertTimePrompt)
+@@ -255,46 +255,49 @@ void SongView::acceptInsertTimePrompt(int bars, int beats, int fractions)
+     emit insertTimePromptChanged();
+     if (songview::TimelineQuickView *const quick = quickView()) {
+         if (songview::QuickPopupSession *const session = quick->popupSession();
+             session && session->owns(this)) {
+             session->close();
+         }
+     }
+ 
+     SongDocument *const document = m_document;
+     if (document == pending.document.data() && document->revision() == pending.documentRevision) {
+-        const uint64_t maximum = (std::numeric_limits<uint64_t>::max)();
++        const Tick maximum = CoreTimeDefaults::kMaxTick;
+         bool overflow =
+-            pending.beatsPerBar != 0 && pending.beatTicks > maximum / pending.beatsPerBar;
+-        const uint64_t measureTicks = overflow ? 0 : pending.beatTicks * pending.beatsPerBar;
++            pending.beatsPerBar != 0 && uint64_t(pending.beatTicks) > maximum / pending.beatsPerBar;
++        const uint64_t measureTicks =
++            overflow ? 0 : uint64_t(pending.beatTicks) * pending.beatsPerBar;
+ 
+         const uint64_t barCount = uint64_t(bars);
+         const uint64_t beatCount = uint64_t(beats);
+         const uint64_t fractionCount = uint64_t(fractions);
+         overflow = overflow || (barCount != 0 && measureTicks > maximum / barCount);
+         const uint64_t barTicks = overflow ? 0 : barCount * measureTicks;
+-        overflow = overflow || (beatCount != 0 && pending.beatTicks > maximum / beatCount);
++        overflow =
++            overflow || (beatCount != 0 && uint64_t(pending.beatTicks) > maximum / beatCount);
+         const uint64_t beatTicks = overflow ? 0 : beatCount * pending.beatTicks;
+         const uint64_t fractionTicks = fractionCount * (pending.beatTicks / 4) +
+                                        (fractionCount * (pending.beatTicks % 4) + 3) / 4;
+ 
+         overflow = overflow || barTicks > maximum - beatTicks;
+         const uint64_t wholeTicks = overflow ? 0 : barTicks + beatTicks;
+         overflow = overflow || wholeTicks > maximum - fractionTicks;
+         const uint64_t span = overflow ? 0 : wholeTicks + fractionTicks;
+ 
+-        if (overflow || span > maximum - pending.cursorTick) {
++        if (overflow || uint64_t(span) > maximum - pending.cursorTick) {
+             announce(tr("Cannot insert time at the cursor"));
+         } else {
+             SongDocument::TimeScope scope;
+             scope.wholeSong = true;
+-            if (!document->insertBlankTime({pending.cursorTick, pending.cursorTick + span}, scope))
++            if (!document->insertBlankTime(
++                    {pending.cursorTick, Tick(uint64_t(pending.cursorTick) + span)}, scope))
+                 announce(tr("Nothing to insert at the cursor"));
+             else
+                 announce(tr("Inserted time at the cursor"));
+         }
+     }
+     focusActiveSurface();
+ }
+ 
+ void SongView::cancelInsertTimePrompt()
+ {
+@@ -427,21 +430,21 @@ std::optional<SongDocument::TimeScope> SongView::timeSelectionScope() const
+     return scope;
+ }
+ void SongView::copyTimeSelection()
+ {
+     const auto &selection = m_selectionModel.timeSelection();
+     if (!m_document || !selection.active())
+         return;
+     const auto scope = timeSelectionScope();
+     if (!scope)
+         return;
+-    const auto range = SongDocument::TimeRange{selection.startTick, selection.endTick};
++    const auto range = SongDocument::TimeRange{Tick(selection.startTick), Tick(selection.endTick)};
+     const TimeRangeContents contents = gatherRange(*m_document, range, *scope);
+     Clip clip;
+     clip.span = range.span();
+     int noteCount = 0;
+     int pointCount = 0;
+     for (const TimeRangeContents::TrackNotes &track : contents.tracks) {
+         ClipTrack ct{track.track, {}};
+         for (const DocNote &note : track.notes) {
+             ct.notes.push_back(
+                 {uint32_t(note.tick - range.startTick), note.key,
+@@ -471,21 +474,21 @@ void SongView::copyTimeSelection()
+ void SongView::deleteTimeSelection()
+ {
+     const auto &selection = m_selectionModel.timeSelection();
+     if (!m_document || !selection.active())
+         return;
+     const auto scope = timeSelectionScope();
+     if (!scope) {
+         announce(tr("Nothing to delete in the time selection"));
+         return;
+     }
+-    const auto range = SongDocument::TimeRange{selection.startTick, selection.endTick};
++    const auto range = SongDocument::TimeRange{Tick(selection.startTick), Tick(selection.endTick)};
+     TimeRangeContents contents = gatherRange(*m_document, range, *scope);
+     SongDocument::RangeEdit edit;
+     for (const TimeRangeContents::TrackNotes &track : contents.tracks) {
+         for (const DocNote &note : track.notes)
+             edit.removeNotes.push_back(note);
+     }
+     for (const TimeRangeContents::TrackLane &lane : contents.lanes) {
+         for (const DocLanePoint &point : lane.points)
+             edit.removePoints.push_back(point);
+     }
+@@ -504,21 +507,22 @@ void SongView::transposeTimeSelection(int dKey)
+     const auto &selection = m_selectionModel.timeSelection();
+     if (!m_document || !selection.active() || dKey == 0 ||
+         selection.scope == EditorSelectionModel::TimeSelection::Lanes)
+         return;
+     const auto scope = timeSelectionScope();
+     if (!scope)
+         return;
+     // gatherRange also collects lanes/tempo, but transpose only moves notes:
+     // flatten the track groups into the scan's note list.
+     const TimeRangeContents contents = gatherRange(
+-        *m_document, SongDocument::TimeRange{selection.startTick, selection.endTick}, *scope);
++        *m_document, SongDocument::TimeRange{Tick(selection.startTick), Tick(selection.endTick)},
++        *scope);
+     std::vector<DocNote> notes;
+     for (const TimeRangeContents::TrackNotes &track : contents.tracks) {
+         for (const DocNote &note : track.notes)
+             notes.push_back(note);
+     }
+     if (notes.empty()) {
+         announce(tr("No notes in the time selection"));
+         return;
+     }
+     for (const DocNote &note : notes) {
+@@ -567,23 +571,23 @@ void SongView::foldTransposeSelection(int degreeDelta)
+     for (uint8_t destination : destinations)
+         edge =
+             degreeDelta > 0 ? std::max(edge, int(destination)) : std::min(edge, int(destination));
+     ensureKeyVisible(edge);
+ }
+ void SongView::nudgeTimeSelection(bool right)
+ {
+     const auto &selection = m_selectionModel.timeSelection();
+     if (!m_document || !selection.active())
+         return;
+-    const uint64_t s = selection.startTick;
+-    const uint64_t e = selection.endTick;
+-    const uint64_t snapped =
++    const Tick s = selection.startTick;
++    const Tick e = selection.endTick;
++    const Tick snapped =
+         right ? m_grid.snapTickUp(double(s) + 1.0) : m_grid.snapTickDown(double(s) - 1.0);
+     const int64_t dTick = int64_t(snapped) - int64_t(s);
+     if (dTick == 0)
+         return;
+     const auto scope = timeSelectionScope();
+     if (!scope)
+         return;
+     TimeRangeContents contents = gatherRange(*m_document, SongDocument::TimeRange{s, e}, *scope);
+     std::vector<DocNote> notes;
+     std::vector<DocLanePoint> points;
+@@ -594,22 +598,22 @@ void SongView::nudgeTimeSelection(bool right)
+     }
+     for (const TimeRangeContents::TrackLane &lane : contents.lanes) {
+         for (const DocLanePoint &point : lane.points)
+             points.push_back(point);
+     }
+     tempo = std::move(contents.tempo);
+     m_document->moveRange(notes, points, dTick, tempo);
+     // The band follows even over empty content, so repeated nudges keep
+     // aiming at the same region.
+     EditorSelectionModel::TimeSelection moved = selection;
+-    moved.startTick = uint64_t(int64_t(s) + dTick);
+-    moved.endTick = uint64_t(int64_t(e) + dTick);
++    moved.startTick = Tick(int64_t(s) + dTick);
++    moved.endTick = Tick(int64_t(e) + dTick);
+     m_selectionModel.setTimeSelection(moved);
+     ensureRangeVisible(moved.startTick, moved.endTick, right);
+ }
+ void SongView::removeTimeSelectionContents()
+ {
+     const auto resolved = resolveTimeSelectionScope();
+     if (!resolved)
+         return;
+     const auto &selection = m_selectionModel.timeSelection();
+     const SongDocument::TimeRange range{selection.startTick, selection.endTick};
+@@ -658,73 +662,75 @@ void SongView::duplicateTimeSelection()
+ {
+     const auto resolved = resolveTimeSelectionScope();
+     if (!resolved)
+         return;
+     const auto &selection = m_selectionModel.timeSelection();
+     const SongDocument::TimeRange range{selection.startTick, selection.endTick};
+     if (!m_document->duplicateTimeRange(range, resolved->scope)) {
+         announce(tr("Nothing to duplicate in the time selection"));
+         return;
+     }
+-    const uint64_t destinationEnd = range.endTick + range.span();
++    const uint64_t destinationEnd = uint64_t(range.endTick) + range.span();
+     EditorSelectionModel::TimeSelection moved = selection;
+     moved.startTick = range.endTick;
+     moved.endTick = destinationEnd;
+     m_selectionModel.setTimeSelection(moved);
+     commitEditCursor(destinationEnd);
+     ensureRangeVisible(moved.startTick, moved.endTick, true);
+     const double beats =
+         double(range.span()) / double(std::max<uint32_t>(1, m_timeline->ticksPerBeat));
+     announce(tr("Duplicated %1 beats on %2").arg(beats, 0, 'g', 4).arg(resolved->label));
+ }
+ void SongView::pasteRangeAtEditCursor(const Clip &clip)
+ {
+     if (!m_document || !m_timeline || clip.span == 0 || clip.empty())
+         return;
+-    const uint64_t s = m_grid.snapTick(double(m_editCursorTick));
+-    const uint64_t e = s + clip.span;
++    const Tick s = m_grid.snapTick(double(m_editCursorTick));
++    const uint64_t e = uint64_t(s) + clip.span;
+ 
+     // A clip whose content came from one track retargets to the selected
+     // track (cross-track copy); multi-track clips paste back in place.
+     const DestinationMapper destinations(*m_document, m_selectionModel, singleSourceTrack(clip));
+     SongDocument::RangeEdit edit;
+     for (const ClipTrack &track : clip.tracks) {
+         if (track.notes.empty())
+             continue;
+         const std::optional<int> destinationTrack = destinations.map(track.track);
+         if (!destinationTrack)
+             continue;
+         edit.minimumEngineTrackCount =
+             std::max(edit.minimumEngineTrackCount, *destinationTrack + 1);
+         SongDocument::RangeEdit::TrackNotes notes{*destinationTrack, {}};
+         for (const ClipNote &note : track.notes)
+-            notes.notes.push_back({s + note.relTick, note.key, note.duration, note.velocity});
++            notes.notes.push_back(
++                {Tick(uint64_t(s) + note.relTick), note.key, note.duration, note.velocity});
+         edit.addNotes.push_back(std::move(notes));
+     }
+     for (const ClipLane &lane : clip.lanes) {
+         if (lane.points.empty())
+             continue;
+         const std::optional<int> destinationTrack = destinations.map(lane.track);
+         if (!destinationTrack)
+             continue;
+         edit.minimumEngineTrackCount =
+             std::max(edit.minimumEngineTrackCount, *destinationTrack + 1);
+         SongDocument::RangeEdit::LaneWrite write{*destinationTrack, lane.cc, {}};
+         for (const auto &[relativeTick, value] : lane.points)
+-            write.points.push_back({s + relativeTick, value});
++            write.points.push_back({Tick(uint64_t(s) + relativeTick), value});
+         appendExactTickRemovals(m_document->lanePoints(*destinationTrack, lane.cc), write.points,
+                                 edit.removePoints);
+         edit.addPoints.push_back(std::move(write));
+     }
+     if (!clip.tempo.empty()) {
+         for (const auto &point : clip.tempo)
+-            edit.addTempo.push_back({Tick(s + point.tick), point.microsecondsPerQuarterNote});
++            edit.addTempo.push_back(
++                {Tick(uint64_t(s) + point.tick), point.microsecondsPerQuarterNote});
+         appendExactTickRemovals(m_document->tempoPoints(), edit.addTempo, edit.removeTempo);
+     }
+     if (edit.empty()) {
+         announce(tr("Nothing useful to paste"));
+         return;
+     }
+     m_document->applyRangeEdit(tr("paste range"), edit);
+ 
+     // Set up for tiling: advance to the clip's end while keeping the newly
+     // merged content, rather than the advanced cursor, in view.
+@@ -742,29 +748,29 @@ void SongView::pasteFromClipboard()
+         return;
+     if (clip->span > 0) {
+         if (!clip->empty())
+             pasteRangeAtEditCursor(*clip);
+         return;
+     }
+     // Plain note clip: additive paste of the clip's first track onto the
+     // selected track at the edit cursor (the roll's note-paste path).
+     if (clip->tracks.empty() || clip->tracks.front().notes.empty())
+         return;
+-    const uint64_t base = m_grid.snapTick(double(m_editCursorTick));
++    const Tick base = m_grid.snapTick(double(m_editCursorTick));
+     const int selectedTrack = m_selectionModel.primaryTrack();
+     const std::vector<DocNote> before = m_document->notesForTrack(selectedTrack);
+     std::vector<SongDocument::NewNote> notes;
+-    uint64_t end = base;
++    Tick end = base;
+     for (const ClipNote &cn : clip->tracks.front().notes) {
+-        const uint64_t tick = base + cn.relTick;
+-        notes.push_back({tick, cn.key, cn.duration, cn.velocity});
+-        end = std::max(end, tick + cn.duration);
++        const uint64_t tick = uint64_t(base) + cn.relTick;
++        notes.push_back({Tick(tick), cn.key, cn.duration, cn.velocity});
++        end = Tick(std::max(uint64_t(end), tick + cn.duration));
+     }
+     const SongView::DocumentSwapHintScope swapHint{*this, cNoteMutationDirty};
+     m_document->addNotes(selectedTrack, notes);
+     m_selectionModel.setNoteSelection(m_document->insertedNoteIds(selectedTrack, before));
+     // Like pasteRangeAtEditCursor: advance the edit cursor past the pasted
+     // notes so repeated Ctrl+V lays copies back-to-back, but keep the view
+     // anchored on the content that just landed.
+     commitEditCursor(end);
+     ensureTickVisible(base);
+     announce(tr("Pasted %n note(s)", nullptr, int(notes.size())));
+diff --git a/src/ui/songview/timeaxis.cpp b/src/ui/songview/timeaxis.cpp
+index 33e410fc..ae218a0b 100644
+--- a/src/ui/songview/timeaxis.cpp
++++ b/src/ui/songview/timeaxis.cpp
+@@ -8,27 +8,28 @@ namespace {
+ 
+ // The fallback timebase. The default field values of GridSegment and
+ // ResolvedTimeSignature mirror this axis's implicit opening 4/4, so a
+ // default-constructed segment or signature IS the fallback shape.
+ constexpr uint32_t kFallbackTicksPerBeat = 24;
+ 
+ // Normalized signature fields shared by the segment and signature lookups:
+ // a blank numerator reads as 4, and the denominator shift is clamped so a
+ // corrupt 0x58 denominator cannot shift into undefined behavior. The floor
+ // keeps every beat length a valid stride.
+-uint64_t beatsPerBarFor(uint8_t numerator) noexcept
++uint32_t beatsPerBarFor(uint8_t numerator) noexcept
+ {
+     return numerator ? numerator : 4;
+ }
+-uint64_t beatTicksFor(uint32_t ticksPerBeat, uint8_t denomPow2) noexcept
++uint32_t beatTicksFor(uint32_t ticksPerBeat, uint8_t denomPow2) noexcept
+ {
+-    return (std::max)(uint64_t(1), (uint64_t(ticksPerBeat) * 4) >> (std::min)(int(denomPow2), 63));
++    return (std::max)(uint32_t(1),
++                      uint32_t(uint64_t(ticksPerBeat) * 4) >> (std::min)(int(denomPow2), 31));
+ }
+ 
+ } // namespace
+ 
+ TimeAxis::TimeAxis() noexcept = default;
+ 
+ void TimeAxis::bind(const MidiTimeline *timeline) noexcept
+ {
+     m_timeline = timeline;
+ }
+@@ -36,129 +37,129 @@ void TimeAxis::bind(const MidiTimeline *timeline) noexcept
+ bool TimeAxis::isBound() const noexcept
+ {
+     return m_timeline != nullptr;
+ }
+ 
+ uint32_t TimeAxis::ticksPerBeat() const noexcept
+ {
+     return m_timeline ? (std::max)(uint32_t(1), m_timeline->ticksPerBeat) : kFallbackTicksPerBeat;
+ }
+ 
+-uint64_t TimeAxis::lengthTicks() const noexcept
++Tick TimeAxis::lengthTicks() const noexcept
+ {
+     return m_timeline ? m_timeline->lengthTicks : 0;
+ }
+ 
+-uint64_t TimeAxis::loopStartTick() const noexcept
++Tick TimeAxis::loopStartTick() const noexcept
+ {
+-    return m_timeline ? m_timeline->loopStartTick : UINT64_MAX;
++    return m_timeline ? m_timeline->loopStartTick : CoreTimeDefaults::kNoTick;
+ }
+ 
+-uint64_t TimeAxis::loopEndTick() const noexcept
++Tick TimeAxis::loopEndTick() const noexcept
+ {
+-    return m_timeline ? m_timeline->loopEndTick : UINT64_MAX;
++    return m_timeline ? m_timeline->loopEndTick : CoreTimeDefaults::kNoTick;
+ }
+ 
+ std::span<const TimeSigPoint> TimeAxis::explicitTimeSignatures() const noexcept
+ {
+     return m_timeline ? std::span<const TimeSigPoint>(m_timeline->timeSigs)
+                       : std::span<const TimeSigPoint>();
+ }
+ 
+ bool TimeAxis::hasImplicitOpeningSignature() const noexcept
+ {
+     // Signatures are tick-sorted, so tick 0 is governed by an actual event
+     // exactly when the first one sits at tick 0.
+     return !m_timeline || m_timeline->timeSigs.empty() || m_timeline->timeSigs.front().tick != 0;
+ }
+ 
+-TimeAxis::ResolvedTimeSignature TimeAxis::signatureAt(uint64_t tick) const noexcept
++TimeAxis::ResolvedTimeSignature TimeAxis::signatureAt(Tick tick) const noexcept
+ {
+     if (!m_timeline)
+         return {};                                        // the fallback's implicit opening 4/4
+     ResolvedTimeSignature resolved;                       // the implicit opening 4/4 at tick 0
+     for (const TimeSigPoint &ts : m_timeline->timeSigs) { // tick-sorted
+         if (ts.tick > tick)
+             break;
+         // Same-tick duplicates overwrite: the last at a tick wins.
+         resolved.tick = ts.tick;
+         resolved.numerator = int(beatsPerBarFor(ts.numerator));
+         // Preserve raw MIDI exponent for UI and edit round-tripping;
+         // beatTicksFor separately clamps the shift and timeSigLabel clamps presentation.
+         resolved.denomPow2 = int(ts.denomPow2);
+         resolved.implicit = false;
+     }
+     return resolved;
+ }
+ 
+-TimeAxis::GridSegment TimeAxis::segmentAt(uint64_t tick) const noexcept
++TimeAxis::GridSegment TimeAxis::segmentAt(Tick tick) const noexcept
+ {
+     GridSegment seg; // the implicit opening 4/4 at tick 0
+     seg.beatTicks = ticksPerBeat();
+     if (!m_timeline)
+         return seg;
+     for (const TimeSigPoint &ts : m_timeline->timeSigs) { // tick-sorted
+         if (ts.tick > tick) {
+             seg.next = ts.tick;
+             break;
+         }
+         // Same-tick duplicates overwrite: the last at a tick wins, matching
+         // signatureAt() and forEachGridLine().
+         seg.start = ts.tick;
+         seg.beatTicks = beatTicksFor(ticksPerBeat(), ts.denomPow2);
+         seg.beatsPerBar = beatsPerBarFor(ts.numerator);
+     }
+     return seg;
+ }
+ 
+-void TimeAxis::forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
+-                               const GridLineVisitor &visitor) const
++void TimeAxis::forEachGridLine(Tick tickBegin, Tick tickEnd, const GridLineVisitor &visitor) const
+ {
+     if (tickEnd <= tickBegin)
+         return;
+     const uint32_t tpb = ticksPerBeat();
+     const std::span<const TimeSigPoint> sigs = explicitTimeSignatures();
+ 
+     // Streaming walk over the implicit opening segment plus the explicit
+     // signature segments, merging same-tick duplicates (the last at a tick
+     // wins) instead of copying a segment list out of the timeline. `next`
+     // always indexes the first signature strictly after seg.start.
+     GridSegment seg; // the implicit opening 4/4 at tick 0
+     seg.beatTicks = tpb;
+     std::size_t next = 0;
+     for (; next < sigs.size() && sigs[next].tick == 0; ++next) {
+         seg.beatTicks = beatTicksFor(tpb, sigs[next].denomPow2);
+         seg.beatsPerBar = beatsPerBarFor(sigs[next].numerator);
+     }
+     int bar = 1;
+     while (seg.start < tickEnd) {
+-        const uint64_t segEnd = next < sigs.size() ? sigs[next].tick : tickEnd;
+-        const uint64_t clampedEnd = (std::min)(segEnd, tickEnd);
++        const Tick segEnd = next < sigs.size() ? sigs[next].tick : tickEnd;
++        const Tick clampedEnd = (std::min)(segEnd, tickEnd);
+         if (seg.start < clampedEnd) {
+-            uint64_t k = tickBegin > seg.start ? (tickBegin - seg.start) / seg.beatTicks : 0;
+-            for (uint64_t tick = seg.start + k * seg.beatTicks; tick < clampedEnd;) {
++            uint64_t k =
++                tickBegin > seg.start ? (uint64_t(tickBegin) - seg.start) / seg.beatTicks : 0;
++            for (Tick tick = seg.start + Tick(k * seg.beatTicks); tick < clampedEnd;) {
+                 if (tick >= tickBegin)
+                     visitor(tick, k % seg.beatsPerBar == 0, bar + int(k / seg.beatsPerBar),
+                             int(k % seg.beatsPerBar) + 1);
+                 if (seg.beatTicks >= clampedEnd - tick)
+                     break;
+                 tick += seg.beatTicks;
+                 ++k;
+             }
+         }
+         if (next >= sigs.size())
+             break;
+         // Bar numbering carries across each segment's measure count,
+         // including trailing partial measures, so bars stay 1-based over the
+         // whole song rather than per segment.
+-        const uint64_t segTicks = sigs[next].tick - seg.start;
+-        const uint64_t barTicks = seg.beatTicks * seg.beatsPerBar;
++        const uint64_t segTicks = uint64_t(sigs[next].tick) - seg.start;
++        const uint64_t barTicks = uint64_t(seg.beatTicks) * seg.beatsPerBar;
+         bar += int((segTicks + barTicks - 1) / barTicks);
+         seg.start = sigs[next].tick;
+         seg.beatTicks = beatTicksFor(tpb, sigs[next].denomPow2);
+         seg.beatsPerBar = beatsPerBarFor(sigs[next].numerator);
+         for (++next; next < sigs.size() && sigs[next].tick == seg.start; ++next) {
+             seg.beatTicks = beatTicksFor(tpb, sigs[next].denomPow2);
+             seg.beatsPerBar = beatsPerBarFor(sigs[next].numerator);
+         }
+     }
+ }
+diff --git a/src/ui/songview/timeaxis.h b/src/ui/songview/timeaxis.h
+index 77fdb218..e725579d 100644
+--- a/src/ui/songview/timeaxis.h
++++ b/src/ui/songview/timeaxis.h
+@@ -1,17 +1,18 @@
+ #pragma once
+ 
+ #include <cstdint>
+ #include <functional>
+ #include <span>
+ 
+ #include "core/miditimeline.h"
++#include "core/timedefaults.h"
+ 
+ namespace songview {
+ 
+ // The musical coordinate system of the song view's time axis: the timebase,
+ // the time-signature map, the known content length, and the loop markers.
+ // It has two states. Unbound — a fresh tab, or after setSong(nullptr) — it is
+ // the fallback axis: 24 ticks per beat, an implicit opening 4/4, zero known
+ // content length, and no loop markers. Bound, it borrows the immutable
+ // MidiTimeline whose lease SongTab keeps alive; nothing is copied, and the
+ // borrow must be repointed before the owning timeline is released. Camera,
+@@ -23,62 +24,61 @@ namespace songview {
+ // signature span. Zoom- and editor-dependent subdivision stays in SongView;
+ // this module only knows the signature-segmented musical grid itself.
+ class TimeAxis
+ {
+   public:
+     // Time-signature segment governing a tick. The grid — beats, snap
+     // positions, sub-beat lines — restarts at every signature change and
+     // scales the beat by the signature's denominator; a signature placed
+     // mid-measure must still leave the drawn lines snappable.
+     struct GridSegment {
+-        uint64_t start = 0;         // governing signature's tick (0 = song start)
+-        uint64_t next = UINT64_MAX; // next signature's tick; the grid restarts there
+-        uint64_t beatTicks = 24;    // denominator-scaled beat length in ticks
+-        uint64_t beatsPerBar = 4;   // numerator, matching forEachGridLine()
++        Tick start = 0;                        // governing signature's tick (0 = song start)
++        Tick next = CoreTimeDefaults::kNoTick; // next signature's tick; the grid restarts there
++        uint32_t beatTicks = 24;               // denominator-scaled beat length in ticks
++        uint32_t beatsPerBar = 4;              // numerator, matching forEachGridLine()
+     };
++    static_assert(sizeof(GridSegment) == 16);
+ 
+     // The signature governing a tick, normalized: a blank numerator reads
+     // as 4, and `implicit` marks the synthesized opening 4/4 of a song (or
+     // of the fallback axis) whose tick 0 carries no actual signature event.
+     struct ResolvedTimeSignature {
+-        uint64_t tick = 0;
++        Tick tick = 0;
+         int numerator = 4;
+         int denomPow2 = 2;
+         bool implicit = true;
+     };
+ 
+     using GridLineVisitor =
+-        std::function<void(uint64_t tick, bool isBar, int barNumber, int beatNumber)>;
++        std::function<void(Tick tick, bool isBar, int barNumber, int beatNumber)>;
+ 
+     TimeAxis() noexcept;
+ 
+     // Borrow the timeline's musical time; nullptr returns to the fallback
+     // axis. The borrowed timeline must outlive the axis or every later
+     // rebinding.
+     void bind(const MidiTimeline *timeline) noexcept;
+     bool isBound() const noexcept;
+ 
+     uint32_t ticksPerBeat() const noexcept;
+-    uint64_t lengthTicks() const noexcept;
+-    uint64_t loopStartTick() const noexcept; // UINT64_MAX when absent
+-    uint64_t loopEndTick() const noexcept;   // UINT64_MAX when absent
++    Tick lengthTicks() const noexcept;
++    Tick loopStartTick() const noexcept; // kNoTick when absent
++    Tick loopEndTick() const noexcept;   // kNoTick when absent
+ 
+     // Actual 0x58 events only. Fallback returns an empty span; storage
+     // remains borrowed from the bound immutable timeline.
+     std::span<const TimeSigPoint> explicitTimeSignatures() const noexcept;
+     // True in fallback and whenever no actual signature governs tick zero.
+     bool hasImplicitOpeningSignature() const noexcept;
+-    ResolvedTimeSignature signatureAt(uint64_t tick) const noexcept;
+-
+-    GridSegment segmentAt(uint64_t tick) const noexcept;
++    ResolvedTimeSignature signatureAt(Tick tick) const noexcept;
++    GridSegment segmentAt(Tick tick) const noexcept;
+     // Bar/beat grid over [tickBegin, tickEnd): visitor(tick, isBarStart,
+     // barNumber, beatNumber) for every beat — 1-based numbering, bars
+     // counted across signature changes. Walks the borrowed signatures in
+     // place; no segment list is copied.
+-    void forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
+-                         const GridLineVisitor &visitor) const;
++    void forEachGridLine(Tick tickBegin, Tick tickEnd, const GridLineVisitor &visitor) const;
+ 
+   private:
+     const MidiTimeline *m_timeline = nullptr;
+ };
+ 
+ } // namespace songview
+diff --git a/src/ui/songview/timecamera.cpp b/src/ui/songview/timecamera.cpp
+index 67b2f8ee..a2e90cda 100644
+--- a/src/ui/songview/timecamera.cpp
++++ b/src/ui/songview/timecamera.cpp
+@@ -175,32 +175,31 @@ bool TimeCamera::zoomKeyHeight(double factor, double anchorY)
+         return false;
+     // Pin the content row under the cursor before projecting to the scroll
+     // offset. The camera scale changed even when the cursor anchor keeps its
+     // scroll offset numerically unchanged.
+     const double anchoredScroll = cursorAnchoredScroll(anchorY, oldH, m_scrollY, newH);
+     m_keyHeight = newH;
+     setVScroll(std::clamp(anchoredScroll, 0.0, maxRollScroll()));
+     return true;
+ }
+ 
+-bool TimeCamera::ensureTickVisible(uint64_t tick, double dpr)
++bool TimeCamera::ensureTickVisible(Tick tick, double dpr)
+ {
+     const double vw = m_viewportWidth;
+     const double physicalPixel = logicalPhysicalPixel(dpr);
+     const double displayedX = displayX(double(tick), 0.0, dpr);
+     if (displayedX >= 0.0 && displayedX <= vw - physicalPixel)
+         return false;
+     return setHScroll(double(tick) * pxPerTick() - vw * m_limits.revealViewportFraction);
+ }
+ 
+-bool TimeCamera::ensureRangeVisible(uint64_t startTick, uint64_t endTick, bool preferEnd,
+-                                    double dpr)
++bool TimeCamera::ensureRangeVisible(Tick startTick, Tick endTick, bool preferEnd, double dpr)
+ {
+     const double x0 = contentX(double(startTick));
+     const double x1 = contentX(double(endTick));
+     const double vw = m_viewportWidth;
+     const double physicalPixel = logicalPhysicalPixel(dpr);
+     const double displayedX0 = displayX(double(startTick), 0.0, dpr);
+     const double displayedX1 = displayX(double(endTick), 0.0, dpr);
+     const double rightEdge = vw - physicalPixel;
+     double dx = 0.0;
+     if (displayedX1 - displayedX0 > rightEdge)
+diff --git a/src/ui/songview/timecamera.h b/src/ui/songview/timecamera.h
+index 9b3a17d9..6a50d435 100644
+--- a/src/ui/songview/timecamera.h
++++ b/src/ui/songview/timecamera.h
+@@ -57,22 +57,22 @@ class TimeCamera
+     // mutate — return camera-changed; host owns every redraw tail.
+     // All clamp internally. Unanchored setters are the session-restore path.
+     bool setHScroll(double px);
+     bool setVScroll(double y);
+     bool scrollByPx(double dx);          // horizontal
+     bool scrollRollBy(double dy);        // vertical
+     bool setTimeZoom(double pxPerBeat);  // no anchor, scroll kept
+     bool setKeyHeight(double keyHeight); // no anchor
+     ZoomResult zoomAroundContentX(double factor, double anchorContentX);
+     bool zoomKeyHeight(double factor, double anchorY);
+-    bool ensureTickVisible(uint64_t tick, double dpr);
+-    bool ensureRangeVisible(uint64_t startTick, uint64_t endTick, bool preferEnd, double dpr);
++    bool ensureTickVisible(Tick tick, double dpr);
++    bool ensureRangeVisible(Tick startTick, Tick endTick, bool preferEnd, double dpr);
+     bool ensureKeyVisible(int key); // uses ctor projection; cHiddenRow -> false
+ 
+   private:
+     const TimeAxis &m_axis;
+     const PitchProjection &m_projection;
+     Limits m_limits;
+     double m_viewportWidth = 0.0;
+     double m_rollHeight = 0.0;
+     double m_pxPerBeat = 0.0;
+     double m_scrollX = 0.0;
+diff --git a/src/ui/songview/timeruler.cpp b/src/ui/songview/timeruler.cpp
+index 9ec51bea..b8a89c21 100644
+--- a/src/ui/songview/timeruler.cpp
++++ b/src/ui/songview/timeruler.cpp
+@@ -260,21 +260,21 @@ QString TimeRuler::timeSigPromptTitle() const
+ QString TimeRuler::timeSigPromptLabel() const
+ {
+     return SongView::tr("Numerator (1-32):");
+ }
+ 
+ QVariantMap TimeRuler::timeSigPromptAppearance() const
+ {
+     return promptDialogAppearance(m_inputHost ? m_inputHost->font() : QGuiApplication::font());
+ }
+ 
+-void TimeRuler::openTimeSigPrompt(uint64_t tick, int numerator, int denominatorPow2)
++void TimeRuler::openTimeSigPrompt(Tick tick, int numerator, int denominatorPow2)
+ {
+     SongDocument *const document = m_owner.document();
+     TimelineQuickView *const quick = m_owner.quickView();
+     QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+     if (!document || !session)
+         return;
+ 
+     // Replacement ends the active shared-popup session before this bridge
+     // publishes a new guarded target.
+     session->cancel(/*restoreFocus=*/false);
+@@ -487,25 +487,25 @@ int TimeRuler::textBaseline(const QRect &row, const QFontMetrics &metrics) const
+ }
+ 
+ // 0 = start marker, 1 = end marker, -1 = neither near pos.
+ int TimeRuler::hitMarker(QPointF pos) const
+ {
+     const MidiTimeline *tl = m_owner.timeline();
+     if (!tl || !QRectF(markerRow()).contains(pos))
+         return -1;
+     const auto markerHitHalfWidth = lyt::space(Space::Two);
+     const qreal dpr = m_inputHost->devicePixelRatio();
+-    if (tl->loopStartTick != UINT64_MAX &&
++    if (tl->loopStartTick != CoreTimeDefaults::kNoTick &&
+         std::abs(m_camera.displayX(double(tl->loopStartTick), 0.0, dpr) - pos.x()) <=
+             markerHitHalfWidth)
+         return 0;
+-    if (tl->loopEndTick != UINT64_MAX &&
++    if (tl->loopEndTick != CoreTimeDefaults::kNoTick &&
+         std::abs(m_camera.displayX(double(tl->loopEndTick), 0.0, dpr) - pos.x()) <=
+             markerHitHalfWidth)
+         return 1;
+     return -1;
+ }
+ 
+ // Chip layout shared by paint and hit-testing: shadowed same-tick
+ // duplicates dropped, labels nudged past a loop bracket glyph sitting on
+ // the same spot, and a label hidden (stem only) when it would run into
+ // the next chip — zooming in separates them again.
+@@ -524,42 +524,42 @@ std::vector<TimeRuler::SigChip> TimeRuler::sigChips() const
+     // The axis synthesizes the opening 4/4 whenever no actual signature
+     // governs tick 0 — always so on the fallback axis.
+     if (axis.hasImplicitOpeningSignature())
+         add(axis.signatureAt(0));
+     const std::span<const TimeSigPoint> sigs = axis.explicitTimeSignatures();
+     for (size_t i = 0; i < sigs.size(); i++) {
+         if (i + 1 < sigs.size() && sigs[i + 1].tick == sigs[i].tick)
+             continue; // shadowed duplicate: the last at a tick wins
+         add(axis.signatureAt(sigs[i].tick));
+     }
+-    const uint64_t loops[2] = {axis.loopStartTick(), axis.loopEndTick()};
++    const Tick loops[2] = {axis.loopStartTick(), axis.loopEndTick()};
+     const qreal bracketWidth = fm.horizontalAdvance(QStringLiteral("["));
+     for (SigChip &chip : chips) {
+-        for (uint64_t loopTick : loops) {
+-            if (loopTick == UINT64_MAX)
++        for (Tick loopTick : loops) {
++            if (loopTick == CoreTimeDefaults::kNoTick)
+                 continue;
+             const qreal bracketStart = m_camera.displayX(double(loopTick), 0.0, dpr) + labelInset;
+             const qreal bracketRight = bracketStart + bracketWidth;
+             if (bracketRight > chip.labelX && bracketStart < chip.labelX + chip.labelW)
+                 chip.labelX = bracketRight + labelInset;
+         }
+     }
+     for (size_t i = 0; i + 1 < chips.size(); i++) {
+         if (chips[i].labelX + chips[i].labelW + labelInset > chips[i + 1].x)
+             chips[i].labelW = 0;
+     }
+     return chips;
+ }
+ 
+ // Chip hit-test in the ruler's top half, including the placeholder 4/4
+ // at tick 0. Fills the chip's tick and values.
+-bool TimeRuler::hitTimeSigChip(QPointF pos, uint64_t *tick, int *numerator, int *denomPow2,
++bool TimeRuler::hitTimeSigChip(QPointF pos, Tick *tick, int *numerator, int *denomPow2,
+                                bool *implicit) const
+ {
+     if (!QRectF(markerRow()).contains(pos))
+         return false;
+     const std::vector<SigChip> chips = sigChips();
+     const auto stemHitHalfWidth = lyt::space(Space::One);
+     const auto hitFuzz = lyt::singlePixel();
+     // Back to front so the rightmost chip wins where chips crowd.
+     for (auto it = chips.rbegin(); it != chips.rend(); ++it) {
+         const bool onStem = std::abs(it->x - pos.x()) <= stemHitHalfWidth;
+@@ -570,21 +570,21 @@ bool TimeRuler::hitTimeSigChip(QPointF pos, uint64_t *tick, int *numerator, int
+             *numerator = it->numerator;
+             *denomPow2 = it->denomPow2;
+             *implicit = it->implicit;
+             return true;
+         }
+     }
+     return false;
+ }
+ 
+ // Values in effect at tick; the axis resolves the implicit opening 4/4.
+-void TimeRuler::sigAtTick(uint64_t tick, int *numerator, int *denomPow2) const
++void TimeRuler::sigAtTick(Tick tick, int *numerator, int *denomPow2) const
+ {
+     const TimeAxis::ResolvedTimeSignature sig = m_owner.timeAxis().signatureAt(tick);
+     *numerator = sig.numerator;
+     *denomPow2 = sig.denomPow2;
+ }
+ 
+ // 0 = selection start edge, 1 = end edge, -1 = neither near pos.
+ int TimeRuler::hitSelEdge(QPointF pos) const
+ {
+     const auto &sel = m_owner.selectionModel().timeSelection();
+diff --git a/src/ui/songview/timeruler.h b/src/ui/songview/timeruler.h
+index 41373c75..1653dc96 100644
+--- a/src/ui/songview/timeruler.h
++++ b/src/ui/songview/timeruler.h
+@@ -150,83 +150,83 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
+ 
+     // Loop-marker and selection-edge grab zones live in the marker row —
+     // where the bracket glyphs and edge handles are drawn — so the tick row
+     // always scrubs the edit cursor even directly on a marker line.
+ 
+     // 0 = start marker, 1 = end marker, -1 = neither near pos.
+     int hitMarker(QPointF pos) const;
+ 
+     // One time-signature chip as laid out in the marker row.
+     struct SigChip {
+-        uint64_t tick;
++        Tick tick;
+         int numerator;
+         int denomPow2;
+         bool implicit; // no 0x58 meta behind it (editing one creates the event)
+         qreal x;       // stem position (band-local coords)
+         qreal labelX;  // label left edge, nudged right past a loop bracket
+         qreal labelW;  // 0: label hidden behind the next chip (stem only)
+     };
+ 
+     // Chip layout shared by paint and hit-testing: shadowed same-tick
+     // duplicates dropped, labels nudged past a loop bracket glyph sitting on
+     // the same spot, and a label hidden (stem only) when it would run into
+     // the next chip — zooming in separates them again.
+     std::vector<SigChip> sigChips() const;
+ 
+     // Chip hit-test in the ruler's top half, including the placeholder 4/4
+     // at tick 0. Fills the chip's tick and values.
+-    bool hitTimeSigChip(QPointF pos, uint64_t *tick, int *numerator, int *denomPow2,
++    bool hitTimeSigChip(QPointF pos, Tick *tick, int *numerator, int *denomPow2,
+                         bool *implicit) const;
+ 
+     // Values in effect at tick (4/4 before any 0x58 meta).
+-    void sigAtTick(uint64_t tick, int *numerator, int *denomPow2) const;
++    void sigAtTick(Tick tick, int *numerator, int *denomPow2) const;
+ 
+     // 0 = selection start edge, 1 = end edge, -1 = neither near pos.
+     int hitSelEdge(QPointF pos) const;
+ 
+     // Loop/selection/signature context menu over the shared canvas popup
+     // session. scenePos is a Quick-window scene position (the release
+     // point); the acted tick is the snapped press tick.
+-    void showRulerMenu(uint64_t clickTick, const QPointF &scenePos);
++    void showRulerMenu(Tick clickTick, const QPointF &scenePos);
+ 
+     struct PendingTimeSigPrompt {
+         QPointer<SongDocument> document;
+         uint64_t documentRevision = 0;
+-        uint64_t tick = 0;
++        Tick tick = 0;
+         int initialNumerator = timeSigPromptMinimumNumerator();
+         int initialDenominatorPow2 = timeSigPromptMinimumDenominatorPow2();
+     };
+ 
+     // Guarded open-time target for the loop menu: published only after the
+     // host successfully opened the shared session, consumed before any
+     // command, and dropped as stale when the document moved underneath.
+     struct PendingRulerMenu {
+         QPointer<SongDocument> document;
+         uint64_t documentRevision = 0;
+-        uint64_t clickTick = 0;
+-        uint64_t sigTick = 0;
++        Tick clickTick = 0;
++        Tick sigTick = 0;
+         int sigNumerator = 0;
+         int sigDenominatorPow2 = 0;
+         EditorSelectionModel::TimeSelection selection;
+         uint32_t trackScope = 0;
+     };
+ 
+     // Shared adapter factory for every ruler menu: the grid-control menus
+     // and the loop menu may each be first to create the host and models.
+     void ensureMenuAdapters();
+     // Consumes the guarded open-time target; clears it before any command.
+     void handleRulerMenuAction(int id);
+     // True when the live selection no longer matches the open-time
+     // snapshot; selection-scoped loop-menu actions must not run.
+     bool menuSelectionStale(const PendingRulerMenu &target) const;
+ 
+-    void openTimeSigPrompt(uint64_t tick, int numerator, int denominatorPow2);
++    void openTimeSigPrompt(Tick tick, int numerator, int denominatorPow2);
+     void clearTimeSigPrompt(bool restoreFocus);
+     void restoreRulerFocus();
+ 
+     QFont m_signatureFont;
+     QFont m_rulerFont;
+     QFont m_beatFont;
+     QFont m_boldRulerFont;
+     // Metrics of the fixed fonts above, built once in the constructor;
+     // row heights, label widths, and baselines reuse them.
+     QFontMetrics m_rulerMetrics{QFont{}};
+@@ -247,24 +247,24 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
+     // open — from either entry — and reused.
+     QuickMenuHost *m_menuHost = nullptr;
+     QuickMenuModel *m_divisionModel = nullptr;
+     QuickMenuModel *m_feelModel = nullptr;
+     QuickMenuModel *m_rulerMenuModel = nullptr;
+     std::optional<PendingTimeSigPrompt> m_pendingTimeSigPrompt;
+     std::optional<PendingRulerMenu> m_pendingRulerMenu;
+     QMetaObject::Connection m_timeSigPromptCancellation;
+     int m_markerHeight = 0;
+     int m_dragMarker = -1;
+-    uint64_t m_dragTick = 0;
++    Tick m_dragTick = 0;
+     bool m_dragTimeSig = false;     // chip drag is live; commits moveTimeSig
+-    uint64_t m_dragTimeSigFrom = 0; // the dragged signature's original tick
++    Tick m_dragTimeSigFrom = 0;     // the dragged signature's original tick
+     bool m_leftPress = false;       // plain click vs. time-selection sweep undecided
+     bool m_rightPress = false;      // right click held until the ruler menu opens
+     bool m_selSweep = false;        // left-drag time-selection sweep is live
+     bool m_multiTrackSweep = false; // modifier intent captured when the sweep is armed
+     QPointF m_leftPressPos;
+     QPointF m_rightPressPos;
+-    uint64_t m_selAnchor = 0; // snapped tick of the pending press
+-    int m_dragSelEdge = -1;   // selection edge being left-dragged (0/1)
++    Tick m_selAnchor = 0;   // snapped tick of the pending press
++    int m_dragSelEdge = -1; // selection edge being left-dragged (0/1)
+ };
+ 
+ } // namespace songview
+diff --git a/src/ui/songview/timeruler_interaction.cpp b/src/ui/songview/timeruler_interaction.cpp
+index 964ba8c1..85249bf7 100644
+--- a/src/ui/songview/timeruler_interaction.cpp
++++ b/src/ui/songview/timeruler_interaction.cpp
+@@ -34,41 +34,41 @@ QuickPopupSession *quickSessionFor(SongView &owner)
+ }
+ 
+ } // namespace
+ 
+ bool TimeRuler::pointerPress(const TimelinePointerInput &input)
+ {
+     SongDocument *doc = m_owner.document();
+     const MidiTimeline *timeline = m_owner.timeline();
+     if (!timeline || input.surface != TimelineInputSurface::Plot)
+         return false;
+-    const uint64_t clickTick = m_grid.snapTick(m_camera.tickAtContentX(input.position.x()));
++    const Tick clickTick = m_grid.snapTick(m_camera.tickAtContentX(input.position.x()));
+ 
+     if (input.button == Qt::RightButton) {
+         // Deferred until release so the loop/selection menu opens at the
+         // original click tick.
+         if (!doc)
+             return false;
+         m_rightPress = true;
+         m_rightPressPos = input.position;
+         m_selAnchor = clickTick;
+         return true;
+     }
+     if (input.button != Qt::LeftButton)
+         return false;
+     m_dragMarker = doc ? hitMarker(input.position) : -1;
+     if (m_dragMarker >= 0) {
+         m_dragTick = clickTick;
+         requestQuickUpdate();
+         return true;
+     }
+-    uint64_t sigTick;
++    Tick sigTick;
+     int sigNum, sigDen;
+     bool sigImplicit;
+     if (doc && hitTimeSigChip(input.position, &sigTick, &sigNum, &sigDen, &sigImplicit) &&
+         !sigImplicit) {
+         // Drag moves the signature; starting at its own tick keeps a
+         // plain click (and the first half of a double-click) a no-op.
+         m_dragTimeSig = true;
+         m_dragTimeSigFrom = sigTick;
+         m_dragTick = sigTick;
+         requestQuickUpdate();
+@@ -95,21 +95,21 @@ bool TimeRuler::pointerMove(const TimelinePointerInput &input)
+     };
+     if (m_rightPress)
+         return true;
+     if (m_leftPress) {
+         if (!m_selSweep &&
+             (input.position.toPoint() - m_leftPressPos.toPoint()).manhattanLength() >=
+                 QApplication::startDragDistance()) {
+             m_selSweep = true;
+         }
+         if (m_selSweep) {
+-            const uint64_t tick = dragTick();
++            const Tick tick = dragTick();
+             EditorSelectionModel::TimeSelection selection;
+             selection.startTick = std::min(m_selAnchor, tick);
+             selection.endTick = std::max(m_selAnchor, tick);
+             TrackMask trackMask = 1u << m_owner.selectionModel().primaryTrack();
+             if (m_multiTrackSweep) {
+                 for (const ViewNote &note : m_owner.model().notes) {
+                     if (note.startTick >= selection.endTick)
+                         break;
+                     if (note.track >= 0 && note.track < 16 &&
+                         selection.startTick < note.endTick()) {
+@@ -123,33 +123,33 @@ bool TimeRuler::pointerMove(const TimelinePointerInput &input)
+     }
+     if (m_dragMarker >= 0 || m_dragTimeSig) {
+         m_dragTick = dragTick();
+         requestQuickUpdate();
+         return true;
+     }
+     if (m_dragSelEdge >= 0) {
+         // Selection edges move live (view state, unlike the loop
+         // markers' commit-on-release document edit).
+         EditorSelectionModel::TimeSelection selection = m_owner.selectionModel().timeSelection();
+-        const uint64_t tick = dragTick();
++        const Tick tick = dragTick();
+         if (m_dragSelEdge == 0)
+             selection.startTick = tick;
+         else
+             selection.endTick = tick;
+         if (selection.startTick > selection.endTick) {
+             std::swap(selection.startTick, selection.endTick);
+             m_dragSelEdge ^= 1;
+         }
+         m_owner.selectionModel().setTimeSelection(selection);
+         return true;
+     }
+-    uint64_t sigTick;
++    Tick sigTick;
+     int sigNum, sigDen;
+     bool sigImplicit;
+     m_inputHost->setCursor(
+         m_owner.document() &&
+                 (hitMarker(input.position) >= 0 || hitSelEdge(input.position) >= 0 ||
+                  hitTimeSigChip(input.position, &sigTick, &sigNum, &sigDen, &sigImplicit))
+             ? Qt::SplitHCursor
+             : Qt::ArrowCursor);
+     return true;
+ }
+@@ -207,21 +207,21 @@ bool TimeRuler::pointerRelease(const TimelinePointerInput &input)
+     requestQuickUpdate();
+     return true;
+ }
+ 
+ bool TimeRuler::pointerDoubleClick(const TimelinePointerInput &input)
+ {
+     if (input.surface != TimelineInputSurface::Plot)
+         return false;
+ 
+     SongDocument *doc = m_owner.document();
+-    uint64_t sigTick;
++    Tick sigTick;
+     int numerator, denomPow2;
+     bool implicit;
+     if (input.button != Qt::LeftButton || !doc ||
+         !hitTimeSigChip(input.position, &sigTick, &numerator, &denomPow2, &implicit)) {
+         return false;
+     }
+     // End the double-click's implicit grab before publishing the form. The
+     // resulting PointerUngrabbed cancellation synchronously clears the old
+     // ruler gesture and popup state; publishing first would cancel this form.
+     m_dragTimeSig = false;
+@@ -269,52 +269,53 @@ void TimeRuler::inputCancelled(TimelineInputCancelReason reason)
+     const bool menuOwnsSession =
+         m_menuHost && session && session->isOpen() && session->owns(m_menuHost);
+     const bool menuTookTheInput =
+         menuOwnsSession && (reason == TimelineInputCancelReason::FocusLost ||
+                             reason == TimelineInputCancelReason::PointerUngrabbed);
+     if (!menuTookTheInput)
+         closePopups();
+     cancelInteraction();
+ }
+ 
+-void TimeRuler::showRulerMenu(uint64_t clickTick, const QPointF &scenePos)
++void TimeRuler::showRulerMenu(Tick clickTick, const QPointF &scenePos)
+ {
+     SongDocument *doc = m_owner.document();
+     const MidiTimeline *timeline = m_owner.timeline();
+     QuickPopupSession *const session = quickSessionFor(m_owner);
+     if (!doc || !timeline || !session)
+         return;
+ 
+     // Chip hit snapshotted at open from the press position: it decides the
+     // Edit/Remove time-signature rows and the prompt's initial values.
+-    uint64_t sigTick = clickTick;
++    Tick sigTick = clickTick;
+     int sigNum, sigDen;
+     bool sigImplicit = true;
+     const bool onChip = hitTimeSigChip(m_rightPressPos, &sigTick, &sigNum, &sigDen, &sigImplicit);
+     if (!onChip)
+         sigAtTick(clickTick, &sigNum, &sigDen);
+ 
+     // Same rows, order, labels, and enablement as the former native menu;
+     // ids carry the RulerMenuAction values the handler consumes.
+     std::vector<QuickMenuItem> rows;
+     rows.reserve(12);
+     const auto addRow = [&rows](RulerMenuAction action, QString text, bool enabled = true) {
+         QuickMenuItem item;
+         item.id = static_cast<int>(action);
+         item.text = std::move(text);
+         item.enabled = enabled;
+         rows.push_back(std::move(item));
+     };
+     addRow(RulerMenuAction::SetLoopStart, SongView::tr("Set loop start here"));
+     addRow(RulerMenuAction::SetLoopEnd, SongView::tr("Set loop end here"));
+     addRow(RulerMenuAction::RemoveLoop, SongView::tr("Remove loop markers"),
+-           timeline->loopStartTick != UINT64_MAX || timeline->loopEndTick != UINT64_MAX);
++           timeline->loopStartTick != CoreTimeDefaults::kNoTick ||
++               timeline->loopEndTick != CoreTimeDefaults::kNoTick);
+     const EditorSelectionModel::TimeSelection selection = m_owner.selectionModel().timeSelection();
+     if (selection.active()) {
+         rows.push_back(QuickMenuItem::makeSeparator());
+         addRow(RulerMenuAction::LoopFromSelection, SongView::tr("Set loop to selection"));
+         addRow(RulerMenuAction::InsertBlank, SongView::tr("Insert blank time"));
+         addRow(RulerMenuAction::Duplicate, SongView::tr("Duplicate time"));
+         rows.back().shortcutText = contextShortcutText(QStringLiteral("roll.duplicate_time"));
+         addRow(RulerMenuAction::RemoveContents, SongView::tr("Remove contents (shift left)"));
+         addRow(RulerMenuAction::ClearSelection, SongView::tr("Clear time selection"));
+     }
+@@ -375,23 +376,23 @@ void TimeRuler::handleRulerMenuAction(int id)
+         return;
+     switch (static_cast<RulerMenuAction>(id)) {
+     case RulerMenuAction::SetLoopStart:
+         doc->setLoopTick(false, int64_t(target.clickTick));
+         break;
+     case RulerMenuAction::SetLoopEnd:
+         doc->setLoopTick(true, int64_t(target.clickTick));
+         break;
+     case RulerMenuAction::RemoveLoop:
+         // Two commands; undo restores them one at a time.
+-        if (m_owner.timeline()->loopStartTick != UINT64_MAX)
++        if (m_owner.timeline()->loopStartTick != CoreTimeDefaults::kNoTick)
+             doc->setLoopTick(false, -1);
+-        if (m_owner.timeline()->loopEndTick != UINT64_MAX)
++        if (m_owner.timeline()->loopEndTick != CoreTimeDefaults::kNoTick)
+             doc->setLoopTick(true, -1);
+         break;
+     case RulerMenuAction::LoopFromSelection:
+         if (menuSelectionStale(target))
+             return;
+         // Same two-command shape as "Remove loop markers".
+         doc->setLoopTick(false, int64_t(target.selection.startTick));
+         doc->setLoopTick(true, int64_t(target.selection.endTick));
+         break;
+     case RulerMenuAction::InsertBlank:
+diff --git a/src/ui/songview/trackvoiceops.cpp b/src/ui/songview/trackvoiceops.cpp
+index 63d6780e..2a7a9681 100644
+--- a/src/ui/songview/trackvoiceops.cpp
++++ b/src/ui/songview/trackvoiceops.cpp
+@@ -35,21 +35,21 @@ void SongView::transitionSelectedTrack(int newTrack)
+ }
+ void SongView::transitionSelectedTrack(int newTrack, bool trackIdentityChanged)
+ {
+     if (newTrack < 0 || newTrack > 15 || !trackIdentityChanged)
+         return;
+     if (m_roll)
+         m_roll->cancelPitchBendPopup();
+     cancelActiveInteractions();
+     m_selectionModel.applyPrimaryTrackTransition(newTrack);
+ }
+-bool SongView::revealNote(int track, uint8_t key, uint64_t tick)
++bool SongView::revealNote(int track, uint8_t key, Tick tick)
+ {
+     if (track < 0 || track > 15)
+         return false;
+     selectTrack(track);
+     const ViewNote *found = nullptr;
+     for (const ViewNote &note : m_model.notes) {
+         if (note.startTick > tick)
+             break;
+         if (note.track == track && note.key == key && tick < note.endTick())
+             found = &note;
+@@ -187,21 +187,21 @@ QColor SongView::velocityNoteColor(int velocity)
+ }
+ QColor SongView::noteFillColor(int track, int velocity) const
+ {
+     return m_velocityColorMode ? velocityNoteColor(velocity) : noteColor(track, velocity);
+ }
+ int SongView::currentProgram(int track) const
+ {
+     if (!m_timeline)
+         return -1;
+     int prog = m_timeline->tracks[track].firstProgram;
+-    const uint64_t tick = m_playing ? uint64_t(m_playheadTick) : m_editCursorTick;
++    const Tick tick = m_playing ? Tick(m_playheadTick) : m_editCursorTick;
+     for (const VoiceChange &vc : m_model.voices) {
+         if (vc.tick > tick)
+             break;
+         if (vc.track == track)
+             prog = vc.program;
+     }
+     return prog;
+ }
+ QString SongView::instrumentLabel(int track) const
+ {
+@@ -218,27 +218,27 @@ QString SongView::voiceShortName(uint8_t program) const
+     QString name;
+     QString type;
+     if (m_voicegroup && program < VOICEGROUP_SIZE) {
+         name = QString::fromUtf8(m_voicegroup->voiceNames[program]).trimmed();
+         type = m4aVoiceTypeName(m_voicegroup->voices[program].type);
+     }
+     if (name.isEmpty())
+         return type.isEmpty() ? tr("Voice") : type;
+     return QStringLiteral("%1 (%2)").arg(name, type);
+ }
+-DrawerPageVoiceContext SongView::voiceContext(uint64_t tick) const
++DrawerPageVoiceContext SongView::voiceContext(Tick tick) const
+ {
+     const int primaryTrack = m_selectionModel.primaryTrack();
+     if (!m_timeline || !m_voicegroup || primaryTrack < 0 || primaryTrack >= 16)
+         return {};
+     int program = m_timeline->tracks[primaryTrack].firstProgram;
+-    uint64_t endTick = UINT64_MAX;
++    Tick endTick = CoreTimeDefaults::kNoTick;
+     for (const VoiceChange &change : m_model.voices) {
+         if (change.track != primaryTrack)
+             continue;
+         if (change.tick > tick) {
+             endTick = change.tick;
+             break;
+         }
+         program = change.program;
+     }
+     if (program < 0 || program >= VOICEGROUP_SIZE)
+@@ -441,22 +441,23 @@ void SongView::onTracksRemapped(const TrackRemap &remap)
+         Q_ASSERT(m_selectionModel.timeSelection().lanes == remappedLanes);
+     m_editorDrawer->velocityArea()->tracksRemapped(remap);
+     m_editorDrawer->voiceChangeArea()->tracksRemapped(remap);
+     setEditorViewState(remappedEditorViewState);
+ 
+     if (muteChanged)
+         emit muteMaskChanged(m_muteMask);
+     if (soloChanged)
+         emit soloMaskChanged(m_soloMask);
+ }
+-void SongView::auditionTimed(int track, int key, int velocity, uint64_t startTick, uint64_t endTick)
++void SongView::auditionTimed(int track, int key, int velocity, Tick startTick, Tick endTick)
+ {
+     if (!m_timeline || endTick <= startTick)
+         return;
+-    uint64_t dur = m_timeline->sampleForTick(endTick) - m_timeline->sampleForTick(startTick);
++    uint64_t dur = m_timeline->sampleForTick(uint64_t(endTick)) -
++                   m_timeline->sampleForTick(uint64_t(startTick));
+     // Keep long notes from producing an excessive audition length.
+     const uint64_t cap = uint64_t(m_timeline->sampleRate * 10.0);
+     if (cap > 0)
+         dur = std::min(dur, cap);
+     if (dur > 0)
+         emit auditionNoteTimed(track, key, velocity, quint32(std::min<uint64_t>(dur, UINT32_MAX)));
+ }
+diff --git a/src/ui/songviewmodel.h b/src/ui/songviewmodel.h
+index dd19de9c..74d83f15 100644
+--- a/src/ui/songviewmodel.h
++++ b/src/ui/songviewmodel.h
+@@ -9,52 +9,52 @@
+ #include "core/noteid.h"
+ #include "core/timedefaults.h"
+ 
+ // Presentation model derived from a MidiTimeline: notes paired from on/off
+ // events, automation lane curves per (track, parameter), voice changes, and a
+ // strip of everything else. Every timeline event lands in exactly one of
+ // these buckets — the M1 guarantee that no event is silently invisible.
+ 
+ struct ViewNote {
+     NoteId noteId; // source document identity; unassigned for ordinary timeline notes
+-    uint32_t startTick;
++    Tick startTick;
+     uint32_t duration; // 0 = unpaired note-on or same-tick pair
+     uint8_t key;
+     uint8_t velocity;
+     uint8_t track;
+ 
+     uint64_t endTick() const { return uint64_t(startTick) + duration; }
+ };
+ 
+ struct LanePoint {
+-    uint32_t tick;
++    Tick tick;
+     int value;
+ };
+ 
+ constexpr uint8_t LANE_CC_BEND = CoreTimeDefaults::kLaneCcBend;
+ 
+ struct CcLane {
+     uint8_t track;
+     uint8_t cc; // MIDI CC number or registered pseudo-lane controller
+     M4aLane lane;
+     QString name;
+     std::vector<LanePoint> points; // sorted by tick
+ };
+ 
+ struct VoiceChange {
+-    uint32_t tick;
++    Tick tick;
+     uint8_t track;
+     uint8_t program;
+ };
+ 
+ struct StripItem {
+-    uint64_t tick;
++    Tick tick;
+     int track; // -1 = file-level
+     QString label;
+ };
+ 
+ struct SongViewModel {
+     std::vector<ViewNote> notes;     // sorted by startTick
+     std::vector<CcLane> lanes;       // grouped by track, lane order per §4.2
+     std::vector<VoiceChange> voices; // sorted by tick
+     std::vector<StripItem> strip;    // sorted by tick; advanced CCs + parser leftovers
+     int minNoteKey = 127;

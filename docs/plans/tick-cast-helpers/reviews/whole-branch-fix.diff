@@ -1,0 +1,902 @@
+diff --git a/src/checks/rollcheck/static/camera.cpp b/src/checks/rollcheck/static/camera.cpp
+index 242e0ff2..6e1a33e9 100644
+--- a/src/checks/rollcheck/static/camera.cpp
++++ b/src/checks/rollcheck/static/camera.cpp
+@@ -124,6 +124,115 @@ void PianoRollStaticTest::tickRangeWalksFractionalLattice()
+         songview::detail::tickRange(std::numeric_limits<double>::quiet_NaN(), 100.0), 1,
+         [&rejected](Tick tick, int) { rejected.push_back(tick); });
+     QVERIFY(rejected.empty());
++    // Boundary scenarios on a coarser lattice: gridMinDenom=16 keeps the
++    // drawn sub-grid above the clock floor at any cell-width threshold, so
++    // the stride is a nontrivial divisor of the 24-tick beat. The snap grid
++    // runs one ladder step finer (8 divisions), which also stays nontrivial:
++    // gcd(6, 3) = 3 ticks. (Denom=32 would cap the drawn grid at 3 ticks and
++    // collapse the snap stride to the 1-tick clock floor.)
++    SongView::ViewState coarse = original;
++    coarse.pxPerBeat = 192.0;
++    coarse.gridMinDenom = 16;
++    view.applyViewState(coarse);
++    const Tick latticeG = view.grid().gridTicksAt(0);
++    const Tick snapG = view.grid().snapTicksAt(0);
++    QVERIFY(latticeG > 1);
++    QVERIFY(latticeG < segment.beatTicks);
++    QVERIFY(96 % latticeG == 0);
++    QVERIFY(snapG >= 3);
++    QVERIFY(segment.beatTicks % snapG == 0);
++    QCOMPARE(view.grid().fineGridTicks(), Tick(1));
++    // Collects the walked ticks; a callback outside the half-open range
++    // aborts the walk so a wrapped candidate cannot accumulate callbacks
++    // (a missing advancement stays bounded by the harness timeout).
++    struct OutOfRangeTick {};
++    const auto walk = [&view](Tick begin, Tick end) {
++        std::vector<Tick> ticks;
++        songview::detail::forEachSubGridLine(view.grid(), view.camera(),
++                                             songview::detail::TickRange{begin, end}, 1,
++                                             [&ticks, begin, end](Tick tick, int) {
++                                                 if (tick < begin || tick >= end)
++                                                     throw OutOfRangeTick{};
++                                                 ticks.push_back(tick);
++                                             });
++        return ticks;
++    };
++    // Independent membership expectation: every in-range tick on its
++    // governing segment's sub-beat lattice that is not a beat line.
++    const auto expectedLines = [&view](Tick begin, Tick end) {
++        std::vector<Tick> ticks;
++        for (Tick tick = begin; tick < end; ++tick) {
++            const songview::Grid::Segment s = view.grid().segmentAt(tick);
++            const Tick step = view.grid().gridTicksAt(tick);
++            if (step > 0 && step < s.beatTicks && (tick - s.start) % step == 0 &&
++                (tick - s.start) % s.beatTicks != 0 &&
++                view.camera().pxPerTick() * double(s.beatTicks) >= 1)
++                ticks.push_back(tick);
++        }
++        return ticks;
++    };
++    // The first ceiling-aligned candidate (96 + latticeG) already lies at
++    // or beyond the range end: the segment contributes nothing.
++    const std::vector<Tick> firstOutside = walk(97, 98);
++    QVERIFY2(firstOutside.empty(), "a first aligned candidate past the range end must be skipped");
++    // The first candidate is the beat line at 96: only its callback is
++    // skipped; the walk still advances through the rest of the range.
++    QCOMPARE(walk(95, 110), expectedLines(95, 110));
++    // The terminal range ends mid-cell (kMaxTick is not on the lattice):
++    // the last advancement must break instead of striding past the end.
++    QCOMPARE(walk(CoreTimeDefaults::kMaxTick - 9, CoreTimeDefaults::kMaxTick),
++             expectedLines(CoreTimeDefaults::kMaxTick - 9, CoreTimeDefaults::kMaxTick));
++    const std::vector<Tick> ceilingCell =
++        walk(CoreTimeDefaults::kMaxTick - 1, CoreTimeDefaults::kMaxTick);
++    // Snap inputs: NaN and non-positive values map to 0, infinities clamp
++    // to the corresponding endpoint (down lands on the lattice below it).
++    const double nan = std::numeric_limits<double>::quiet_NaN();
++    const double infinity = std::numeric_limits<double>::infinity();
++    QCOMPARE(view.grid().snapTick(nan), Tick(0));
++    QCOMPARE(view.grid().snapTickDown(nan), Tick(0));
++    QCOMPARE(view.grid().snapTickUp(nan), Tick(0));
++    QCOMPARE(view.grid().snapTick(-infinity), Tick(0));
++    QCOMPARE(view.grid().snapTick(infinity), CoreTimeDefaults::kMaxTick);
++    QCOMPARE(view.grid().snapTickDown(infinity), Tick(CoreTimeDefaults::kMaxTick / snapG * snapG));
++    QCOMPARE(view.grid().snapTickUp(infinity), CoreTimeDefaults::kMaxTick);
++    QCOMPARE(view.grid().snapTick(infinity, true), CoreTimeDefaults::kMaxTick);
++    // Fractional nearest tie on either side of the midpoint: the lower
++    // candidate wins exactly at the tie.
++    QCOMPARE(view.grid().snapTick(96.0 + snapG / 2.0), Tick(96));
++    QCOMPARE(view.grid().snapTick(96.0 + snapG / 2.0 - 0.25), Tick(96));
++    QCOMPARE(view.grid().snapTick(96.0 + snapG / 2.0 + 0.25), Tick(96 + snapG));
++    QCOMPARE(view.grid().snapTickDown(96.0 + snapG / 2.0 + 0.25), Tick(96));
++    QCOMPARE(view.grid().snapTickUp(96.0 + snapG / 2.0 - 0.25), Tick(96 + snapG));
++    // Coarse up/nearest at the domain edge saturate at kMaxTick instead of
++    // wrapping the lo + g candidate; down stays on the lattice.
++    QCOMPARE(view.grid().snapTickUp(double(CoreTimeDefaults::kMaxTick) - 0.5),
++             CoreTimeDefaults::kMaxTick);
++    QCOMPARE(view.grid().snapTick(double(CoreTimeDefaults::kMaxTick) - 0.5),
++             CoreTimeDefaults::kMaxTick);
++    QCOMPARE(view.grid().snapTickDown(double(CoreTimeDefaults::kMaxTick) - 0.5),
++             Tick((CoreTimeDefaults::kMaxTick - 1) / snapG * snapG));
++    // Fine snap rounds on the clock grid; a rounded result past the domain
++    // saturates through tickFromDouble instead of producing the sentinel.
++    QCOMPARE(view.grid().snapTick(double(CoreTimeDefaults::kMaxTick) + 0.6, true),
++             CoreTimeDefaults::kMaxTick);
++    QCOMPARE(view.grid().snapTick(double(CoreTimeDefaults::kMaxTick) - 0.4, true),
++             CoreTimeDefaults::kMaxTick);
++    QCOMPARE(view.grid().snapTick(1e30, true), CoreTimeDefaults::kMaxTick);
++    // A mid-cell signature change re-anchors the lattice: the first
++    // segment's walk stops at the seam (its next candidate lies at the
++    // segment end), and the new segment restarts its own lattice and
++    // beat-line omission from its start.
++    fixture.tab()->document().setTimeSig(102, 4, 2);
++    QTRY_VERIFY(view.grid().segmentAt(102).start == 102);
++    QCOMPARE(view.grid().segmentAt(101).next, Tick(102));
++    QCOMPARE(walk(95, 130), expectedLines(95, 130));
++    QCOMPARE(walk(100, 110), expectedLines(100, 110));
++    QCOMPARE(view.grid().snapTickDown(103.5), Tick(102));
++    QCOMPARE(view.grid().snapTickUp(101.5), Tick(102));
++    QCOMPARE(view.grid().snapTick(103.5), Tick(102));
++    QCOMPARE(view.grid().snapTick(103.5 + double(snapG)), Tick(102 + snapG));
++    fixture.tab()->document().deleteTimeSig(102);
++    QTRY_VERIFY(view.grid().segmentAt(102).start == segment.start);
+     view.applyViewState(original);
+ }
+ 
+diff --git a/src/core/songdocument.cpp b/src/core/songdocument.cpp
+index 864d9b32..05f13a6f 100644
+--- a/src/core/songdocument.cpp
++++ b/src/core/songdocument.cpp
+@@ -99,6 +99,13 @@ bool cfgSemanticEqual(const SongCfg &a, const SongCfg &b)
+            a.extendedClocks == b.extendedClocks && a.noCompression == b.noCompression;
+ }
+ 
++// Whether accumulating delta `b` onto `a` stays inside int64_t; classified
++// before any arithmetic so no overflow executes.
++constexpr bool deltasAccumulateFits(int64_t a, int64_t b)
++{
++    return !(b > 0 && a > INT64_MAX - b) && !(b < 0 && a < INT64_MIN - b);
++}
++
+ } // namespace
+ 
+ // Applies a prebuilt op list; undo reverts it. Op index rules: removals and
+@@ -217,6 +224,10 @@ class MoveNotesCommand : public QUndoCommand
+             const_cast<MoveNotesCommand *>(static_cast<const MoveNotesCommand *>(command));
+         if (!other->m_mergeable || !movesMyOutputs(other->m_notes))
+             return false;
++        // An accumulated delta that no longer fits int64_t cannot be
++        // re-landed; decline the merge and keep both applied commands.
++        if (!deltasAccumulateFits(m_dTick, other->m_dTick))
++            return false;
+         // Both commands are applied here (the stack redoes the new one
+         // before offering the merge). Rewind to the pre-gesture state, then
+         // land the accumulated move in one hop.
+@@ -244,7 +255,7 @@ class MoveNotesCommand : public QUndoCommand
+         if (next.size() != m_notes.size())
+             return false;
+         for (const DocNote &note : m_notes) {
+-            const Tick outputTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
++            const Tick outputTick = CoreTimeDefaults::shiftTickClamped(note.tick, m_dTick);
+             const uint8_t outputKey = uint8_t(std::clamp(int(note.key) + m_dKey, 0, 127));
+             const auto output =
+                 std::find_if(next.begin(), next.end(), [&](const DocNote &candidate) {
+@@ -304,6 +315,8 @@ class MoveNotesToPitchesCommand : public QUndoCommand
+             static_cast<const MoveNotesToPitchesCommand *>(command));
+         if (!other->m_mergeable || !movesMyOutputs(other->m_notes))
+             return false;
++        if (!deltasAccumulateFits(m_dTick, other->m_dTick))
++            return false;
+         m_doc->revertOps(other->m_ops);
+         m_doc->revertOps(m_ops);
+         m_destPitches = other->m_destPitches;
+@@ -336,7 +349,7 @@ class MoveNotesToPitchesCommand : public QUndoCommand
+             const DocNote &note = m_notes[i];
+             const Tick tick = note.unterminated()
+                                   ? note.tick
+-                                  : Tick(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
++                                  : CoreTimeDefaults::shiftTickClamped(note.tick, m_dTick);
+             const int key = note.unterminated() ? note.key : m_destPitches[i];
+             mine.push_back(
+                 {note.engineTrack, tick, key, note.duration, note.velocity, note.channel});
+@@ -683,7 +696,7 @@ std::vector<NoteId> SongDocument::insertedNoteIds(int engineTrack,
+ uint64_t SongDocument::noteEndTick(const DocNote &note) const
+ {
+     if (!note.unterminated())
+-        return note.tick + note.duration;
++        return uint64_t(note.tick) + note.duration;
+     if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()))
+         return note.tick;
+     return m_smf.tracks[size_t(note.smfTrack)].endTick;
+@@ -877,7 +890,9 @@ void SongDocument::appendNoteInsertOps(std::vector<EditOp> &ops, int smfTrack, u
+     EditOp end;
+     end.type = EditOp::InsertEvent;
+     end.smfTrack = smfTrack;
+-    end.event = makeChannelEvent(0x9, channel, tick + std::max<uint32_t>(1, duration), key, 0);
++    const uint64_t endTick = uint64_t(tick) + std::max<uint32_t>(1, duration);
++    Q_ASSERT(endTick <= CoreTimeDefaults::kMaxTick);
++    end.event = makeChannelEvent(0x9, channel, Tick(endTick), key, 0);
+     ops.push_back(end);
+ }
+ 
+@@ -1009,6 +1024,11 @@ void SongDocument::addNote(int engineTrack, Tick tick, uint8_t key, uint32_t dur
+     const int smfTrack = smfTrackFor(engineTrack);
+     if (smfTrack < 0)
+         return;
++    // A persisted note end must stay at or below kMaxTick; a zero duration
++    // normalizes to one tick before the check. Reject before planning any
++    // overlap removal so an invalid end leaves the document untouched.
++    if (uint64_t(tick) + std::max<uint32_t>(1, duration) > CoreTimeDefaults::kMaxTick)
++        return;
+     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+     std::vector<EditOp> trims;
+     resolveNoteOverlaps(
+@@ -1029,6 +1049,11 @@ void SongDocument::addNotes(int engineTrack, const std::vector<NewNote> &notes)
+         return;
+     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+     std::vector<PlannedNote> written;
++    // One invalid end rejects the whole batch before overlap planning.
++    for (const NewNote &note : notes) {
++        if (uint64_t(note.tick) + std::max<uint32_t>(1, note.duration) > CoreTimeDefaults::kMaxTick)
++            return;
++    }
+     for (const NewNote &note : notes)
+         written.push_back({engineTrack, note.key, note.tick,
+                            uint64_t(note.tick) + std::max<uint32_t>(1, note.duration)});
+@@ -1071,9 +1096,21 @@ void SongDocument::moveNotes(const std::vector<DocNote> &notes, int64_t dTick, i
+ {
+     if (notes.empty() || (dTick == 0 && dKey == 0))
+         return;
++    // Every participating note must keep its stored start and, when
++    // terminated, its end at or below kMaxTick; one invalid upper
++    // destination rejects the whole batch before anything is planned.
++    for (const DocNote &note : notes) {
++        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()))
++            continue;
++        if (dTick > int64_t(CoreTimeDefaults::kMaxTick) - int64_t(note.tick))
++            return;
++        const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
++        if (!note.unterminated() && uint64_t(newTick) + note.duration > CoreTimeDefaults::kMaxTick)
++            return;
++    }
+     const bool changes =
+         std::any_of(notes.begin(), notes.end(), [dTick, dKey](const DocNote &note) {
+-            return Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick)) != note.tick ||
++            return CoreTimeDefaults::shiftTickClamped(note.tick, dTick) != note.tick ||
+                    uint8_t(std::clamp(int(note.key) + dKey, 0, 127)) != note.key;
+         });
+     if (!changes)
+@@ -1105,6 +1142,20 @@ bool SongDocument::moveNotesToPitches(const std::vector<DocNote> &notes,
+     }
+     if (!anyMove)
+         return true;
++    // Notes the builder skips (invalid track, unterminated, or a no-op
++    // pitch) never move; every rewritten note must keep its stored start
++    // and end at or below kMaxTick or the whole batch is refused.
++    for (size_t i = 0; i < notes.size(); i++) {
++        const DocNote &note = notes[i];
++        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) || note.unterminated() ||
++            (destPitches[i] == note.key && dTick == 0))
++            continue;
++        if (dTick > int64_t(CoreTimeDefaults::kMaxTick) - int64_t(note.tick))
++            return false;
++        const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
++        if (uint64_t(newTick) + note.duration > CoreTimeDefaults::kMaxTick)
++            return false;
++    }
+     m_history.pushDocument(
+         std::make_unique<MoveNotesToPitchesCommand>(this, notes, destPitches, dTick, mergeable));
+     return true;
+@@ -1133,7 +1184,7 @@ void collectMovePlans(const std::vector<DocNote> &notes, int64_t dTick, auto des
+         if (note.unterminated())
+             continue;
+         outRemovals[size_t(note.smfTrack)].push_back(note.endIndex);
+-        const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
++        const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
+         outWritten.push_back(
+             {note.engineTrack, destKey, newTick, uint64_t(newTick) + note.duration});
+     }
+@@ -1165,7 +1216,7 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vec
+         if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
+             shouldSkip(note, destKey))
+             continue;
+-        const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
++        const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
+         EditOp on;
+         on.type = EditOp::InsertEvent;
+         on.smfTrack = note.smfTrack;
+@@ -1179,7 +1230,9 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vec
+             end.type = EditOp::InsertEvent;
+             end.smfTrack = note.smfTrack;
+             end.event = m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex];
+-            end.event.tick = newTick + note.duration;
++            const uint64_t endTick = uint64_t(newTick) + note.duration;
++            Q_ASSERT(endTick <= CoreTimeDefaults::kMaxTick);
++            end.event.tick = Tick(endTick);
+             end.event.data0 = destKey;
+             ops.push_back(std::move(end));
+         }
+@@ -1210,7 +1263,7 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesToPitchesOps(
+         if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
+             shouldSkip(note, destKey))
+             continue;
+-        const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
++        const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
+         appendNoteInsertOps(ops, note.smfTrack, note.channel, newTick, destKey, note.duration,
+                             note.velocity);
+     }
+@@ -1222,6 +1275,18 @@ void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDurat
+ {
+     if (notes.empty() || dDuration == 0)
+         return;
++    // The resized end of every note this writes must stay at or below
++    // kMaxTick. The delta is classified against the remaining duration
++    // headroom before any addition, so extreme signed deltas neither
++    // overflow int64_t nor narrow early; one overflow rejects the batch.
++    for (const DocNote &note : notes) {
++        if (dDuration >
++            int64_t(CoreTimeDefaults::kMaxTick) - int64_t(note.tick) - int64_t(note.duration))
++            return;
++        const int64_t newDuration = std::max<int64_t>(1, int64_t(note.duration) + dDuration);
++        if (uint64_t(note.tick) + uint64_t(newDuration) > CoreTimeDefaults::kMaxTick)
++            return;
++    }
+     const bool changes = std::any_of(notes.begin(), notes.end(), [dDuration](const DocNote &note) {
+         return note.unterminated() ||
+                uint32_t(std::max<int64_t>(1, int64_t(note.duration) + dDuration)) != note.duration;
+@@ -1250,7 +1315,9 @@ void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDurat
+         EditOp end;
+         end.type = EditOp::InsertEvent;
+         end.smfTrack = note.smfTrack;
+-        end.event = makeChannelEvent(0x9, note.channel, note.tick + newDuration, note.key, 0);
++        const uint64_t endTick = uint64_t(note.tick) + newDuration;
++        Q_ASSERT(endTick <= CoreTimeDefaults::kMaxTick);
++        end.event = makeChannelEvent(0x9, note.channel, Tick(endTick), note.key, 0);
+         ops.push_back(end);
+     }
+     ops.insert(ops.end(), trims.begin(), trims.end());
+diff --git a/src/core/songdocument.h b/src/core/songdocument.h
+index ab1597cf..f4f84576 100644
+--- a/src/core/songdocument.h
++++ b/src/core/songdocument.h
+@@ -310,7 +310,13 @@ class SongDocument : public QObject
+         Tick endTick = 0;
+ 
+         bool empty() const { return endTick <= startTick; }
+-        uint64_t span() const { return empty() ? 0 : uint64_t(endTick) - startTick; }
++        Tick span() const { return empty() ? 0 : endTick - startTick; }
++        // Either endpoint holds the kNoTick sentinel (absent/unbounded), so
++        // the range cannot be edited.
++        bool hasReservedEndpoint() const
++        {
++            return startTick == CoreTimeDefaults::kNoTick || endTick == CoreTimeDefaults::kNoTick;
++        }
+         bool contains(Tick tick) const { return tick >= startTick && tick < endTick; }
+         bool overlaps(Tick start, Tick end) const
+         {
+diff --git a/src/core/songdocument_timeeditor.cpp b/src/core/songdocument_timeeditor.cpp
+index 365ffb31..c782526e 100644
+--- a/src/core/songdocument_timeeditor.cpp
++++ b/src/core/songdocument_timeeditor.cpp
+@@ -11,9 +11,9 @@ namespace time_edit_detail {
+ std::vector<TempoPoint> removeTempoPoints(const std::vector<TempoPoint> &src,
+                                           const SongDocument::TimeRange &range)
+ {
+-    const uint64_t s = range.startTick;
+-    const uint64_t e = range.endTick;
+-    const uint64_t span = range.span();
++    const Tick s = range.startTick;
++    const Tick e = range.endTick;
++    const Tick span = range.span();
+     bool seamCovered = false;
+     int winner = -1;
+     for (int i = 0; i < int(src.size()); i++) {
+@@ -29,9 +29,10 @@ std::vector<TempoPoint> removeTempoPoints(const std::vector<TempoPoint> &src,
+         if (point.tick < s)
+             out.push_back(point);
+         else if (point.tick >= e)
+-            out.push_back({Tick(point.tick - span), point.microsecondsPerQuarterNote});
++            out.push_back({CoreTimeDefaults::shiftTickClamped(point.tick, -int64_t(span)),
++                           point.microsecondsPerQuarterNote});
+         else if (i == winner && !seamCovered)
+-            out.push_back({Tick(s), point.microsecondsPerQuarterNote});
++            out.push_back({s, point.microsecondsPerQuarterNote});
+     }
+     return out;
+ }
+@@ -39,13 +40,14 @@ std::vector<TempoPoint> removeTempoPoints(const std::vector<TempoPoint> &src,
+ std::vector<TempoPoint> insertBlankTempoPoints(const std::vector<TempoPoint> &src,
+                                                const SongDocument::TimeRange &range)
+ {
+-    const uint64_t s = range.startTick;
+-    const uint64_t span = range.span();
++    const Tick s = range.startTick;
++    const Tick span = range.span();
+     std::vector<TempoPoint> out;
+     out.reserve(src.size());
+     for (const TempoPoint &point : src) {
+         if (point.tick >= s)
+-            out.push_back({Tick(point.tick + span), point.microsecondsPerQuarterNote});
++            out.push_back({CoreTimeDefaults::shiftTickClamped(point.tick, int64_t(span)),
++                           point.microsecondsPerQuarterNote});
+         else
+             out.push_back(point);
+     }
+@@ -55,9 +57,9 @@ std::vector<TempoPoint> insertBlankTempoPoints(const std::vector<TempoPoint> &sr
+ std::vector<TempoPoint> duplicateTempoPoints(const std::vector<TempoPoint> &src,
+                                              const SongDocument::TimeRange &range)
+ {
+-    const uint64_t s = range.startTick;
+-    const uint64_t e = range.endTick;
+-    const uint64_t span = range.span();
++    const Tick s = range.startTick;
++    const Tick e = range.endTick;
++    const Tick span = range.span();
+     const TempoPoint *atStart = nullptr;
+     const TempoPoint *firstInside = nullptr;
+     for (const TempoPoint &point : src) {
+@@ -70,17 +72,19 @@ std::vector<TempoPoint> duplicateTempoPoints(const std::vector<TempoPoint> &src,
+     out.reserve(src.size() + 2);
+     for (const TempoPoint &point : src) {
+         if (point.tick >= e)
+-            out.push_back({Tick(point.tick + span), point.microsecondsPerQuarterNote});
++            out.push_back({CoreTimeDefaults::shiftTickClamped(point.tick, int64_t(span)),
++                           point.microsecondsPerQuarterNote});
+         else
+             out.push_back(point);
+     }
+     if (atStart)
+-        out.push_back({Tick(e), atStart->microsecondsPerQuarterNote});
++        out.push_back({e, atStart->microsecondsPerQuarterNote});
+     else if (firstInside)
+-        out.push_back({Tick(e), CoreTimeDefaults::kDefaultTempoUspqn});
++        out.push_back({e, CoreTimeDefaults::kDefaultTempoUspqn});
+     for (const TempoPoint &point : src) {
+         if (point.tick > s && point.tick < e)
+-            out.push_back({Tick(e + (point.tick - s)), point.microsecondsPerQuarterNote});
++            out.push_back({CoreTimeDefaults::shiftTickClamped(point.tick, int64_t(span)),
++                           point.microsecondsPerQuarterNote});
+     }
+     return out;
+ }
+@@ -303,12 +307,12 @@ std::vector<SongDocument::EditOp> SongDocument::TimeEditor::timeEditCloseGapTrac
+     if (!m_scope.wholeSong)
+         return {};
+     std::vector<SongDocument::EditOp> trackEnds;
+-    const uint64_t span = m_range.span();
++    const Tick span = m_range.span();
+     for (size_t t = 0; t < m_document.m_smf.tracks.size(); t++) {
+-        const uint64_t end = m_document.m_smf.tracks[t].endTick;
+-        const uint64_t newEnd = end >= m_range.endTick
+-                                    ? end - span
+-                                    : (end > m_range.startTick ? m_range.startTick : end);
++        const Tick end = m_document.m_smf.tracks[t].endTick;
++        const Tick newEnd = end >= m_range.endTick
++                                ? CoreTimeDefaults::shiftTickClamped(end, -int64_t(span))
++                                : (end > m_range.startTick ? m_range.startTick : end);
+         if (newEnd == end)
+             continue;
+         SongDocument::EditOp op;
+@@ -325,15 +329,15 @@ std::vector<SongDocument::EditOp> SongDocument::TimeEditor::timeEditShiftRightTr
+     Tick threshold) const
+ {
+     std::vector<SongDocument::EditOp> trackEnds;
+-    const uint64_t span = m_range.span();
++    const Tick span = m_range.span();
+     for (size_t t = 0; t < m_document.m_smf.tracks.size(); t++) {
+-        const uint64_t end = m_document.m_smf.tracks[t].endTick;
+-        uint64_t newEnd = end;
++        const Tick end = m_document.m_smf.tracks[t].endTick;
++        Tick newEnd = end;
+         if (affectedTracks[t] && end >= threshold)
+-            newEnd = end + span;
++            newEnd = CoreTimeDefaults::shiftTickClamped(end, int64_t(span));
+         for (const SongDocument::EditOp &insert : inserts) {
+             if (insert.smfTrack == int(t))
+-                newEnd = std::max(newEnd, uint64_t(insert.event.tick));
++                newEnd = std::max(newEnd, insert.event.tick);
+         }
+         if (newEnd == end)
+             continue;
+@@ -424,11 +428,11 @@ SongDocument::TimeEditor::timeEditStreams(const TimeEditPlan &plan) const
+ 
+ bool SongDocument::TimeEditor::remove()
+ {
+-    if (m_range.empty() || m_document.m_smf.tracks.empty())
++    if (m_range.empty() || m_document.m_smf.tracks.empty() || m_range.hasReservedEndpoint())
+         return false;
+-    const uint64_t s = m_range.startTick;
+-    const uint64_t e = m_range.endTick;
+-    const uint64_t span = m_range.span();
++    const Tick s = m_range.startTick;
++    const Tick e = m_range.endTick;
++    const Tick span = m_range.span();
+     const TimeEditPlan plan = buildTimeEditPlan();
+     std::vector<std::vector<size_t>> removals(m_document.m_smf.tracks.size());
+     std::vector<SongDocument::EditOp> inserts;
+@@ -437,12 +441,14 @@ bool SongDocument::TimeEditor::remove()
+     for (const DocNote &note : plan.notes) {
+         if (note.tick >= e) {
+             appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.onIndex,
+-                               Tick(note.tick - span), MoveMode::SkipUnchanged, xcmdEventRecords);
++                               CoreTimeDefaults::shiftTickClamped(note.tick, -int64_t(span)),
++                               MoveMode::SkipUnchanged, xcmdEventRecords);
+             if (!note.unterminated()) {
+                 const Tick endTick =
+                     m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick;
+                 appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.endIndex,
+-                                   Tick(endTick - span), MoveMode::SkipUnchanged, xcmdEventRecords);
++                                   CoreTimeDefaults::shiftTickClamped(endTick, -int64_t(span)),
++                                   MoveMode::SkipUnchanged, xcmdEventRecords);
+             }
+         } else if (note.tick >= s) {
+             appendTimeEditRemove(removals, taken, note.smfTrack, note.onIndex);
+@@ -463,7 +469,8 @@ bool SongDocument::TimeEditor::remove()
+             consumeTimeEditEvent(taken, ref.smfTrack, ref.index);
+         else if (ref.tick >= e)
+             appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index,
+-                               Tick(ref.tick - span), MoveMode::SkipUnchanged, xcmdEventRecords);
++                               CoreTimeDefaults::shiftTickClamped(ref.tick, -int64_t(span)),
++                               MoveMode::SkipUnchanged, xcmdEventRecords);
+         else
+             appendTimeEditRemove(removals, taken, ref.smfTrack, ref.index);
+     }
+@@ -489,10 +496,10 @@ bool SongDocument::TimeEditor::remove()
+                 consumeTimeEditEvent(taken, ref.smfTrack, ref.index);
+             else if (ref.tick >= e)
+                 appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index,
+-                                   Tick(ref.tick - span), MoveMode::SkipUnchanged,
+-                                   xcmdEventRecords);
++                                   CoreTimeDefaults::shiftTickClamped(ref.tick, -int64_t(span)),
++                                   MoveMode::SkipUnchanged, xcmdEventRecords);
+             else if (int(i) == winner && !seamCovered)
+-                appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, Tick(s),
++                appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, s,
+                                    MoveMode::SkipUnchanged, xcmdEventRecords);
+             else
+                 appendTimeEditRemove(removals, taken, ref.smfTrack, ref.index);
+@@ -504,10 +511,10 @@ bool SongDocument::TimeEditor::remove()
+                 continue;
+             if (ref.tick >= e)
+                 appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index,
+-                                   Tick(ref.tick - span), MoveMode::SkipUnchanged,
+-                                   xcmdEventRecords);
++                                   CoreTimeDefaults::shiftTickClamped(ref.tick, -int64_t(span)),
++                                   MoveMode::SkipUnchanged, xcmdEventRecords);
+             else if (ref.tick > s)
+-                appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, Tick(s),
++                appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, s,
+                                    MoveMode::SkipUnchanged, xcmdEventRecords);
+             else
+                 consumeTimeEditEvent(taken, ref.smfTrack, ref.index);
+diff --git a/src/core/songdocument_timeeditor_insert.cpp b/src/core/songdocument_timeeditor_insert.cpp
+index c9fae540..baeed6b1 100644
+--- a/src/core/songdocument_timeeditor_insert.cpp
++++ b/src/core/songdocument_timeeditor_insert.cpp
+@@ -13,23 +13,23 @@ std::vector<TempoPoint> duplicateTempoPoints(const std::vector<TempoPoint> &src,
+ 
+ bool SongDocument::TimeEditor::insertBlank()
+ {
+-    if (m_range.empty() || m_document.m_smf.tracks.empty())
++    if (m_range.empty() || m_document.m_smf.tracks.empty() || m_range.hasReservedEndpoint())
+         return false;
+-    const uint64_t s = m_range.startTick;
+-    const uint64_t e = m_range.endTick;
+-    const uint64_t span = m_range.span();
++    const Tick s = m_range.startTick;
++    const Tick e = m_range.endTick;
++    const Tick span = m_range.span();
+     const TimeEditPlan plan = buildTimeEditPlan();
+     const std::vector<bool> affectedTracks = timeEditAffectedSmfTracks();
+     for (size_t t = 0; t < m_document.m_smf.tracks.size(); t++)
+         if (affectedTracks[t] && m_document.m_smf.tracks[t].endTick >= s &&
+-            Tick(m_document.m_smf.tracks[t].endTick) > CoreTimeDefaults::kMaxTick - Tick(span))
++            m_document.m_smf.tracks[t].endTick > CoreTimeDefaults::kMaxTick - span)
+             return false;
+     for (const TimeEventRef &ref : plan.events)
+-        if (ref.tick >= s && Tick(ref.tick) > CoreTimeDefaults::kMaxTick - Tick(span))
++        if (ref.tick >= s && ref.tick > CoreTimeDefaults::kMaxTick - span)
+             return false;
+     if (m_scope.coversTempo()) {
+         for (const TempoPoint &point : m_document.m_tempoPoints)
+-            if (point.tick >= s && point.tick > CoreTimeDefaults::kMaxTick - Tick(span))
++            if (point.tick >= s && point.tick > CoreTimeDefaults::kMaxTick - span)
+                 return false;
+     }
+     std::vector<std::vector<size_t>> removals(m_document.m_smf.tracks.size());
+@@ -43,12 +43,12 @@ bool SongDocument::TimeEditor::insertBlank()
+                 : m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick;
+         if (note.tick >= s) {
+             appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.onIndex,
+-                               Tick(note.tick + span), MoveMode::MoveEvenIfUnchanged,
+-                               xcmdEventRecords);
++                               CoreTimeDefaults::shiftTickClamped(note.tick, int64_t(span)),
++                               MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
+             if (!note.unterminated())
+                 appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.endIndex,
+-                                   Tick(endTick + span), MoveMode::MoveEvenIfUnchanged,
+-                                   xcmdEventRecords);
++                                   CoreTimeDefaults::shiftTickClamped(endTick, int64_t(span)),
++                                   MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
+         } else if (!note.unterminated() && endTick == s) {
+             consumeTimeEditEvent(taken, note.smfTrack, note.endIndex);
+         } else if (!note.unterminated() && endTick > s) {
+@@ -59,20 +59,20 @@ bool SongDocument::TimeEditor::insertBlank()
+             consumeTimeEditEvent(taken, note.smfTrack, note.onIndex);
+             consumeTimeEditEvent(taken, note.smfTrack, note.endIndex);
+             removals[size_t(note.smfTrack)].push_back(note.endIndex);
+-            appendTimeEditInsert(inserts, note.smfTrack, end, Tick(s), false);
+-            appendTimeEditInsert(inserts, note.smfTrack, on, Tick(e), false);
+-            appendTimeEditInsert(inserts, note.smfTrack, end, Tick(endTick + span), false);
++            appendTimeEditInsert(inserts, note.smfTrack, end, s, false);
++            appendTimeEditInsert(inserts, note.smfTrack, on, e, false);
++            appendTimeEditInsert(inserts, note.smfTrack, end,
++                                 CoreTimeDefaults::shiftTickClamped(endTick, int64_t(span)), false);
+         } else if (note.unterminated()) {
+             // Keep the original left note-on, close it at the seam, and start
+             // a fresh note-on after the silent interval.
+             const SmfEvent &on =
+                 m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
+             consumeTimeEditEvent(taken, note.smfTrack, note.onIndex);
+-            appendTimeEditInsert(
+-                inserts, note.smfTrack,
+-                m_document.makeChannelEvent(0x8, note.channel, Tick(s), note.key, 0), Tick(s),
+-                false);
+-            appendTimeEditInsert(inserts, note.smfTrack, on, Tick(e), false);
++            appendTimeEditInsert(inserts, note.smfTrack,
++                                 m_document.makeChannelEvent(0x8, note.channel, s, note.key, 0), s,
++                                 false);
++            appendTimeEditInsert(inserts, note.smfTrack, on, e, false);
+         }
+     }
+     for (const TimeEventRef &ref : plan.events) {
+@@ -81,15 +81,16 @@ bool SongDocument::TimeEditor::insertBlank()
+         if (ref.tick < s)
+             continue;
+         const SmfEvent &event = m_document.m_smf.tracks[size_t(ref.smfTrack)].events[ref.index];
+-        appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, Tick(ref.tick + span),
++        appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index,
++                           CoreTimeDefaults::shiftTickClamped(ref.tick, int64_t(span)),
+                            MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
+         // A time signature at the insertion seam governs the blank bars as
+         // well as the shifted content, so retain it at both ends of the gap.
+         if (ref.kind == EventKind::TimeSig && ref.tick == s)
+-            appendTimeEditInsert(inserts, ref.smfTrack, event, Tick(s), false);
++            appendTimeEditInsert(inserts, ref.smfTrack, event, s, false);
+     }
+     const std::vector<SongDocument::EditOp> trackEnds =
+-        timeEditShiftRightTrackEnds(affectedTracks, inserts, Tick(s));
++        timeEditShiftRightTrackEnds(affectedTracks, inserts, s);
+     auto opsOpt = xcmdAssembleOps(std::move(removals), std::move(inserts), std::move(trackEnds),
+                                   xcmdEventRecords);
+     if (!opsOpt)
+@@ -110,25 +111,26 @@ bool SongDocument::TimeEditor::insertBlank()
+ 
+ bool SongDocument::TimeEditor::duplicate()
+ {
+-    if (m_range.empty() || m_document.m_smf.tracks.empty() ||
+-        m_range.endTick > CoreTimeDefaults::kMaxTick - Tick(m_range.span()))
++    if (m_range.empty() || m_document.m_smf.tracks.empty() || m_range.hasReservedEndpoint())
+         return false;
+-    const uint64_t s = m_range.startTick;
+-    const uint64_t e = m_range.endTick;
+-    const uint64_t span = m_range.span();
+-    const uint64_t destinationEnd = e + span;
++    const Tick s = m_range.startTick;
++    const Tick e = m_range.endTick;
++    const Tick span = m_range.span();
++    if (e > CoreTimeDefaults::kMaxTick - span)
++        return false;
++    const Tick destinationEnd = CoreTimeDefaults::shiftTickClamped(e, int64_t(span));
+     const TimeEditPlan plan = buildTimeEditPlan();
+     const std::vector<bool> affectedTracks = timeEditAffectedSmfTracks();
+     for (size_t t = 0; t < m_document.m_smf.tracks.size(); t++)
+         if (affectedTracks[t] && m_document.m_smf.tracks[t].endTick >= e &&
+-            Tick(m_document.m_smf.tracks[t].endTick) > CoreTimeDefaults::kMaxTick - Tick(span))
++            m_document.m_smf.tracks[t].endTick > CoreTimeDefaults::kMaxTick - span)
+             return false;
+     for (const TimeEventRef &ref : plan.events)
+-        if (ref.tick >= e && ref.tick > CoreTimeDefaults::kMaxTick - Tick(span))
++        if (ref.tick >= e && ref.tick > CoreTimeDefaults::kMaxTick - span)
+             return false;
+     if (m_scope.coversTempo()) {
+         for (const TempoPoint &point : m_document.m_tempoPoints)
+-            if (point.tick >= e && point.tick > CoreTimeDefaults::kMaxTick - Tick(span))
++            if (point.tick >= e && point.tick > CoreTimeDefaults::kMaxTick - span)
+                 return false;
+     }
+     std::vector<std::vector<size_t>> removals(m_document.m_smf.tracks.size());
+@@ -148,12 +150,12 @@ bool SongDocument::TimeEditor::duplicate()
+             paired[size_t(note.smfTrack)][note.endIndex] = true;
+         if (note.tick >= e) {
+             appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.onIndex,
+-                               Tick(note.tick + span), MoveMode::MoveEvenIfUnchanged,
+-                               xcmdEventRecords);
++                               CoreTimeDefaults::shiftTickClamped(note.tick, int64_t(span)),
++                               MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
+             if (!note.unterminated())
+                 appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.endIndex,
+-                                   Tick(endTick + span), MoveMode::MoveEvenIfUnchanged,
+-                                   xcmdEventRecords);
++                                   CoreTimeDefaults::shiftTickClamped(endTick, int64_t(span)),
++                                   MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
+         } else if (!note.unterminated() && endTick >= e) {
+             if (endTick == e)
+                 consumeTimeEditEvent(taken, note.smfTrack, note.endIndex);
+@@ -164,9 +166,11 @@ bool SongDocument::TimeEditor::duplicate()
+                     m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex];
+                 consumeTimeEditEvent(taken, note.smfTrack, note.endIndex);
+                 removals[size_t(note.smfTrack)].push_back(note.endIndex);
+-                appendTimeEditInsert(inserts, note.smfTrack, end, Tick(e), false);
+-                appendTimeEditInsert(inserts, note.smfTrack, on, Tick(destinationEnd), false);
+-                appendTimeEditInsert(inserts, note.smfTrack, end, Tick(endTick + span), false);
++                appendTimeEditInsert(inserts, note.smfTrack, end, e, false);
++                appendTimeEditInsert(inserts, note.smfTrack, on, destinationEnd, false);
++                appendTimeEditInsert(inserts, note.smfTrack, end,
++                                     CoreTimeDefaults::shiftTickClamped(endTick, int64_t(span)),
++                                     false);
+             }
+         }
+     }
+@@ -175,30 +179,30 @@ bool SongDocument::TimeEditor::duplicate()
+             continue;
+         if (ref.tick >= e)
+             appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index,
+-                               Tick(ref.tick + span), MoveMode::MoveEvenIfUnchanged,
+-                               xcmdEventRecords);
++                               CoreTimeDefaults::shiftTickClamped(ref.tick, int64_t(span)),
++                               MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
+     }
+     for (const DocNote &note : plan.notes) {
+         if (note.tick >= e)
+             continue;
+-        const uint64_t endTick =
++        const Tick endTick =
+             note.unterminated()
+                 ? e
+-                : uint64_t(
+-                      m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick);
+-        const uint64_t sourceStart = std::max(uint64_t(note.tick), s);
+-        const uint64_t sourceEnd = std::min(endTick, e);
++                : m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick;
++        const Tick sourceStart = std::max(note.tick, s);
++        const Tick sourceEnd = std::min(endTick, e);
+         if (sourceEnd <= sourceStart)
+             continue;
+         const SmfEvent &on = m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
+-        appendTimeEditInsert(inserts, note.smfTrack, on, Tick(e + (sourceStart - s)), false);
++        appendTimeEditInsert(inserts, note.smfTrack, on,
++                             CoreTimeDefaults::shiftTickClamped(sourceStart, int64_t(span)), false);
+         SmfEvent end;
+         if (!note.unterminated()) {
+             end = m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex];
+         } else {
+-            end = m_document.makeChannelEvent(0x8, note.channel, Tick(destinationEnd), note.key, 0);
++            end = m_document.makeChannelEvent(0x8, note.channel, destinationEnd, note.key, 0);
+         }
+-        end.tick = Tick(e + (sourceEnd - s));
++        end.tick = CoreTimeDefaults::shiftTickClamped(sourceEnd, int64_t(span));
+         appendTimeEditInsert(inserts, note.smfTrack, end, end.tick, false);
+     }
+     const auto streams = timeEditStreams(plan);
+@@ -217,9 +221,9 @@ bool SongDocument::TimeEditor::duplicate()
+         if (atStart) {
+             const SmfEvent &source =
+                 m_document.m_smf.tracks[size_t(atStart->smfTrack)].events[atStart->index];
+-            appendTimeEditInsert(inserts, atStart->smfTrack, source, Tick(e), false);
+-            recordXcmdRelocation(atStart->smfTrack, atStart->index, Tick(e), inserts.size() - 1,
+-                                 true, xcmdEventRecords);
++            appendTimeEditInsert(inserts, atStart->smfTrack, source, e, false);
++            recordXcmdRelocation(atStart->smfTrack, atStart->index, e, inserts.size() - 1, true,
++                                 xcmdEventRecords);
+         } else {
+             int defaultValue = -1;
+             if (prototype->kind == EventKind::TimeSig) {
+@@ -251,9 +255,9 @@ bool SongDocument::TimeEditor::duplicate()
+                     const uint8_t data0 = type == 0xB ? source.data0 : 0;
+                     const uint8_t data1 = type == 0xE ? 64 : uint8_t(defaultValue);
+                     synthetic =
+-                        m_document.makeChannelEvent(type, source.channel(), Tick(e), data0, data1);
++                        m_document.makeChannelEvent(type, source.channel(), e, data0, data1);
+                 }
+-                appendTimeEditInsert(inserts, targetTrack, synthetic, Tick(e), false);
++                appendTimeEditInsert(inserts, targetTrack, synthetic, e, false);
+             }
+         }
+         for (const TimeEventRef *ref : points) {
+@@ -261,8 +265,11 @@ bool SongDocument::TimeEditor::duplicate()
+                 continue;
+             const SmfEvent &source =
+                 m_document.m_smf.tracks[size_t(ref->smfTrack)].events[ref->index];
+-            appendTimeEditInsert(inserts, ref->smfTrack, source, Tick(e + (ref->tick - s)), false);
+-            recordXcmdRelocation(ref->smfTrack, ref->index, Tick(e + (ref->tick - s)),
++            appendTimeEditInsert(inserts, ref->smfTrack, source,
++                                 CoreTimeDefaults::shiftTickClamped(ref->tick, int64_t(span)),
++                                 false);
++            recordXcmdRelocation(ref->smfTrack, ref->index,
++                                 CoreTimeDefaults::shiftTickClamped(ref->tick, int64_t(span)),
+                                  inserts.size() - 1, true, xcmdEventRecords);
+         }
+     }
+@@ -272,7 +279,9 @@ bool SongDocument::TimeEditor::duplicate()
+                 continue;
+             const SmfEvent &source =
+                 m_document.m_smf.tracks[size_t(ref.smfTrack)].events[ref.index];
+-            appendTimeEditInsert(inserts, ref.smfTrack, source, Tick(e + (ref.tick - s)), false);
++            appendTimeEditInsert(inserts, ref.smfTrack, source,
++                                 CoreTimeDefaults::shiftTickClamped(ref.tick, int64_t(span)),
++                                 false);
+         }
+     }
+     for (const TimeEventRef &ref : plan.events) {
+@@ -280,10 +289,11 @@ bool SongDocument::TimeEditor::duplicate()
+             ref.tick < s || ref.tick >= e)
+             continue;
+         const SmfEvent &source = m_document.m_smf.tracks[size_t(ref.smfTrack)].events[ref.index];
+-        appendTimeEditInsert(inserts, ref.smfTrack, source, Tick(e + (ref.tick - s)), false);
++        appendTimeEditInsert(inserts, ref.smfTrack, source,
++                             CoreTimeDefaults::shiftTickClamped(ref.tick, int64_t(span)), false);
+     }
+     const std::vector<SongDocument::EditOp> trackEnds =
+-        timeEditShiftRightTrackEnds(affectedTracks, inserts, Tick(e));
++        timeEditShiftRightTrackEnds(affectedTracks, inserts, e);
+     auto opsOpt = xcmdAssembleOps(std::move(removals), std::move(inserts), std::move(trackEnds),
+                                   xcmdEventRecords);
+     if (!opsOpt)
+diff --git a/src/ui/songview/grid.cpp b/src/ui/songview/grid.cpp
+index 2c99a6e1..907d2b81 100644
+--- a/src/ui/songview/grid.cpp
++++ b/src/ui/songview/grid.cpp
+@@ -127,42 +127,64 @@ Tick Grid::fineGridTicks() const
+ {
+     return m_clock == 0 ? gridTicksAt(0) : std::max<uint32_t>(1, m_clock);
+ }
++
++namespace {
++
++// Clamp a raw snap input to the valid position domain without truncating
++// its fraction: NaN and non-positive values map to 0, +inf and anything
++// at or beyond kMaxTick clamp to kMaxTick.
++double clampSnapInput(double tick)
++{
++    if (!(tick >= 0.0))
++        return 0.0;
++    return std::min(tick, double(CoreTimeDefaults::kMaxTick));
++}
++
++// The upper snap candidate above `lo`: the next signature's tick is itself
++// a grid position (the grid restarts there), so the candidate never
++// crosses it; at the domain edge kMaxTick is the saturating terminal
++// candidate even when it is not on the grid. Headroom is checked before
++// the addition so lo + g never wraps.
++Tick upperSnapCandidate(Tick lo, Tick g, Tick next)
++{
++    const Tick ceiling = std::min(next, CoreTimeDefaults::kMaxTick);
++    return lo < ceiling && g <= ceiling - lo ? Tick(lo + g) : ceiling;
++}
++
++} // namespace
++
+ Tick Grid::snapTick(double tick, bool fine) const
+ {
+-    tick = std::max(0.0, tick);
++    tick = clampSnapInput(tick);
+     if (fine) {
+         // The clock grid is the document's absolute resolution; it does not
+         // restart at time-signature changes.
+         const double g = double(fineGridTicks());
+-        return Tick(std::round(tick / g) * g);
++        return CoreTimeDefaults::tickFromDouble(std::round(tick / g) * g);
+     }
+-    const Segment seg = segmentAt(Tick(tick));
++    const Segment seg = segmentAt(CoreTimeDefaults::tickFromDouble(tick));
+     const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
+     const Tick k = Tick((tick - double(seg.start)) / double(g));
+     const Tick lo = seg.start + Tick(k * g);
+-    // The next signature's tick is itself a grid position (the grid
+-    // restarts there), so the upper candidate never crosses it.
+-    const Tick hi = std::min(lo + g, seg.next);
++    const Tick hi = upperSnapCandidate(lo, g, seg.next);
+     return tick - double(lo) <= double(hi) - tick ? lo : hi;
+ }
+ Tick Grid::snapTickDown(double tick) const
+ {
+-    tick = std::max(0.0, tick);
+-    const Segment seg = segmentAt(Tick(tick));
++    tick = clampSnapInput(tick);
++    const Segment seg = segmentAt(CoreTimeDefaults::tickFromDouble(tick));
+     const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
+     return seg.start + Tick(Tick((tick - double(seg.start)) / double(g)) * g);
+ }
+ Tick Grid::snapTickUp(double tick) const
+ {
+-    tick = std::max(0.0, tick);
+-    const Segment seg = segmentAt(Tick(tick));
++    tick = clampSnapInput(tick);
++    const Segment seg = segmentAt(CoreTimeDefaults::tickFromDouble(tick));
+     const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
+     const Tick lo = seg.start + Tick(Tick((tick - double(seg.start)) / double(g)) * g);
+     if (double(lo) >= tick)
+         return lo;
+-    // The next signature's tick is itself a grid position, so the upper
+-    // candidate never crosses it.
+-    return std::min(lo + g, seg.next);
++    return upperSnapCandidate(lo, g, seg.next);
+ }
+ 
+ // --- SongView: host setters and axis iteration ---

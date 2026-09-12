@@ -1,0 +1,3791 @@
+diff --git a/src/mainwindow.cpp b/src/mainwindow.cpp
+index 9ad6a56c..e6032991 100644
+--- a/src/mainwindow.cpp
++++ b/src/mainwindow.cpp
+@@ -483,30 +483,30 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
+             [this](uint32_t mask) { m_audio.setMuteMask(mask); });
+     connect(m_workspace.get(), &WorkspaceUi::selectedTabSoloMaskChanged, this,
+             [this](uint32_t mask) { m_audio.setSoloMask(mask); });
+     connect(m_workspace.get(), &WorkspaceUi::selectedTabEventListChanged, this, [this](bool) {
+         const QSignalBlocker blocker(m_eventListAction);
+         m_eventListAction->setChecked(m_selectedTab && m_selectedTab->view().eventListVisible());
+         updateChrome();
+     });
+     connect(m_workspace.get(), &WorkspaceUi::editorViewStateChanged, this,
+             &MainWindow::persistEditorViewState);
+-    connect(m_workspace.get(), &WorkspaceUi::editCursorSeekRequested, this, [this](uint64_t tick) {
++    connect(m_workspace.get(), &WorkspaceUi::editCursorSeekRequested, this, [this](Tick tick) {
+         if (!m_audioOk || !m_audio.songLoaded() || m_audio.transport() == Transport::Stopped)
+             return;
+         const uint64_t target = m_audio.timeline()->sampleForTick(tick);
+         m_audio.seek(target);
+         if (m_selectedTab)
+             m_selectedTab->view().setPlayheadSample(target,
+                                                     m_audio.transport() == Transport::Playing);
+     });
+-    connect(m_workspace.get(), &WorkspaceUi::playPauseFromRequested, this, [this](uint64_t tick) {
++    connect(m_workspace.get(), &WorkspaceUi::playPauseFromRequested, this, [this](Tick tick) {
+         if (!m_selectedTab)
+             return;
+         if (m_audioOk && m_audio.transport() == Transport::Playing) {
+             m_workspace->triggerPlayPause();
+             m_selectedTab->view().commitEditCursor(tick);
+             return;
+         }
+         m_selectedTab->view().commitEditCursor(tick);
+         m_workspace->triggerPlayPause();
+     });
+@@ -569,21 +569,21 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
+         if (m_audioOk)
+             m_audio.setPolyDebugInvert(m_polyPanel->invertChecked() && m_polyDock->isVisible());
+     };
+     connect(m_polyPanel, &PolyphonyPanel::invertToggled, this, applyPolyInvert);
+     connect(m_polyDock, &QDockWidget::visibilityChanged, this, applyPolyInvert);
+     connect(m_polyPanel, &PolyphonyPanel::resetRequested, this, [this] {
+         if (m_audioOk)
+             m_audio.resetPolyStats();
+     });
+     connect(m_polyPanel, &PolyphonyPanel::jumpToEvent, this,
+-            [this](uint64_t tick, int track, int midiKey) {
++            [this](Tick tick, int track, int midiKey) {
+                 // editCursorMoved's seek (above) already follows the cursor
+                 // while playing/paused; when stopped, playback starts from
+                 // the edit cursor. revealNote selects the losing track and
+                 // the lost note itself.
+                 if (!m_selectedTab)
+                     return;
+                 SongView &view = m_selectedTab->view();
+                 view.revealNote(track, uint8_t(midiKey), tick);
+                 view.commitEditCursor(tick);
+                 view.ensureTickVisible(tick);
+diff --git a/src/project/songregistry.cpp b/src/project/songregistry.cpp
+index 6af738fb..5b8045b7 100644
+--- a/src/project/songregistry.cpp
++++ b/src/project/songregistry.cpp
+@@ -1598,21 +1598,21 @@ bool removeSongFlags(const QString &midiDir, const QString &label, QString *erro
+     if (QFile::exists(mkPath))
+         return SongsMk::removeRule(mkPath, label, error);
+     return true;
+ }
+ 
+ SmfFile blankSong()
+ {
+     SmfFile smf;
+     smf.format = 1;
+     smf.division = 24; // vanilla pokeemerald resolution: 1 tick per m4a clock
+-    const uint64_t oneBar = uint64_t(smf.division) * 4;
++    const Tick oneBar = Tick(smf.division) * 4;
+ 
+     SmfTrack seq; // MTrk chunk 0: the only chunk mid2agb reads seq events from
+     SmfEvent tempo;
+     tempo.status = 0xFF;
+     tempo.metaType = 0x51;
+     tempo.blob = QByteArray("\x07\xA1\x20", 3); // 500000 us/beat = 120 BPM
+     seq.events.push_back(tempo);
+     SmfEvent timeSig;
+     timeSig.status = 0xFF;
+     timeSig.metaType = 0x58;
+diff --git a/src/ui/editordrawer/automationcanvas.cpp b/src/ui/editordrawer/automationcanvas.cpp
+index bc02fa64..a773c641 100644
+--- a/src/ui/editordrawer/automationcanvas.cpp
++++ b/src/ui/editordrawer/automationcanvas.cpp
+@@ -139,21 +139,21 @@ NodeLaneHoverTarget AutomationCanvas::hoverTarget() const
+     target.documentRevision = m_page.liveState().documentRevision;
+     target.ready = m_page.ready();
+     return target;
+ }
+ void AutomationCanvas::invalidateSelectedNodeMultiplicity() const noexcept
+ {
+     m_selectedNodeMultiplicity.valid = false;
+ }
+ 
+ bool AutomationCanvas::hasMultipleSelectedNodes(
+-    const std::optional<std::pair<uint64_t, uint64_t>> &selectedTickRange) const
++    const std::optional<std::pair<Tick, Tick>> &selectedTickRange) const
+ {
+     if (!selectedTickRange)
+         return false;
+     const uint64_t documentRevision = m_page.liveState().documentRevision;
+     if (m_selectedNodeMultiplicity.valid &&
+         m_selectedNodeMultiplicity.documentRevision == documentRevision) {
+         return m_selectedNodeMultiplicity.multiple;
+     }
+     const auto [firstTick, lastTick] = *selectedTickRange;
+     auto selectedCount = 0;
+@@ -178,22 +178,22 @@ bool AutomationCanvas::hasMultipleSelectedNodes(
+         .documentRevision = documentRevision, .valid = true, .multiple = false};
+     return false;
+ }
+ 
+ void AutomationCanvas::requestQuickUpdate(songview::AutomationRefreshSet dirty) const
+ {
+     if (dirty.testFlag(songview::AutomationRefresh::Hover)) {
+         if (!m_hoverState.hover.lane.valid()) {
+             m_page.m_owner.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation);
+         } else {
+-            const uint64_t tick =
+-                uint64_t(std::max(0.0, m_hoverState.insertionTick(projection(), m_pencilMode)));
++            const Tick tick =
++                Tick(std::max(0.0, m_hoverState.insertionTick(projection(), m_pencilMode)));
+             m_page.m_owner.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation,
+                                                      tick);
+         }
+     }
+     m_page.requestQuickUpdate(dirty);
+ }
+ 
+ void AutomationCanvas::requestFullQuickUpdate() const
+ {
+     // Full repaints re-render the selection layer, so the revision-keyed
+@@ -488,22 +488,21 @@ bool AutomationCanvas::openValuePromptForNode(LaneHandle handle, const NodePoint
+     SongDocument *document = m_page.document();
+     const NodeLaneSlot *slot = resolveSlot(handle);
+     if (!document || !slot || !slot->lane)
+         return false;
+     m_pendingValuePrompt = PendingValuePrompt{handle, point, document->revision(),
+                                               slot->lane->valuePrompt(point.value), true};
+     emit valuePromptChanged();
+     return true;
+ }
+ 
+-bool AutomationCanvas::openValuePromptForInsertion(LaneHandle handle, uint64_t tick,
+-                                                   int storedValue)
++bool AutomationCanvas::openValuePromptForInsertion(LaneHandle handle, Tick tick, int storedValue)
+ {
+     SongDocument *document = m_page.document();
+     const NodeLaneSlot *slot = resolveSlot(handle);
+     if (!document || !slot || !slot->lane)
+         return false;
+     m_pendingValuePrompt = PendingValuePrompt{handle,
+                                               {tick, storedValue},
+                                               document->revision(),
+                                               slot->lane->valuePrompt(storedValue),
+                                               false};
+@@ -583,28 +582,28 @@ void AutomationCanvas::updateAxisLockCursor(AxisLock lock)
+         updatePencilCursor();
+ }
+ 
+ NodePoint AutomationCanvas::mappedForLane(LaneHandle handle, QPointF pos, bool fine, bool snapValue,
+                                           const AutomationProjection &proj) const
+ {
+     const NodeLane *lane = nullptr;
+     QRect body;
+     if (!resolveLane(handle, &lane, &body) || !lane)
+         return {};
+-    const uint64_t tick = m_page.snapTick(proj.rawTickAt(pos.x()), fine);
++    const Tick tick = m_page.snapTick(proj.rawTickAt(pos.x()), fine);
+     NodePoint out;
+     updateValuePoint(proj, *lane, body, out, pos.y(), tick, snapValue, m_geometry.neutralSnapRadius,
+                      lane->neutralValue());
+     return out;
+ }
+ 
+-void AutomationCanvas::publishBandSelection(uint64_t first, uint64_t last, LaneHandle start,
++void AutomationCanvas::publishBandSelection(Tick first, Tick last, LaneHandle start,
+                                             LaneHandle end) const
+ {
+     if (first >= last || !start.valid() || !end.valid())
+         return;
+     const auto *startSlot = resolveSlot(start);
+     const auto *endSlot = resolveSlot(end);
+     if (!startSlot || !endSlot)
+         return;
+     const auto [tempo, lanes] = m_laneSelection.laneSet(startSlot->id, endSlot->id);
+     m_page.publishTimeSelection(first, last, lanes, tempo);
+diff --git a/src/ui/editordrawer/automationcanvas.h b/src/ui/editordrawer/automationcanvas.h
+index 98d3937b..a991fb8e 100644
+--- a/src/ui/editordrawer/automationcanvas.h
++++ b/src/ui/editordrawer/automationcanvas.h
+@@ -96,21 +96,21 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
+     struct PendingValuePrompt {
+         LaneHandle lane;
+         NodePoint anchor; // existing node (Set Value) or insertion tick/value
+         uint64_t expectedRevision = 0;
+         NodeValuePrompt prompt;
+         bool forExistingNode = false;
+     };
+ 
+     bool openValuePromptForNode(LaneHandle handle, const NodePoint &point);
+     // displayedValue is prompt-domain; tick and storedValue are lane-domain.
+-    bool openValuePromptForInsertion(LaneHandle handle, uint64_t tick, int storedValue);
++    bool openValuePromptForInsertion(LaneHandle handle, Tick tick, int storedValue);
+     void acceptNodeValuePrompt(int displayedValue);
+     void cancelNodeValuePrompt();
+     bool valuePromptVisible() const noexcept { return m_pendingValuePrompt.has_value(); }
+     NodeValuePrompt pendingValuePrompt() const
+     {
+         return m_pendingValuePrompt ? m_pendingValuePrompt->prompt : NodeValuePrompt{};
+     }
+ 
+     // QML bridge for CcDeleteConfirm.qml, the shared-session confirmation
+     // behind the lane menu's Delete CC lane action on a lane that still
+@@ -199,22 +199,22 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
+     friend class songview::TimelineQuickView;
+ 
+     void rebuildQuickScene(songview::TimelineQuickScene &scene,
+                            songview::AutomationRefreshSet refresh);
+     void requestQuickUpdate(songview::AutomationRefreshSet dirty) const;
+     void requestSelectionQuickUpdate() const;
+     void requestHoverQuickUpdate() const;
+     void requestGestureBeginQuickUpdate(bool band) const;
+     void requestGestureMoveQuickUpdate() const;
+     void invalidateSelectedNodeMultiplicity() const noexcept;
+-    bool hasMultipleSelectedNodes(
+-        const std::optional<std::pair<uint64_t, uint64_t>> &selectedTickRange) const;
++    bool
++    hasMultipleSelectedNodes(const std::optional<std::pair<Tick, Tick>> &selectedTickRange) const;
+     struct NodeLaneSlot {
+         EditorAutomationRowId id;
+         NodeLane *lane = nullptr;
+         QRect body;
+         CCLanes::RowTextCache *text = nullptr;
+ 
+         [[nodiscard]] bool isTempo() const noexcept
+         {
+             return id.kind == EditorAutomationRowKind::Tempo;
+         }
+@@ -222,21 +222,21 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
+         decltype(auto) visit(TempoFn &&tempoFn, CcFn &&ccFn) const
+         {
+             if (isTempo())
+                 return std::forward<TempoFn>(tempoFn)();
+             return std::forward<CcFn>(ccFn)();
+         }
+     };
+     struct NodeLaneChange {
+         const NodeLaneSlot *slot = nullptr;
+         std::vector<NodePointMove> moves;
+-        std::vector<uint64_t> deleteTicks;
++        std::vector<Tick> deleteTicks;
+     };
+     // The guarded open-time target for one automation canvas menu. Document
+     // identity plus revision reject any document change since the open; the
+     // lane menu additionally re-resolves the handle and requires the same
+     // row id, so a rebuild landing after the open cannot retarget a
+     // different lane. No lane pointer and no point vector crosses the popup:
+     // commands re-read live state at dispatch. `track` carries the captured
+     // add-menu track, `laneTitle` the presentation string for post-rebuild
+     // announcements.
+     struct PendingMenu {
+@@ -353,22 +353,21 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
+     void cancelNodeGestures();
+     void rebuildNodeStack();
+     LaneHandle laneAt(int y) const noexcept;
+     const NodeLaneSlot *resolveSlot(LaneHandle handle) const noexcept;
+     void refreshHoverAt(const QPointF &position);
+     bool resolveLane(LaneHandle handle, const NodeLane **lane, QRect *body) const noexcept;
+     NodeLane *mutableLane(LaneHandle handle) noexcept;
+     void syncHoverValueLabel();
+     void syncPreviewValueLabel();
+     void highlightHoveredPoint(LaneHandle handle, const QPointF &position, const NodePoint &point);
+-    void publishBandSelection(uint64_t first, uint64_t last, LaneHandle start,
+-                              LaneHandle end) const;
++    void publishBandSelection(Tick first, Tick last, LaneHandle start, LaneHandle end) const;
+     void setGestureActive(bool active);
+ 
+     AutomationGeometry m_geometry;
+     QFont m_laneTitleFont;
+     QFont m_laneCaptionFont;
+     AutomationPage &m_page;
+     songview::TimelineInputHost *m_inputHost = nullptr;
+     CCLanes m_rowData;
+     TempoLane m_tempoLane;
+     std::vector<CCLaneAdapter> m_ccAdapters;
+diff --git a/src/ui/editordrawer/automationcanvas_deleteprompt.cpp b/src/ui/editordrawer/automationcanvas_deleteprompt.cpp
+index 9c4e1308..88c12676 100644
+--- a/src/ui/editordrawer/automationcanvas_deleteprompt.cpp
++++ b/src/ui/editordrawer/automationcanvas_deleteprompt.cpp
+@@ -123,21 +123,21 @@ void AutomationCanvas::acceptCcDeletePrompt()
+     SongDocument *const document = m_page.document();
+     const auto *slot = resolveSlot(pending->lane);
+     if (!document || document != pending->document ||
+         document->revision() != pending->documentRevision || !slot || !slot->lane ||
+         slot->id != pending->rowId)
+         return; // Stale request: document, lane, or row changed since open.
+ 
+     // replaceSpan's documentChanged fan-out rebuilds m_nodeStack
+     // synchronously, so nothing below may touch slot or lane state again —
+     // the snapshot identity is the only surviving target description.
+-    slot->lane->replaceSpan(0, std::numeric_limits<uint64_t>::max(), {});
++    slot->lane->replaceSpan(0, CoreTimeDefaults::kNoTick, {});
+     m_page.requestRefresh();
+ 
+     // Band focus returns only when no popup owns the session now: a popup
+     // opened meanwhile keeps focus.
+     if (!m_menuSession || !m_menuSession->isOpen()) {
+         if (m_inputHost)
+             m_inputHost->requestFocus(Qt::PopupFocusReason);
+     }
+ }
+ 
+diff --git a/src/ui/editordrawer/automationcanvas_gesture.cpp b/src/ui/editordrawer/automationcanvas_gesture.cpp
+index 1f27befd..5d729d98 100644
+--- a/src/ui/editordrawer/automationcanvas_gesture.cpp
++++ b/src/ui/editordrawer/automationcanvas_gesture.cpp
+@@ -68,38 +68,37 @@ AutomationCanvas::originPhantomAt(LaneHandle handle, const QPointF &position,
+ }
+ 
+ std::optional<OriginPhantom>
+ AutomationCanvas::originPhantom(LaneHandle handle, const AutomationProjection &proj,
+                                 std::span<const NodePoint> points) const
+ {
+     const NodeLane *lane = nullptr;
+     QRect body;
+     if (!resolveLane(handle, &lane, &body) || !lane)
+         return std::nullopt;
+-    return ::originPhantomAt(points, handle, lane->minimumValue(), lane->maximumValue(), 0.0,
+-                             [this, &proj](uint64_t tick) {
+-                                 return proj.displayX(
+-                                     tick, m_inputHost ? m_inputHost->devicePixelRatio() : 1.0);
+-                             });
++    return ::originPhantomAt(
++        points, handle, lane->minimumValue(), lane->maximumValue(), 0.0, [this, &proj](Tick tick) {
++            return proj.displayX(tick, m_inputHost ? m_inputHost->devicePixelRatio() : 1.0);
++        });
+ }
+ 
+ bool AutomationCanvas::commitResolvedNodeLaneChanges(std::optional<uint64_t> expectedRevision,
+                                                      const std::vector<NodeLaneChange> &changes,
+                                                      const QString &undoLabel)
+ {
+     if (!m_page.document() || changes.empty())
+         return false;
+     auto *document = m_page.document();
+     if (expectedRevision && document->revision() != *expectedRevision)
+         return false;
+     SongDocument::RangeEdit edit;
+-    std::vector<uint64_t> tempoDeletes;
++    std::vector<Tick> tempoDeletes;
+     std::vector<nodelane::CcDeleteRequest> ccDeletes;
+     for (const NodeLaneChange &change : changes) {
+         const NodeLaneSlot *slot = change.slot;
+         if (!slot || !slot->lane)
+             return false;
+         const bool resolved = slot->visit(
+             [&]() -> bool {
+                 if (!change.moves.empty()) {
+                     const auto moveResult = nodelane::resolveTempoMoves(*document, change.moves);
+                     if (!moveResult)
+@@ -194,25 +193,25 @@ bool AutomationCanvas::commitNodePointDeletes(std::optional<uint64_t> expectedRe
+ 
+ void AutomationCanvas::updateActiveGesture(const QPointF &position, Qt::KeyboardModifiers modifiers,
+                                            bool activateSweep)
+ {
+     if (!m_activeGesture)
+         return;
+     const bool fineGrid = modifiers & Qt::AltModifier;
+     const bool snapValue = modifiers & Qt::ControlModifier;
+     const AutomationProjection proj = projection();
+     AxisLock axisCursor = AxisLock::None;
+-    auto snappedRange = [&](double a, double b) -> std::pair<uint64_t, uint64_t> {
++    auto snappedRange = [&](double a, double b) -> std::pair<Tick, Tick> {
+         return {m_page.snapTick(std::min(a, b), fineGrid),
+                 m_page.snapTick(std::max(a, b), fineGrid)};
+     };
+-    auto nextGridTick = [this](uint64_t tick, bool useFineGrid, uint64_t limit) -> uint64_t {
++    auto nextGridTick = [this](Tick tick, bool useFineGrid, Tick limit) -> Tick {
+         return m_page.nextGridTick(tick, useFineGrid, limit);
+     };
+     std::visit(
+         Visitor{
+             [this, position, fineGrid, snapValue, &proj, &axisCursor,
+              modifiers](NodeDragGesture &gesture) {
+                 const PointDragUpdate dragUpdate =
+                     gesture.drag.update(position, modifiers, m_geometry.nodeDragActivationDistance);
+                 NodePoint mappedGrab;
+                 if (dragUpdate.phase == PointDragUpdate::Phase::Dragging)
+@@ -293,24 +292,24 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
+             gesture->grabbedPoint < gesture->points.size()) {
+             changed = commitNodePointDeletes(gesture->expectedRevision,
+                                              {gesture->points[gesture->grabbedPoint]});
+             if (changed)
+                 m_deletedNodeClick.markDeleted();
+         } else if (finish.release == PointDragRelease::Move && finish.changed) {
+             changed = commitNodePointMoves(gesture->expectedRevision, gesture->points);
+             if (changed && finish.dTick != 0 && finish.selectionDrag) {
+                 const auto &selection = m_page.m_owner.selectionModel().timeSelection();
+                 if (selection.active()) {
+-                    const auto startTick =
+-                        uint64_t(std::max<int64_t>(0, int64_t(selection.startTick) + finish.dTick));
+-                    const auto endTick =
+-                        uint64_t(std::max<int64_t>(0, int64_t(selection.endTick) + finish.dTick));
++                    const Tick startTick =
++                        Tick(std::max<int64_t>(0, int64_t(selection.startTick) + finish.dTick));
++                    const Tick endTick =
++                        Tick(std::max<int64_t>(0, int64_t(selection.endTick) + finish.dTick));
+                     if (endTick > startTick) {
+                         auto movedSelection = selection;
+                         movedSelection.startTick = startTick;
+                         movedSelection.endTick = endTick;
+                         m_page.m_owner.selectionModel().setTimeSelection(std::move(movedSelection));
+                     }
+                 }
+             }
+         }
+     } else if (const auto *gesture = std::get_if<PhantomGesture>(&*m_activeGesture)) {
+@@ -318,21 +317,21 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
+             return;
+         if (const auto point = gesture->finish())
+             changed = commitNodePointMoves(gesture->expectedRevision, {*point});
+     } else if (const auto *gesture = std::get_if<SweepGesture>(&*m_activeGesture)) {
+         if (gesture->mode == SweepGesture::Mode::Drag && !gesture->slop.exceeded) {
+             m_page.commitEditCursor(
+                 m_page.snapTick(proj.rawTickAt(gesture->pressPosition.x()), false));
+         } else if (lane) {
+             auto completion =
+                 gesture->finish(handle, document->revision(), lane->points(), fineMode,
+-                                [this](uint64_t tick, bool fineGrid, uint64_t last) {
++                                [this](Tick tick, bool fineGrid, Tick last) {
+                                     return m_page.nextGridTick(tick, fineGrid, last);
+                                 });
+             if (!completion.unchanged)
+                 changed = commitLaneEdit(completion);
+         }
+     } else if (auto *gesture = std::get_if<PencilGesture>(&*m_activeGesture)) {
+         auto completion = std::move(*gesture).finish();
+         if (!completion.unchanged)
+             changed = commitLaneEdit(completion);
+     }
+diff --git a/src/ui/editordrawer/automationcanvas_input.cpp b/src/ui/editordrawer/automationcanvas_input.cpp
+index dabd2b17..95d6aea3 100644
+--- a/src/ui/editordrawer/automationcanvas_input.cpp
++++ b/src/ui/editordrawer/automationcanvas_input.cpp
+@@ -83,21 +83,21 @@ bool AutomationCanvas::beginPencilPress(QPointF position, Qt::KeyboardModifiers
+ {
+     const auto *timeline = m_page.timeline();
+     if (!timeline)
+         return false;
+     const AutomationProjection::PointerMapping mapped =
+         projection.pointerMapping(lane, body, position.x(), position.y());
+     if (auto nodeGesture = nodeDragGestureAt(handle, position, modifiers & Qt::ShiftModifier,
+                                              projection, m_pencilMode)) {
+         const auto grabbedPoint = nodeGesture->grabbedPoint;
+         if (grabbedPoint < nodeGesture->points.size()) {
+-            const uint64_t hitTick = nodeGesture->points[grabbedPoint].original.tick;
++            const Tick hitTick = nodeGesture->points[grabbedPoint].original.tick;
+             if (std::clamp(hitTick, mapped.cell.tickBegin, mapped.cell.tickEnd - 1) == hitTick) {
+                 m_activeGesture.emplace(std::move(*nodeGesture));
+                 setGestureActive(true);
+                 syncPreviewValueLabel();
+                 requestGestureBeginQuickUpdate(false);
+                 return true;
+             }
+         }
+     }
+     const AutomationPencilGesture::Target target{handle, m_page.document()->revision()};
+@@ -382,21 +382,21 @@ bool AutomationCanvas::pointerDoubleClick(const songview::TimelinePointerInput &
+         m_hoverState.previewValueLabel = {};
+         refreshHoverAt(position);
+         setGestureActive(false);
+         requestFullQuickUpdate();
+         return true;
+     }
+     m_activeGesture.reset();
+     m_hoverState.previewValueLabel = {};
+     setGestureActive(false);
+     const AutomationProjection proj = projection();
+-    const uint64_t tick =
++    const Tick tick =
+         m_page.snapTick(proj.rawTickAt(position.x()), input.modifiers & Qt::AltModifier);
+     const int storedValue = mappedForLane(pointerLane, position, false, false, proj).value;
+     // End the double-click's implicit grab before publishing the prompt. The
+     // resulting PointerUngrabbed cancellation is synchronous; publishing
+     // first would immediately clear the new pending edit during focus handoff.
+     if (songview::TimelineInputHost *const host = input.host ? input.host : m_inputHost)
+         host->releasePointerGrab();
+     openValuePromptForInsertion(pointerLane, tick, storedValue);
+     return true;
+ }
+diff --git a/src/ui/editordrawer/automationcanvas_menu.cpp b/src/ui/editordrawer/automationcanvas_menu.cpp
+index 4c960875..ae53054e 100644
+--- a/src/ui/editordrawer/automationcanvas_menu.cpp
++++ b/src/ui/editordrawer/automationcanvas_menu.cpp
+@@ -285,21 +285,21 @@ void AutomationCanvas::handleMenuAction(int actionId)
+         }
+         return;
+     }
+     // Lane-menu commands re-resolve the captured handle and require the same
+     // row: a remap landing between open and dispatch cannot mutate a
+     // different lane.
+     const auto *slot = resolveSlot(pending.lane);
+     if (!slot || !slot->lane || slot->id != pending.rowId)
+         return;
+     NodeLane *lane = slot->lane;
+-    const auto maxTick = std::numeric_limits<uint64_t>::max();
++    const Tick maxTick = CoreTimeDefaults::kNoTick;
+     if (actionId == int(Action::Copy)) {
+         m_clipboard = lane->points();
+         m_page.announce(
+             laneMenuKind(slot->isTempo(), pending.laneTitle, m_clipboard.size()).copiedMessage);
+     } else if (actionId == int(Action::Paste)) {
+         std::vector<NodePoint> replacement;
+         replacement.reserve(m_clipboard.size());
+         const int minimum = lane->minimumValue();
+         const int maximum = lane->maximumValue();
+         for (const auto &point : m_clipboard)
+diff --git a/src/ui/editordrawer/automationpage.cpp b/src/ui/editordrawer/automationpage.cpp
+index dbe25100..7eb03f75 100644
+--- a/src/ui/editordrawer/automationpage.cpp
++++ b/src/ui/editordrawer/automationpage.cpp
+@@ -226,51 +226,51 @@ void AutomationPage::cancelInteraction()
+         m_canvas->cancelInteraction();
+ }
+ 
+ void AutomationPage::documentChanged()
+ {
+     cancelInteraction();
+     m_viewState = m_owner.editorViewState();
+     rebuildModel();
+ }
+ 
+-uint64_t AutomationPage::snapTick(double tick, bool fineMode) const noexcept
++Tick AutomationPage::snapTick(double tick, bool fineMode) const noexcept
+ {
+     return m_grid.snapTick(tick, fineMode);
+ }
+-uint64_t AutomationPage::snapTickDown(double tick, bool fineMode) const noexcept
++Tick AutomationPage::snapTickDown(double tick, bool fineMode) const noexcept
+ {
+     tick = std::max(0.0, tick);
+     if (!fineMode)
+         return m_grid.snapTickDown(tick);
+-    const uint64_t spacing = gridState(uint64_t(tick), true).snapTicks;
+-    return uint64_t(tick / double(spacing)) * spacing;
++    const uint32_t spacing = gridState(Tick(tick), true).snapTicks;
++    return Tick(uint64_t(tick / double(spacing)) * spacing);
+ }
+ 
+-DrawerPageGridState AutomationPage::gridState(uint64_t tick, bool fineMode) const noexcept
++DrawerPageGridState AutomationPage::gridState(Tick tick, bool fineMode) const noexcept
+ {
+     return {m_grid.gridTicksAt(tick), fineMode ? m_grid.fineGridTicks() : m_grid.snapTicksAt(tick)};
+ }
+ 
+-uint64_t AutomationPage::nextGridTick(uint64_t tick, bool fineMode, uint64_t limit) const noexcept
++Tick AutomationPage::nextGridTick(Tick tick, bool fineMode, Tick limit) const noexcept
+ {
+     if (tick >= limit)
+         return limit;
+-    const uint64_t spacing = gridState(tick, fineMode).snapTicks;
+-    const uint64_t candidate = spacing >= limit - tick ? limit : tick + spacing;
++    const uint32_t spacing = gridState(tick, fineMode).snapTicks;
++    const Tick candidate = spacing >= limit - tick ? limit : tick + spacing;
+     if (gridState(candidate, fineMode).snapTicks == spacing)
+         return candidate;
+-    uint64_t first = tick + 1;
+-    uint64_t last = candidate;
++    Tick first = tick + 1;
++    Tick last = candidate;
+     while (first < last) {
+-        const uint64_t probe = first + (last - first) / 2;
+-        const uint64_t probeSpacing = gridState(probe, fineMode).snapTicks;
++        const Tick probe = first + (last - first) / 2;
++        const uint32_t probeSpacing = gridState(probe, fineMode).snapTicks;
+         if (probeSpacing == spacing)
+             first = probe + 1;
+         else
+             last = probe;
+     }
+     return first;
+ }
+ 
+ double AutomationPage::tickAtContentX(double x) const noexcept
+ {
+@@ -327,51 +327,51 @@ void AutomationPage::rebuildModel()
+         m_canvas->rebuildRows();
+ }
+ 
+ void AutomationPage::setLaneRange(const EditorAutomationRowId &row, uint8_t range)
+ {
+     m_viewState.laneRanges[row] = range;
+     publishViewState();
+     m_canvas->requestFullQuickUpdate();
+ }
+ 
+-void AutomationPage::publishTimeSelection(uint64_t startTick, uint64_t endTick,
++void AutomationPage::publishTimeSelection(Tick startTick, Tick endTick,
+                                           const std::vector<std::pair<int, uint8_t>> &lanes,
+                                           bool tempo) const
+ {
+     songview::EditorSelectionModel::TimeSelection selection;
+     selection.startTick = startTick;
+     selection.endTick = endTick;
+     selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
+     selection.lanes = lanes;
+     selection.tempo = tempo;
+     m_owner.selectionModel().setTimeSelection(selection);
+ }
+ 
+-DrawerPageVoiceContext AutomationPage::voiceContext(uint64_t tick) const
++DrawerPageVoiceContext AutomationPage::voiceContext(Tick tick) const
+ {
+     return m_owner.voiceContext(tick);
+ }
+ 
+ void AutomationPage::showTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequest &request) const
+ {
+     m_owner.showDrawerPageTimeSelectionMenu(request);
+ }
+ 
+ void AutomationPage::requestRefresh() const
+ {
+     m_owner.refreshAllDrawerPages();
+ }
+ void AutomationPage::requestQuickUpdate(songview::AutomationRefreshSet dirty) const
+ {
+     m_owner.requestAutomationQuickUpdate(dirty);
+ }
+ 
+-void AutomationPage::commitEditCursor(uint64_t tick) const
++void AutomationPage::commitEditCursor(Tick tick) const
+ {
+     m_owner.commitEditCursor(tick);
+ }
+ 
+ void AutomationPage::announce(const QString &message) const
+ {
+     m_owner.announce(message);
+ }
+diff --git a/src/ui/editordrawer/automationpage.h b/src/ui/editordrawer/automationpage.h
+index 6e3a2e5b..8ced1519 100644
+--- a/src/ui/editordrawer/automationpage.h
++++ b/src/ui/editordrawer/automationpage.h
+@@ -74,40 +74,40 @@ class AutomationPage final : public QObject
+ 
+         static Geometry resolve();
+     };
+ 
+     bool ready() const noexcept;
+     const DrawerPageLiveState &liveState() const noexcept { return m_liveState; }
+     const MidiTimeline *timeline() const noexcept;
+     uint32_t usedTrackMask() const noexcept;
+     SongDocument *document() const noexcept;
+     const LoadedVoiceGroup *voicegroup() const noexcept;
+-    uint64_t snapTick(double tick, bool fineMode) const noexcept;
+-    uint64_t snapTickDown(double tick, bool fineMode) const noexcept;
+-    DrawerPageGridState gridState(uint64_t tick, bool fineMode) const noexcept;
+-    uint64_t nextGridTick(uint64_t tick, bool fineMode, uint64_t limit) const noexcept;
++    Tick snapTick(double tick, bool fineMode) const noexcept;
++    Tick snapTickDown(double tick, bool fineMode) const noexcept;
++    DrawerPageGridState gridState(Tick tick, bool fineMode) const noexcept;
++    Tick nextGridTick(Tick tick, bool fineMode, Tick limit) const noexcept;
+     double tickAtContentX(double x) const noexcept;
+     qreal displayX(double tick, qreal origin, qreal dpr) const noexcept;
+     double pxPerBeat() const noexcept;
+     void requestHorizontalScroll(double value) const;
+     void requestTimeZoom(const songview::TimelineWheelInput &input, qreal anchorContentX) const;
+     void setFollowScrollPaused(bool paused) const;
+     void publishViewState();
+     void rebuildModel();
+-    void publishTimeSelection(uint64_t startTick, uint64_t endTick,
++    void publishTimeSelection(Tick startTick, Tick endTick,
+                               const std::vector<std::pair<int, uint8_t>> &lanes,
+                               bool tempo = false) const;
+-    DrawerPageVoiceContext voiceContext(uint64_t tick) const;
++    DrawerPageVoiceContext voiceContext(Tick tick) const;
+     void showTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequest &request) const;
+     void requestRefresh() const;
+     void requestQuickUpdate(songview::AutomationRefreshSet dirty) const;
+-    void commitEditCursor(uint64_t tick) const;
++    void commitEditCursor(Tick tick) const;
+     void announce(const QString &message) const;
+ 
+     bool matchesPencilShortcut(int key, Qt::KeyboardModifiers modifiers) const noexcept;
+     bool belongsToPageWindow(const QObject *target) const noexcept;
+ 
+     Geometry m_geometry;
+     SongView &m_owner;
+     const songview::Grid &m_grid;
+     QAction *m_pencilModeAction = nullptr;
+     DrawerPageLiveState m_liveState;
+diff --git a/src/ui/editordrawer/automationprojection.cpp b/src/ui/editordrawer/automationprojection.cpp
+index 0a8e9c8f..6248a674 100644
+--- a/src/ui/editordrawer/automationprojection.cpp
++++ b/src/ui/editordrawer/automationprojection.cpp
+@@ -39,95 +39,95 @@ AutomationProjection::AutomationProjection(const AutomationGeometry &geometry,
+     , m_grid(songView ? &songView->grid() : nullptr)
+ {}
+ 
+ const MidiTimeline *AutomationProjection::timeline() const
+ {
+     if (m_page)
+         return m_page->timeline();
+     return m_songView ? m_songView->timeline() : nullptr;
+ }
+ 
+-uint64_t AutomationProjection::gridSnapTicks(uint64_t tick, bool fine) const
++uint32_t AutomationProjection::gridSnapTicks(Tick tick, bool fine) const
+ {
+     if (m_page)
+         return m_page->gridState(tick, fine).snapTicks;
+     if (m_grid)
+         return fine ? m_grid->fineGridTicks() : m_grid->snapTicksAt(tick);
+     return 1;
+ }
+ 
+-uint64_t AutomationProjection::snapTickDown(double tick, bool fine) const
++Tick AutomationProjection::snapTickDown(double tick, bool fine) const
+ {
+     tick = std::max(0.0, tick);
+     if (!fine) {
+         if (m_page)
+             return m_page->snapTickDown(tick, false);
+         return m_grid ? m_grid->snapTickDown(tick) : 0;
+     }
+-    const uint64_t spacing = gridSnapTicks(uint64_t(tick), true);
+-    return uint64_t(tick / double(spacing)) * spacing;
++    const uint32_t spacing = gridSnapTicks(Tick(tick), true);
++    return Tick(uint64_t(tick / double(spacing)) * spacing);
+ }
+ 
+-uint64_t AutomationProjection::nextGridTick(uint64_t tick, bool fine, uint64_t limit) const
++Tick AutomationProjection::nextGridTick(Tick tick, bool fine, Tick limit) const
+ {
+     if (tick >= limit)
+         return limit;
+-    const uint64_t spacing = gridSnapTicks(tick, fine);
+-    const uint64_t candidate = spacing >= limit - tick ? limit : tick + spacing;
++    const uint32_t spacing = gridSnapTicks(tick, fine);
++    const Tick candidate = spacing >= limit - tick ? limit : tick + spacing;
+     if (gridSnapTicks(candidate, fine) == spacing)
+         return candidate;
+-    uint64_t first = tick + 1;
+-    uint64_t last = candidate;
++    Tick first = tick + 1;
++    Tick last = candidate;
+     while (first < last) {
+-        const uint64_t probe = first + (last - first) / 2;
++        const Tick probe = first + (last - first) / 2;
+         if (gridSnapTicks(probe, fine) == spacing)
+             first = probe + 1;
+         else
+             last = probe;
+     }
+     return first;
+ }
+ 
+ AutomationProjection::PointerMapping AutomationProjection::pointerMapping(const NodeLane &lane,
+                                                                           const QRect &body,
+                                                                           qreal x, qreal y) const
+ {
+     PointerMapping mapped;
+     const MidiTimeline *songTimeline = timeline();
+     if (!songTimeline)
+         return mapped;
+-    const uint64_t length = songTimeline->lengthTicks;
++    const Tick length = songTimeline->lengthTicks;
+     mapped.rawTick = std::clamp(rawTickAt(x), 0.0, double(length));
+     mapped.point.value =
+         std::clamp(qRound(valueAtY(body, m_geometry, lane.minimumValue(), lane.maximumValue(), y)),
+                    lane.minimumValue(), lane.maximumValue());
+     mapped.cell = snapCellAt(mapped.rawTick);
+     mapped.point.tick = mapped.cell.tickBegin;
+     return mapped;
+ }
+ 
+ double AutomationProjection::rawTickAt(qreal x) const
+ {
+     const qreal contentX = std::max(qreal(0.0), x);
+     if (m_page)
+         return std::max(0.0, m_page->tickAtContentX(contentX));
+     return m_camera ? std::max(0.0, m_camera->tickAtContentX(contentX)) : 0.0;
+ }
+ 
+-qreal AutomationProjection::displayX(uint64_t tick, qreal devicePixelRatio) const
++qreal AutomationProjection::displayX(Tick tick, qreal devicePixelRatio) const
+ {
+     if (m_page)
+         return m_page->displayX(tick, 0.0, devicePixelRatio);
+     return m_camera ? m_camera->displayX(tick, 0.0, devicePixelRatio) : 0.0;
+ }
+ 
+-uint64_t AutomationProjection::snapTickAt(qreal x, bool fine) const
++Tick AutomationProjection::snapTickAt(qreal x, bool fine) const
+ {
+     const double tick = rawTickAt(x);
+     if (m_page)
+         return m_page->snapTick(tick, fine);
+     return m_grid ? m_grid->snapTick(tick, fine) : 0;
+ }
+ 
+ qreal AutomationProjection::valueY(const QRect &bounds, const AutomationGeometry &geometry,
+                                    double minimum, double maximum, double value)
+ {
+@@ -141,64 +141,64 @@ qreal AutomationProjection::valueY(const QRect &bounds, const AutomationGeometry
+ double AutomationProjection::valueAtY(const QRect &bounds, const AutomationGeometry &geometry,
+                                       double minimum, double maximum, qreal y)
+ {
+     const qreal top = bounds.top() + geometry.valuePlotPadding;
+     const qreal bottom = bounds.bottom() - geometry.valuePlotPadding;
+     const qreal clamped = std::clamp(y, top, bottom);
+     return minimum +
+            double(bottom - clamped) * (maximum - minimum) / std::max<qreal>(1.0, bottom - top);
+ }
+ 
+-uint64_t AutomationProjection::fineSnapTick(double rawTick) const
++Tick AutomationProjection::fineSnapTick(double rawTick) const
+ {
+     if (m_page)
+         return m_page->snapTick(rawTick, true);
+     return m_grid ? m_grid->snapTick(rawTick, true) : 0;
+ }
+ 
+ bool AutomationProjection::nodeMarkersVisible() const
+ {
+     if (m_page)
+         return m_page->pxPerBeat() >= m_geometry.pointDetailThreshold;
+     return m_camera && m_camera->pxPerBeat() >= m_geometry.pointDetailThreshold;
+ }
+ 
+ AutomationGridCell AutomationProjection::snapCellAt(double rawTick) const
+ {
+     const MidiTimeline *songTimeline = timeline();
+     if (!songTimeline || songTimeline->lengthTicks == 0)
+         return {};
+-    const uint64_t length = songTimeline->lengthTicks;
++    const Tick length = songTimeline->lengthTicks;
+     const double clamped = std::clamp(rawTick, 0.0, double(length));
+-    const uint64_t tick = clamped >= double(length) ? length - 1 : uint64_t(std::floor(clamped));
+-    const uint64_t start = snapTickDown(double(tick), false);
++    const Tick tick = clamped >= double(length) ? length - 1 : Tick(std::floor(clamped));
++    const Tick start = snapTickDown(double(tick), false);
+     return {start, nextGridTick(start, false, length)};
+ }
+ 
+ const std::vector<AutomationGridCell> &
+ AutomationProjection::snapCellsCrossed(std::vector<AutomationGridCell> &cells,
+                                        double previousRawTick, double currentRawTick) const
+ {
+     cells.clear();
+     const MidiTimeline *songTimeline = timeline();
+     if (!songTimeline || songTimeline->lengthTicks == 0)
+         return cells;
+-    const uint64_t length = songTimeline->lengthTicks;
++    const Tick length = songTimeline->lengthTicks;
+     const bool forward = currentRawTick >= previousRawTick;
+     const auto target = snapCellAt(currentRawTick);
+     auto cell = snapCellAt(previousRawTick);
+     while (cell.tickBegin < cell.tickEnd && cell.tickEnd <= length) {
+         cells.push_back(cell);
+         if (cell.tickBegin == target.tickBegin)
+             return cells;
+         if (forward) {
+-            const uint64_t nextStart = nextGridTick(cell.tickBegin, false, length);
++            const Tick nextStart = nextGridTick(cell.tickBegin, false, length);
+             if (nextStart >= length)
+                 break;
+             const auto next = snapCellAt(double(nextStart));
+             if (next.tickBegin <= cell.tickBegin)
+                 break;
+             cell = next;
+         } else {
+             if (cell.tickBegin == 0)
+                 break;
+             const auto previous = snapCellAt(double(cell.tickBegin - 1));
+diff --git a/src/ui/editordrawer/automationprojection.h b/src/ui/editordrawer/automationprojection.h
+index b089c1c6..9d3f57fc 100644
+--- a/src/ui/editordrawer/automationprojection.h
++++ b/src/ui/editordrawer/automationprojection.h
+@@ -13,22 +13,22 @@ class AutomationPage;
+ class MidiTimeline;
+ class SongView;
+ 
+ namespace songview {
+ class Grid;
+ class TimeCamera;
+ } // namespace songview
+ // A half-open visible grid cell. Snapped callers provide crossed cells in
+ // pointer traversal order, including both endpoint cells.
+ struct AutomationGridCell {
+-    uint64_t tickBegin = 0;
+-    uint64_t tickEnd = 0;
++    Tick tickBegin = 0;
++    Tick tickEnd = 0;
+ };
+ 
+ // Automation drawer layout constants resolved from the UI scale. Shared by the
+ // projection (mapping math) and the canvas (paint and hit-test geometry).
+ struct AutomationGeometry {
+     int rowDefaultHeight = 0;
+     int pointHitRadius = 0;
+     int neutralSnapRadius = 0;
+     int deleteTimeRadius = 0;
+     int pointDetailThreshold = 0;
+@@ -57,37 +57,37 @@ class AutomationProjection
+     };
+ 
+     AutomationProjection(const AutomationGeometry &geometry, const AutomationPage *page)
+         : m_geometry(geometry)
+         , m_page(page)
+     {}
+     AutomationProjection(const AutomationGeometry &geometry, const SongView *songView);
+ 
+     const AutomationGeometry &geometry() const noexcept { return m_geometry; }
+     double rawTickAt(qreal x) const;
+-    qreal displayX(uint64_t tick, qreal devicePixelRatio) const;
+-    uint64_t snapTickAt(qreal x, bool fine) const;
++    qreal displayX(Tick tick, qreal devicePixelRatio) const;
++    Tick snapTickAt(qreal x, bool fine) const;
+     static qreal valueY(const QRect &bounds, const AutomationGeometry &geometry, double minimum,
+                         double maximum, double value);
+     static double valueAtY(const QRect &bounds, const AutomationGeometry &geometry, double minimum,
+                            double maximum, qreal y);
+-    uint64_t fineSnapTick(double rawTick) const;
++    Tick fineSnapTick(double rawTick) const;
+     bool nodeMarkersVisible() const;
+     PointerMapping pointerMapping(const NodeLane &lane, const QRect &body, qreal x, qreal y) const;
+     AutomationGridCell snapCellAt(double rawTick) const;
+     // Fills `cells` (reused scratch, no allocation) and returns it.
+     const std::vector<AutomationGridCell> &snapCellsCrossed(std::vector<AutomationGridCell> &cells,
+                                                             double previousRawTick,
+                                                             double currentRawTick) const;
+ 
+   private:
+     const MidiTimeline *timeline() const;
+-    uint64_t gridSnapTicks(uint64_t tick, bool fine) const;
+-    uint64_t snapTickDown(double tick, bool fine) const;
+-    uint64_t nextGridTick(uint64_t tick, bool fine, uint64_t limit) const;
++    uint32_t gridSnapTicks(Tick tick, bool fine) const;
++    Tick snapTickDown(double tick, bool fine) const;
++    Tick nextGridTick(Tick tick, bool fine, Tick limit) const;
+ 
+     AutomationGeometry m_geometry;
+     const AutomationPage *m_page = nullptr;
+     const SongView *m_songView = nullptr;
+     const songview::TimeCamera *m_camera = nullptr;
+     const songview::Grid *m_grid = nullptr;
+ };
+diff --git a/src/ui/editordrawer/cclanes.cpp b/src/ui/editordrawer/cclanes.cpp
+index 9cb72aa0..786a65cb 100644
+--- a/src/ui/editordrawer/cclanes.cpp
++++ b/src/ui/editordrawer/cclanes.cpp
+@@ -195,21 +195,21 @@ std::optional<NodePoint> CCLaneAdapter::leadIn() const
+     if (std::ranges::any_of(documentPoints,
+                             [](const DocLanePoint &point) { return point.tick == 0; })) {
+         return std::nullopt;
+     }
+     const int defaultValue = m_controller == CCLanes::bendController()
+                                  ? 0
+                                  : CoreTimeDefaults::controllerDefault(m_controller);
+     return defaultValue >= 0 ? std::optional<NodePoint>{{0, defaultValue}} : std::nullopt;
+ }
+ 
+-void CCLaneAdapter::replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points)
++void CCLaneAdapter::replaceSpan(Tick first, Tick last, const std::vector<NodePoint> &points)
+ {
+     std::vector<SongDocument::LanePointValue> written;
+     written.reserve(points.size());
+     for (const NodePoint &point : points)
+         written.push_back({point.tick, point.value});
+     std::vector<SongDocument::LanePointValue> existing;
+     for (const DocLanePoint &point : m_document.lanePoints(m_engineTrack, m_controller)) {
+         if (point.tick >= first && point.tick <= last)
+             existing.push_back({point.tick, point.value});
+     }
+diff --git a/src/ui/editordrawer/cclanes.h b/src/ui/editordrawer/cclanes.h
+index daaab03c..b10d4dd8 100644
+--- a/src/ui/editordrawer/cclanes.h
++++ b/src/ui/editordrawer/cclanes.h
+@@ -17,21 +17,21 @@ class CCLaneAdapter final : public NodeLane
+     CCLaneAdapter(SongDocument &document, int engineTrack, uint8_t controller) noexcept;
+ 
+     QString title() const override;
+     std::vector<NodePoint> points() const override;
+     int minimumValue() const override;
+     int maximumValue() const override;
+     QString valueText(int value) const override;
+     NodeValuePrompt valuePrompt(int storedValue) const override;
+     int neutralValue() const override;
+     std::optional<NodePoint> leadIn() const override;
+-    void replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points) override;
++    void replaceSpan(Tick first, Tick last, const std::vector<NodePoint> &points) override;
+ 
+   private:
+     SongDocument &m_document;
+     int m_engineTrack = -1;
+     uint8_t m_controller = 0;
+ };
+ 
+ // CC lane table and CCLaneAdapter for the automation canvas. It owns the
+ // stable CC-row snapshot used by painting and input throughout an
+ // AutomationCanvas frame.
+diff --git a/src/ui/editordrawer/drawerpage.h b/src/ui/editordrawer/drawerpage.h
+index 2bf311c5..1a583d49 100644
+--- a/src/ui/editordrawer/drawerpage.h
++++ b/src/ui/editordrawer/drawerpage.h
+@@ -2,60 +2,61 @@
+ 
+ #include <cstdint>
+ #include <optional>
+ #include <utility>
+ #include <vector>
+ 
+ #include <QColor>
+ #include <QPointF>
+ 
+ #include "core/noteid.h"
++#include "core/timedefaults.h"
+ 
+ extern "C" {
+ #include "voicegroup_loader.h"
+ }
+ 
+ // Both fields are >= 1 and safe as divisors or loop strides.
+ struct DrawerPageGridState {
+-    uint64_t gridTicks = 0;
+-    uint64_t snapTicks = 0;
++    uint32_t gridTicks = 0;
++    uint32_t snapTicks = 0;
+ };
+ 
+ struct DrawerPagePlaybackState {
+     double playheadTick = 0.0;
+     bool playing = false;
+ };
+ 
+ // Live values shared by concrete drawer surfaces. The document revision lets
+ // an interaction discard a frozen edit when the model changes underneath it.
+ struct DrawerPageLiveState {
+     uint64_t documentRevision = 0;
+     double timeZoom = 1.0;
+     double horizontalScroll = 0.0;
+-    uint64_t editCursorTick = 0;
++    Tick editCursorTick = 0;
+     QColor trackColor;
+     DrawerPagePlaybackState playback;
+ };
+ 
+ struct DrawerPageVoiceContext {
+     const ToneData *voice = nullptr;
+     int voiceSlot = -1;
+-    uint64_t endTick = UINT64_MAX;
++    Tick endTick = CoreTimeDefaults::kNoTick;
+ };
+ 
+ struct DrawerPageTimeSelectionMenuRequest {
+-    uint64_t startTick = 0;
+-    uint64_t endTick = 0;
++    Tick startTick = 0;
++    Tick endTick = 0;
+     std::vector<std::pair<int, uint8_t>> lanes;
+     bool tempo = false;
+     // Quick-window scene position of the menu anchor (never screen-global:
+     // the shared popup layer is parented to the canvas window).
+     QPointF scenePosition;
+ };
+ 
+ struct DrawerPageNoteStatus {
+     uint8_t key = 0;
+     uint8_t storedVelocity = 0;
+     uint8_t effectiveVelocity = 0;
+-    uint64_t durationTicks = 0;
+-    uint64_t durationClocks = 0;
++    uint32_t durationTicks = 0;
++    uint32_t durationClocks = 0;
+ };
+diff --git a/src/ui/editordrawer/laneselection.cpp b/src/ui/editordrawer/laneselection.cpp
+index 21ef0ea1..3cb91212 100644
+--- a/src/ui/editordrawer/laneselection.cpp
++++ b/src/ui/editordrawer/laneselection.cpp
+@@ -16,21 +16,21 @@ LaneSelection::LaneSelection(const songview::EditorSelectionModel &model,
+ void LaneSelection::setUsedTrackMask(uint32_t usedTrackMask) noexcept
+ {
+     m_usedTrackMask = usedTrackMask;
+ }
+ 
+ bool LaneSelection::active() const noexcept
+ {
+     return m_model.timeSelection().active();
+ }
+ 
+-std::optional<std::pair<uint64_t, uint64_t>> LaneSelection::activeTickRange() const noexcept
++std::optional<std::pair<Tick, Tick>> LaneSelection::activeTickRange() const noexcept
+ {
+     if (!active())
+         return std::nullopt;
+     const auto &selection = m_model.timeSelection();
+     return std::pair{std::min(selection.startTick, selection.endTick),
+                      std::max(selection.startTick, selection.endTick)};
+ }
+ 
+ bool LaneSelection::coversLane(EditorAutomationRowId id) const noexcept
+ {
+diff --git a/src/ui/editordrawer/laneselection.h b/src/ui/editordrawer/laneselection.h
+index 8d890ebd..9ed727fe 100644
+--- a/src/ui/editordrawer/laneselection.h
++++ b/src/ui/editordrawer/laneselection.h
+@@ -1,19 +1,21 @@
+ #pragma once
+ 
+ #include <cstdint>
+ #include <optional>
+ #include <utility>
+ #include <vector>
+ 
+ #include <QtGlobal>
+ 
++#include "core/timedefaults.h"
++
+ #include "ui/editorviewstate.h"
+ 
+ class AutomationProjection;
+ struct AutomationRow;
+ 
+ namespace songview {
+ class EditorSelectionModel;
+ }
+ 
+ // One selection view over the song EditorSelectionModel and the current CC
+@@ -22,21 +24,21 @@ class EditorSelectionModel;
+ // row rebuild.
+ class LaneSelection
+ {
+   public:
+     LaneSelection(const songview::EditorSelectionModel &model,
+                   const std::vector<AutomationRow> &rows, uint32_t usedTrackMask) noexcept;
+     // Refreshes the only captured value that can change between row rebuilds.
+     void setUsedTrackMask(uint32_t usedTrackMask) noexcept;
+ 
+     bool active() const noexcept;
+-    std::optional<std::pair<uint64_t, uint64_t>> activeTickRange() const noexcept;
++    std::optional<std::pair<Tick, Tick>> activeTickRange() const noexcept;
+     // coversLane drives lane selection hit/menu/reticle behavior. Tempo uses
+     // tempo coverage; CC rows require Lanes scope and a visible row identity.
+     bool coversLane(EditorAutomationRowId id) const noexcept;
+     // coversNodes drives selected point paint/drag behavior. Tempo uses tempo
+     // coverage; CC rows use the model's lane coverage in either scope.
+     bool coversNodes(EditorAutomationRowId id) const noexcept;
+     bool hitTest(EditorAutomationRowId id, qreal x, const AutomationProjection &projection,
+                  qreal dpr) const noexcept;
+     // The selection's lanes that are still present in the row table, in row
+     // order. The model sanitizes identities, so no dedupe is needed here.
+diff --git a/src/ui/editordrawer/nodelane/batchcommit.cpp b/src/ui/editordrawer/nodelane/batchcommit.cpp
+index 6bac95fd..071b770b 100644
+--- a/src/ui/editordrawer/nodelane/batchcommit.cpp
++++ b/src/ui/editordrawer/nodelane/batchcommit.cpp
+@@ -9,65 +9,65 @@
+ 
+ #include "core/lanemoveplan.h"
+ #include "core/timedefaults.h"
+ 
+ namespace nodelane {
+ namespace {
+ 
+ std::vector<NodePointMove> lastMovesBySourceTick(const std::vector<NodePointMove> &moves)
+ {
+     std::vector<NodePointMove> unique;
+-    std::set<uint64_t> seen;
++    std::set<Tick> seen;
+     unique.reserve(moves.size());
+     for (auto it = moves.crbegin(); it != moves.crend(); ++it) {
+         if (seen.insert(it->fromTick).second)
+             unique.push_back(*it);
+     }
+     std::reverse(unique.begin(), unique.end());
+     return unique;
+ }
+ 
+-const TempoPoint *tempoAtTick(const std::vector<TempoPoint> &points, uint64_t tick)
++const TempoPoint *tempoAtTick(const std::vector<TempoPoint> &points, Tick tick)
+ {
+     for (const TempoPoint &point : points) {
+         if (point.tick == tick)
+             return &point;
+     }
+     return nullptr;
+ }
+ 
+ TempoPoint tempoDestination(const TempoPoint &source, const NodePoint &to)
+ {
+     const int currentBpm = qRound(CoreTimeDefaults::tempoBpm(source.microsecondsPerQuarterNote));
+-    TempoPoint destination{Tick(to.tick), source.microsecondsPerQuarterNote};
++    TempoPoint destination{to.tick, source.microsecondsPerQuarterNote};
+     if (to.value != currentBpm)
+         destination.microsecondsPerQuarterNote =
+             CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(to.value);
+     return destination;
+ }
+ 
+ } // namespace
+ 
+ std::optional<TempoEdit> resolveTempoMoves(const SongDocument &document,
+                                            const std::vector<NodePointMove> &moves)
+ {
+     TempoEdit edit;
+     if (moves.empty())
+         return edit;
+     const auto &tempoPoints = document.tempoPoints();
+     for (const NodePointMove &move : moves) {
+         if (!tempoAtTick(tempoPoints, move.fromTick))
+             return std::nullopt;
+     }
+     const auto unique = lastMovesBySourceTick(moves);
+-    std::map<uint64_t, TempoPoint> addByTick;
+-    std::set<uint64_t> removedTicks;
++    std::map<Tick, TempoPoint> addByTick;
++    std::set<Tick> removedTicks;
+     const auto removePoint = [&](const TempoPoint &point) {
+         if (!removedTicks.insert(point.tick).second)
+             return;
+         edit.remove.push_back(point);
+     };
+     for (const NodePointMove &move : unique) {
+         const TempoPoint *source = tempoAtTick(tempoPoints, move.fromTick);
+         const TempoPoint destination = tempoDestination(*source, move.to);
+         if (destination == *source)
+             continue;
+@@ -89,44 +89,44 @@ std::optional<CcResolvedMoves> resolveCcMoves(const SongDocument &document, int
+     CcResolvedMoves resolved;
+     resolved.write.engineTrack = engineTrack;
+     resolved.write.cc = controller;
+     if (moves.empty())
+         return resolved;
+     const auto raw = document.lanePoints(engineTrack, controller);
+     std::vector<LaneMovePoint> existing;
+     existing.reserve(raw.size() + 1);
+     std::vector<std::optional<size_t>> rawIdByPoint;
+     rawIdByPoint.reserve(raw.size() + 1);
+-    std::map<uint64_t, std::vector<size_t>> idsByTick;
++    std::map<Tick, std::vector<size_t>> idsByTick;
+     if (const auto synthetic = CoreTimeDefaults::syntheticTickZero(controller, raw)) {
+         idsByTick[0].push_back(existing.size());
+         existing.push_back({0, *synthetic});
+         rawIdByPoint.push_back(std::nullopt);
+     }
+     for (size_t rawId = 0; rawId < raw.size(); ++rawId) {
+         idsByTick[raw[rawId].tick].push_back(existing.size());
+-        existing.push_back({Tick(raw[rawId].tick), raw[rawId].value});
++        existing.push_back({raw[rawId].tick, raw[rawId].value});
+         rawIdByPoint.push_back(rawId);
+     }
+     for (const NodePointMove &move : moves) {
+         const auto found = idsByTick.find(move.fromTick);
+         if (found == idsByTick.end() || found->second.empty())
+             return std::nullopt;
+     }
+     std::vector<LaneMoveRequest> requests;
+     for (const NodePointMove &move : moves) {
+         const auto &group = idsByTick[move.fromTick];
+         const int newValue = CoreTimeDefaults::clampLaneValue(controller, move.to.value);
+         for (size_t index = 0; index < group.size(); ++index) {
+             const size_t id = group[index];
+             const int value = index + 1 == group.size() ? newValue : existing[id].value;
+-            requests.push_back({id, Tick(move.to.tick), value});
++            requests.push_back({id, move.to.tick, value});
+         }
+     }
+     const auto plan = planLaneMoves(existing, requests);
+     if (!plan)
+         return std::nullopt;
+     std::set<size_t> removed;
+     const auto removeId = [&](size_t id) {
+         if (!removed.insert(id).second || !rawIdByPoint[id])
+             return;
+         resolved.removePoints.push_back(raw[*rawIdByPoint[id]]);
+@@ -134,43 +134,43 @@ std::optional<CcResolvedMoves> resolveCcMoves(const SongDocument &document, int
+     for (size_t id : plan->removeIds)
+         removeId(id);
+     for (const LaneMoveWrite &write : plan->writes) {
+         removeId(write.sourceId);
+         resolved.write.points.push_back({write.tick, write.value});
+     }
+     return resolved;
+ }
+ 
+ std::optional<SongDocument::RangeEdit>
+-resolveBatchDeletes(const SongDocument &document, const std::vector<uint64_t> &tempoTicks,
++resolveBatchDeletes(const SongDocument &document, const std::vector<Tick> &tempoTicks,
+                     const std::vector<CcDeleteRequest> &ccDeletes)
+ {
+     SongDocument::RangeEdit edit;
+     const auto &tempoPoints = document.tempoPoints();
+-    std::set<uint64_t> seenTempo;
+-    for (uint64_t tick : tempoTicks) {
++    std::set<Tick> seenTempo;
++    for (Tick tick : tempoTicks) {
+         const TempoPoint *point = tempoAtTick(tempoPoints, tick);
+         if (!point)
+             return std::nullopt;
+         if (!seenTempo.insert(tick).second)
+             continue;
+         edit.removeTempo.push_back(*point);
+     }
+     for (const CcDeleteRequest &lane : ccDeletes) {
+         const auto raw = document.lanePoints(lane.engineTrack, lane.controller);
+-        std::map<uint64_t, std::vector<DocLanePoint>> groups;
++        std::map<Tick, std::vector<DocLanePoint>> groups;
+         for (const DocLanePoint &point : raw)
+             groups[point.tick].push_back(point);
+         const bool hasSyntheticTickZero =
+             CoreTimeDefaults::syntheticTickZero(lane.controller, raw).has_value();
+-        std::set<uint64_t> seen;
+-        for (uint64_t tick : lane.ticks) {
++        std::set<Tick> seen;
++        for (Tick tick : lane.ticks) {
+             const auto found = groups.find(tick);
+             if (found == groups.end() || found->second.empty()) {
+                 if (tick == 0 && hasSyntheticTickZero) {
+                     seen.insert(tick);
+                     continue;
+                 }
+                 return std::nullopt;
+             }
+             if (!seen.insert(tick).second)
+                 continue;
+diff --git a/src/ui/editordrawer/nodelane/batchcommit.h b/src/ui/editordrawer/nodelane/batchcommit.h
+index 37d743c0..640afcb8 100644
+--- a/src/ui/editordrawer/nodelane/batchcommit.h
++++ b/src/ui/editordrawer/nodelane/batchcommit.h
+@@ -11,26 +11,26 @@ namespace nodelane {
+ struct CcResolvedMoves {
+     std::vector<DocLanePoint> removePoints;
+     SongDocument::RangeEdit::LaneWrite write;
+ 
+     bool empty() const noexcept { return removePoints.empty() && write.points.empty(); }
+ };
+ 
+ struct CcDeleteRequest {
+     int engineTrack = -1;
+     uint8_t controller = 0;
+-    std::vector<uint64_t> ticks;
++    std::vector<Tick> ticks;
+ };
+ 
+ std::optional<TempoEdit> resolveTempoMoves(const SongDocument &document,
+                                            const std::vector<NodePointMove> &moves);
+ std::optional<CcResolvedMoves> resolveCcMoves(const SongDocument &document, int engineTrack,
+                                               uint8_t controller,
+                                               const std::vector<NodePointMove> &moves);
+ std::optional<SongDocument::RangeEdit>
+-resolveBatchDeletes(const SongDocument &document, const std::vector<uint64_t> &tempoTicks,
++resolveBatchDeletes(const SongDocument &document, const std::vector<Tick> &tempoTicks,
+                     const std::vector<CcDeleteRequest> &ccDeletes);
+ 
+ void appendResolvedTempoMoves(SongDocument::RangeEdit &edit, const TempoEdit &resolved);
+ void appendResolvedCcMoves(SongDocument::RangeEdit &edit, const CcResolvedMoves &resolved);
+ 
+ } // namespace nodelane
+diff --git a/src/ui/editordrawer/nodelane/gesture.cpp b/src/ui/editordrawer/nodelane/gesture.cpp
+index 5ce75942..3167959b 100644
+--- a/src/ui/editordrawer/nodelane/gesture.cpp
++++ b/src/ui/editordrawer/nodelane/gesture.cpp
+@@ -42,51 +42,51 @@ PointDragUpdate PointDragGesture::update(QPointF position, Qt::KeyboardModifiers
+     return {PointDragUpdate::Phase::Dragging, pressPosition + position - dragSlop.origin, axisLock};
+ }
+ 
+ PointDragRelease PointDragGesture::release() const noexcept
+ {
+     if (!dragSlop.exceeded)
+         return deleteOnStationary ? PointDragRelease::StationaryDelete : PointDragRelease::NoOp;
+     return PointDragRelease::Move;
+ }
+ 
+-void BandGesture::press(QPoint pos, uint64_t tick)
++void BandGesture::press(QPoint pos, Tick tick)
+ {
+     pending = true;
+     active = false;
+     pressPos = pos;
+     startTick = tick;
+     endTick = tick;
+ }
+ 
+-bool BandGesture::move(QPoint pos, uint64_t tick)
++bool BandGesture::move(QPoint pos, Tick tick)
+ {
+     if (!pending)
+         return false;
+     if (!active && (pos - pressPos).manhattanLength() >= QApplication::startDragDistance()) {
+         active = true;
+         endTick = tick;
+         return true;
+     }
+     if (active)
+         endTick = tick;
+     return false;
+ }
+ 
+-std::optional<std::pair<uint64_t, uint64_t>> BandGesture::release()
++std::optional<std::pair<Tick, Tick>> BandGesture::release()
+ {
+     if (!pending || !active) {
+         clear();
+         return std::nullopt;
+     }
+-    const std::pair<uint64_t, uint64_t> result{std::min<uint64_t>(startTick, endTick),
+-                                               std::max<uint64_t>(startTick, endTick)};
++    const std::pair<Tick, Tick> result{std::min<Tick>(startTick, endTick),
++                                       std::max<Tick>(startTick, endTick)};
+     clear();
+     return result;
+ }
+ 
+ void BandGesture::extendTo(LaneHandle candidate, bool compatible)
+ {
+     if (!laneStart.valid() || !candidate.valid())
+         return;
+     if (!compatible)
+         return;
+@@ -182,27 +182,27 @@ void NodeDragGesture::updatePreview()
+             appendMoved();
+     }
+ }
+ 
+ void NodeDragGesture::applyDrag(const NodePoint &grabCurrent)
+ {
+     if (points.empty() || grabbedPoint >= points.size())
+         return;
+     const NodePoint grabOriginal = points[grabbedPoint].original;
+     const int64_t requestedTickDelta = int64_t(grabCurrent.tick) - int64_t(grabOriginal.tick);
+-    uint64_t earliestTick = points.front().original.tick;
++    Tick earliestTick = points.front().original.tick;
+     for (const NodeDrag &point : points)
+-        earliestTick = std::min<uint64_t>(earliestTick, point.original.tick);
++        earliestTick = std::min<Tick>(earliestTick, point.original.tick);
+     const int64_t dTick = std::max<int64_t>(requestedTickDelta, -int64_t(earliestTick));
+     const int dValue = grabCurrent.value - grabOriginal.value;
+     for (NodeDrag &point : points) {
+-        point.current.tick = uint64_t(int64_t(point.original.tick) + dTick);
++        point.current.tick = Tick(int64_t(point.original.tick) + dTick);
+         point.current.value =
+             std::clamp(point.original.value + dValue, point.minimumValue, point.maximumValue);
+     }
+ }
+ AxisLock NodeDragGesture::update(const PointDragUpdate &dragUpdate,
+                                  const NodePoint &mappedGrabBeforeLock)
+ {
+     if (points.empty() || grabbedPoint >= points.size() ||
+         dragUpdate.phase == PointDragUpdate::Phase::Pending)
+         return AxisLock::None;
+@@ -253,22 +253,22 @@ std::optional<QPointF> SweepGesture::dragPosition(QPointF position, bool activat
+ 
+ bool PencilGesture::update(const QPointF &position, bool freehand, AxisLock lock,
+                            const AutomationProjection &proj, const NodeLane &nodeLane,
+                            const QRect &body, int verticalSlopDistance)
+ {
+     return updatePencilDrawPath(*this, position, freehand, lock, proj, nodeLane, body,
+                                 verticalSlopDistance);
+ }
+ 
+ void updateValuePoint(const AutomationProjection &proj, const NodeLane &lane, const QRect &body,
+-                      NodePoint &point, qreal y, uint64_t tick, bool snapValue,
+-                      int neutralSnapRadius, int snapNeutral)
++                      NodePoint &point, qreal y, Tick tick, bool snapValue, int neutralSnapRadius,
++                      int snapNeutral)
+ {
+     point.value =
+         std::clamp(qRound(AutomationProjection::valueAtY(body, proj.geometry(), lane.minimumValue(),
+                                                          lane.maximumValue(), y)),
+                    lane.minimumValue(), lane.maximumValue());
+     if (snapValue && snapNeutral >= 0) {
+         const int span = lane.maximumValue() - lane.minimumValue();
+         const int height = std::max<int>(1, body.height());
+         if (std::abs(point.value - snapNeutral) <= span * neutralSnapRadius / height)
+             point.value = snapNeutral;
+diff --git a/src/ui/editordrawer/nodelane/gesture.h b/src/ui/editordrawer/nodelane/gesture.h
+index 0479883e..5cc8477a 100644
+--- a/src/ui/editordrawer/nodelane/gesture.h
++++ b/src/ui/editordrawer/nodelane/gesture.h
+@@ -125,22 +125,22 @@ struct SweepGesture {
+     NodePoint anchor;
+     NodePoint current;
+     std::vector<NodePoint> points;
+     double previousRawTick = 0.0;
+     int previousValue = 0;
+     QPointF pressPosition;
+     // A drag sweep remains pending while this is false.
+     Slop slop;
+ 
+     template <typename NextGridTick>
+-    void update(const NodePoint &mapped, uint64_t first, uint64_t last, double rawTick,
+-                bool fineGrid, NextGridTick &&nextGridTick);
++    void update(const NodePoint &mapped, Tick first, Tick last, double rawTick, bool fineGrid,
++                NextGridTick &&nextGridTick);
+     void update(const NodePoint &mapped) { current = mapped; }
+     std::optional<QPointF> dragPosition(QPointF position, bool activate, int activationDistance);
+     template <typename NextGridTick>
+     std::vector<NodePoint> finishedPoints(bool fineGrid, NextGridTick &&nextGridTick) const;
+     template <typename NextGridTick>
+     NodeLaneEdit::Completion finish(LaneHandle handle, uint64_t revision,
+                                     const std::vector<NodePoint> &existing, bool fineGrid,
+                                     NextGridTick &&nextGridTick) const;
+ };
+ 
+@@ -154,38 +154,38 @@ struct PencilGesture {
+     bool update(const QPointF &position, bool freehand, AxisLock lock,
+                 const AutomationProjection &proj, const NodeLane &nodeLane, const QRect &body,
+                 int verticalSlopDistance);
+     NodeLaneEdit::Completion finish() &&;
+ };
+ 
+ struct BandGesture {
+     bool pending = false;
+     bool active = false;
+     QPoint pressPos;
+-    uint64_t startTick = 0;
+-    uint64_t endTick = 0;
++    Tick startTick = 0;
++    Tick endTick = 0;
+     LaneHandle laneStart;
+     LaneHandle laneEnd;
+ 
+-    void press(QPoint pos, uint64_t tick);
++    void press(QPoint pos, Tick tick);
+     void pressLane(LaneHandle handle) { laneStart = laneEnd = handle; }
+     void extendTo(LaneHandle candidate, bool compatible);
+     std::pair<LaneHandle, LaneHandle> laneRange() const noexcept { return {laneStart, laneEnd}; }
+     bool coversLane(LaneHandle handle) const noexcept;
+     // Owns QApplication::startDragDistance. Returns true only on the move
+     // that first activates (callers clear locked hover on that transition).
+-    bool move(QPoint pos, uint64_t tick);
++    bool move(QPoint pos, Tick tick);
+     // Clears pending/active. Returns:
+     //   nullopt            — never activated (click)
+     //   {t, t}             — activated drag, snapped width zero
+     //   {first, last}      — activated drag, first < last
+-    std::optional<std::pair<uint64_t, uint64_t>> release();
++    std::optional<std::pair<Tick, Tick>> release();
+     void clear() noexcept
+     {
+         pending = false;
+         active = false;
+         pressPos = {};
+         startTick = 0;
+         endTick = 0;
+         laneStart = {};
+         laneEnd = {};
+     }
+@@ -210,41 +210,41 @@ void upsertByTick(Points &points, Point point);
+ 
+ // Nearest point to pos within radius px, measured via xOf/yOf pixel mapping.
+ // Preconditions: points sorted by .tick; xOf(point) monotonic in tick
+ // (early termination relies on it).
+ // Tie rule: exact equidistant candidates resolve to the LATER tick.
+ template <class Points, class XOf, class YOf>
+ std::optional<std::size_t> nearestPointInRadius(const Points &points, double centerRawTick,
+                                                 QPointF pos, qreal radius, XOf &&xOf, YOf &&yOf);
+ 
+ void updateValuePoint(const AutomationProjection &proj, const NodeLane &lane, const QRect &body,
+-                      NodePoint &point, qreal y, uint64_t tick, bool snapValue,
+-                      int neutralSnapRadius, int snapNeutral);
++                      NodePoint &point, qreal y, Tick tick, bool snapValue, int neutralSnapRadius,
++                      int snapNeutral);
+ bool hitNodePoint(const NodeLane &lane, const QRect &body, const AutomationProjection &proj,
+                   const AutomationGeometry &geometry, QPointF position, qreal devicePixelRatio,
+                   bool requireVisibleMarkers, NodePoint *point);
+ 
+ template <typename NextGridTick>
+-void extendSweepPoints(SweepGesture &gesture, uint64_t first, uint64_t last, double rawTick,
+-                       bool fineGrid, NextGridTick &&nextGridTick);
++void extendSweepPoints(SweepGesture &gesture, Tick first, Tick last, double rawTick, bool fineGrid,
++                       NextGridTick &&nextGridTick);
+ 
+ bool updatePencilDrawPath(PencilGesture &gesture, const QPointF &position, bool freehand,
+                           AxisLock lock, const AutomationProjection &proj, const NodeLane &lane,
+                           const QRect &body, int verticalSlopDistance);
+ 
+ // ---- template definitions ----
+ 
+ template <class Points, class Point>
+ void upsertByTick(Points &points, Point point)
+ {
+     auto it = std::lower_bound(points.begin(), points.end(), point.tick,
+-                               [](const auto &p, uint64_t tick) { return p.tick < tick; });
++                               [](const auto &p, Tick tick) { return p.tick < tick; });
+     if (it != points.end() && it->tick == point.tick)
+         *it = point;
+     else
+         points.insert(it, std::move(point));
+ }
+ 
+ template <class Points, class XOf, class YOf>
+ std::optional<std::size_t> nearestPointInRadius(const Points &points, double centerRawTick,
+                                                 QPointF pos, qreal radius, XOf &&xOf, YOf &&yOf)
+ {
+@@ -272,79 +272,79 @@ std::optional<std::size_t> nearestPointInRadius(const Points &points, double cen
+         const qreal distance = pointDistanceSquared(QPointF(xOf(*candidate), yOf(*candidate)), pos);
+         if (distance <= radiusSquared && distance <= nearestDistance) {
+             nearestDistance = distance;
+             nearest = std::size_t(candidate - points.cbegin());
+         }
+     }
+     return nearest;
+ }
+ 
+ template <typename NextGridTick>
+-void extendSweepPoints(SweepGesture &gesture, uint64_t first, uint64_t last, double rawTick,
+-                       bool fineGrid, NextGridTick &&nextGridTick)
++void extendSweepPoints(SweepGesture &gesture, Tick first, Tick last, double rawTick, bool fineGrid,
++                       NextGridTick &&nextGridTick)
+ {
+     const double from = gesture.previousRawTick;
+-    for (uint64_t tick = first;;) {
++    for (Tick tick = first;;) {
+         int value = gesture.current.value;
+         if (rawTick != from) {
+             const double fraction = std::clamp((double(tick) - from) / (rawTick - from), 0.0, 1.0);
+             value = gesture.previousValue +
+                     int(std::llround(fraction * (gesture.current.value - gesture.previousValue)));
+         }
+         upsertByTick(gesture.points, NodePoint{tick, value});
+         if (tick == last)
+             break;
+         tick = nextGridTick(tick, fineGrid, last);
+     }
+     gesture.previousRawTick = rawTick;
+     gesture.previousValue = gesture.current.value;
+ }
+ 
+ template <typename NextGridTick>
+-void SweepGesture::update(const NodePoint &mapped, uint64_t first, uint64_t last, double rawTick,
++void SweepGesture::update(const NodePoint &mapped, Tick first, Tick last, double rawTick,
+                           bool fineGrid, NextGridTick &&nextGridTick)
+ {
+     current = mapped;
+     extendSweepPoints(*this, first, last, rawTick, fineGrid,
+                       std::forward<NextGridTick>(nextGridTick));
+ }
+ 
+ template <typename NextGridTick>
+ std::vector<NodePoint> SweepGesture::finishedPoints(bool fineGrid,
+                                                     NextGridTick &&nextGridTick) const
+ {
+     if (mode != Mode::Ramp)
+         return points;
+-    uint64_t first = anchor.tick;
+-    uint64_t last = current.tick;
++    Tick first = anchor.tick;
++    Tick last = current.tick;
+     int firstValue = anchor.value;
+     int lastValue = current.value;
+     if (first > last) {
+         std::swap(first, last);
+         std::swap(firstValue, lastValue);
+     }
+     std::vector<NodePoint> result;
+-    for (uint64_t tick = first;;) {
++    for (Tick tick = first;;) {
+         const int value = int(std::llround(ui::linearRampValue(
+             double(tick), double(first), double(firstValue), double(last), double(lastValue))));
+         result.push_back({tick, value});
+         if (tick == last)
+             break;
+         tick = nextGridTick(tick, fineGrid, last);
+     }
+     return result;
+ }
+ 
+ template <typename NextGridTick>
+ NodeLaneEdit::Completion SweepGesture::finish(LaneHandle handle, uint64_t revision,
+                                               const std::vector<NodePoint> &existing, bool fineGrid,
+                                               NextGridTick &&nextGridTick) const
+ {
+     std::vector<NodePoint> result =
+         finishedPoints(fineGrid, std::forward<NextGridTick>(nextGridTick));
+     if (result.empty())
+         return {};
+-    const uint64_t tickBegin = result.front().tick;
+-    const uint64_t tickEnd = result.back().tick;
++    const Tick tickBegin = result.front().tick;
++    const Tick tickEnd = result.back().tick;
+     const NodeLaneEdit laneEdit({handle, revision}, existing);
+     return laneEdit.replacePointRange(tickBegin, tickEnd, std::move(result));
+ }
+diff --git a/src/ui/editordrawer/nodelane/nodelane.cpp b/src/ui/editordrawer/nodelane/nodelane.cpp
+index df15ff81..962d75d3 100644
+--- a/src/ui/editordrawer/nodelane/nodelane.cpp
++++ b/src/ui/editordrawer/nodelane/nodelane.cpp
+@@ -24,21 +24,21 @@ QRectF nodeOverflowClip(const QRect &plot, const AutomationGeometry &geometry)
+         std::max<qreal>(geometry.nodePaintRadius, geometry.selectedNodeRingRadius) +
+         layout::singlePixel();
+     return QRectF(plot).adjusted(-extent, -extent, extent, extent);
+ }
+ 
+ } // namespace nodelane
+ 
+ namespace {
+ 
+ using Point = NodeLaneEdit::Point;
+-void canonicalize(std::vector<Point> &points, uint64_t tickBegin, uint64_t tickEnd,
++void canonicalize(std::vector<Point> &points, Tick tickBegin, Tick tickEnd,
+                   int minimumValue = std::numeric_limits<int>::min(),
+                   int maximumValue = std::numeric_limits<int>::max(),
+                   std::optional<int> priorValue = std::nullopt)
+ {
+     std::stable_sort(points.begin(), points.end(),
+                      [](const Point &left, const Point &right) { return left.tick < right.tick; });
+     auto kept = std::size_t{0};
+     for (auto index = std::size_t{0}; index < points.size();) {
+         auto point = points[index++];
+         while (index < points.size() && points[index].tick == point.tick)
+@@ -47,64 +47,64 @@ void canonicalize(std::vector<Point> &points, uint64_t tickBegin, uint64_t tickE
+             continue;
+         point.value = std::clamp(point.value, minimumValue, maximumValue);
+         if (priorValue && *priorValue == point.value)
+             continue;
+         points[kept++] = point;
+         priorValue = point.value;
+     }
+     points.resize(kept);
+ }
+ 
+-std::optional<int> heldValue(const std::vector<Point> &points, uint64_t tick, bool inclusive)
++std::optional<int> heldValue(const std::vector<Point> &points, Tick tick, bool inclusive)
+ {
+     auto position =
+         std::lower_bound(points.cbegin(), points.cend(), tick,
+-                         [](const Point &point, uint64_t value) { return point.tick < value; });
++                         [](const Point &point, Tick value) { return point.tick < value; });
+     if (inclusive && position != points.cend() && position->tick == tick)
+         ++position;
+     return position == points.cbegin() ? std::nullopt : std::optional<int>((position - 1)->value);
+ }
+ 
+-bool rangeMatches(const std::vector<Point> &original, uint64_t tickBegin, uint64_t tickEnd,
++bool rangeMatches(const std::vector<Point> &original, Tick tickBegin, Tick tickEnd,
+                   const std::vector<Point> &replacement)
+ {
+     const auto first =
+         std::lower_bound(original.cbegin(), original.cend(), tickBegin,
+-                         [](const Point &point, uint64_t tick) { return point.tick < tick; });
++                         [](const Point &point, Tick tick) { return point.tick < tick; });
+     const auto last =
+         std::upper_bound(first, original.cend(), tickEnd,
+-                         [](uint64_t tick, const Point &point) { return tick < point.tick; });
++                         [](Tick tick, const Point &point) { return tick < point.tick; });
+     return std::equal(first, last, replacement.cbegin(), replacement.cend(),
+                       [](const Point &left, const Point &right) {
+                           return left.tick == right.tick && left.value == right.value;
+                       });
+ }
+ 
+ } // namespace
+ 
+ NodeLaneEdit::NodeLaneEdit(Target target, std::vector<Point> originalPoints)
+     : m_target(target)
+     , m_originalPoints(std::move(originalPoints))
+     , m_heldOriginalPoints(m_originalPoints)
+ {
+-    canonicalize(m_heldOriginalPoints, 0, std::numeric_limits<uint64_t>::max());
++    canonicalize(m_heldOriginalPoints, 0, CoreTimeDefaults::kNoTick);
+ }
+ 
+-NodeLaneEdit::Completion NodeLaneEdit::replacePointRange(uint64_t tickBegin, uint64_t tickEnd,
++NodeLaneEdit::Completion NodeLaneEdit::replacePointRange(Tick tickBegin, Tick tickEnd,
+                                                          std::vector<Point> points) const
+ {
+     const bool unchanged = rangeMatches(m_originalPoints, tickBegin, tickEnd, points);
+     return {m_target, tickBegin, tickEnd, std::move(points), unchanged};
+ }
+ 
+-NodeLaneEdit::Completion NodeLaneEdit::replaceHeldSpan(uint64_t tickBegin, uint64_t tickEnd,
+-                                                       uint64_t songEndTick, int minimumValue,
++NodeLaneEdit::Completion NodeLaneEdit::replaceHeldSpan(Tick tickBegin, Tick tickEnd,
++                                                       Tick songEndTick, int minimumValue,
+                                                        int maximumValue,
+                                                        std::vector<Point> points) const
+ {
+     if (tickEnd < songEndTick)
+         if (const auto endpointValue = heldValue(m_heldOriginalPoints, tickEnd, true))
+             points.push_back({tickEnd, *endpointValue});
+     canonicalize(points, tickBegin, tickEnd, minimumValue, maximumValue,
+                  heldValue(m_heldOriginalPoints, tickBegin, false));
+     const bool unchanged = rangeMatches(m_heldOriginalPoints, tickBegin, tickEnd, points);
+     return {m_target, tickBegin, tickEnd, std::move(points), unchanged};
+diff --git a/src/ui/editordrawer/nodelane/nodelane.h b/src/ui/editordrawer/nodelane/nodelane.h
+index 08ee4b29..be3aab4d 100644
+--- a/src/ui/editordrawer/nodelane/nodelane.h
++++ b/src/ui/editordrawer/nodelane/nodelane.h
+@@ -1,40 +1,43 @@
+ #pragma once
+ 
+ #include <algorithm>
+ #include <cstdint>
+ #include <iterator>
+ #include <optional>
+ #include <span>
+ #include <vector>
+ 
++#include "core/timedefaults.h"
++
+ #include <QRect>
+ #include <QRectF>
+ #include <QString>
+ 
+ struct NodeValuePrompt {
+     QString title;
+     QString label;
+     int initialValue = 0;
+     int minimum = 0;
+     int maximum = 0;
+     int storedOffset = 0;
+ };
+ 
+ struct NodePoint {
+-    uint64_t tick = 0;
++    Tick tick = 0;
+     int value = 0;
+ };
++static_assert(sizeof(NodePoint) == 8);
+ 
+ struct NodePointMove {
+-    uint64_t fromTick = 0; // identifies the point (one per tick per lane)
+-    NodePoint to;          // destination tick + value
++    Tick fromTick = 0; // identifies the point (one per tick per lane)
++    NodePoint to;      // destination tick + value
+ };
+ 
+ struct LaneHandle {
+     int index = -1;
+     constexpr bool valid() const noexcept { return index >= 0; }
+     constexpr bool operator==(const LaneHandle &) const noexcept = default;
+ };
+ 
+ // The automation node nearest the plot origin while still covered by the lane
+ // labels. The point keeps its source tick; callers present it at the origin.
+@@ -73,22 +76,21 @@ class NodeLane
+     // Everything the shared inline value prompt needs to present one edit.
+     // initialValue/minimum/maximum are prompt-displayed values; storedOffset
+     // converts a displayed value back to the stored lane value on acceptance.
+     virtual NodeValuePrompt valuePrompt(int storedValue) const = 0;
+     virtual int neutralValue() const { return -1; }
+     // Implicit held tick-zero value outside points(); nullopt means no such
+     // value. Tempo retains its 120-BPM default until an explicit tick-zero
+     // point supersedes it.
+     virtual std::optional<NodePoint> leadIn() const { return std::nullopt; }
+ 
+-    virtual void replaceSpan(uint64_t first, uint64_t last,
+-                             const std::vector<NodePoint> &points) = 0;
++    virtual void replaceSpan(Tick first, Tick last, const std::vector<NodePoint> &points) = 0;
+ };
+ 
+ namespace nodelane {
+ 
+ qreal valueY(const NodeLane &lane, const QRect &body, const AutomationGeometry &geometry,
+              int value);
+ QRectF nodeOverflowClip(const QRect &plot, const AutomationGeometry &geometry);
+ 
+ } // namespace nodelane
+ 
+@@ -97,28 +99,27 @@ class NodeLaneEdit
+   public:
+     using Point = NodePoint;
+ 
+     struct Target {
+         LaneHandle lane;
+         uint64_t expectedRevision = 0;
+     };
+ 
+     struct Completion {
+         Target target;
+-        uint64_t tickBegin = 0;
+-        uint64_t tickEnd = 0;
++        Tick tickBegin = 0;
++        Tick tickEnd = 0;
+         std::vector<Point> points;
+         bool unchanged = false;
+     };
+ 
+     NodeLaneEdit(Target target, std::vector<Point> originalPoints);
+ 
+-    Completion replacePointRange(uint64_t tickBegin, uint64_t tickEnd,
+-                                 std::vector<Point> points) const;
+-    Completion replaceHeldSpan(uint64_t tickBegin, uint64_t tickEnd, uint64_t songEndTick,
+-                               int minimumValue, int maximumValue, std::vector<Point> points) const;
++    Completion replacePointRange(Tick tickBegin, Tick tickEnd, std::vector<Point> points) const;
++    Completion replaceHeldSpan(Tick tickBegin, Tick tickEnd, Tick songEndTick, int minimumValue,
++                               int maximumValue, std::vector<Point> points) const;
+ 
+   private:
+     Target m_target;
+     std::vector<Point> m_originalPoints;
+     std::vector<Point> m_heldOriginalPoints;
+ };
+diff --git a/src/ui/editordrawer/nodelane/pencilgesture.cpp b/src/ui/editordrawer/nodelane/pencilgesture.cpp
+index e54eea55..632d8f8d 100644
+--- a/src/ui/editordrawer/nodelane/pencilgesture.cpp
++++ b/src/ui/editordrawer/nodelane/pencilgesture.cpp
+@@ -8,42 +8,42 @@
+ #include <utility>
+ 
+ namespace {
+ 
+ bool finiteSample(const AutomationPencilGesture::Sample &sample)
+ {
+     return std::isfinite(sample.rawTick) && std::isfinite(sample.logicalX) &&
+            std::isfinite(sample.continuousValue);
+ }
+ 
+-double clampedRawTick(double tick, uint64_t songEndTick)
++double clampedRawTick(double tick, Tick songEndTick)
+ {
+     if (tick <= 0.0)
+         return 0.0;
+     const double songEnd = double(songEndTick);
+     return tick >= songEnd ? songEnd : tick;
+ }
+ 
+-uint64_t clampedTick(double tick, uint64_t songEndTick)
++Tick clampedTick(double tick, Tick songEndTick)
+ {
+     const double clamped = clampedRawTick(tick, songEndTick);
+-    return clamped >= double(songEndTick) ? songEndTick : uint64_t(std::floor(clamped));
++    return clamped >= double(songEndTick) ? songEndTick : Tick(std::floor(clamped));
+ }
+ 
+ AutomationPencilGesture::Sample normalizedSample(AutomationPencilGesture::Sample sample,
+-                                                 uint64_t songEndTick)
++                                                 Tick songEndTick)
+ {
+     sample.rawTick = clampedRawTick(sample.rawTick, songEndTick);
+     return sample;
+ }
+ 
+-uint64_t nextClockTick(uint64_t tick, uint64_t clockTicks, uint64_t songEndTick)
++Tick nextClockTick(Tick tick, uint32_t clockTicks, Tick songEndTick)
+ {
+     if (tick >= songEndTick || clockTicks > songEndTick - tick)
+         return songEndTick;
+     return tick + clockTicks;
+ }
+ 
+ bool collinearForward(double previousDeltaAxis, double previousDeltaValue, double currentDeltaAxis,
+                       double currentDeltaValue)
+ {
+     if (previousDeltaAxis == 0.0 || currentDeltaAxis == 0.0 ||
+@@ -54,40 +54,40 @@ bool collinearForward(double previousDeltaAxis, double previousDeltaValue, doubl
+     const double tolerance =
+         std::max(std::numeric_limits<double>::epsilon() * 64.0 *
+                      std::max({1.0, std::abs(leftProduct), std::abs(rightProduct)}),
+                  0.5 * std::max(std::abs(previousDeltaAxis), std::abs(currentDeltaAxis)));
+     return std::abs(leftProduct - rightProduct) <= tolerance;
+ }
+ 
+ } // namespace
+ 
+ std::optional<AutomationPencilGesture> AutomationPencilGesture::start(
+-    Target target, int minimumValue, int maximumValue, uint64_t songEndTick,
+-    uint64_t documentClockTicks, std::vector<NodeLaneEdit::Point> originalPoints,
++    Target target, int minimumValue, int maximumValue, Tick songEndTick,
++    uint32_t documentClockTicks, std::vector<NodeLaneEdit::Point> originalPoints,
+     std::optional<NodePoint> leadIn, Sample firstSample, AutomationGridCell firstCell)
+ {
+     if (!target.lane.valid() || minimumValue > maximumValue || documentClockTicks == 0 ||
+         !finiteSample(firstSample) || !validCell(firstCell, songEndTick))
+         return std::nullopt;
+     if (leadIn) {
+         const auto position = std::lower_bound(originalPoints.cbegin(), originalPoints.cend(),
+                                                leadIn->tick, lessPointTick);
+         if (position == originalPoints.cend() || position->tick != leadIn->tick)
+             originalPoints.insert(position, *leadIn);
+     }
+     return AutomationPencilGesture(target, minimumValue, maximumValue, songEndTick,
+                                    documentClockTicks, std::move(originalPoints), firstSample,
+                                    firstCell);
+ }
+ 
+ AutomationPencilGesture::AutomationPencilGesture(Target target, int minimumValue, int maximumValue,
+-                                                 uint64_t songEndTick, uint64_t documentClockTicks,
++                                                 Tick songEndTick, uint32_t documentClockTicks,
+                                                  std::vector<NodeLaneEdit::Point> originalPoints,
+                                                  Sample firstSample, AutomationGridCell firstCell)
+     : m_minimumValue(minimumValue)
+     , m_maximumValue(maximumValue)
+     , m_songEndTick(songEndTick)
+     , m_documentClockTicks(documentClockTicks)
+     , m_previous(normalizedSample(firstSample, songEndTick))
+     , m_laneEdit(target, std::move(originalPoints))
+     , m_initialCell(firstCell)
+     , m_initialPoint(m_previous.point)
+@@ -180,21 +180,21 @@ bool AutomationPencilGesture::applySnappedSegment(Sample sample,
+ 
+ bool AutomationPencilGesture::applyFreehandSegment(Sample sample)
+ {
+     if (!finiteSample(sample))
+         return false;
+ 
+     sample = normalizedSample(sample, m_songEndTick);
+     m_snappedSegmentStart.reset();
+     const Sample previous = m_previous;
+     const double deltaX = sample.logicalX - previous.logicalX;
+-    std::optional<uint64_t> preservedTurnTick;
++    std::optional<Tick> preservedTurnTick;
+     if (m_provisionalFreehandEndpoint) {
+         bool continuesFreehandLine = false;
+         if (m_freehandSegmentStart) {
+             const Sample &start = *m_freehandSegmentStart;
+             continuesFreehandLine =
+                 collinearForward(previous.logicalX - start.logicalX,
+                                  previous.continuousValue - start.continuousValue, deltaX,
+                                  sample.continuousValue - previous.continuousValue);
+         }
+         if (!continuesFreehandLine) {
+@@ -204,28 +204,28 @@ bool AutomationPencilGesture::applyFreehandSegment(Sample sample)
+     }
+     m_provisionalFreehandEndpoint.reset();
+     const auto applyAtX = [this, &previous, &sample, &preservedTurnTick,
+                            deltaX](double logicalX, bool provisionalEndpoint, bool interiorSample) {
+         const double fraction =
+             deltaX == 0.0 ? 1.0 : std::clamp((logicalX - previous.logicalX) / deltaX, 0.0, 1.0);
+         const double rawTick = previous.rawTick + (sample.rawTick - previous.rawTick) * fraction;
+         const double continuousValue =
+             previous.continuousValue +
+             (sample.continuousValue - previous.continuousValue) * fraction;
+-        const uint64_t rawIntegerTick = clampedTick(rawTick, m_songEndTick);
+-        const uint64_t clockTick = (rawIntegerTick / m_documentClockTicks) * m_documentClockTicks;
++        const Tick rawIntegerTick = clampedTick(rawTick, m_songEndTick);
++        const Tick clockTick = (rawIntegerTick / m_documentClockTicks) * m_documentClockTicks;
+         const NodePoint point{clockTick, roundedValue(continuousValue)};
+         if (provisionalEndpoint)
+             m_provisionalFreehandEndpoint = point;
+         else if (!interiorSample || !preservedTurnTick || point.tick != *preservedTurnTick)
+             upsertByTick(m_strokePoints, point);
+-        const uint64_t rangeEnd = nextClockTick(clockTick, m_documentClockTicks, m_songEndTick);
++        const Tick rangeEnd = nextClockTick(clockTick, m_documentClockTicks, m_songEndTick);
+         m_tickBegin = std::min(m_tickBegin, clockTick);
+         m_tickEnd = std::max(m_tickEnd, rangeEnd);
+     };
+ 
+     if (deltaX > 0.0) {
+         for (double logicalX = std::floor(previous.logicalX) + 1.0; logicalX < sample.logicalX;
+              logicalX += 1.0)
+             applyAtX(logicalX, false, true);
+     } else if (deltaX < 0.0) {
+         for (double logicalX = std::ceil(previous.logicalX) - 1.0; logicalX > sample.logicalX;
+@@ -233,42 +233,41 @@ bool AutomationPencilGesture::applyFreehandSegment(Sample sample)
+             applyAtX(logicalX, false, true);
+     }
+     applyAtX(sample.logicalX, std::floor(sample.logicalX) != sample.logicalX, false);
+ 
+     m_freehandSegmentStart = previous;
+     m_previous = sample;
+     rebuildPreview();
+     return true;
+ }
+ 
+-bool AutomationPencilGesture::lessPointTick(const NodePoint &left, uint64_t tick) noexcept
++bool AutomationPencilGesture::lessPointTick(const NodePoint &left, Tick tick) noexcept
+ {
+     return left.tick < tick;
+ }
+ 
+-bool AutomationPencilGesture::validCell(const AutomationGridCell &cell,
+-                                        uint64_t songEndTick) noexcept
++bool AutomationPencilGesture::validCell(const AutomationGridCell &cell, Tick songEndTick) noexcept
+ {
+     return cell.tickBegin < cell.tickEnd && cell.tickEnd <= songEndTick;
+ }
+ 
+ void AutomationPencilGesture::rebuildPreview()
+ {
+     std::vector<NodePoint> points = m_strokePoints;
+     if (m_provisionalFreehandEndpoint && m_provisionalFreehandEndpoint->tick >= m_tickBegin &&
+         m_provisionalFreehandEndpoint->tick <= m_tickEnd)
+         upsertByTick(points, *m_provisionalFreehandEndpoint);
+     m_cachedPreview = m_laneEdit.replaceHeldSpan(m_tickBegin, m_tickEnd, m_songEndTick,
+                                                  m_minimumValue, m_maximumValue, std::move(points));
+ }
+ 
+-void AutomationPencilGesture::eraseStrokePointsIn(uint64_t tickBegin, uint64_t tickEnd)
++void AutomationPencilGesture::eraseStrokePointsIn(Tick tickBegin, Tick tickEnd)
+ {
+     const auto first =
+         std::lower_bound(m_strokePoints.begin(), m_strokePoints.end(), tickBegin, lessPointTick);
+     const auto last =
+         std::lower_bound(m_strokePoints.begin(), m_strokePoints.end(), tickEnd, lessPointTick);
+     m_strokePoints.erase(first, last);
+ }
+ 
+ int AutomationPencilGesture::roundedValue(double continuousValue) const noexcept
+ {
+diff --git a/src/ui/editordrawer/nodelane/pencilgesture.h b/src/ui/editordrawer/nodelane/pencilgesture.h
+index af71cf96..9ed0ed46 100644
+--- a/src/ui/editordrawer/nodelane/pencilgesture.h
++++ b/src/ui/editordrawer/nodelane/pencilgesture.h
+@@ -20,53 +20,53 @@ class AutomationPencilGesture
+         double rawTick = 0.0;
+         double logicalX = 0.0;
+         NodePoint point;
+         double continuousValue = 0.0;
+     };
+ 
+     // Edit snap cells are produced by AutomationProjection.
+     // `leadIn` supplies an implicit pre-roll held value excluded from the
+     // lane's editable point list.
+     static std::optional<AutomationPencilGesture>
+-    start(Target target, int minimumValue, int maximumValue, uint64_t songEndTick,
+-          uint64_t documentClockTicks, std::vector<NodeLaneEdit::Point> originalPoints,
++    start(Target target, int minimumValue, int maximumValue, Tick songEndTick,
++          uint32_t documentClockTicks, std::vector<NodeLaneEdit::Point> originalPoints,
+           std::optional<NodePoint> leadIn, Sample firstSample, AutomationGridCell firstCell);
+ 
+     bool applySnappedSegment(Sample sample, const std::vector<AutomationGridCell> &cells);
+     bool applyFreehandSegment(Sample sample);
+ 
+     Completion finish() && { return std::move(m_cachedPreview); }
+     const Completion &preview() const noexcept { return m_cachedPreview; }
+     const Sample &lastSample() const noexcept { return m_previous; }
+ 
+   private:
+-    AutomationPencilGesture(Target target, int minimumValue, int maximumValue, uint64_t songEndTick,
+-                            uint64_t documentClockTicks,
++    AutomationPencilGesture(Target target, int minimumValue, int maximumValue, Tick songEndTick,
++                            uint32_t documentClockTicks,
+                             std::vector<NodeLaneEdit::Point> originalPoints, Sample firstSample,
+                             AutomationGridCell firstCell);
+ 
+-    static bool lessPointTick(const NodePoint &left, uint64_t tick) noexcept;
+-    static bool validCell(const AutomationGridCell &cell, uint64_t songEndTick) noexcept;
++    static bool lessPointTick(const NodePoint &left, Tick tick) noexcept;
++    static bool validCell(const AutomationGridCell &cell, Tick songEndTick) noexcept;
+ 
+     void rebuildPreview();
+-    void eraseStrokePointsIn(uint64_t tickBegin, uint64_t tickEnd);
++    void eraseStrokePointsIn(Tick tickBegin, Tick tickEnd);
+     int roundedValue(double continuousValue) const noexcept;
+ 
+     int m_minimumValue = 0;
+     int m_maximumValue = 0;
+-    uint64_t m_songEndTick = 0;
+-    uint64_t m_documentClockTicks = 0;
++    Tick m_songEndTick = 0;
++    uint32_t m_documentClockTicks = 0;
+     Sample m_previous;
+     NodeLaneEdit m_laneEdit;
+     std::vector<NodePoint> m_strokePoints;
+     AutomationGridCell m_initialCell;
+     NodePoint m_initialPoint{};
+     bool m_initialCellExited = false;
+     // A non-integral freehand endpoint remains provisional until the next
+     // event proves it collinear and forward with both adjacent segments.
+     std::optional<NodePoint> m_provisionalFreehandEndpoint;
+     std::optional<Sample> m_freehandSegmentStart;
+     std::optional<Sample> m_snappedSegmentStart;
+-    uint64_t m_tickBegin = 0;
+-    uint64_t m_tickEnd = 0;
++    Tick m_tickBegin = 0;
++    Tick m_tickEnd = 0;
+     Completion m_cachedPreview;
+ };
+diff --git a/src/ui/editordrawer/nodelane/tempoadapter.cpp b/src/ui/editordrawer/nodelane/tempoadapter.cpp
+index 012239eb..3d5974dd 100644
+--- a/src/ui/editordrawer/nodelane/tempoadapter.cpp
++++ b/src/ui/editordrawer/nodelane/tempoadapter.cpp
+@@ -43,27 +43,27 @@ std::optional<NodePoint> TempoLane::leadIn() const
+ {
+     const SongDocument *document = m_page ? m_page->document() : m_document;
+     if (!document)
+         return std::nullopt;
+     const auto &tempoPoints = document->tempoPoints();
+     if (!tempoPoints.empty() && tempoPoints.front().tick == 0)
+         return std::nullopt;
+     return NodePoint{0, CoreTimeDefaults::kTempoBpm};
+ }
+ 
+-void TempoLane::replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points)
++void TempoLane::replaceSpan(Tick first, Tick last, const std::vector<NodePoint> &points)
+ {
+     SongDocument *document = m_page ? m_page->document() : m_document;
+     if (!document)
+         return;
+     const auto &tempoPoints = document->tempoPoints();
+     TempoEdit edit;
+     for (const TempoPoint &point : tempoPoints) {
+         if (point.tick >= first && point.tick <= last)
+             edit.remove.push_back(point);
+     }
+     edit.add.reserve(points.size());
+     for (const NodePoint &point : points)
+         edit.add.push_back(
+-            {Tick(point.tick), CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
++            {point.tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
+     document->applyTempoEdit(edit);
+ }
+diff --git a/src/ui/editordrawer/tempolane.h b/src/ui/editordrawer/tempolane.h
+index c66890f1..828a08ea 100644
+--- a/src/ui/editordrawer/tempolane.h
++++ b/src/ui/editordrawer/tempolane.h
+@@ -16,17 +16,17 @@ class TempoLane final : public NodeLane
+   public:
+     explicit TempoLane(AutomationPage *page) noexcept;
+     explicit TempoLane(SongDocument &document) noexcept;
+ 
+     QString title() const override;
+     std::vector<NodePoint> points() const override;
+     int minimumValue() const override;
+     int maximumValue() const override;
+     QString valueText(int value) const override;
+     std::optional<NodePoint> leadIn() const override;
+-    void replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points) override;
++    void replaceSpan(Tick first, Tick last, const std::vector<NodePoint> &points) override;
+     NodeValuePrompt valuePrompt(int storedValue) const override;
+ 
+   private:
+     AutomationPage *m_page = nullptr;
+     SongDocument *m_document = nullptr;
+ };
+\ No newline at end of file
+diff --git a/src/ui/editordrawer/velocityarea/velocityarea.cpp b/src/ui/editordrawer/velocityarea/velocityarea.cpp
+index 3191a209..8e8c6326 100644
+--- a/src/ui/editordrawer/velocityarea/velocityarea.cpp
++++ b/src/ui/editordrawer/velocityarea/velocityarea.cpp
+@@ -30,23 +30,23 @@ bool detentUnlockHeld(Qt::KeyboardModifiers modifiers, bool allowShift)
+     if (binding == Qt::NoModifier)
+         return false;
+     const Qt::KeyboardModifiers shortcutModifiers =
+         modifiers & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier);
+     if (shortcutModifiers == binding)
+         return true;
+     // Shift-ramp adds exactly one Shift modifier to the configured hold chord.
+     return allowShift && shortcutModifiers == (binding | Qt::ShiftModifier);
+ }
+ 
+-uint64_t drawerContextTick(double tick)
++Tick drawerContextTick(double tick)
+ {
+-    return static_cast<uint64_t>(std::floor(std::max(0.0, tick) + 0.5));
++    return static_cast<Tick>(std::floor(std::max(0.0, tick) + 0.5));
+ }
+ 
+ } // namespace
+ void VelocityArea::Geometry::resolve()
+ {
+     densityThresholdD1 = layout::fontPx(6.0);
+     densityThresholdD2 = layout::fontPx(25.0 / 3.0);
+     densityThresholdD3 = layout::fontPx(12.0);
+     densityThresholdD4 = layout::fontPx(24.0);
+     startNodeHitRadius = layout::fontPx(0.5);
+@@ -330,23 +330,22 @@ void VelocityArea::publishAccessibleDescription()
+     m_inputHost->setAccessibilityDescription(
+         QString::fromLatin1(description.data(), int(description.size())));
+ }
+ 
+ // One compatible PSG map lets users edit intrinsic levels. Unresolved, non-PSG,
+ // or selections that are not compatible use the continuous 1–127 velocity domain.
+ VelocityMap VelocityArea::currentContext() const
+ {
+     const std::vector<DocNote> notes = selectedNotes();
+     if (notes.empty()) {
+-        const uint64_t tick = m_live.playback.playing
+-                                  ? drawerContextTick(m_live.playback.playheadTick)
+-                                  : m_live.editCursorTick;
++        const Tick tick = m_live.playback.playing ? drawerContextTick(m_live.playback.playheadTick)
++                                                  : m_live.editCursorTick;
+         return VelocityMap::resolve(m_owner.voiceContext(tick).voice, std::nullopt);
+     }
+     const VelocityMap first = contextForNote(notes.front());
+     if (!first.isPsg())
+         return VelocityMap::resolve(nullptr, std::nullopt);
+     for (const DocNote &note : notes) {
+         const VelocityMap next = contextForNote(note);
+         if (!next.isPsg() || !first.compatibleWith(next))
+             return VelocityMap::resolve(nullptr, std::nullopt);
+     }
+@@ -425,21 +424,21 @@ QRectF VelocityArea::nodeRect(const DocNote &note) const
+     const uint8_t velocity = displayedVelocity(note);
+     return QRectF(xForTick(note.tick) - radius, yForNote(note, velocity) - radius, radius * 2.0,
+                   radius * 2.0);
+ }
+ 
+ QRectF VelocityArea::stemRect(const DocNote &note) const
+ {
+     const double verticalRadius = double(m_geometry.durationLineVerticalRadius);
+     const double horizontalSlop = double(m_geometry.durationLineHorizontalSlop);
+     const double start = xForTick(note.tick) - horizontalSlop;
+-    const double end = xForTick(note.tick + note.duration) + horizontalSlop;
++    const double end = xForTick(uint64_t(note.tick) + note.duration) + horizontalSlop;
+     const uint8_t velocity = displayedVelocity(note);
+     return QRectF(start, yForNote(note, velocity) - verticalRadius, std::max(0.0, end - start),
+                   verticalRadius * 2.0);
+ }
+ 
+ double VelocityArea::xForTick(uint64_t tick) const
+ {
+     const qreal dpr = m_inputHost ? m_inputHost->devicePixelRatio() : 1.0;
+     return m_camera.displayX(double(tick), 0.0, dpr);
+ }
+diff --git a/src/ui/editordrawer/velocityarea/velocityarea.h b/src/ui/editordrawer/velocityarea/velocityarea.h
+index 87e750d0..e365304e 100644
+--- a/src/ui/editordrawer/velocityarea/velocityarea.h
++++ b/src/ui/editordrawer/velocityarea/velocityarea.h
+@@ -99,21 +99,21 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
+         void resolve();
+     };
+ 
+     // Snapshot of one note taken when a gesture begins. Mouse movement must never
+     // read the document, so every field the gesture needs is frozen here. `map`
+     // in particular is the gesture-time voice resolution: contextForNote can
+     // return a different map mid-gesture (hover changes, voicegroup swaps), and
+     // the gesture must stay on the axis it started on.
+     struct FrozenNote {
+         NoteId noteId;
+-        uint64_t tick = 0;
++        Tick tick = 0;
+         uint32_t duration = 0;
+         uint8_t key = 0;
+         uint8_t velocity = 1;
+         VelocityMap map;
+         uint8_t exactOrigin = 1;
+     };
+ 
+     void requestQuickUpdate();
+     void rebuildQuickScene(songview::TimelineQuickScene &scene, bool horizontalPan);
+     void rebuildQuickChrome(songview::TimelineQuickScene &scene, const QRectF &plot,
+diff --git a/src/ui/editordrawer/velocityarea/velocityarea_interaction.cpp b/src/ui/editordrawer/velocityarea/velocityarea_interaction.cpp
+index a83622b9..756e0854 100644
+--- a/src/ui/editordrawer/velocityarea/velocityarea_interaction.cpp
++++ b/src/ui/editordrawer/velocityarea/velocityarea_interaction.cpp
+@@ -236,21 +236,21 @@ void VelocityArea::announcePreview()
+ {
+     const SongDocument *document = m_owner.document();
+     if (!document || m_frozen.empty())
+         return;
+     if (!m_announcedNote.isAssigned())
+         m_announcedNote = m_frozen.front().noteId;
+     for (const FrozenNote &note : m_frozen) {
+         if (note.noteId != m_announcedNote)
+             continue;
+         const uint8_t velocity = m_owner.previewVelocity(note.noteId).value_or(note.velocity);
+-        const uint64_t clocks =
++        const uint32_t clocks =
+             document->ticksPerClock() == 0 ? 0 : note.duration / document->ticksPerClock();
+         const DrawerPageNoteStatus status{
+             note.key, velocity, uint8_t(mid2agbEffectiveVelocity(velocity)), note.duration, clocks};
+         m_owner.showDrawerPageNoteStatus(std::optional<DrawerPageNoteStatus>{status});
+         return;
+     }
+ }
+ 
+ bool VelocityArea::pointerPress(const songview::TimelinePointerInput &input)
+ {
+diff --git a/src/ui/editordrawer/voicechangearea/voicechangearea.cpp b/src/ui/editordrawer/voicechangearea/voicechangearea.cpp
+index 7d654cd8..297e27c8 100644
+--- a/src/ui/editordrawer/voicechangearea/voicechangearea.cpp
++++ b/src/ui/editordrawer/voicechangearea/voicechangearea.cpp
+@@ -213,22 +213,22 @@ void VoiceChangeArea::tracksRemapped(const TrackRemap &)
+     documentChanged();
+ }
+ 
+ void VoiceChangeArea::presentPlayhead(double tick)
+ {
+     // The playhead line itself is painted by SongView's shared Quick chrome; this
+     // updates the right-aligned context readout only when the displayed program
+     // context changes.
+     if (m_live.playback.playing && m_lastPresentedPlayheadTick &&
+         *m_lastPresentedPlayheadTick != tick &&
+-        voiceSlotAt(uint64_t(std::round(std::max(0.0, *m_lastPresentedPlayheadTick)))) !=
+-            voiceSlotAt(uint64_t(std::round(std::max(0.0, tick)))))
++        voiceSlotAt(Tick(std::round(std::max(0.0, *m_lastPresentedPlayheadTick)))) !=
++            voiceSlotAt(Tick(std::round(std::max(0.0, tick)))))
+         requestQuickUpdate();
+     m_live.playback.playheadTick = tick;
+     m_lastPresentedPlayheadTick = tick;
+ }
+ 
+ void VoiceChangeArea::requestQuickUpdate()
+ {
+     m_owner.requestTimelineQuickUpdate(songview::TimelineQuickDirty::VoiceChanges);
+ }
+ 
+@@ -286,24 +286,24 @@ void VoiceChangeArea::clearHover()
+ 
+ void VoiceChangeArea::updateHover(qreal x)
+ {
+     const QRect plot = plotRect();
+     if (!ready() || plot.isEmpty()) {
+         clearHover();
+         return;
+     }
+     const qreal dpr = devicePixelRatio();
+     const double tick = std::max(0.0, m_camera.tickAtContentX(std::max<qreal>(0.0, x)));
+-    const uint64_t snapped = m_grid.snapTick(tick, true);
++    const Tick snapped = m_grid.snapTick(tick, true);
+     DocLanePoint markerPoint;
+     const bool atMarker = voiceMarkerAt(x, &markerPoint);
+-    const uint64_t hoverTick = atMarker ? markerPoint.tick : snapped;
++    const Tick hoverTick = atMarker ? markerPoint.tick : snapped;
+     const qreal lineX = m_camera.displayX(double(hoverTick), 0.0, dpr);
+     QString hoverLabel;
+     if (!voiceMarkerAt(lineX, &markerPoint)) {
+         const int slot = voiceSlotAt(hoverTick);
+         if (slot >= 0 && slot < VOICEGROUP_SIZE)
+             hoverLabel = paintTextFor(slot).hoverLabel;
+     }
+     QRectF labelRect;
+     if (!hoverLabel.isEmpty()) {
+         labelRect = QRectF(lineX + layout::space(layout::Space::One), plot.top(),
+@@ -355,21 +355,21 @@ const VoiceChangeArea::VoicePaintText &VoiceChangeArea::paintTextFor(int program
+         typeName = m4aVoiceTypeName(voicegroup->voices[program].type);
+     }
+     const QString shortName = name.isEmpty() ? (typeName.isEmpty() ? tr("Voice") : typeName)
+                                              : QStringLiteral("%1 (%2)").arg(name, typeName);
+     cache.label = QStringLiteral("%1 %2").arg(program, 3, 10, QLatin1Char('0')).arg(shortName);
+     cache.hoverLabel =
+         QStringLiteral("→ %1 %2").arg(program, 3, 10, QLatin1Char('0')).arg(shortName);
+     return cache;
+ }
+ 
+-int VoiceChangeArea::voiceSlotAt(uint64_t tick) const
++int VoiceChangeArea::voiceSlotAt(Tick tick) const
+ {
+     if (m_engineTrack < 0 || m_engineTrack >= 16)
+         return -1;
+     const auto *timeline = m_owner.timeline();
+     if (!timeline || !m_owner.voicegroup())
+         return -1;
+     int program = timeline->tracks[m_engineTrack].firstProgram;
+     for (const DocLanePoint &point : m_voicePoints) {
+         if (point.tick > tick)
+             break;
+@@ -487,21 +487,21 @@ bool VoiceChangeArea::pointerMove(const songview::TimelinePointerInput &input)
+             if (horizontalDistance < QApplication::startDragDistance())
+                 return true;
+             m_voiceDrag->phase = VoiceDragState::Phase::Active;
+             clearHover();
+             m_owner.setFollowScrollPaused(true);
+             m_inputHost->setCursor(Qt::SizeHorCursor);
+             requestQuickUpdate();
+         }
+         const double rawTick =
+             std::max(0.0, m_camera.tickAtContentX(std::max<qreal>(0.0, position.x())));
+-        const uint64_t tick = m_grid.snapTick(rawTick, input.modifiers & Qt::AltModifier);
++        const Tick tick = m_grid.snapTick(rawTick, input.modifiers & Qt::AltModifier);
+         if (tick != m_voiceDrag->previewTick) {
+             m_voiceDrag->previewTick = tick;
+             requestQuickUpdate();
+         }
+         m_previousPosition = position;
+         return true;
+     }
+     if (m_interaction == Interaction::Pan) {
+         const auto requestedScroll =
+             m_live.horizontalScroll - (position.x() - m_previousPosition.x());
+diff --git a/src/ui/editordrawer/voicechangearea/voicechangearea.h b/src/ui/editordrawer/voicechangearea/voicechangearea.h
+index bff6772b..0eac9c05 100644
+--- a/src/ui/editordrawer/voicechangearea/voicechangearea.h
++++ b/src/ui/editordrawer/voicechangearea/voicechangearea.h
+@@ -92,24 +92,24 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
+         enum class Phase : uint8_t {
+             Pending,
+             Active,
+         };
+ 
+         Phase phase = Phase::Pending;
+         QPointF pressPosition;
+         int engineTrack = -1;
+         DocLanePoint point;
+         uint64_t revision = 0;
+-        uint64_t previewTick = 0;
++        Tick previewTick = 0;
+     };
+     struct VoicePaintEntry {
+-        uint64_t tick = 0;
++        Tick tick = 0;
+         int program = 0;
+     };
+     struct Geometry {
+         int markerHitRadius = 0;
+         int hoverPaintPadding = 0;
+         int gridMinimumCellWidth = 0;
+         void resolve();
+     };
+     // Resolved label text for one program slot. Cached until the voicegroup
+     // pointer, the slot's type, or its source name changes; songChanged drops
+@@ -132,35 +132,35 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
+     void rebuildQuickHover(songview::TimelineQuickScene &scene);
+     void rebuildVisualState();
+     void clearHover();
+     void updateHover(qreal x);
+     QRectF bounds() const;
+     QRectF gutterRect() const;
+     qreal devicePixelRatio() const;
+     bool ready() const noexcept;
+     int primaryTrack() const noexcept;
+     const VoicePaintText &paintTextFor(int program) const;
+-    int voiceSlotAt(uint64_t tick) const;
++    int voiceSlotAt(Tick tick) const;
+     QRect plotRect() const;
+     bool voiceMarkerAt(qreal x, DocLanePoint *out) const;
+     bool voiceDragActive() const noexcept;
+     void resetVoiceDrag();
+     void showPicker(qreal plotX);
+     void showContextMenu(qreal plotX, const QPointF &globalPosition);
+     // Menu/picker seam, owned by voicechangemenu.cpp: guarded capture of the
+     // open-time target, typed menu rows, dispatch, and the shared
+     // captured-target picker path behind both the double-click and the menu.
+     struct PendingVoiceMenu {
+         QPointer<SongDocument> document;
+         uint64_t revision = 0;
+         int track = -1;
+-        uint64_t tick = 0;
++        Tick tick = 0;
+         // Present when the press hit an existing marker; carries the full
+         // occurrence (tick and value) so a Change pick re-finds exactly it.
+         std::optional<DocLanePoint> marker;
+         int initialVoice = 0;
+     };
+     std::optional<PendingVoiceMenu> captureTargetAt(qreal plotX) const;
+     void openPickerForTarget(const PendingVoiceMenu &target);
+     void ensureMenuAdapters();
+     void cancelMenuWithoutFocus();
+     void handleMenuAction(int actionId);
+@@ -176,21 +176,21 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
+     std::vector<VoiceLabelLayout> m_labelLayouts;
+     const SongDocument *m_voicePointsDocument = nullptr;
+     uint64_t m_voicePointsRevision = 0;
+     int m_voicePointsTrack = -1;
+     Interaction m_interaction = Interaction::None;
+     std::optional<VoiceDragState> m_voiceDrag;
+     std::vector<VoicePaintEntry> m_previewEntries;
+     QPointF m_previousPosition;
+     bool m_hoverActive = false;
+     qreal m_hoverX = 0.0;
+-    uint64_t m_hoverTick = 0;
++    Tick m_hoverTick = 0;
+     QString m_hoverLabel;
+     QRectF m_hoverLabelRect;
+     QFont m_titleFont;
+     QFont m_captionFont;
+     QFontMetricsF m_captionMetrics;
+     QFont m_hoverLabelFont;
+     layout::TwoLineTextLayout m_textLayout;
+     mutable std::array<VoicePaintText, VOICEGROUP_SIZE> m_paintTexts;
+     mutable QString m_secondary;
+     // The shared canvas popup session and this band's typed menu adapter.
+diff --git a/src/ui/eventtablemodel.cpp b/src/ui/eventtablemodel.cpp
+index 01aed3a1..b01f8979 100644
+--- a/src/ui/eventtablemodel.cpp
++++ b/src/ui/eventtablemodel.cpp
+@@ -64,21 +64,22 @@ int EventTableModel::qmlRowForRawIndex(qulonglong eventIndex) const
+ {
+     if (eventIndex > qulonglong(std::numeric_limits<size_t>::max()))
+         return -1;
+     return rowForRawEventIndex(size_t(eventIndex));
+ }
+ 
+ int EventTableModel::qmlTempoRowForTick(const QString &tickDigits) const
+ {
+     bool ok = false;
+     const qulonglong tick = tickDigits.toULongLong(&ok);
+-    return ok ? tempoRowForExactTick(uint64_t(tick)) : -1;
++    return ok && tick <= qulonglong(CoreTimeDefaults::kMaxTick) ? tempoRowForExactTick(Tick(tick))
++                                                                : -1;
+ }
+ 
+ bool EventTableModel::qmlUsesNumericFont(int column)
+ {
+     return usesNumericFont(column);
+ }
+ 
+ QHash<int, QByteArray> EventTableModel::roleNames() const
+ {
+     return {
+@@ -166,35 +167,35 @@ std::optional<TempoPoint> EventTableModel::tempoPointForRow(int row) const
+ 
+ int EventTableModel::rowForRawEventIndex(size_t index) const
+ {
+     const auto it = std::find_if(m_rows.begin(), m_rows.end(), [index](const RowKey &key) {
+         const auto *raw = std::get_if<RawRow>(&key);
+         return raw && raw->eventIndex == index;
+     });
+     return it == m_rows.end() ? -1 : int(it - m_rows.begin());
+ }
+ 
+-int EventTableModel::tempoRowForExactTick(uint64_t tick) const
++int EventTableModel::tempoRowForExactTick(Tick tick) const
+ {
+     const auto it = std::find_if(m_rows.begin(), m_rows.end(), [tick](const RowKey &key) {
+         const auto *tempo = std::get_if<TempoRow>(&key);
+         return tempo && tempo->tick == tick;
+     });
+     return it == m_rows.end() ? -1 : int(it - m_rows.begin());
+ }
+ 
+-std::optional<uint64_t> EventTableModel::exactTickForRow(int row) const
++std::optional<Tick> EventTableModel::exactTickForRow(int row) const
+ {
+     if (row < 0 || row >= int(m_rows.size()))
+         return std::nullopt;
+-    const uint64_t tick = rowTick(m_rows[row]);
+-    if (tick == std::numeric_limits<uint64_t>::max())
++    const Tick tick = rowTick(m_rows[row]);
++    if (tick == CoreTimeDefaults::kNoTick)
+         return std::nullopt;
+     return tick;
+ }
+ 
+ int EventTableModel::playheadRowAtOrBeforeTick(double tick) const
+ {
+     const SmfTrack *tr = track();
+     if (!tr || tick < 0)
+         return -1;
+     if (tick >= double(tr->endTick))
+@@ -508,39 +509,39 @@ Qt::ItemFlags EventTableModel::flags(const QModelIndex &index) const
+     return f;
+ }
+ 
+ const SmfTrack *EventTableModel::track() const
+ {
+     if (!m_doc || m_chunk < 0 || m_chunk >= int(m_doc->smf().tracks.size()))
+         return nullptr;
+     return &m_doc->smf().tracks[m_chunk];
+ }
+ 
+-const TempoPoint *EventTableModel::tempoPoint(uint64_t tick) const
++const TempoPoint *EventTableModel::tempoPoint(Tick tick) const
+ {
+     if (!m_doc || m_chunk != 0)
+         return nullptr;
+     const auto &points = m_doc->tempoPoints();
+     const auto it =
+         std::lower_bound(points.begin(), points.end(), tick,
+-                         [](const TempoPoint &point, uint64_t t) { return point.tick < t; });
++                         [](const TempoPoint &point, Tick t) { return point.tick < t; });
+     return it != points.end() && it->tick == tick ? &*it : nullptr;
+ }
+ 
+-uint64_t EventTableModel::rowTick(const RowKey &key) const
++Tick EventTableModel::rowTick(const RowKey &key) const
+ {
+     if (const auto *tempo = std::get_if<TempoRow>(&key))
+         return tempo->tick;
+     const auto *raw = std::get_if<RawRow>(&key);
+     const SmfTrack *tr = track();
+     if (!raw || !tr || raw->eventIndex >= tr->events.size())
+-        return std::numeric_limits<uint64_t>::max();
++        return CoreTimeDefaults::kNoTick;
+     return tr->events[raw->eventIndex].tick;
+ }
+ 
+ void EventTableModel::rebuildRows()
+ {
+     m_rows.clear();
+     m_playRow = -1;
+     const SmfTrack *tr = track();
+     if (!tr)
+         return;
+@@ -563,16 +564,16 @@ void EventTableModel::rebuildRows()
+             (rawIndex == raw.size() || tempo[tempoIndex].tick <= rowTick(raw[rawIndex]))) {
+             m_rows.push_back(TempoRow{tempo[tempoIndex].tick});
+             tempoIndex++;
+         } else {
+             m_rows.push_back(raw[rawIndex]);
+             rawIndex++;
+         }
+     }
+ }
+ 
+-void EventTableModel::setSelectionHandler(std::function<void(int, uint64_t)> handler)
++void EventTableModel::setSelectionHandler(std::function<void(int, Tick)> handler)
+ {
+     m_select = std::move(handler);
+ }
+ 
+ } // namespace eventlist
+diff --git a/src/ui/eventtablemodel.h b/src/ui/eventtablemodel.h
+index 35c48e97..cea08a27 100644
+--- a/src/ui/eventtablemodel.h
++++ b/src/ui/eventtablemodel.h
+@@ -65,73 +65,73 @@ class EventTableModel : public QAbstractTableModel
+     explicit EventTableModel(SongView *sv, QObject *parent);
+     void setSource(SongDocument *doc, int chunk);
+     void setFilter(int mask);
+     void reload();
+     int chunk() const { return m_chunk; }
+     size_t shownEvents() const { return m_rows.size(); }
+     std::optional<size_t> rawEventIndexForRow(int row) const;
+     std::optional<TempoPoint> tempoPointForRow(int row) const;
+     // QModelIndex-compatible row lookups return -1 when no row matches.
+     int rowForRawEventIndex(size_t index) const;
+-    int tempoRowForExactTick(uint64_t tick) const;
+-    std::optional<uint64_t> exactTickForRow(int row) const;
++    int tempoRowForExactTick(Tick tick) const;
++    std::optional<Tick> exactTickForRow(int row) const;
+     int playheadRowAtOrBeforeTick(double tick) const;
+     int playRow() const { return m_playRow; }
+     void setPlayRow(int row);
+     uint8_t fallbackChannel() const;
+-    void setSelectionHandler(std::function<void(int, uint64_t)> handler);
++    void setSelectionHandler(std::function<void(int, Tick)> handler);
+ 
+     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+     QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
+     QVariant data(const QModelIndex &index, int role) const override;
+     QHash<int, QByteArray> roleNames() const override;
+     Qt::ItemFlags flags(const QModelIndex &index) const override;
+     bool setData(const QModelIndex &index, const QVariant &value, int role) override;
+ 
+   private:
+     enum class RowKind { Raw, Tempo };
+     struct PendingRawEdit;
+     struct RawRow {
+         size_t eventIndex;
+     };
+     struct TempoRow {
+-        uint64_t tick;
++        Tick tick;
+     };
+     using RowKey = std::variant<RawRow, TempoRow>;
+ 
+     static RowKind rowKind(const RowKey &key);
+     const SmfTrack *track() const;
+     static bool filterMatches(int mask, const SmfEvent &ev);
+-    const TempoPoint *tempoPoint(uint64_t tick) const;
++    const TempoPoint *tempoPoint(Tick tick) const;
+     bool handleEndTick(const QVariant &value);
+     bool handleTempoTick(const TempoPoint &point, const QVariant &value);
+     bool handleTempoTypeChange(const TempoPoint &point, const QVariant &value);
+     bool handleTempoBpm(const TempoPoint &point, const QVariant &value);
+     bool handleRawTick(size_t eventIndex, const SmfEvent &event, const QVariant &value);
+     bool handleRawTypeChange(size_t eventIndex, const SmfEvent &event, const QVariant &value);
+     bool handleRawTypeToTempo(size_t eventIndex, const SmfEvent &event);
+     bool handleRawChannel(size_t eventIndex, const SmfEvent &event, const QVariant &value);
+     bool handleRawData1(size_t eventIndex, const SmfEvent &event, const QVariant &value);
+     bool handleRawData2(size_t eventIndex, const SmfEvent &event, const QVariant &value);
+     bool handleRawBlob(size_t eventIndex, const SmfEvent &event, const QVariant &value);
+     SmfEvent pendingRawEvent(size_t eventIndex, const SmfEvent &fallback) const;
+     bool commitRawEdit(size_t eventIndex, const SmfEvent &event);
+-    void queueTempoEdit(const TempoEdit &edit, uint64_t selectTick);
+-    uint64_t rowTick(const RowKey &key) const;
++    void queueTempoEdit(const TempoEdit &edit, Tick selectTick);
++    Tick rowTick(const RowKey &key) const;
+     void rebuildRows();
+ 
+     QFont m_bodyFont;
+     QFont m_bodyItalicFont;
+     QFont m_numericFont;
+     QFont m_numericItalicFont;
+     SongView *m_sv;
+     SongDocument *m_doc = nullptr;
+     int m_chunk = -1;
+     int m_filter = FilterAll;
+     int m_playRow = -1;
+     std::vector<RowKey> m_rows;
+     std::vector<std::shared_ptr<PendingRawEdit>> m_pendingRawEdits;
+-    std::function<void(int, uint64_t)> m_select;
++    std::function<void(int, Tick)> m_select;
+ };
+ 
+ } // namespace eventlist
+diff --git a/src/ui/eventtablemodeledit.cpp b/src/ui/eventtablemodeledit.cpp
+index cf17d988..f6bffa97 100644
+--- a/src/ui/eventtablemodeledit.cpp
++++ b/src/ui/eventtablemodeledit.cpp
+@@ -8,65 +8,70 @@
+ 
+ #include "core/smf.h"
+ #include "core/songdocument.h"
+ #include "eventtabletypes.h"
+ #include "ui/songview.h"
+ 
+ namespace eventlist {
+ 
+ namespace {
+ 
+-TempoPoint tempoPointForBpm(uint64_t tick, int bpm)
++TempoPoint tempoPointForBpm(Tick tick, int bpm)
+ {
+-    return {Tick(tick), uint32_t(std::lround(60000000.0 / bpm))};
++    return {tick, uint32_t(std::lround(60000000.0 / bpm))};
+ }
+ 
+ } // namespace
+ struct EventTableModel::PendingRawEdit {
+     QPointer<SongDocument> document;
+     int chunk = -1;
+     size_t index = 0;
+     SmfEvent projected;
+     SmfEvent applied;
+     uint64_t revision = 0;
+     size_t generation = 0;
+ };
+ 
+ bool EventTableModel::handleEndTick(const QVariant &value)
+ {
+     const auto doc = m_doc;
+     const auto chunk = m_chunk;
+-    const auto tick = uint64_t(value.toULongLong());
++    const auto tick = value.toULongLong();
++    if (tick > CoreTimeDefaults::kMaxTick)
++        return false;
+     QMetaObject::invokeMethod(
+-        this, [doc, chunk, tick] { doc->setTrackEndTick(chunk, tick); }, Qt::QueuedConnection);
++        this, [doc, chunk, tick] { doc->setTrackEndTick(chunk, Tick(tick)); },
++        Qt::QueuedConnection);
+     return true;
+ }
+ 
+-void EventTableModel::queueTempoEdit(const TempoEdit &edit, uint64_t selectTick)
++void EventTableModel::queueTempoEdit(const TempoEdit &edit, Tick selectTick)
+ {
+     const auto doc = m_doc;
+     const auto select = m_select;
+     const auto chunk = m_chunk;
+     QMetaObject::invokeMethod(
+         this,
+         [doc, edit, select, chunk, selectTick] {
+             doc->applyTempoEdit(edit);
+             if (select)
+                 select(chunk, selectTick);
+         },
+         Qt::QueuedConnection);
+ }
+ 
+ bool EventTableModel::handleTempoTick(const TempoPoint &point, const QVariant &value)
+ {
+-    const auto tick = uint64_t(value.toULongLong());
+-    queueTempoEdit({{point}, {{Tick(tick), point.microsecondsPerQuarterNote}}}, tick);
++    const auto tick = value.toULongLong();
++    if (tick > CoreTimeDefaults::kMaxTick)
++        return false;
++    queueTempoEdit({{point}, {{Tick(tick), point.microsecondsPerQuarterNote}}}, Tick(tick));
+     return true;
+ }
+ 
+ bool EventTableModel::handleTempoTypeChange(const TempoPoint &point, const QVariant &value)
+ {
+     const auto kind = value.toInt();
+     if (kind == TypeTempo)
+         return true;
+     if (kind < 0 || kind >= TypeKindCount)
+         return false;
+@@ -100,21 +105,24 @@ bool EventTableModel::handleTempoBpm(const TempoPoint &point, const QVariant &va
+                 EventListController::tr("Tempo must be a whole BPM from 20 through 255"));
+         return false;
+     }
+     queueTempoEdit({{point}, {tempoPointForBpm(point.tick, bpm)}}, point.tick);
+     return true;
+ }
+ 
+ bool EventTableModel::handleRawTick(size_t eventIndex, const SmfEvent &event, const QVariant &value)
+ {
+     auto next = pendingRawEvent(eventIndex, event);
+-    next.tick = value.toULongLong();
++    const auto tick = value.toULongLong();
++    if (tick > CoreTimeDefaults::kMaxTick)
++        return false;
++    next.tick = Tick(tick);
+     return commitRawEdit(eventIndex, next);
+ }
+ 
+ bool EventTableModel::handleRawTypeToTempo(size_t eventIndex, const SmfEvent &event)
+ {
+     if (m_chunk != 0)
+         return false;
+     const auto point = TempoPoint{event.tick, 500000};
+     const auto doc = m_doc;
+     const auto chunk = m_chunk;
+diff --git a/src/ui/pitchbendeditor.cpp b/src/ui/pitchbendeditor.cpp
+index cdae35a3..951c3c0c 100644
+--- a/src/ui/pitchbendeditor.cpp
++++ b/src/ui/pitchbendeditor.cpp
+@@ -36,26 +36,26 @@ QFont chromeFont()
+ }
+ 
+ // Effective DPR of the actual Quick window; safe identity before the
+ // window exists or after the coordinator detaches.
+ qreal chromeDpr(const QPointer<::SongView> &songView)
+ {
+     return songView ? songView->quickView()->quickDevicePixelRatio() : 1.0;
+ }
+ 
+ struct CurveSnapshot {
+-    std::map<uint64_t, int> points;
++    std::map<Tick, int> points;
+     int endValue = 0;
+ };
+ 
+ CurveSnapshot readCurveSnapshot(const SongDocument *document, int engineTrack, uint8_t cc,
+-                                uint64_t startTick, uint64_t endTick)
++                                Tick startTick, Tick endTick)
+ {
+     CurveSnapshot snapshot;
+     int enteringValue = 0;
+     for (const DocLanePoint &point : document->lanePoints(engineTrack, cc)) {
+         if (point.tick <= startTick)
+             enteringValue = point.value;
+         if (point.tick > endTick)
+             break;
+         snapshot.endValue = point.value;
+         if (point.tick > startTick && point.tick < endTick)
+@@ -219,31 +219,31 @@ void PitchBendEditor::snapshotCurve(PitchBendGraph *graph, uint8_t cc)
+ {
+     CurveSnapshot snapshot =
+         readCurveSnapshot(m_document, m_engineTrack, cc, m_startTick, m_endTick);
+     graph->setCurve(snapshot.points, snapshot.endValue);
+ }
+ 
+ bool PitchBendEditor::writeController(uint8_t cc, int value, int endValue)
+ {
+     if (!noteSpanStillPresent())
+         return false;
+-    m_document->writeLanePoints(m_engineTrack, cc, m_startTick, m_endTick,
+-                                {{m_startTick, value}, {m_endTick, endValue}});
++    m_document->writeLanePoints(m_engineTrack, cc, Tick(m_startTick), Tick(m_endTick),
++                                {{Tick(m_startTick), value}, {Tick(m_endTick), endValue}});
+     return true;
+ }
+ 
+ void PitchBendEditor::writeCurve(PitchBendGraph *graph)
+ {
+     if (!noteSpanStillPresent())
+         return;
+-    m_document->writeLanePoints(m_engineTrack, ccForGraph(graph), m_startTick, m_endTick,
+-                                graph->curvePoints());
++    m_document->writeLanePoints(m_engineTrack, ccForGraph(graph), Tick(m_startTick),
++                                Tick(m_endTick), graph->curvePoints());
+ }
+ 
+ void PitchBendEditor::markCurvePending(PitchBendGraph *graph)
+ {
+     m_pendingGraph = graph;
+     m_pending = PendingEdit::Curve;
+ }
+ 
+ void PitchBendEditor::commitCurve()
+ {
+@@ -383,26 +383,26 @@ void PitchBendEditor::bindGraph(PitchBendGraph *graph, PitchBendGraph::Lane lane
+     // for both lanes preserves the widget popup's behavior exactly.
+     callbacks.rangeChangeRequested = [this](int steps) { updateRange(steps); };
+     callbacks.auditionRequested = [this] {
+         commitCurve();
+         if (m_songView)
+             m_songView->requestPlayPauseFrom(m_startTick);
+     };
+     callbacks.grabLost = [this] { onGrabLost(); };
+ 
+     CurveSnapshot snapshot = readCurveSnapshot(m_document.data(), m_engineTrack, ccForGraph(graph),
+-                                               m_startTick, m_endTick);
++                                               Tick(m_startTick), Tick(m_endTick));
+     graph->initialize({
+         .songView = m_songView.data(),
+         .engineTrack = m_engineTrack,
+-        .startTick = m_startTick,
+-        .endTick = m_endTick,
++        .startTick = Tick(m_startTick),
++        .endTick = Tick(m_endTick),
+         .unterminated = m_unterminated,
+         .lane = lane,
+         .geometry = m_geometry,
+         .bendRange = m_bendRange,
+         .points = std::move(snapshot.points),
+         .endValue = snapshot.endValue,
+         .callbacks = std::move(callbacks),
+     });
+ }
+ 
+diff --git a/src/ui/pitchbendgraph.cpp b/src/ui/pitchbendgraph.cpp
+index 7deb6fa5..535aa1a9 100644
+--- a/src/ui/pitchbendgraph.cpp
++++ b/src/ui/pitchbendgraph.cpp
+@@ -72,21 +72,21 @@ void PitchBendGraph::setBendRange(int range)
+         return;
+     const int clampedRange = std::clamp(range, 0, 127);
+     if (m_bendRange == clampedRange)
+         return;
+     m_bendRange = clampedRange;
+     redraw();
+     notifyPresentationChanged();
+     notifyLiveValueChanged();
+ }
+ 
+-void PitchBendGraph::setCurve(const std::map<uint64_t, int> &points, int endValue)
++void PitchBendGraph::setCurve(const std::map<Tick, int> &points, int endValue)
+ {
+     if (!m_initialized)
+         return;
+     m_points = points;
+     m_endValue = std::clamp(endValue, minimumValue(), maximumValue());
+     m_points[m_endTick] = m_endValue;
+     if (m_selectedTick && !m_points.contains(*m_selectedTick))
+         m_selectedTick.reset();
+     cancelGesture();
+     m_keyboardTick = m_startTick;
+@@ -105,46 +105,46 @@ void PitchBendGraph::resetCurve()
+     m_selectedTick.reset();
+     cancelGesture();
+     m_keyboardTick = m_startTick;
+     m_liveValue = defaultValue();
+     notifyPreviewChanged();
+     forceActiveFocus(Qt::MouseFocusReason);
+     redraw();
+     notifyLiveValueChanged();
+ }
+ 
+-std::optional<uint64_t> PitchBendGraph::selectedTick() const
++std::optional<Tick> PitchBendGraph::selectedTick() const
+ {
+     return m_selectedTick;
+ }
+ 
+-void PitchBendGraph::setSelectedTick(std::optional<uint64_t> tick)
++void PitchBendGraph::setSelectedTick(std::optional<Tick> tick)
+ {
+     if (!m_initialized)
+         return;
+     if (tick && !m_points.contains(*tick))
+         tick.reset();
+     if (m_selectedTick == tick)
+         return;
+     m_selectedTick = tick;
+     redraw();
+ }
+ 
+-std::optional<std::pair<uint64_t, int>> PitchBendGraph::hitTest(const QPointF &position) const
++std::optional<std::pair<Tick, int>> PitchBendGraph::hitTest(const QPointF &position) const
+ {
+     if (!m_initialized)
+         return std::nullopt;
+     // Node radii are DIPs; Quick delivers item-local points, so unlike the
+     // widget surface there is no per-window DPR multiplier here.
+     const qreal radiusSquared = m_geometry.nodeHitRadius * m_geometry.nodeHitRadius;
+     qreal nearestDistanceSquared = radiusSquared;
+-    std::optional<std::pair<uint64_t, int>> nearest;
++    std::optional<std::pair<Tick, int>> nearest;
+     for (const auto &[tick, value] : m_points) {
+         const QPoint center = vertexPosition(tick, value);
+         const qreal dx = position.x() - center.x();
+         const qreal dy = position.y() - center.y();
+         const qreal distanceSquared = dx * dx + dy * dy;
+         if (distanceSquared > radiusSquared)
+             continue;
+         if (!nearest || distanceSquared < nearestDistanceSquared ||
+             (qFuzzyCompare(distanceSquared, nearestDistanceSquared) && tick < nearest->first)) {
+             nearestDistanceSquared = distanceSquared;
+@@ -163,21 +163,21 @@ bool PitchBendGraph::removeSelectedVertex()
+     if (m_points.erase(*m_selectedTick) == 0)
+         return false;
+     setSelectedTick(std::nullopt);
+     m_liveValue = valueAtTick(m_keyboardTick);
+     notifyPreviewChanged();
+     notifyLiveValueChanged();
+     notifyCommitRequested();
+     return true;
+ }
+ 
+-QPoint PitchBendGraph::vertexPosition(uint64_t tick, int value) const
++QPoint PitchBendGraph::vertexPosition(Tick tick, int value) const
+ {
+     if (!m_initialized)
+         return {};
+     return {xAtTick(tick), yAtValue(value)};
+ }
+ 
+ void PitchBendGraph::setKeyboardFraction(double fraction)
+ {
+     if (!m_initialized)
+         return;
+@@ -241,23 +241,23 @@ int PitchBendGraph::liveValue() const
+ {
+     return m_initialized ? m_liveValue : 0;
+ }
+ 
+ std::vector<SongDocument::LanePointValue> PitchBendGraph::curvePoints() const
+ {
+     if (!m_initialized)
+         return {};
+     std::vector<SongDocument::LanePointValue> points;
+     points.reserve(m_points.size());
+-    const uint64_t fineTick = m_grid ? m_grid->fineGridTicks() : 1;
++    const uint32_t fineTick = m_grid ? m_grid->fineGridTicks() : 1;
+     int previous = 0;
+-    uint64_t previousTick = 0;
++    Tick previousTick = 0;
+     bool havePrevious = false;
+     for (const auto &[tick, value] : m_points) {
+         const bool endpoint = tick == m_startTick || tick == m_endTick;
+         const bool fineSample =
+             havePrevious && tick > previousTick && tick - previousTick == fineTick;
+         if (endpoint || !havePrevious || value != previous || fineSample)
+             points.push_back({tick, value});
+         previous = value;
+         previousTick = tick;
+         havePrevious = true;
+@@ -476,21 +476,21 @@ void PitchBendGraph::notifyGrabLost()
+ {
+     if (m_initialized && m_callbacks.grabLost)
+         m_callbacks.grabLost();
+ }
+ 
+ void PitchBendGraph::updateStroke(const QPointF &position)
+ {
+     if (!m_initialized || !m_strokeState)
+         return;
+     auto &state = *m_strokeState;
+-    const uint64_t tick = tickAtX(position.x(), gestureSampling());
++    const Tick tick = tickAtX(position.x(), gestureSampling());
+     const int value = valueAtY(position.y());
+     if (isLineGesture()) {
+         m_points = state.snapshot;
+         replaceSegment(state.anchorTick, state.anchorValue, tick, value, gestureSampling());
+     } else {
+         replaceSegment(state.previousTick, state.previousValue, tick, value, gestureSampling());
+     }
+     state.previousTick = tick;
+     state.previousValue = value;
+     m_keyboardTick = tick;
+@@ -500,30 +500,30 @@ void PitchBendGraph::updateStroke(const QPointF &position)
+     notifyLiveValueChanged();
+ }
+ 
+ void PitchBendGraph::updateVertexDrag(const QPointF &position, Qt::KeyboardModifiers modifiers)
+ {
+     if (!m_initialized || !m_vertexDragState)
+         return;
+     auto &state = *m_vertexDragState;
+     m_points = state.snapshot;
+     const int value = valueAtY(position.y());
+-    uint64_t tick = state.originalTick;
++    Tick tick = state.originalTick;
+     const bool endpoint = tick == m_startTick || tick == m_endTick;
+     if (!endpoint && m_endTick > m_startTick + 1) {
+         const Sampling sampling = modifiers & Qt::AltModifier ? Sampling::Fine : Sampling::Normal;
+-        const uint64_t minimumTick = m_startTick + 1;
+-        const uint64_t maximumTick = m_endTick - 1;
++        const Tick minimumTick = m_startTick + 1;
++        const Tick maximumTick = m_endTick - 1;
+         tick = std::clamp(tickAtX(position.x(), sampling), minimumTick, maximumTick);
+         if (tick != state.originalTick && m_points.contains(tick)) {
+             const int direction = tick > state.originalTick ? 1 : -1;
+-            uint64_t candidate = tick;
++            Tick candidate = tick;
+             bool found = false;
+             while (true) {
+                 if (direction > 0) {
+                     if (candidate >= maximumTick)
+                         break;
+                     ++candidate;
+                 } else {
+                     if (candidate <= minimumTick)
+                         break;
+                     --candidate;
+@@ -551,143 +551,138 @@ void PitchBendGraph::updateVertexDrag(const QPointF &position, Qt::KeyboardModif
+     notifyLiveValueChanged();
+ }
+ 
+ void PitchBendGraph::finishGesture()
+ {
+     cancelGesture();
+     redraw();
+     notifyCommitRequested();
+ }
+ 
+-void PitchBendGraph::replaceSegment(uint64_t tick0, int value0, uint64_t tick1, int value1,
++void PitchBendGraph::replaceSegment(Tick tick0, int value0, Tick tick1, int value1,
+                                     Sampling sampling)
+ {
+-    const uint64_t low = std::min(tick0, tick1);
+-    const uint64_t high = std::max(tick0, tick1);
++    const Tick low = std::min(tick0, tick1);
++    const Tick high = std::max(tick0, tick1);
+     const auto eraseBegin = m_points.lower_bound(low);
+     const auto eraseEnd = m_points.upper_bound(high);
+     m_points.erase(eraseBegin, eraseEnd);
+-    const auto writeSample = [&](uint64_t sampleTick) {
++    const auto writeSample = [&](Tick sampleTick) {
+         const double fraction =
+             tick1 == tick0
+                 ? 1.0
+                 : std::clamp((double(sampleTick) - double(tick0)) / (double(tick1) - double(tick0)),
+                              0.0, 1.0);
+         m_points[sampleTick] = std::clamp(value0 + qRound(fraction * double(value1 - value0)),
+                                           minimumValue(), maximumValue());
+     };
+     writeSample(low);
+-    uint64_t tick = low;
++    Tick tick = low;
+     while (tick < high) {
+-        const uint64_t next = nextSampleTick(tick, sampling);
++        const Tick next = nextSampleTick(tick, sampling);
+         if (next <= tick || next >= high)
+             break;
+         writeSample(next);
+         tick = next;
+     }
+     if (high != low)
+         writeSample(high);
+     m_points[m_endTick] = m_endValue;
+ }
+ 
+ bool PitchBendGraph::isLineGesture() const
+ {
+     return m_strokeState && m_strokeState->mode == StrokeMode::AngledLine;
+ }
+ 
+ PitchBendGraph::Sampling PitchBendGraph::gestureSampling() const
+ {
+     return isLineGesture() ? Sampling::Fine : Sampling::Normal;
+ }
+ 
+-uint64_t PitchBendGraph::normalCellTicksAt(uint64_t tick) const
++uint32_t PitchBendGraph::normalCellTicksAt(Tick tick) const
+ {
+     if (!m_grid)
+         return 1;
+-    const uint64_t span = std::max<uint64_t>(1, m_endTick - m_startTick);
++    const uint32_t span = std::max<Tick>(1, m_endTick - m_startTick);
+     const double pixelsPerTick = double(canvasRect().width() - 1) / double(span);
+     return m_grid->gridTicksAtScale(tick, pixelsPerTick);
+ }
+ 
+-uint64_t PitchBendGraph::samplingCellTicksAt(uint64_t tick, Sampling sampling) const
++uint32_t PitchBendGraph::samplingCellTicksAt(Tick tick, Sampling sampling) const
+ {
+     return sampling == Sampling::Fine ? (m_grid ? m_grid->fineGridTicks() : 1)
+                                       : normalCellTicksAt(tick);
+ }
+ 
+-uint64_t PitchBendGraph::nextSampleTick(uint64_t tick, Sampling sampling) const
++Tick PitchBendGraph::nextSampleTick(Tick tick, Sampling sampling) const
+ {
+     if (tick >= m_endTick)
+         return m_endTick;
+-    const uint64_t cell = samplingCellTicksAt(tick, sampling);
+-    uint64_t segmentEnd = m_endTick;
+-    const uint64_t anchor =
++    const uint32_t cell = samplingCellTicksAt(tick, sampling);
++    Tick segmentEnd = m_endTick;
++    const Tick anchor =
+         sampling == Sampling::Fine ? 0 : (m_grid ? m_grid->segmentAt(tick).start : 0);
+     if (sampling == Sampling::Normal && m_grid)
+         segmentEnd = std::min(m_endTick, m_grid->segmentAt(tick).next);
+     const uint64_t offset = tick > anchor ? tick - anchor : 0;
+     const uint64_t quotient = offset / cell;
+-    if (quotient >= UINT64_MAX / cell)
+-        return segmentEnd;
+-    const uint64_t aligned = anchor + (quotient + 1) * cell;
++    const uint64_t aligned = uint64_t(anchor) + (quotient + 1) * cell;
+     if (aligned > tick)
+-        return std::min(aligned, segmentEnd);
+-    if (tick == UINT64_MAX)
+-        return segmentEnd;
+-    return std::min(tick + 1, segmentEnd);
++        return std::min(Tick(aligned), segmentEnd);
++    return std::min(Tick(tick + 1), segmentEnd);
+ }
+ 
+-uint64_t PitchBendGraph::lastEditableTick(Sampling sampling) const
++Tick PitchBendGraph::lastEditableTick(Sampling sampling) const
+ {
+     if (m_endTick <= m_startTick + 1)
+         return m_startTick;
+-    const uint64_t lastRaw = m_endTick - 1;
+-    const uint64_t cell = samplingCellTicksAt(lastRaw, sampling);
+-    const uint64_t anchor =
++    const Tick lastRaw = m_endTick - 1;
++    const uint32_t cell = samplingCellTicksAt(lastRaw, sampling);
++    const Tick anchor =
+         sampling == Sampling::Fine ? 0 : (m_grid ? m_grid->segmentAt(lastRaw).start : 0);
+-    const uint64_t tick =
+-        lastRaw < anchor ? m_startTick : anchor + ((lastRaw - anchor) / cell) * cell;
++    const Tick tick = lastRaw < anchor ? m_startTick : anchor + ((lastRaw - anchor) / cell) * cell;
+     return std::clamp(tick, m_startTick, lastRaw);
+ }
+-uint64_t PitchBendGraph::tickAtFraction(double fraction, Sampling sampling) const
++Tick PitchBendGraph::tickAtFraction(double fraction, Sampling sampling) const
+ {
+     if (fraction <= 0.0)
+         return m_startTick;
+     if (fraction >= 1.0)
+         return lastEditableTick(sampling);
+     const double raw = double(m_startTick) + fraction * double(m_endTick - m_startTick);
+-    const uint64_t rawTick =
+-        std::clamp<uint64_t>(uint64_t(std::max(0.0, std::round(raw))), m_startTick, m_endTick);
+-    const uint64_t cell = samplingCellTicksAt(rawTick, sampling);
+-    const uint64_t anchor =
++    const Tick rawTick =
++        std::clamp<Tick>(Tick(std::max(0.0, std::round(raw))), m_startTick, m_endTick);
++    const uint32_t cell = samplingCellTicksAt(rawTick, sampling);
++    const Tick anchor =
+         sampling == Sampling::Fine ? 0 : (m_grid ? m_grid->segmentAt(rawTick).start : 0);
+     const double snapped =
+         double(anchor) + std::round((raw - double(anchor)) / double(cell)) * cell;
+     if (snapped <= double(m_startTick))
+         return m_startTick;
+     if (sampling == Sampling::Normal && m_grid) {
+-        const uint64_t segmentEnd = std::min(m_endTick, m_grid->segmentAt(rawTick).next);
++        const Tick segmentEnd = std::min(m_endTick, m_grid->segmentAt(rawTick).next);
+         if (snapped >= double(segmentEnd) && segmentEnd < m_endTick)
+             return segmentEnd;
+     }
+-    return std::min<uint64_t>(uint64_t(snapped), lastEditableTick(sampling));
++    return std::min<Tick>(Tick(snapped), lastEditableTick(sampling));
+ }
+ 
+-uint64_t PitchBendGraph::tickAtX(qreal x, Sampling sampling) const
++Tick PitchBendGraph::tickAtX(qreal x, Sampling sampling) const
+ {
+     const QRect graph = canvasRect();
+     const double fraction =
+         std::clamp((x - graph.left()) / double(std::max(1, graph.width() - 1)), 0.0, 1.0);
+     return tickAtFraction(fraction, sampling);
+ }
+ 
+-int PitchBendGraph::xAtTick(uint64_t tick) const
++int PitchBendGraph::xAtTick(Tick tick) const
+ {
+     const QRect graph = canvasRect();
+     const double fraction = m_endTick > m_startTick && tick >= m_startTick
+                                 ? double(tick - m_startTick) / double(m_endTick - m_startTick)
+                                 : 0.0;
+     return graph.left() + qRound(std::clamp(fraction, 0.0, 1.0) * (graph.width() - 1));
+ }
+ 
+ int PitchBendGraph::valueAtY(qreal y) const
+ {
+@@ -717,21 +712,21 @@ int PitchBendGraph::yAtValue(int value) const
+ {
+     const QRect graph = canvasRect();
+     if (m_lane == Lane::ModWheel)
+         return graph.bottom() - qRound(double(std::clamp(value, 0, 127)) * graph.height() / 127.0);
+     const int center = graph.center().y();
+     if (value >= 0)
+         return center - qRound(double(value) * double(center - graph.top()) / 8191.0);
+     return center + qRound(double(-value) * double(graph.bottom() - center) / 8192.0);
+ }
+ 
+-int PitchBendGraph::valueAtTick(uint64_t tick) const
++int PitchBendGraph::valueAtTick(Tick tick) const
+ {
+     const auto it = m_points.upper_bound(tick);
+     if (it == m_points.begin())
+         return defaultValue();
+     return std::prev(it)->second;
+ }
+ 
+ int PitchBendGraph::minimumValue() const
+ {
+     return m_lane == Lane::PitchBend ? -8192 : 0;
+diff --git a/src/ui/pitchbendgraph.hpp b/src/ui/pitchbendgraph.hpp
+index 9aa090fb..5a93f3ac 100644
+--- a/src/ui/pitchbendgraph.hpp
++++ b/src/ui/pitchbendgraph.hpp
+@@ -52,21 +52,21 @@ struct PitchBendGeometry {
+     qreal nodeHitRadius = 0.0;
+     qreal nodePaintRadius = 0.0;
+     qreal selectedRingRadius = 0.0;
+     qreal curveStroke = 0.0;
+     qreal scrubThreshold = 0.0;
+     qreal hairline = 0.0;
+ };
+ 
+ // One editable lane of the note-automation popup. A QQuickItem whose curve,
+ // gesture, sampling, collision, and wheel algorithms stay in C++ with exact
+-// uint64_t tick precision; QML owns only the labels around the canvas. The
++// Tick tick precision; QML owns only the labels around the canvas. The
+ // retained scene-graph layer is rebuilt on the GUI thread and synchronized on
+ // the render thread through timeline_quick::syncLayerNode (see
+ // pitchbendgraph_render.cpp). Not final: QML registration instantiates the
+ // type through QQmlElement<T>.
+ class PitchBendGraph : public QQuickItem
+ {
+     Q_OBJECT
+     Q_DISABLE_COPY_MOVE(PitchBendGraph)
+ 
+     Q_PROPERTY(QString laneTitle READ laneTitle NOTIFY presentationChanged FINAL)
+@@ -87,46 +87,46 @@ class PitchBendGraph : public QQuickItem
+         std::function<void(int)> rangeChangeRequested;
+         std::function<void()> auditionRequested;
+         // Unexpected grab loss commits the pending preview while open.
+         // Dismissal settles by its own action before releasing the grab.
+         std::function<void()> grabLost;
+     };
+ 
+     struct Initialization {
+         ::SongView *songView = nullptr;
+         int engineTrack = -1;
+-        uint64_t startTick = 0;
+-        uint64_t endTick = 0;
++        Tick startTick = 0;
++        Tick endTick = 0;
+         bool unterminated = false;
+         Lane lane = Lane::PitchBend;
+         PitchBendGeometry geometry;
+         int bendRange = 2;
+-        std::map<uint64_t, int> points;
++        std::map<Tick, int> points;
+         int endValue = 0;
+         Callbacks callbacks;
+     };
+ 
+     explicit PitchBendGraph(QQuickItem *parent = nullptr);
+ 
+     // Establishes all dependencies and initial state before rendering, input,
+     // or property notifications are enabled.
+     void initialize(Initialization initial);
+     void setMetrics(const PitchBendGeometry &geometry);
+ 
+     void setBendRange(int range);
+-    void setCurve(const std::map<uint64_t, int> &points, int endValue);
++    void setCurve(const std::map<Tick, int> &points, int endValue);
+     void resetCurve();
+-    std::optional<uint64_t> selectedTick() const;
+-    void setSelectedTick(std::optional<uint64_t> tick);
+-    std::optional<std::pair<uint64_t, int>> hitTest(const QPointF &position) const;
++    std::optional<Tick> selectedTick() const;
++    void setSelectedTick(std::optional<Tick> tick);
++    std::optional<std::pair<Tick, int>> hitTest(const QPointF &position) const;
+     bool removeSelectedVertex();
+-    QPoint vertexPosition(uint64_t tick, int value) const;
++    QPoint vertexPosition(Tick tick, int value) const;
+     void setKeyboardFraction(double fraction);
+     void cancelGesture();
+     bool handleKeyPress(QKeyEvent *event);
+ 
+     QRect canvasRect() const;
+     bool hasGesture() const;
+     int liveValue() const;
+     std::vector<SongDocument::LanePointValue> curvePoints() const;
+     Lane lane() const;
+ 
+@@ -152,30 +152,30 @@ class PitchBendGraph : public QQuickItem
+     void focusInEvent(QFocusEvent *event) override;
+     void focusOutEvent(QFocusEvent *event) override;
+     void mouseUngrabEvent() override;
+ 
+   private:
+     enum class StrokeMode { Freehand, AngledLine };
+     enum class Sampling { Normal, Fine };
+ 
+     struct StrokeState {
+         StrokeMode mode = StrokeMode::Freehand;
+-        std::map<uint64_t, int> snapshot;
+-        uint64_t anchorTick = 0;
++        std::map<Tick, int> snapshot;
++        Tick anchorTick = 0;
+         int anchorValue = 0;
+-        uint64_t previousTick = 0;
++        Tick previousTick = 0;
+         int previousValue = 0;
+     };
+ 
+     struct VertexDragState {
+-        std::map<uint64_t, int> snapshot;
+-        uint64_t originalTick = 0;
++        std::map<Tick, int> snapshot;
++        Tick originalTick = 0;
+     };
+ 
+     // redraw() rebuilds the retained layer and schedules a scene-graph sync.
+     void redraw();
+     void notifyPresentationChanged();
+     void notifyLiveValueChanged();
+     // Retained-layer rebuild (grid, curve, nodes, preview, focus frame);
+     // implemented in pitchbendgraph_render.cpp.
+     void rebuildLayer();
+     void buildGrid(const QRectF &plot);
+@@ -184,53 +184,53 @@ class PitchBendGraph : public QQuickItem
+     void buildFocusFrame();
+ 
+     void notifyPreviewChanged();
+     void notifyCommitRequested();
+     void notifyCancelRequested();
+     void notifyAuditionRequested();
+     void notifyGrabLost();
+     void updateStroke(const QPointF &position);
+     void updateVertexDrag(const QPointF &position, Qt::KeyboardModifiers modifiers = {});
+     void finishGesture();
+-    void replaceSegment(uint64_t tick0, int value0, uint64_t tick1, int value1, Sampling sampling);
++    void replaceSegment(Tick tick0, int value0, Tick tick1, int value1, Sampling sampling);
+     bool isLineGesture() const;
+     Sampling gestureSampling() const;
+-    uint64_t normalCellTicksAt(uint64_t tick) const;
+-    uint64_t samplingCellTicksAt(uint64_t tick, Sampling sampling) const;
+-    uint64_t nextSampleTick(uint64_t tick, Sampling sampling) const;
+-    uint64_t lastEditableTick(Sampling sampling) const;
+-    uint64_t tickAtFraction(double fraction, Sampling sampling) const;
+-    uint64_t tickAtX(qreal x, Sampling sampling) const;
+-    int xAtTick(uint64_t tick) const;
++    uint32_t normalCellTicksAt(Tick tick) const;
++    uint32_t samplingCellTicksAt(Tick tick, Sampling sampling) const;
++    Tick nextSampleTick(Tick tick, Sampling sampling) const;
++    Tick lastEditableTick(Sampling sampling) const;
++    Tick tickAtFraction(double fraction, Sampling sampling) const;
++    Tick tickAtX(qreal x, Sampling sampling) const;
++    int xAtTick(Tick tick) const;
+     int valueAtY(qreal y) const;
+     int yAtValue(int value) const;
+-    int valueAtTick(uint64_t tick) const;
++    int valueAtTick(Tick tick) const;
+     int minimumValue() const;
+     int maximumValue() const;
+     int defaultValue() const;
+     QString formatLiveValue() const;
+     QString formatRangeLimit(bool positive) const;
+ 
+     static constexpr int kBendStep = 128;
+ 
+     bool m_initialized = false;
+     ::SongView *m_songView = nullptr;
+     const songview::Grid *m_grid = nullptr;
+     int m_engineTrack = -1;
+-    uint64_t m_startTick = 0;
+-    uint64_t m_endTick = 0;
++    Tick m_startTick = 0;
++    Tick m_endTick = 0;
+     bool m_unterminated = false;
+     int m_bendRange = 2;
+     int m_endValue = 0;
+     Lane m_lane = Lane::PitchBend;
+-    std::map<uint64_t, int> m_points;
+-    uint64_t m_keyboardTick = 0;
++    std::map<Tick, int> m_points;
++    Tick m_keyboardTick = 0;
+     int m_liveValue = 0;
+     double m_rangeWheelRemainder = 0.0;
+     std::optional<StrokeState> m_strokeState;
+     std::optional<VertexDragState> m_vertexDragState;
+-    std::optional<uint64_t> m_selectedTick;
++    std::optional<Tick> m_selectedTick;
+     Callbacks m_callbacks;
+     PitchBendGeometry m_geometry;
+     TimelineQuickLayerData m_layer;
+ };
+ } // namespace songview
+diff --git a/src/ui/pitchbendgraph_render.cpp b/src/ui/pitchbendgraph_render.cpp
+index ef9223fa..1e38f609 100644
+--- a/src/ui/pitchbendgraph_render.cpp
++++ b/src/ui/pitchbendgraph_render.cpp
+@@ -102,54 +102,50 @@ void PitchBendGraph::rebuildLayer()
+     buildGrid(plot);
+     buildCurve(plot);
+     buildLinePreview(plot);
+     buildFocusFrame();
+ }
+ 
+ void PitchBendGraph::buildGrid(const QRectF &plot)
+ {
+     const QColor gridColor = themes::color(themes::Role::song_view_grid);
+     if (m_grid && m_endTick > m_startTick) {
+-        uint64_t segmentTick = m_startTick;
++        Tick segmentTick = m_startTick;
+         while (segmentTick < m_endTick) {
+             const Grid::Segment segment = m_grid->segmentAt(segmentTick);
+-            const uint64_t segmentEnd = std::min(m_endTick, segment.next);
+-            const uint64_t cell = normalCellTicksAt(segmentTick);
+-            const uint64_t anchor = segment.start;
++            const Tick segmentEnd = std::min(m_endTick, segment.next);
++            const uint32_t cell = normalCellTicksAt(segmentTick);
++            const Tick anchor = segment.start;
+             const uint64_t offset = segmentTick > anchor ? segmentTick - anchor : 0;
+             const uint64_t quotient = offset / cell;
+-            uint64_t tick = anchor;
+-            if (quotient < UINT64_MAX / cell)
+-                tick = anchor + (quotient + 1) * cell;
++            uint64_t tick = uint64_t(anchor) + (quotient + 1) * cell;
+             while (tick < segmentEnd) {
+-                addVerticalLine(m_layer, xAtTick(tick), plot.top(), plot.bottom(),
++                addVerticalLine(m_layer, xAtTick(Tick(tick)), plot.top(), plot.bottom(),
+                                 m_geometry.hairline, gridColor, plot);
+-                if (UINT64_MAX - tick < cell)
+-                    break;
+                 tick += cell;
+             }
+             if (segmentEnd >= m_endTick)
+                 break;
+             segmentTick = segmentEnd;
+         }
+     }
+     addDashedHorizontal(m_layer, plot.left(), plot.right(), yAtValue(0), m_geometry.hairline,
+                         kDashMultiplier * m_geometry.hairline, kGapMultiplier * m_geometry.hairline,
+                         themes::color(themes::Role::song_view_separator), plot);
+ }
+ 
+ void PitchBendGraph::buildCurve(const QRectF &plot)
+ {
+     const QColor curveColor = SongView::trackColor(m_engineTrack);
+     const QColor endpointColor = themes::color(themes::Role::song_view_secondary_text);
+     const QColor selectedRing = themes::color(themes::Role::focus_outline);
+-    const uint64_t fineTick = m_grid ? m_grid->fineGridTicks() : 1;
++    const uint32_t fineTick = m_grid ? m_grid->fineGridTicks() : 1;
+     for (auto it = m_points.cbegin(); it != m_points.cend(); ++it) {
+         const auto next = std::next(it);
+         const qreal x0 = xAtTick(it->first);
+         const qreal x1 = next == m_points.cend() ? plot.right() : xAtTick(next->first);
+         const qreal y = yAtValue(it->second);
+         const bool angled = next != m_points.cend() && next->first > it->first &&
+                             next->first - it->first == fineTick;
+         if (angled) {
+             addLine(m_layer, {x0, y}, {x1, qreal(yAtValue(next->second))}, m_geometry.curveStroke,
+                     curveColor, plot);
+diff --git a/src/ui/polyphonypanel.cpp b/src/ui/polyphonypanel.cpp
+index 7b2211fc..024a1600 100644
+--- a/src/ui/polyphonypanel.cpp
++++ b/src/ui/polyphonypanel.cpp
+@@ -50,21 +50,21 @@ QColor cellColor(int state)
+         return themes::color(themes::Role::polyphony_cell_shadow_background);
+     default:
+         return themes::color(themes::Role::polyphony_cell_free_background);
+     }
+ }
+ 
+ // Bar:beat.tick position for an event, honoring time-signature changes the
+ // way the ruler grid does: a signature change restarts the bar at its own
+ // tick, and a partial bar before it still counts as a bar. 4/4 is assumed
+ // before the first (or without any) signature.
+-QString formatBarBeat(const MidiTimeline *tl, uint32_t tick)
++QString formatBarBeat(const MidiTimeline *tl, Tick tick)
+ {
+     if (!tl)
+         return QString::number(tick);
+     const uint64_t tpb = tl->ticksPerBeat ? tl->ticksPerBeat : 24;
+     uint64_t segStart = 0;
+     uint64_t num = 4;
+     uint32_t denomPow2 = 2;
+     uint64_t bar = 1;
+     for (const TimeSigPoint &sig : tl->timeSigs) {
+         if (sig.tick > tick)
+@@ -463,21 +463,21 @@ QString PolyphonyPanel::logRowText(int row) const
+     return item ? item->text() : QString();
+ }
+ 
+ void PolyphonyPanel::activateLogRow(int row)
+ {
+     const QListWidgetItem *item = m_log->item(row);
+     if (!item)
+         return;
+     const QVariant tick = item->data(Qt::UserRole);
+     if (tick.isValid())
+-        emit jumpToEvent(tick.toULongLong(), item->data(Qt::UserRole + 1).toInt(),
++        emit jumpToEvent(Tick(tick.toULongLong()), item->data(Qt::UserRole + 1).toInt(),
+                          item->data(Qt::UserRole + 2).toInt());
+ }
+ 
+ void PolyphonyPanel::updateSnapshot(const AudioEngine::PolySnapshot &snap)
+ {
+     // A total below the drained mark means the stats were reset (play start,
+     // or the Reset button): the log and counters describe the same run, so
+     // both restart together. Re-arming m_prevValid also keeps the first
+     // post-reset counters from flashing.
+     if (snap.eventTotal < m_lastSeenTotal) {
+diff --git a/src/ui/polyphonypanel.h b/src/ui/polyphonypanel.h
+index 34f9f9aa..0866b812 100644
+--- a/src/ui/polyphonypanel.h
++++ b/src/ui/polyphonypanel.h
+@@ -1,16 +1,18 @@
+ #pragma once
+ 
+ #include <QElapsedTimer>
+ #include <QStringList>
+ #include <QWidget>
+ 
++#include "core/timedefaults.h"
++
+ #include "audio/audioengine.h"
+ 
+ class QCheckBox;
+ class QGridLayout;
+ class QLabel;
+ class QListWidget;
+ class QListWidgetItem;
+ class QPushButton;
+ class QScrollArea;
+ class QTableWidget;
+@@ -54,21 +56,21 @@ class PolyphonyPanel : public QWidget
+     QRect usageSectionRect() const;
+     QRect overflowSectionRect() const;
+     bool gridFullyVisible() const;
+     int vScrollRange() const; // >0 when the content scrolls (short window)
+ 
+   signals:
+     void invertToggled(bool on);
+     void resetRequested();
+     // Double-clicked event row: jump the edit cursor to tick and reveal the
+     // lost note (track + midiKey identify it; see SongView::revealNote).
+-    void jumpToEvent(uint64_t tick, int track, int midiKey);
++    void jumpToEvent(Tick tick, int track, int midiKey);
+ 
+   protected:
+     void resizeEvent(QResizeEvent *event) override;
+     void changeEvent(QEvent *event) override;
+ 
+   private:
+     void appendEvent(const M4APolyEvent &ev);
+     void applyLogItemInk(QListWidgetItem *item);
+     void refreshTable(const AudioEngine::PolySnapshot &snap);
+     void clearRuntimeState();
+diff --git a/src/ui/workspaceui.cpp b/src/ui/workspaceui.cpp
+index 1f11a497..e7208fdd 100644
+--- a/src/ui/workspaceui.cpp
++++ b/src/ui/workspaceui.cpp
+@@ -212,25 +212,25 @@ void WorkspaceUi::wireTab(SongTab *tab)
+     connect(&view, &SongView::auditionNoteTimed, this,
+             [this, tab](int track, int key, int velocity, quint32 durationSamples) {
+                 if (tab == m_selectedTab)
+                     emit auditionNoteTimedRequested(uint8_t(track), uint8_t(key), uint8_t(velocity),
+                                                     durationSamples);
+             });
+     connect(&view, &SongView::auditionVoice, this, [this, tab](int voice, int key, int velocity) {
+         if (tab == m_selectedTab)
+             emit auditionVoiceRequested(uint8_t(voice), uint8_t(key), uint8_t(velocity));
+     });
+-    connect(&view, &SongView::editCursorMoved, this, [this, tab](uint64_t tick) {
++    connect(&view, &SongView::editCursorMoved, this, [this, tab](Tick tick) {
+         if (tab == m_selectedTab)
+             emit editCursorSeekRequested(tick);
+     });
+-    connect(&view, &SongView::playPauseFromRequested, this, [this, tab](uint64_t tick) {
++    connect(&view, &SongView::playPauseFromRequested, this, [this, tab](Tick tick) {
+         if (tab == m_selectedTab)
+             emit playPauseFromRequested(tick);
+     });
+     connect(&view, &SongView::revealVoiceRequested, this, [this](int program) {
+         showVoicegroupPanel();
+         m_voicegroupBrowser->revealSlot(program);
+     });
+     connect(&view, &SongView::eventListVisibilityChanged, this, [this, tab](bool visible) {
+         if (tab == m_selectedTab)
+             emit selectedTabEventListChanged(visible);
+diff --git a/src/ui/workspaceui.h b/src/ui/workspaceui.h
+index 8a9a5bc0..d1121397 100644
+--- a/src/ui/workspaceui.h
++++ b/src/ui/workspaceui.h
+@@ -8,20 +8,22 @@
+ #include <QSet>
+ #include <QString>
+ #include <QStringList>
+ #include <QVector>
+ 
+ #include <cstdint>
+ #include <memory>
+ #include <optional>
+ #include <vector>
+ 
++#include "core/timedefaults.h"
++
+ #include "porydaw_scale.h"
+ #include "project/projectidentity.h"
+ #include "project/projectworkspace.h"
+ #include "ui/editorviewstate.h"
+ #include "ui/voicegroupbrowser.h"
+ #include "ui/voicegroupviewcache.h"
+ 
+ class QAction;
+ class AudioEngine;
+ class QDockWidget;
+@@ -249,22 +251,22 @@ class WorkspaceUi final : public QObject
+     void outputVolumeChanged(int value);
+     void scaleRootChanged(int root);
+     void scaleIdChanged(porydaw_scale::ScaleId scale);
+     void scaleHighlightChanged(bool enabled);
+     void scaleFoldChanged(bool enabled);
+ 
+     void selectedTabMuteMaskChanged(uint32_t mask);
+     void selectedTabSoloMaskChanged(uint32_t mask);
+     void selectedTabEventListChanged(bool visible);
+     void editorViewStateChanged(const EditorViewState &state);
+-    void editCursorSeekRequested(uint64_t tick);
+-    void playPauseFromRequested(uint64_t tick);
++    void editCursorSeekRequested(Tick tick);
++    void playPauseFromRequested(Tick tick);
+ 
+     // Audition intents are copied values; MainWindow owns every engine call.
+     void auditionNoteRequested(uint8_t track, uint8_t key, uint8_t velocity);
+     void auditionNoteTimedRequested(uint8_t track, uint8_t key, uint8_t velocity,
+                                     uint32_t durationSamples);
+     void auditionVoiceRequested(uint8_t voice, uint8_t key, uint8_t velocity);
+     void sampleAuditionRequested(const QString &symbol, VgAuditionKind kind,
+                                  const AuditionSlots::Adsr &adsr);
+     void sampleAuditionStopRequested();
+ 

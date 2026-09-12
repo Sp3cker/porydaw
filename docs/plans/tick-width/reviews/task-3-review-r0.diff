@@ -1,0 +1,546 @@
+diff --git a/src/core/lanemoveplan.cpp b/src/core/lanemoveplan.cpp
+index e620c260..00dbf25e 100644
+--- a/src/core/lanemoveplan.cpp
++++ b/src/core/lanemoveplan.cpp
+@@ -14,26 +14,26 @@ std::optional<LaneMovePlan> planLaneMoves(const std::vector<LaneMovePoint> &exis
+     std::vector<LaneMoveRequest> unique;
+     unique.reserve(requests.size());
+     std::map<size_t, size_t> indexBySource;
+     for (const LaneMoveRequest &request : requests) {
+         const auto [it, inserted] = indexBySource.emplace(request.sourceId, unique.size());
+         if (inserted)
+             unique.push_back(request);
+         else
+             unique[it->second] = request;
+     }
+-    std::map<uint64_t, uint64_t> destBySourceTick;
++    std::map<Tick, Tick> destBySourceTick;
+     for (const LaneMoveRequest &request : unique)
+         destBySourceTick[existing[request.sourceId].tick] = request.toTick;
+     for (LaneMoveRequest &request : unique)
+         request.toTick = destBySourceTick[existing[request.sourceId].tick];
+-    std::map<uint64_t, uint64_t> winningSourceTick;
++    std::map<Tick, Tick> winningSourceTick;
+     for (const LaneMoveRequest &request : unique)
+         winningSourceTick[request.toTick] = existing[request.sourceId].tick;
+     std::vector<char> winning(existing.size(), 0);
+     for (const LaneMoveRequest &request : unique) {
+         if (winningSourceTick[request.toTick] == existing[request.sourceId].tick)
+             winning[request.sourceId] = 1;
+     }
+     std::vector<char> remove(existing.size(), 0);
+     LaneMovePlan plan;
+     plan.writes.reserve(unique.size());
+diff --git a/src/core/lanemoveplan.h b/src/core/lanemoveplan.h
+index 70476282..a93b64bc 100644
+--- a/src/core/lanemoveplan.h
++++ b/src/core/lanemoveplan.h
+@@ -1,38 +1,41 @@
+ #pragma once
+ 
++#include "timedefaults.h"
+ #include <cstddef>
+ #include <cstdint>
+ #include <optional>
+ #include <vector>
+ 
+ // Per-lane move planner over primitive existing points and requested source
+ // identities. Encodes destination collision once: every requested identity
+ // must exist, a same-source-tick group that is requested together keeps order,
+ // the last source group wins a destination tick, losing groups and unrelated
+ // destination occupants are removed, and an identity same-tick/value landing
+ // is a no-op. Output ids index `existing` so core can modify-vs-insert while
+ // RangeEdit can remove-then-write.
+ struct LaneMovePoint {
+-    uint64_t tick = 0;
++    Tick tick = 0;
+     int value = 0;
+ };
+ 
++static_assert(sizeof(LaneMovePoint) == 8, "LaneMovePoint must stay 8 bytes");
++
+ struct LaneMoveRequest {
+     size_t sourceId = 0;
+-    uint64_t toTick = 0;
++    Tick toTick = 0;
+     int toValue = 0;
+ };
+ 
+ struct LaneMoveWrite {
+     size_t sourceId = 0;
+-    uint64_t tick = 0;
++    Tick tick = 0;
+     int value = 0;
+ };
+ 
+ struct LaneMovePlan {
+     std::vector<size_t> removeIds;
+     std::vector<LaneMoveWrite> writes;
+ 
+     bool empty() const noexcept { return removeIds.empty() && writes.empty(); }
+ };
+ 
+diff --git a/src/core/songdocument_range.cpp b/src/core/songdocument_range.cpp
+index 58824237..b9585451 100644
+--- a/src/core/songdocument_range.cpp
++++ b/src/core/songdocument_range.cpp
+@@ -1,17 +1,19 @@
+ #include "songdocument.h"
+ 
+ #include <algorithm>
+ #include <set>
+ #include <utility>
+ #include <vector>
+ 
++#include "core/timedefaults.h"
++
+ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
+ {
+     if (edit.empty())
+         return;
+     std::vector<EditOp> ops;
+     const int targetEngineTrackCount =
+         std::clamp(edit.minimumEngineTrackCount, engineTrackCount(), 16);
+     std::vector<int> engineToSmf = m_engineToSmf;
+     std::vector<uint8_t> engineChannels = m_engineChannel;
+     bool usedChannels[16] = {};
+@@ -72,21 +74,21 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
+         }
+         for (const RangeEdit::LaneWrite &lw : edit.addPoints) {
+             if (lw.engineTrack < 0 || lw.engineTrack >= int(engineToSmf.size()))
+                 continue;
+             const int smfTrack = engineToSmf[size_t(lw.engineTrack)];
+             if (const xcmd::Descriptor *descriptor = xcmd::descriptorForLane(lw.cc)) {
+                 std::vector<xcmd::PointWrite> &trackWrites = writes[size_t(smfTrack)];
+                 for (const LanePointValue &point : lw.points) {
+                     const int clamped = std::clamp(point.value, int(descriptor->minimumValue),
+                                                    int(descriptor->maximumValue));
+-                    trackWrites.push_back({point.tick, lw.cc, uint8_t(clamped),
++                    trackWrites.push_back({Tick(point.tick), lw.cc, uint8_t(clamped),
+                                            uint8_t(lw.engineTrack),
+                                            engineChannels[size_t(lw.engineTrack)]});
+                 }
+             }
+         }
+         std::vector<EditOp> xcmdInserts;
+         // One rewrite per affected track. Only tracks with remove candidates
+         // need the projection — it classifies each candidate (a known
+         // descriptor point leaves through the canonical plan, a stale
+         // identity as a plain raw removal). A rejection (unknown identity,
+@@ -231,21 +233,21 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
+             if (removeIdentities.empty())
+                 continue;
+             std::sort(removeIdentities.begin(), removeIdentities.end());
+             removeIdentities.erase(std::unique(removeIdentities.begin(), removeIdentities.end()),
+                                    removeIdentities.end());
+             std::vector<xcmd::PointWrite> writes;
+             for (const xcmd::Point &point : projection.points) {
+                 if (!std::binary_search(removeIdentities.begin(), removeIdentities.end(),
+                                         point.index))
+                     continue;
+-                writes.push_back({uint64_t(std::max<int64_t>(0, int64_t(point.tick) + dTick)),
++                writes.push_back({Tick(std::max<int64_t>(0, int64_t(point.tick) + dTick)),
+                                   point.lane, uint8_t(point.value), point.stream, point.channel});
+             }
+             const auto patch = xcmd::rewritePoints(events, removeIdentities, writes);
+             if (!patch)
+                 return; // semantics unsatisfiable: fail without mutation
+             appendXcmdPatchOps(removals, xcmdInserts, int(t), *patch);
+         }
+         // Ascending + deduped so the raw re-inserts below mirror the removals
+         // exactly and same-tick events keep their relative order.
+         for (std::vector<size_t> &indices : moved) {
+diff --git a/src/core/songdocument_timeeditor_xcmd.cpp b/src/core/songdocument_timeeditor_xcmd.cpp
+index 96ea4fc0..c3eda588 100644
+--- a/src/core/songdocument_timeeditor_xcmd.cpp
++++ b/src/core/songdocument_timeeditor_xcmd.cpp
+@@ -1,16 +1,18 @@
+ #include "songdocument_timeeditor.hpp"
+ 
+ #include <algorithm>
+ #include <span>
+ #include <utility>
+ 
++#include "core/timedefaults.h"
++
+ // ---------------------------------------------------------------------------
+ // TimeEditor XCMD reconciliation adapter.
+ //
+ // The generic remove/insertBlank/duplicate passes operate on raw events and
+ // know nothing of the XCMD protocol; this TU is the thin per-track adapter.
+ // For every track touched by the edit it:
+ //   1. collects the consumed protocol events the generic pass removes as
+ //      raw removals, and the consumed events it moves or duplicates as
+ //      operation-local source-indexed relocations/copies (records, threaded
+ //      through each edit pass — no member state);
+@@ -40,21 +42,21 @@ std::optional<std::vector<SongDocument::EditOp>> SongDocument::TimeEditor::xcmdA
+     // a mixed-operation conflict.
+     const size_t trackCount = m_document.m_smf.tracks.size();
+     std::vector<std::vector<uint64_t>> rawRemovals(trackCount);
+     std::vector<std::vector<xcmd::Relocation>> rawMoves(trackCount);
+     std::vector<std::vector<xcmd::Relocation>> rawCopies(trackCount);
+     std::vector<std::vector<size_t>> relocated(trackCount);
+     for (const XcmdEventRecord &record : records) {
+         if (record.smfTrack < 0 || record.smfTrack >= int(trackCount))
+             continue;
+         relocated[size_t(record.smfTrack)].push_back(record.eventIndex);
+-        const xcmd::Relocation relocation{uint64_t(record.eventIndex), record.newTick,
++        const xcmd::Relocation relocation{uint64_t(record.eventIndex), Tick(record.newTick),
+                                           record.channel};
+         std::vector<xcmd::Relocation> &target =
+             record.isCopy ? rawCopies[size_t(record.smfTrack)] : rawMoves[size_t(record.smfTrack)];
+         target.push_back(relocation);
+     }
+     std::vector<std::vector<size_t>> plainRemovals(m_document.m_smf.tracks.size());
+     for (size_t t = 0; t < removals.size(); ++t) {
+         auto &plain = plainRemovals[t];
+         plain.reserve(removals[t].size());
+         for (size_t index : removals[t]) {
+diff --git a/src/core/songdocument_xcmd.cpp b/src/core/songdocument_xcmd.cpp
+index 5452801d..4a692d4f 100644
+--- a/src/core/songdocument_xcmd.cpp
++++ b/src/core/songdocument_xcmd.cpp
+@@ -136,21 +136,21 @@ void SongDocument::addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int
+         const std::vector<xcmd::Event> events = xcmdEvents(smfTrack);
+         const xcmd::Projection projection = xcmd::projectEvents(events);
+         std::vector<uint64_t> removeIdentities;
+         for (const xcmd::Point &point : projection.points) {
+             if (point.lane == cc && point.tick == tick)
+                 removeIdentities.push_back(point.index);
+         }
+         const int clamped =
+             std::clamp(value, int(descriptor->minimumValue), int(descriptor->maximumValue));
+         const std::vector<xcmd::PointWrite> writes{
+-            {tick, cc, uint8_t(clamped), uint8_t(engineTrack), channelFor(engineTrack)}};
++            {Tick(tick), cc, uint8_t(clamped), uint8_t(engineTrack), channelFor(engineTrack)}};
+         const auto patch = xcmd::rewritePoints(events, removeIdentities, writes);
+         if (!patch)
+             return; // semantics unsatisfiable: fail without mutation
+         std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+         std::vector<EditOp> ops;
+         std::vector<EditOp> insertions;
+         appendXcmdPatchOps(removals, insertions, smfTrack, *patch);
+         for (size_t track = 0; track < m_smf.tracks.size(); track++)
+             appendRemoveOps(ops, int(track), std::move(removals[track]));
+         for (EditOp &insertion : insertions)
+@@ -187,22 +187,22 @@ void SongDocument::writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBeg
+             if (point.lane == cc && point.tick >= tickBegin && point.tick <= tickEnd)
+                 removeIdentities.push_back(point.index);
+         }
+         if (removeIdentities.empty() && points.empty())
+             return;
+         std::vector<xcmd::PointWrite> writes;
+         writes.reserve(points.size());
+         for (const LanePointValue &point : points) {
+             const int clamped = std::clamp(point.value, int(descriptor->minimumValue),
+                                            int(descriptor->maximumValue));
+-            writes.push_back(
+-                {point.tick, cc, uint8_t(clamped), uint8_t(engineTrack), channelFor(engineTrack)});
++            writes.push_back({Tick(point.tick), cc, uint8_t(clamped), uint8_t(engineTrack),
++                              channelFor(engineTrack)});
+         }
+         const auto patch = xcmd::rewritePoints(events, removeIdentities, writes);
+         if (!patch)
+             return; // semantics unsatisfiable: fail without mutation
+         std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+         std::vector<EditOp> ops;
+         std::vector<EditOp> insertions;
+         appendXcmdPatchOps(removals, insertions, smfTrack, *patch);
+         for (size_t track = 0; track < m_smf.tracks.size(); track++)
+             appendRemoveOps(ops, int(track), std::move(removals[track]));
+@@ -248,21 +248,21 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
+         for (size_t i = 0; i < lanes.size(); ++i) {
+             if (lanes[i].engineTrack == engineTrack && lanes[i].cc == cc)
+                 return i;
+         }
+         LaneRequests lane;
+         lane.engineTrack = engineTrack;
+         lane.cc = cc;
+         lane.existingPoints = lanePoints(engineTrack, cc);
+         lane.existing.reserve(lane.existingPoints.size());
+         for (const DocLanePoint &point : lane.existingPoints)
+-            lane.existing.push_back({point.tick, point.value});
++            lane.existing.push_back({Tick(point.tick), point.value});
+         lanes.push_back(std::move(lane));
+         return lanes.size() - 1;
+     };
+     size_t validCount = 0;
+     uint8_t singularCc = 0;
+     for (const LanePointMove &move : moves) {
+         const int smfTrack = smfTrackFor(move.engineTrack);
+         if (smfTrack < 0 || smfTrack >= int(m_smf.tracks.size()) ||
+             move.point.smfTrack != smfTrack ||
+             move.point.index >= m_smf.tracks[size_t(smfTrack)].events.size())
+@@ -283,21 +283,21 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
+         size_t sourceId = lane.existingPoints.size();
+         for (size_t id = 0; id < lane.existingPoints.size(); ++id) {
+             if (lane.existingPoints[id].smfTrack == move.point.smfTrack &&
+                 lane.existingPoints[id].index == move.point.index) {
+                 sourceId = id;
+                 break;
+             }
+         }
+         if (sourceId >= lane.existingPoints.size())
+             continue;
+-        lane.requests.push_back({sourceId, move.newTick, move.newValue});
++        lane.requests.push_back({sourceId, Tick(move.newTick), move.newValue});
+         singularCc = move.cc;
+         ++validCount;
+     }
+     if (lanes.empty())
+         return;
+     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+     std::vector<EditOp> modifications;
+     std::vector<EditOp> insertions;
+     std::vector<std::vector<uint64_t>> xcmdRemovals(m_smf.tracks.size());
+     std::vector<std::vector<xcmd::PointWrite>> xcmdWrites(m_smf.tracks.size());
+diff --git a/src/core/xcmd.cpp b/src/core/xcmd.cpp
+index f8a54ad2..80f3b1ab 100644
+--- a/src/core/xcmd.cpp
++++ b/src/core/xcmd.cpp
+@@ -1,11 +1,12 @@
+ #include "core/xcmd.h"
++#include "core/timedefaults.h"
+ 
+ #include <algorithm>
+ #include <array>
+ #include <cstdint>
+ #include <unordered_map>
+ #include <utility>
+ 
+ // ---------------------------------------------------------------------------
+ // Deep module. All protocol parsing, epoch segmentation, and identity
+ // validation live in this TU. Decode model: one selector event (CC 0x1E)
+@@ -22,30 +23,30 @@ namespace {
+ 
+ enum class SelectorBlockKind : uint8_t {
+     KnownEpoch,  // selector 0x08/0x09 with payload bytes: one point per byte
+     OpaqueEpoch, // any other selector epoch (or a payload-less known selector)
+     StrayRun,    // payload bytes before any selector
+ };
+ 
+ struct SelectorBlock {
+     SelectorBlockKind kind = SelectorBlockKind::OpaqueEpoch;
+     uint8_t stream = 0;
+-    uint8_t selector = 0;              // epoch selector value
+-    size_t selectorEvent = SIZE_MAX;   // ordinal of the selector event, if any
+-    std::vector<size_t> payloadEvents; // event ordinals in scan order
+-    uint64_t firstTick = UINT64_MAX;   // occupied tick span
+-    uint64_t lastTick = 0;
++    uint8_t selector = 0;                       // epoch selector value
++    size_t selectorEvent = SIZE_MAX;            // ordinal of the selector event, if any
++    std::vector<size_t> payloadEvents;          // event ordinals in scan order
++    Tick firstTick = CoreTimeDefaults::kNoTick; // occupied tick span
++    Tick lastTick = 0;
+ };
+ 
+ struct ProtocolEvent {
+     const Event *source = nullptr; // caller's event (identity/bytes)
+-    uint64_t tick = 0;
++    Tick tick = 0;
+     uint8_t stream = 0;
+     uint8_t value = 0;
+     uint8_t channel = 0;
+     size_t block = SIZE_MAX; // block ordinal
+     bool isSelector = false;
+ };
+ 
+ struct ParsedEvents {
+     std::vector<ProtocolEvent> events;            // protocol events, input order
+     std::vector<SelectorBlock> blocks;            // per stream, epoch order
+@@ -192,21 +193,21 @@ struct RawOperations {
+ 
+ struct BlockOperation {
+     // Meaningful only when affectedMemberCount is nonzero. Zero means the
+     // block is untouched despite the default Remove value.
+     RawOperationKind kind = RawOperationKind::Remove;
+     size_t affectedMemberCount = 0;
+     size_t memberCount = 0;
+     bool mixed = false;
+ };
+ 
+-void appendCanonicalPoint(std::vector<Emission> &inserts, uint64_t tick, uint8_t selector,
++void appendCanonicalPoint(std::vector<Emission> &inserts, Tick tick, uint8_t selector,
+                           uint8_t value, uint8_t channel) noexcept
+ {
+     inserts.push_back({tick, kSelectorController, selector, SIZE_MAX, channel});
+     inserts.push_back({tick, kPayloadController, value, SIZE_MAX, channel});
+ }
+ 
+ void appendVerbatimEvent(std::vector<Emission> &inserts, const ProtocolEvent &event,
+                          const Relocation &relocation) noexcept
+ {
+     inserts.push_back({relocation.tick, 0, 0, event.source->index, relocation.channel});
+diff --git a/src/core/xcmd.h b/src/core/xcmd.h
+index feefb905..71d197c4 100644
+--- a/src/core/xcmd.h
++++ b/src/core/xcmd.h
+@@ -1,12 +1,13 @@
+ #pragma once
+ 
++#include "core/timedefaults.h"
+ #include <array>
+ #include <cstdint>
+ #include <optional>
+ #include <span>
+ #include <vector>
+ 
+ // Deep XCMD module: descriptor metadata, a read projection of known logical
+ // points, one logical lane rewrite, and one raw reconciliation. All protocol
+ // parsing lives privately in xcmd.cpp; callers translate a flat
+ // Projection/Patch into their own edit operations.
+@@ -69,30 +70,30 @@ constexpr bool isLaneController(uint8_t controller) noexcept
+ 
+ // ---------------------------------------------------------------------------
+ // Read projection. Callers adapt their own event type into this flat view;
+ // points keep caller stream order. `index` is the caller's raw index and
+ // stays opaque to the module. `channel` propagates through rebuilds of
+ // existing points.
+ // ---------------------------------------------------------------------------
+ 
+ struct Event {
+     uint64_t index = 0;
+-    uint64_t tick = 0;
++    Tick tick = 0;
+     uint8_t stream = 0; // decoder stream identity (engine track ordinal)
+     uint8_t controller = 0;
+     uint8_t value = 0;
+     uint8_t channel = 0; // MIDI channel of the source event
+ };
+ 
+ struct Point {
+     uint8_t lane = 0;   // descriptor laneController (known points only)
+-    uint64_t tick = 0;  // terminal payload byte tick
++    Tick tick = 0;      // terminal payload byte tick
+     uint32_t value = 0; // decoded payload value
+     uint64_t index = 0; // raw index of the payload byte (identity)
+     uint8_t stream = 0;
+     uint8_t channel = 0;
+ };
+ 
+ struct Projection {
+     std::vector<Point> points;      // completed known points, scan order
+     std::vector<uint64_t> consumed; // raw indices absorbed by the protocol
+ };
+@@ -105,52 +106,52 @@ Projection projectEvents(std::span<const Event> events) noexcept;
+ // Logical lane rewrite: remove known point identities and write known lane
+ // points. Any epoch owning a removed point or containing a write tick is
+ // rebuilt — its bytes leave and its surviving points are re-emitted as
+ // explicit selector+payload pairs. Writes land as canonical pairs. Opaque
+ // traffic is preserved; the rewrite is rejected (nullopt) when a write
+ // would land inside an opaque block's occupied tick span or when any
+ // identity or lane is unknown.
+ // ---------------------------------------------------------------------------
+ 
+ struct PointWrite {
+-    uint64_t tick = 0;
++    Tick tick = 0;
+     uint8_t lane = 0; // descriptor laneController
+     uint8_t value = 0;
+     uint8_t stream = 0;
+     uint8_t channel = 0; // MIDI channel stamped on emitted events
+ };
+ 
+ // ---------------------------------------------------------------------------
+ // Raw reconciliation: plain removals plus source-indexed relocations and
+ // copies. A known point's move/copy is rebuilt canonically; an opaque epoch
+ // may only be removed, moved, or copied as a whole block with one
+ // operation, byte-exact via Emission::sourceIndex. Unknown identities,
+ // partial or mixed block operations, and destinations inside the occupied
+ // span of an epoch whose bytes survive the rewrite reject. Spans vacated by
+ // this edit (fully removed or fully relocated blocks) accept destinations.
+ // ---------------------------------------------------------------------------
+ 
+ struct Relocation {
+     uint64_t index = 0; // raw index of the event to re-insert
+-    uint64_t tick = 0;  // destination tick
++    Tick tick = 0;      // destination tick
+     uint8_t channel = 0;
+ };
+ 
+ // ---------------------------------------------------------------------------
+ // Flat patch: raw indices to remove plus ordered controller emissions to
+ // insert. `sourceIndex` marks a byte-exact re-insertion of an existing
+ // event (the caller copies that event's bytes and re-stamps its tick);
+ // otherwise `controller`/`value` is a canonical emission on `channel`.
+ // ---------------------------------------------------------------------------
+ 
+ struct Emission {
+-    uint64_t tick = 0;
++    Tick tick = 0;
+     uint8_t controller = 0;
+     uint8_t value = 0;
+     uint64_t sourceIndex = SIZE_MAX; // verbatim re-insertion source
+     uint8_t channel = 0;
+ };
+ 
+ struct Patch {
+     std::vector<uint64_t> removeEvents; // ascending, deduplicated
+     std::vector<Emission> inserts;      // ordered final-stream order
+ };
+diff --git a/src/ui/editordrawer/nodelane/batchcommit.cpp b/src/ui/editordrawer/nodelane/batchcommit.cpp
+index 5a8c5bde..6bac95fd 100644
+--- a/src/ui/editordrawer/nodelane/batchcommit.cpp
++++ b/src/ui/editordrawer/nodelane/batchcommit.cpp
+@@ -31,21 +31,21 @@ const TempoPoint *tempoAtTick(const std::vector<TempoPoint> &points, uint64_t ti
+     for (const TempoPoint &point : points) {
+         if (point.tick == tick)
+             return &point;
+     }
+     return nullptr;
+ }
+ 
+ TempoPoint tempoDestination(const TempoPoint &source, const NodePoint &to)
+ {
+     const int currentBpm = qRound(CoreTimeDefaults::tempoBpm(source.microsecondsPerQuarterNote));
+-    TempoPoint destination{to.tick, source.microsecondsPerQuarterNote};
++    TempoPoint destination{Tick(to.tick), source.microsecondsPerQuarterNote};
+     if (to.value != currentBpm)
+         destination.microsecondsPerQuarterNote =
+             CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(to.value);
+     return destination;
+ }
+ 
+ } // namespace
+ 
+ std::optional<TempoEdit> resolveTempoMoves(const SongDocument &document,
+                                            const std::vector<NodePointMove> &moves)
+@@ -97,36 +97,36 @@ std::optional<CcResolvedMoves> resolveCcMoves(const SongDocument &document, int
+     std::vector<std::optional<size_t>> rawIdByPoint;
+     rawIdByPoint.reserve(raw.size() + 1);
+     std::map<uint64_t, std::vector<size_t>> idsByTick;
+     if (const auto synthetic = CoreTimeDefaults::syntheticTickZero(controller, raw)) {
+         idsByTick[0].push_back(existing.size());
+         existing.push_back({0, *synthetic});
+         rawIdByPoint.push_back(std::nullopt);
+     }
+     for (size_t rawId = 0; rawId < raw.size(); ++rawId) {
+         idsByTick[raw[rawId].tick].push_back(existing.size());
+-        existing.push_back({raw[rawId].tick, raw[rawId].value});
++        existing.push_back({Tick(raw[rawId].tick), raw[rawId].value});
+         rawIdByPoint.push_back(rawId);
+     }
+     for (const NodePointMove &move : moves) {
+         const auto found = idsByTick.find(move.fromTick);
+         if (found == idsByTick.end() || found->second.empty())
+             return std::nullopt;
+     }
+     std::vector<LaneMoveRequest> requests;
+     for (const NodePointMove &move : moves) {
+         const auto &group = idsByTick[move.fromTick];
+         const int newValue = CoreTimeDefaults::clampLaneValue(controller, move.to.value);
+         for (size_t index = 0; index < group.size(); ++index) {
+             const size_t id = group[index];
+             const int value = index + 1 == group.size() ? newValue : existing[id].value;
+-            requests.push_back({id, move.to.tick, value});
++            requests.push_back({id, Tick(move.to.tick), value});
+         }
+     }
+     const auto plan = planLaneMoves(existing, requests);
+     if (!plan)
+         return std::nullopt;
+     std::set<size_t> removed;
+     const auto removeId = [&](size_t id) {
+         if (!removed.insert(id).second || !rawIdByPoint[id])
+             return;
+         resolved.removePoints.push_back(raw[*rawIdByPoint[id]]);

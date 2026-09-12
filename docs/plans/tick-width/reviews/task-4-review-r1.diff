@@ -1,0 +1,2171 @@
+diff --git a/src/checks/editcheck/tst_songdocument.h b/src/checks/editcheck/tst_songdocument.h
+index e44a616d..21a5bd7c 100644
+--- a/src/checks/editcheck/tst_songdocument.h
++++ b/src/checks/editcheck/tst_songdocument.h
+@@ -114,20 +114,21 @@ class EditCheckTest final : public QObject
+     void documentCrossingIdentities();
+     void documentPublicationNetZero();
+     void documentMergedOverlapPublication();
+     void timeRangeNoOps();
+     void timeRangeInsertScopeAndSplit();
+     void timeRangeUnterminated();
+     void timeRangeDuplicateClippingAndOrder();
+     void timeRangeSignatureAndOrphans();
+     void timeRangeAutomationSeamsAndDefaults();
+     void timeRangeWholeSong();
++    void timeRangeInsertBlankOverflow();
+ 
+     // SMF byte-format contracts: foreign/synthetic files and the save
+     // pipeline.
+     void xcmdSaveSnapshot();
+     void formatZeroCoercion();
+     void formatZeroGlobals();
+     void formatZeroSaveRoundTrip();
+     void markerVersusTrackName();
+     void duplicateLaneAndTempoLoad();
+     void duplicateCanonicalization();
+diff --git a/src/checks/editcheck/tst_songdocument_document.cpp b/src/checks/editcheck/tst_songdocument_document.cpp
+index 17f87165..c4eb7db9 100644
+--- a/src/checks/editcheck/tst_songdocument_document.cpp
++++ b/src/checks/editcheck/tst_songdocument_document.cpp
+@@ -448,22 +448,22 @@ void EditCheckTest::documentGlobalMetadata()
+                     tempos += isTempoMeta(event);
+                     signatures += event.metaType == 0x58 && event.blob.size() >= 2;
+                     starts += event.metaType == 0x06 && event.blob == QByteArrayLiteral("[");
+                     labels += event.metaType == 0x06 && event.blob == QByteArrayLiteral(":");
+                 }
+         const auto sigs = document.timeSigs();
+         return document.tempoPoints() ==
+                    std::vector<TempoPoint>{songdocument_test::tempo(0, 120)} &&
+                sigs.size() == 1 && sigs.front().tick == 0 && sigs.front().numerator == 4 &&
+                sigs.front().denomPow2 == 2 && document.loopTick(false) == 12 &&
+-               document.loopTick(true) == UINT64_MAX && tempos == 0 && signatures == 1 &&
+-               starts == 1 && labels == 1;
++               document.loopTick(true) == CoreTimeDefaults::kNoTick && tempos == 0 &&
++               signatures == 1 && starts == 1 && labels == 1;
+     };
+     QVERIFY(globalsOriginal());
+     const int copy = document.duplicateTrack(0);
+     QVERIFY(copy >= 0);
+     QCOMPARE(document.channelFor(copy), uint8_t(2));
+     const auto &events = document.smf().tracks[size_t(document.smfTrackFor(copy))].events;
+     QCOMPARE(events.size(), size_t(3));
+     QCOMPARE(events[0], songdocument_test::channel(0xC2, 0, 6, 0));
+     QCOMPARE(events[1], songdocument_test::channel(0x92, 0, 60, 100));
+     QCOMPARE(events[2], songdocument_test::channel(0x82, 24, 60, 0));
+diff --git a/src/checks/editcheck/tst_songdocument_songtracks.cpp b/src/checks/editcheck/tst_songdocument_songtracks.cpp
+index c62233ff..350161a7 100644
+--- a/src/checks/editcheck/tst_songdocument_songtracks.cpp
++++ b/src/checks/editcheck/tst_songdocument_songtracks.cpp
+@@ -1,16 +1,14 @@
+ #include "checks/editcheck/tst_songdocument.h"
+ 
+ #include <QtTest>
+ 
+-#include <limits>
+-
+ #include "checks/editcheck/tst_songdocument_support.h"
+ #include "core/miditimeline.h"
+ 
+ namespace {
+ 
+ SmfFile markerNameFile()
+ {
+     SmfFile smf;
+     smf.format = 1;
+     smf.division = 24;
+@@ -301,23 +299,23 @@ void EditCheckTest::loopCfgUndoRedo_data()
+ 
+ void EditCheckTest::loopCfgUndoRedo()
+ {
+     QFETCH(QString, songLabel);
+     const SongInfo song = songForLabel(songLabel);
+     SongDocument document;
+     QString error;
+     QVERIFY2(document.load(song, &error), qPrintable(error));
+     const QByteArray baseline = document.smf().write();
+     const uint32_t step = document.ticksPerClock();
+-    const uint64_t loopStart = document.loopTick(false);
+-    document.setLoopTick(
+-        false, loopStart == std::numeric_limits<uint64_t>::max() ? 0 : int64_t(loopStart + step));
++    const Tick loopStart = document.loopTick(false);
++    document.setLoopTick(false,
++                         loopStart == CoreTimeDefaults::kNoTick ? 0 : int64_t(loopStart) + step);
+     QVERIFY(songdocument_test::tracksSorted(document.smf()));
+     SongCfg cfg = document.cfg();
+     cfg.masterVolume = cfg.masterVolume == 80 ? 90 : 80;
+     document.setCfg(cfg);
+     while (document.undoStack()->canUndo())
+         document.undoStack()->undo();
+     QCOMPARE(document.smf().write(), baseline);
+     QCOMPARE(document.cfg().masterVolume, song.cfg.masterVolume);
+     while (document.undoStack()->canRedo())
+         document.undoStack()->redo();
+diff --git a/src/checks/editcheck/tst_songdocument_timerange.cpp b/src/checks/editcheck/tst_songdocument_timerange.cpp
+index f73968fa..0b5f6ebd 100644
+--- a/src/checks/editcheck/tst_songdocument_timerange.cpp
++++ b/src/checks/editcheck/tst_songdocument_timerange.cpp
+@@ -179,21 +179,21 @@ void EditCheckTest::timeRangeUnterminated()
+     QCOMPARE(document.smf().write(), after);
+ }
+ 
+ void EditCheckTest::timeRangeDuplicateClippingAndOrder()
+ {
+     auto fixture =
+         songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-clipping"));
+     QVERIFY(fixture);
+     SongDocument &document = fixture->document;
+     const SongDocument::TimeScope scope = trackZero();
+-    constexpr uint64_t start = 600;
++    constexpr Tick start = 600;
+     document.addNote(0, start + 10, 64, 10, 90);
+     document.addNote(0, start - 5, 65, 15, 80);
+     document.addNote(0, start + 10, 66, 20, 70);
+     document.addNote(0, start - 5, 67, 30, 60);
+     DocNote contained;
+     DocNote leftCross;
+     DocNote rightCross;
+     DocNote bothCross;
+     QVERIFY(document.findNote(0, start + 10, 64, &contained));
+     QVERIFY(document.findNote(0, start - 5, 65, &leftCross));
+@@ -238,22 +238,22 @@ void EditCheckTest::timeRangeDuplicateClippingAndOrder()
+     QVERIFY(document.insertBlankTime({800, 820}, scope));
+     QVERIFY(songdocument_test::noteEndsBeforeOnsAt(document, 0, 820));
+ }
+ 
+ void EditCheckTest::timeRangeSignatureAndOrphans()
+ {
+     auto fixture =
+         songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-signature"));
+     QVERIFY(fixture);
+     SongDocument &document = fixture->document;
+-    constexpr uint64_t seam = 960;
+-    const uint64_t bar = 3 * uint64_t(document.smf().division);
++    constexpr Tick seam = 960;
++    const Tick bar = 3 * Tick(document.smf().division);
+     document.setTimeSig(0, 4, 2);
+     document.setTimeSig(seam, 3, 2);
+     SongDocument::TimeScope whole;
+     whole.wholeSong = true;
+     const QByteArray before = document.smf().write();
+     QVERIFY(document.insertBlankTime({seam, seam + bar}, whole));
+     bool start = false;
+     bool end = false;
+     for (const DocTimeSig &signature : document.timeSigs())
+         if (signature.numerator == 3 && signature.denomPow2 == 2) {
+@@ -318,21 +318,21 @@ void EditCheckTest::timeRangeSignatureAndOrphans()
+     orphan.undoStack()->redo();
+     QCOMPARE(orphan.smf().write(), orphanAfter);
+ }
+ 
+ void EditCheckTest::timeRangeAutomationSeamsAndDefaults()
+ {
+     auto fixture =
+         songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-automation"));
+     QVERIFY(fixture);
+     SongDocument &document = fixture->document;
+-    constexpr uint64_t seam = 1000;
++    constexpr Tick seam = 1000;
+     SongDocument::TimeScope laneScope;
+     laneScope.lanes = {{0, 7}};
+     document.addLanePoint(0, 7, seam - 20, 33);
+     document.addLanePoint(0, 7, seam + 10, 44);
+     const QByteArray seamBefore = document.smf().write();
+     const int seamUndoCount = document.undoStack()->count();
+     QVERIFY(document.duplicateTimeRange({seam, seam + 40}, laneScope));
+     DocLanePoint point;
+     QVERIFY(document.findLanePoint(0, 7, seam + 40, &point));
+     QCOMPARE(point.value, 33);
+@@ -358,21 +358,21 @@ void EditCheckTest::timeRangeAutomationSeamsAndDefaults()
+                                                      {0x05, 12, 0},
+                                                      {0x07, 80, 127},
+                                                      {0x0A, 81, 64},
+                                                      {0x14, 3, 2},
+                                                      {0x15, 4, 22},
+                                                      {0x17, 5, 0},
+                                                      {0x19, 6, 0},
+                                                      {DOC_CC_BEND, 500, 0}};
+     for (size_t remaining = defaults.size(); remaining > 0; --remaining) {
+         const size_t index = remaining - 1;
+-        const uint64_t start = 1100 + index * 40;
++        const Tick start = 1100 + index * 40U;
+         defaultsDocument.addLanePoint(0, defaults[index].cc, start + 10, defaults[index].source);
+         const QByteArray before = defaultsDocument.smf().write();
+         const int undoCount = defaultsDocument.undoStack()->count();
+         SongDocument::TimeScope lane;
+         lane.lanes = {{0, defaults[index].cc}};
+         QVERIFY(defaultsDocument.duplicateTimeRange({start, start + 20}, lane));
+         QVERIFY(defaultsDocument.findLanePoint(0, defaults[index].cc, start + 20, &point));
+         QCOMPARE(point.value, defaults[index].expected);
+         QCOMPARE(defaultsDocument.undoStack()->count(), undoCount + 1);
+         const QByteArray after = defaultsDocument.smf().write();
+@@ -439,21 +439,21 @@ void EditCheckTest::timeRangeAutomationSeamsAndDefaults()
+     defaultsDocument.undoStack()->redo();
+     QCOMPARE(defaultsDocument.smf().write(), downstreamAfter);
+ }
+ 
+ void EditCheckTest::timeRangeWholeSong()
+ {
+     auto fixture =
+         songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-whole-song"));
+     QVERIFY(fixture);
+     SongDocument &document = fixture->document;
+-    constexpr uint64_t start = 1800;
++    constexpr Tick start = 1800;
+     document.addNote(0, 1900, 70, 5, 50);
+     document.setTimeSig(start + 10, 3, 2);
+     document.applyTempoEdit({{}, {songdocument_test::tempo(start + 10, 180)}});
+     document.insertRawEvent(0,
+                             songdocument_test::meta(0x01, start + 15, QByteArrayLiteral("global")));
+     SongDocument::TimeScope wholeSong;
+     wholeSong.wholeSong = true;
+     const QByteArray before = document.smf().write();
+     QVERIFY(document.duplicateTimeRange({start, start + 20}, wholeSong));
+     bool copiedMeta = false;
+@@ -471,10 +471,33 @@ void EditCheckTest::timeRangeWholeSong()
+     QVERIFY(document.findNote(0, 1920, 70, &shifted));
+     const int smfTrack = document.smfTrackFor(0);
+     QVERIFY(smfTrack >= 0);
+     QVERIFY(document.smf().tracks[size_t(smfTrack)].endTick >= shifted.tick + shifted.duration);
+     const QByteArray after = document.smf().write();
+     document.undoStack()->undo();
+     QCOMPARE(document.smf().write(), before);
+     document.undoStack()->redo();
+     QCOMPARE(document.smf().write(), after);
+ }
++
++void EditCheckTest::timeRangeInsertBlankOverflow()
++{
++    SmfFile smf;
++    smf.format = 1;
++    smf.division = 24;
++    smf.tracks.push_back(SmfTrack{{}, 48});
++    smf.tracks.push_back(SmfTrack{{songdocument_test::channel(0xC0, 0, 1, 0)}, 48});
++    auto fixture =
++        songdocument_test::makeDocument(std::move(smf), QStringLiteral("time-blank-overflow"));
++    QVERIFY(fixture);
++    SongDocument &document = fixture->document;
++    const int smfTrack = document.smfTrackFor(0);
++    QVERIFY(smfTrack >= 0);
++    // SMF VLQ is 28-bit, so kMaxTick cannot round-trip as EOT through makeDocument.
++    document.insertRawEvent(smfTrack,
++                            songdocument_test::channel(0xB0, CoreTimeDefaults::kMaxTick, 7, 0));
++    const QByteArray bytes = document.smf().write();
++    const int undoCount = document.undoStack()->count();
++    QVERIFY(!document.insertBlankTime({0, 1}, trackZero()));
++    QCOMPARE(document.smf().write(), bytes);
++    QCOMPARE(document.undoStack()->count(), undoCount);
++}
+diff --git a/src/checks/project/save.cpp b/src/checks/project/save.cpp
+index 15b7ad81..6e76725c 100644
+--- a/src/checks/project/save.cpp
++++ b/src/checks/project/save.cpp
+@@ -1,20 +1,19 @@
+ #include <QtTest>
+ 
+ #include <QFile>
+ #include <QFileInfo>
+ #include <QProcess>
+ #include <QUndoStack>
+ 
+ #include <algorithm>
+ #include <cstdint>
+-#include <limits>
+ #include <memory>
+ #include <optional>
+ 
+ #include "checks/support/songfixture.h"
+ #include "core/songdocument.h"
+ 
+ namespace {
+ 
+ QByteArray readFileBytes(const QString &path)
+ {
+@@ -32,29 +31,29 @@ int firstNonemptyTrack(const SongDocument &document)
+     return -1;
+ }
+ 
+ struct EditWindow {
+     int track = -1;
+     uint64_t base = 0;
+ };
+ 
+ std::optional<EditWindow> emptyTailWindow(const SongDocument &document, int track)
+ {
+-    uint64_t lastEnd = 0;
++    Tick lastEnd = 0;
+     for (const SmfTrack &smfTrack : document.smf().tracks)
+-        lastEnd = std::max(lastEnd, uint64_t(smfTrack.endTick));
+-    constexpr uint64_t kRequiredTail = 96 + 528;
+-    if (lastEnd > std::numeric_limits<uint64_t>::max() - kRequiredTail)
++        lastEnd = std::max(lastEnd, smfTrack.endTick);
++    const Tick kRequiredTail = 96 + 528;
++    if (lastEnd > CoreTimeDefaults::kMaxTick - kRequiredTail)
+         return std::nullopt;
+ 
+-    const uint64_t base = lastEnd + 96;
+-    const uint64_t windowEnd = base + 528;
++    const Tick base = lastEnd + 96;
++    const Tick windowEnd = base + 528;
+     for (const DocNote &note : document.notesForTrack(track))
+         if (note.tick < windowEnd && document.noteEndTick(note) > base)
+             return std::nullopt;
+     return EditWindow{track, base};
+ }
+ 
+ struct SavedEdit {
+     EditWindow window;
+     uint64_t expectedLoopStart = 0;
+     QString cfgPath;
+@@ -64,21 +63,21 @@ struct SavedEdit {
+ bool saveEditedDocument(SongDocument &document, const EditWindow &window, SavedEdit &saved,
+                         QString &error)
+ {
+     saved.window = window;
+     saved.cfgPath = QFileInfo(document.midPath()).dir().filePath(QStringLiteral("midi.cfg"));
+     saved.cfgBefore = readFileBytes(saved.cfgPath).split('\n');
+ 
+     document.addNote(window.track, window.base, 72, 24, 93);
+     const uint64_t oldLoopStart = document.loopTick(false);
+     saved.expectedLoopStart =
+-        oldLoopStart == std::numeric_limits<uint64_t>::max() ? 0 : oldLoopStart + 24;
++        oldLoopStart == CoreTimeDefaults::kNoTick ? 0 : uint64_t(oldLoopStart) + 24;
+     document.setLoopTick(false, static_cast<int64_t>(saved.expectedLoopStart));
+     SongCfg cfg = document.cfg();
+     cfg.masterVolume = 111;
+     document.setCfg(cfg);
+     return document.save(&error);
+ }
+ 
+ bool isExactSongCfgLine(const QByteArray &line, const QString &songLabel)
+ {
+     return line.startsWith(songLabel.toUtf8() + ".mid:");
+diff --git a/src/checks/selectionkey/corefixture.cpp b/src/checks/selectionkey/corefixture.cpp
+index 19de7ed7..6af95f4a 100644
+--- a/src/checks/selectionkey/corefixture.cpp
++++ b/src/checks/selectionkey/corefixture.cpp
+@@ -97,31 +97,31 @@ QString describeNoteIds(const std::vector<NoteId> &ids)
+ {
+     static_assert(sizeof(NoteId) == sizeof(uint64_t));
+     QStringList values;
+     for (const NoteId id : ids) {
+         values.push_back(QStringLiteral("0x%1").arg(
+             static_cast<qulonglong>(std::bit_cast<uint64_t>(id)), 16, 16, QLatin1Char('0')));
+     }
+     return QStringLiteral("[%1]").arg(values.join(QLatin1Char(',')));
+ }
+ 
+-songview::EditorSelectionModel::TimeSelection coreLaneRange(uint64_t begin, uint64_t end)
++songview::EditorSelectionModel::TimeSelection coreLaneRange(Tick begin, Tick end)
+ {
+     songview::EditorSelectionModel::TimeSelection selection;
+     selection.startTick = begin;
+     selection.endTick = end;
+     selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
+     selection.lanes = {{kTrack, kController}};
+     return selection;
+ }
+ 
+-songview::EditorSelectionModel::TimeSelection coreTrackRange(uint64_t begin, uint64_t end)
++songview::EditorSelectionModel::TimeSelection coreTrackRange(Tick begin, Tick end)
+ {
+     songview::EditorSelectionModel::TimeSelection selection;
+     selection.startTick = begin;
+     selection.endTick = end;
+     selection.scope = songview::EditorSelectionModel::TimeSelection::Tracks;
+     return selection;
+ }
+ 
+ std::optional<EditorDrawerPage> drawerPageForBand(songview::TimelineBand band)
+ {
+@@ -244,57 +244,56 @@ ClickTarget CoreFixture::selectedVelocityStemPoint() const
+     return result;
+ }
+ 
+ std::optional<QPoint> CoreFixture::plainRulerPoint(songview::TimelineInputItem *ruler) const
+ {
+     // An ordinary ruler click near the center, clear of loop markers and
+     // time-signature chips whose press-drag state commits on release.
+     if (!ruler || ruler->bounds().isEmpty())
+         return std::nullopt;
+     std::vector<qreal> reservedX;
+-    const auto reserve = [&reservedX, this, ruler](uint64_t tick) {
+-        if (tick != UINT64_MAX)
++    const auto reserve = [&reservedX, this, ruler](Tick tick) {
++        if (tick != CoreTimeDefaults::kNoTick)
+             reservedX.push_back(
+                 rigView(*m_world).camera().displayX(double(tick), 0.0, ruler->devicePixelRatio()));
+     };
+     reserve(rigDocument(*m_world).loopTick(false));
+     reserve(rigDocument(*m_world).loopTick(true));
+     for (const DocTimeSig &signature : rigDocument(*m_world).timeSigs())
+         reserve(signature.tick);
+     const QRectF bounds = ruler->bounds();
+     for (qreal x = bounds.center().x(); x + 24.0 < bounds.right(); x += 16.0) {
+         const bool reserved = std::any_of(reservedX.begin(), reservedX.end(), [x](qreal reserved) {
+             return std::abs(x - reserved) <= 24.0;
+         });
+         if (!reserved)
+             return std::optional(ruler->mapToScene(QPointF(x, bounds.center().y())).toPoint());
+     }
+     return std::nullopt;
+ }
+ 
+ std::optional<std::vector<QPoint>>
+-CoreFixture::laneWindowPoints(const std::vector<std::pair<uint64_t, int>> &pointSpecs,
++CoreFixture::laneWindowPoints(const std::vector<std::pair<Tick, int>> &pointSpecs,
+                               QString *diagnostics) const
+ {
+     const auto probe =
+         AutomationProbe::locate(rigView(*m_world), rigInput(*m_world, "timelineAutomationInput"),
+                                 kTrack, kController, diagnostics);
+     if (!probe)
+         return std::nullopt;
+     std::vector<AutomationProbePoint> requested;
+     requested.reserve(pointSpecs.size());
+     for (const auto &spec : pointSpecs)
+         requested.push_back({spec.first, spec.second});
+     std::vector<QPoint> projected(pointSpecs.size());
+     if (!probe->project(requested, projected, diagnostics))
+         return std::nullopt;
+     return projected;
+ }
+ 
+-std::optional<QPoint> CoreFixture::laneWindowPoint(uint64_t tick, int value,
+-                                                   QString *diagnostics) const
++std::optional<QPoint> CoreFixture::laneWindowPoint(Tick tick, int value, QString *diagnostics) const
+ {
+     const auto points = laneWindowPoints({{tick, value}}, diagnostics);
+     return points ? std::optional(points->front()) : std::nullopt;
+ }
+ 
+ } // namespace selectionkey
+diff --git a/src/checks/selectionkey/corefixture.h b/src/checks/selectionkey/corefixture.h
+index eb3f1e2d..75bc390a 100644
+--- a/src/checks/selectionkey/corefixture.h
++++ b/src/checks/selectionkey/corefixture.h
+@@ -1,61 +1,62 @@
+ #pragma once
+ 
+ // Core-scenario fixture for the selection-keyboard-routing check: the
+ // canonical standalone RigWorld plus the drawer-surface, focus, selection and
+ // click-target staging that every core case shares. Fixture methods locate and
+ // stage; the scenario slots in tst_selectionkeycore own every verdict, so this
+ // class deliberately holds no assertions. It is core-tier only: the gesture,
+ // window and local-input tiers keep using primitives.h directly.
+ 
+ #include "checks/selectionkey/primitives.h"
++#include "core/timedefaults.h"
+ #include "ui/songview/editorselectionmodel.h"
+ 
+ #include <QPoint>
+ #include <QString>
+ 
+ #include <array>
+ #include <cstdint>
+ #include <memory>
+ #include <optional>
+ #include <utility>
+ #include <vector>
+ 
+ namespace selectionkey {
+ 
+ // Reserved fixture ticks (plan scenario 1): notes at kFirstNoteTick{+48,+96},
+ // automation lane points at kFirstPointTick/kInsidePointTick/kSecondPointTick/
+ // kOutsidePointTick, paste probe at kPasteTick. Scenario slots own disjoint
+ // tick ranges so an edit to one cannot silently retarget another.
+ inline constexpr int kTrack = 0;
+ inline constexpr uint8_t kController = 10;
+-inline constexpr uint64_t kFirstNoteTick = 960;
+-inline constexpr uint64_t kFirstPointTick = 48;
+-inline constexpr uint64_t kInsidePointTick = 72;
+-inline constexpr uint64_t kSecondPointTick = 96;
+-inline constexpr uint64_t kOutsidePointTick = 144;
+-inline constexpr uint64_t kPasteTick = 1200;
++inline constexpr Tick kFirstNoteTick = 960;
++inline constexpr Tick kFirstPointTick = 48;
++inline constexpr Tick kInsidePointTick = 72;
++inline constexpr Tick kSecondPointTick = 96;
++inline constexpr Tick kOutsidePointTick = 144;
++inline constexpr Tick kPasteTick = 1200;
+ 
+ // A located click point plus the geometry diagnostics that explain it when a
+ // delivery assertion fails.
+ struct ClickTarget {
+     std::optional<QPoint> point;
+     QString diagnostics;
+ };
+ 
+ QString describePoint(const QPointF &point);
+ QString describeRect(const QRectF &rect);
+ QString describeNoteIds(const std::vector<NoteId> &ids);
+ 
+ // Lane-scoped and track-scoped time selections used as staged inputs.
+-songview::EditorSelectionModel::TimeSelection coreLaneRange(uint64_t begin, uint64_t end);
+-songview::EditorSelectionModel::TimeSelection coreTrackRange(uint64_t begin, uint64_t end);
++songview::EditorSelectionModel::TimeSelection coreLaneRange(Tick begin, Tick end);
++songview::EditorSelectionModel::TimeSelection coreTrackRange(Tick begin, Tick end);
+ 
+ // The drawer page mirroring a timeline band; empty for bands outside the
+ // drawer (roll, ruler, other events).
+ std::optional<EditorDrawerPage> drawerPageForBand(songview::TimelineBand band);
+ 
+ class CoreFixture final
+ {
+   public:
+     static std::unique_ptr<CoreFixture> create(const QString &projectRoot, const QString &songLabel,
+                                                std::optional<EditorDrawerPage> drawerPage,
+@@ -82,23 +83,23 @@ class CoreFixture final
+ 
+     std::optional<DocNote> note(std::size_t index) const;
+     // All three fixture notes, or empty when one vanished before a command.
+     std::optional<std::array<DocNote, 3>> snapshotNotes() const;
+ 
+     // Real, visible-surface click targets for the incidental-click scenarios.
+     ClickTarget emptyAutomationLanePoint() const;
+     ClickTarget selectedVelocityStemPoint() const;
+     std::optional<QPoint> plainRulerPoint(songview::TimelineInputItem *ruler) const;
+ 
+-    std::optional<QPoint> laneWindowPoint(uint64_t tick, int value,
++    std::optional<QPoint> laneWindowPoint(Tick tick, int value,
+                                           QString *diagnostics = nullptr) const;
+     std::optional<std::vector<QPoint>>
+-    laneWindowPoints(const std::vector<std::pair<uint64_t, int>> &pointSpecs,
++    laneWindowPoints(const std::vector<std::pair<Tick, int>> &pointSpecs,
+                      QString *diagnostics = nullptr) const;
+ 
+   private:
+     CoreFixture() = default;
+ 
+     std::unique_ptr<RigWorld> m_world;
+ };
+ 
+ } // namespace selectionkey
+diff --git a/src/core/songdocument.cpp b/src/core/songdocument.cpp
+index 49831b0f..864d9b32 100644
+--- a/src/core/songdocument.cpp
++++ b/src/core/songdocument.cpp
+@@ -237,22 +237,21 @@ class MoveNotesCommand : public QUndoCommand
+ 
+   private:
+     // The next press must edit the notes exactly where this command left
+     // them; anything else (new selection, another note landing on the same
+     // spot) is a separate gesture.
+     bool movesMyOutputs(const std::vector<DocNote> &next) const
+     {
+         if (next.size() != m_notes.size())
+             return false;
+         for (const DocNote &note : m_notes) {
+-            const uint64_t outputTick =
+-                uint64_t(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
++            const Tick outputTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
+             const uint8_t outputKey = uint8_t(std::clamp(int(note.key) + m_dKey, 0, 127));
+             const auto output =
+                 std::find_if(next.begin(), next.end(), [&](const DocNote &candidate) {
+                     return candidate.noteId == note.noteId &&
+                            candidate.engineTrack == note.engineTrack &&
+                            candidate.tick == outputTick && candidate.key == outputKey &&
+                            candidate.duration == note.duration &&
+                            candidate.velocity == note.velocity && candidate.channel == note.channel;
+                 });
+             if (output == next.end())
+@@ -324,27 +323,27 @@ class MoveNotesToPitchesCommand : public QUndoCommand
+         return std::all_of(notes.begin(), notes.end(), [engineTrack](const DocNote &note) {
+             return note.engineTrack == engineTrack;
+         });
+     }
+ 
+     bool movesMyOutputs(const std::vector<DocNote> &next) const
+     {
+         if (next.size() != m_notes.size() || !allOnSameEngineTrack(m_notes) ||
+             !allOnSameEngineTrack(next) || m_notes.front().engineTrack != next.front().engineTrack)
+             return false;
+-        using Pos = std::tuple<int, uint64_t, int, uint32_t, uint8_t, uint8_t>;
++        using Pos = std::tuple<int, Tick, int, uint32_t, uint8_t, uint8_t>;
+         std::vector<Pos> mine, theirs;
+         for (size_t i = 0; i < m_notes.size(); i++) {
+             const DocNote &note = m_notes[i];
+-            const uint64_t tick =
+-                note.unterminated() ? note.tick
+-                                    : uint64_t(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
++            const Tick tick = note.unterminated()
++                                  ? note.tick
++                                  : Tick(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
+             const int key = note.unterminated() ? note.key : m_destPitches[i];
+             mine.push_back(
+                 {note.engineTrack, tick, key, note.duration, note.velocity, note.channel});
+         }
+         for (const DocNote &note : next)
+             theirs.push_back({note.engineTrack, note.tick, int(note.key), note.duration,
+                               note.velocity, note.channel});
+         std::sort(mine.begin(), mine.end());
+         std::sort(theirs.begin(), theirs.end());
+         return mine == theirs;
+@@ -694,21 +693,21 @@ bool SongDocument::containsNoteSpan(int engineTrack, const DocNote &snapshot,
+                                     uint64_t expectedEndTick) const
+ {
+     DocNote current;
+     if (!snapshot.noteId.isAssigned() || !findNote(snapshot.noteId, &current))
+         return false;
+     return current.engineTrack == engineTrack &&
+            current.unterminated() == snapshot.unterminated() &&
+            noteEndTick(current) == expectedEndTick;
+ }
+ 
+-bool SongDocument::findNote(int engineTrack, uint64_t tick, uint8_t key, DocNote *out) const
++bool SongDocument::findNote(int engineTrack, Tick tick, uint8_t key, DocNote *out) const
+ {
+     for (const DocNote &note : notesForTrack(engineTrack)) {
+         if (note.tick == tick && note.key == key) {
+             *out = note;
+             return true;
+         }
+     }
+     return false;
+ }
+ 
+@@ -766,22 +765,21 @@ std::vector<DocLanePoint> SongDocument::lanePoints(int engineTrack, uint8_t cc)
+         }
+         return points;
+     }
+     for (size_t index = 0; index < events.size(); ++index) {
+         if (laneEventMatches(events[index], cc))
+             points.push_back({smfTrack, index, events[index].tick, laneValue(events[index], cc)});
+     }
+     return points;
+ }
+ 
+-bool SongDocument::findLanePoint(int engineTrack, uint8_t cc, uint64_t tick,
+-                                 DocLanePoint *out) const
++bool SongDocument::findLanePoint(int engineTrack, uint8_t cc, Tick tick, DocLanePoint *out) const
+ {
+     // The LAST point at the tick, mirroring setTimeSig: playback applies a
+     // tick's events in order, so among same-tick duplicates the last is the
+     // audible one — edits must target it, not a shadowed earlier value.
+     bool found = false;
+     for (const DocLanePoint &pt : lanePoints(engineTrack, cc)) {
+         if (pt.tick > tick)
+             break;
+         if (pt.tick == tick) {
+             if (out)
+@@ -821,58 +819,58 @@ bool SongDocument::findLoopMarkerEvent(bool endMarker, int *smfTrack, size_t *in
+             if (metaIsLoopMarker(ev, marker)) {
+                 *smfTrack = int(t);
+                 *index = i;
+                 return true;
+             }
+         }
+     }
+     return false;
+ }
+ 
+-uint64_t SongDocument::loopTick(bool endMarker) const
++Tick SongDocument::loopTick(bool endMarker) const
+ {
+     int track;
+     size_t index;
+     if (!findLoopMarkerEvent(endMarker, &track, &index))
+-        return UINT64_MAX;
++        return CoreTimeDefaults::kNoTick;
+     return m_smf.tracks[track].events[index].tick;
+ }
+ 
+ std::vector<DocTimeSig> SongDocument::timeSigs() const
+ {
+     std::vector<DocTimeSig> sigs;
+     for (size_t t = 0; t < m_smf.tracks.size(); t++) {
+         const auto &evs = m_smf.tracks[t].events;
+         for (size_t i = 0; i < evs.size(); i++) {
+             if (metaIsTimeSig(evs[i]))
+                 sigs.push_back(
+                     {int(t), i, evs[i].tick, uint8_t(evs[i].blob[0]), uint8_t(evs[i].blob[1])});
+         }
+     }
+     std::stable_sort(sigs.begin(), sigs.end(),
+                      [](const DocTimeSig &a, const DocTimeSig &b) { return a.tick < b.tick; });
+     return sigs;
+ }
+ 
+-SmfEvent SongDocument::makeChannelEvent(uint8_t typeNibble, uint8_t channel, uint64_t tick,
++SmfEvent SongDocument::makeChannelEvent(uint8_t typeNibble, uint8_t channel, Tick tick,
+                                         uint8_t data0, uint8_t data1) const
+ {
+     SmfEvent ev;
+     ev.tick = tick;
+     ev.status = uint8_t((typeNibble << 4) | (channel & 0x0F));
+     ev.data0 = data0;
+     ev.data1 = data1;
+     return ev;
+ }
+ 
+ void SongDocument::appendNoteInsertOps(std::vector<EditOp> &ops, int smfTrack, uint8_t channel,
+-                                       uint64_t tick, uint8_t key, uint32_t duration,
++                                       Tick tick, uint8_t key, uint32_t duration,
+                                        uint8_t velocity) const
+ {
+     EditOp on;
+     on.type = EditOp::InsertEvent;
+     on.smfTrack = smfTrack;
+     on.event = makeChannelEvent(0x9, channel, tick, key, velocity);
+     ops.push_back(on);
+ 
+     // Note ends are written as velocity-0 note-ons: the form mid2agb's own
+     // ecosystem uses, and the one that keeps running status unbroken.
+@@ -947,22 +945,22 @@ void SongDocument::resolveNoteOverlaps(const std::vector<PlannedNote> &written,
+             if (n.smfTrack == s.smfTrack && n.onIndex == s.onIndex)
+                 return true;
+         }
+         return false;
+     };
+     for (int t : tracks) {
+         for (const DocNote &s : notesForTrack(t)) {
+             // An unterminated note has no end to trim; it stays as-is.
+             if (s.unterminated() || isEdited(s))
+                 continue;
+-            uint64_t sTick = s.tick;
+-            uint64_t sEnd = s.tick + s.duration;
++            Tick sTick = s.tick;
++            uint64_t sEnd = uint64_t(s.tick) + s.duration;
+             bool covered = false, trimEnd = false, trimLeft = false;
+             for (const PlannedNote &w : spans) {
+                 if (w.engineTrack != t || w.key != s.key || w.endTick <= sTick || w.tick >= sEnd)
+                     continue;
+                 if (sTick < w.tick) {
+                     // Head survives (a strictly containing note keeps only
+                     // its head — no splitting). Later spans start at or past
+                     // the new end, so this settles the note.
+                     sEnd = w.tick;
+                     trimEnd = true;
+@@ -998,48 +996,49 @@ void SongDocument::resolveNoteOverlaps(const std::vector<PlannedNote> &written,
+                 op.type = EditOp::InsertEvent;
+                 op.smfTrack = s.smfTrack;
+                 op.event = m_smf.tracks[size_t(s.smfTrack)].events[s.endIndex];
+                 op.event.tick = sEnd;
+                 trims.push_back(op);
+             }
+         }
+     }
+ }
+ 
+-void SongDocument::addNote(int engineTrack, uint64_t tick, uint8_t key, uint32_t duration,
++void SongDocument::addNote(int engineTrack, Tick tick, uint8_t key, uint32_t duration,
+                            uint8_t velocity)
+ {
+     const int smfTrack = smfTrackFor(engineTrack);
+     if (smfTrack < 0)
+         return;
+     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+     std::vector<EditOp> trims;
+-    resolveNoteOverlaps({{engineTrack, key, tick, tick + std::max<uint32_t>(1, duration)}}, {},
+-                        removals, trims);
++    resolveNoteOverlaps(
++        {{engineTrack, key, tick, uint64_t(tick) + std::max<uint32_t>(1, duration)}}, {}, removals,
++        trims);
+     std::vector<EditOp> ops;
+     for (size_t t = 0; t < m_smf.tracks.size(); t++)
+         appendRemoveOps(ops, int(t), std::move(removals[t]));
+     appendNoteInsertOps(ops, smfTrack, channelFor(engineTrack), tick, key, duration, velocity);
+     ops.insert(ops.end(), trims.begin(), trims.end());
+     pushEdit(tr("add note"), std::move(ops));
+ }
+ 
+ void SongDocument::addNotes(int engineTrack, const std::vector<NewNote> &notes)
+ {
+     const int smfTrack = smfTrackFor(engineTrack);
+     if (smfTrack < 0 || notes.empty())
+         return;
+     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+     std::vector<PlannedNote> written;
+     for (const NewNote &note : notes)
+-        written.push_back(
+-            {engineTrack, note.key, note.tick, note.tick + std::max<uint32_t>(1, note.duration)});
++        written.push_back({engineTrack, note.key, note.tick,
++                           uint64_t(note.tick) + std::max<uint32_t>(1, note.duration)});
+     std::vector<EditOp> trims;
+     resolveNoteOverlaps(written, {}, removals, trims);
+     const uint8_t channel = channelFor(engineTrack);
+     std::vector<EditOp> ops;
+     for (size_t t = 0; t < m_smf.tracks.size(); t++)
+         appendRemoveOps(ops, int(t), std::move(removals[t]));
+     for (const NewNote &note : notes)
+         appendNoteInsertOps(ops, smfTrack, channel, note.tick, note.key, note.duration,
+                             note.velocity);
+     ops.insert(ops.end(), trims.begin(), trims.end());
+@@ -1067,21 +1066,21 @@ void SongDocument::deleteNotes(const std::vector<DocNote> &notes)
+     pushEdit(tr("delete %n note(s)", nullptr, int(notes.size())), std::move(ops));
+ }
+ 
+ void SongDocument::moveNotes(const std::vector<DocNote> &notes, int64_t dTick, int dKey,
+                              bool mergeable)
+ {
+     if (notes.empty() || (dTick == 0 && dKey == 0))
+         return;
+     const bool changes =
+         std::any_of(notes.begin(), notes.end(), [dTick, dKey](const DocNote &note) {
+-            return uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick)) != note.tick ||
++            return Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick)) != note.tick ||
+                    uint8_t(std::clamp(int(note.key) + dKey, 0, 127)) != note.key;
+         });
+     if (!changes)
+         return;
+     m_history.pushDocument(std::make_unique<MoveNotesCommand>(this, notes, dTick, dKey, mergeable));
+     // The command suppresses publication from its initial redo because a
+     // merge can replace that provisional state. Publish the public move call
+     // after the stack settles: an inverse merge may remove the command but
+     // has still restored live state.
+     publishMutation(currentTrackRemap());
+@@ -1127,22 +1126,23 @@ void collectMovePlans(const std::vector<DocNote> &notes, int64_t dTick, auto des
+     for (size_t i = 0; i < notes.size(); i++) {
+         const DocNote &note = notes[i];
+         const uint8_t destKey = destKeyAt(i, note);
+         if (note.smfTrack < 0 || note.smfTrack >= int(outRemovals.size()) ||
+             shouldSkip(note, destKey))
+             continue;
+         outRemovals[size_t(note.smfTrack)].push_back(note.onIndex);
+         if (note.unterminated())
+             continue;
+         outRemovals[size_t(note.smfTrack)].push_back(note.endIndex);
+-        const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
+-        outWritten.push_back({note.engineTrack, destKey, newTick, newTick + note.duration});
++        const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
++        outWritten.push_back(
++            {note.engineTrack, destKey, newTick, uint64_t(newTick) + note.duration});
+     }
+ }
+ 
+ } // namespace
+ 
+ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vector<DocNote> &notes,
+                                                                   int64_t dTick, int dKey) const
+ {
+     // Every note moves; the note's own on/end events are rewritten with the
+     // new tick and key (note id preserved, velocity intact). Unterminated
+@@ -1158,21 +1158,21 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vec
+     resolveNoteOverlaps(written, notes, removals, trims);
+     std::vector<EditOp> ops;
+     for (size_t t = 0; t < m_smf.tracks.size(); t++)
+         appendRemoveOps(ops, int(t), std::move(removals[t]));
+     for (size_t i = 0; i < notes.size(); i++) {
+         const DocNote &note = notes[i];
+         const uint8_t destKey = destKeyAt(i, note);
+         if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
+             shouldSkip(note, destKey))
+             continue;
+-        const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
++        const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
+         EditOp on;
+         on.type = EditOp::InsertEvent;
+         on.smfTrack = note.smfTrack;
+         on.event = m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
+         on.event.tick = newTick;
+         on.event.data0 = destKey;
+         on.preservesNoteId = true;
+         ops.push_back(std::move(on));
+         if (!note.unterminated()) {
+             EditOp end;
+@@ -1203,21 +1203,21 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesToPitchesOps(
+     resolveNoteOverlaps(written, notes, removals, trims);
+     std::vector<EditOp> ops;
+     for (size_t t = 0; t < m_smf.tracks.size(); t++)
+         appendRemoveOps(ops, int(t), std::move(removals[t]));
+     for (size_t i = 0; i < notes.size(); i++) {
+         const DocNote &note = notes[i];
+         const uint8_t destKey = destKeyAt(i, note);
+         if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
+             shouldSkip(note, destKey))
+             continue;
+-        const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
++        const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
+         appendNoteInsertOps(ops, note.smfTrack, note.channel, newTick, destKey, note.duration,
+                             note.velocity);
+     }
+     ops.insert(ops.end(), trims.begin(), trims.end());
+     return ops;
+ }
+ 
+ void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDuration)
+ {
+     if (notes.empty() || dDuration == 0)
+@@ -1229,21 +1229,22 @@ void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDurat
+     if (!changes)
+         return;
+     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+     std::vector<PlannedNote> written;
+     for (const DocNote &note : notes) {
+         if (note.unterminated() || note.smfTrack < 0 || note.smfTrack >= int(removals.size()))
+             continue;
+         removals[size_t(note.smfTrack)].push_back(note.endIndex);
+         const uint32_t newDuration =
+             uint32_t(std::max<int64_t>(1, int64_t(note.duration) + dDuration));
+-        written.push_back({note.engineTrack, note.key, note.tick, note.tick + newDuration});
++        written.push_back(
++            {note.engineTrack, note.key, note.tick, uint64_t(note.tick) + uint64_t(newDuration)});
+     }
+     std::vector<EditOp> trims;
+     resolveNoteOverlaps(written, notes, removals, trims);
+     std::vector<EditOp> ops;
+     for (size_t t = 0; t < m_smf.tracks.size(); t++)
+         appendRemoveOps(ops, int(t), std::move(removals[t]));
+     for (const DocNote &note : notes) {
+         const uint32_t newDuration =
+             uint32_t(std::max<int64_t>(1, int64_t(note.duration) + dDuration));
+         EditOp end;
+@@ -1255,49 +1256,48 @@ void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDurat
+     ops.insert(ops.end(), trims.begin(), trims.end());
+     pushEdit(tr("resize %n note(s)", nullptr, int(notes.size())), std::move(ops));
+ }
+ 
+ void SongDocument::resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dTick)
+ {
+     if (notes.empty() || dTick == 0)
+         return;
+     const bool changes = std::any_of(notes.begin(), notes.end(), [dTick](const DocNote &note) {
+         const int64_t maxTick =
+-            note.unterminated() ? INT64_MAX : int64_t(note.tick + note.duration) - 1;
+-        return uint64_t(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, maxTick)) != note.tick;
++            note.unterminated() ? INT64_MAX : int64_t(note.tick) + note.duration - 1;
++        return Tick(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, maxTick)) != note.tick;
+     });
+     if (!changes)
+         return;
+     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+     std::vector<PlannedNote> written;
+     for (const DocNote &note : notes) {
+         if (note.smfTrack < 0 || note.smfTrack >= int(removals.size()))
+             continue;
+         removals[size_t(note.smfTrack)].push_back(note.onIndex);
+         if (note.unterminated())
+             continue;
+-        const uint64_t endTick = note.tick + note.duration;
+-        const uint64_t newTick =
+-            uint64_t(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, int64_t(endTick) - 1));
++        const uint64_t endTick = uint64_t(note.tick) + uint64_t(note.duration);
++        const Tick newTick =
++            Tick(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, int64_t(endTick) - 1));
+         written.push_back({note.engineTrack, note.key, newTick, endTick});
+     }
+     std::vector<EditOp> trims;
+     resolveNoteOverlaps(written, notes, removals, trims);
+     std::vector<EditOp> ops;
+     for (size_t t = 0; t < m_smf.tracks.size(); t++)
+         appendRemoveOps(ops, int(t), std::move(removals[t]));
+     for (const DocNote &note : notes) {
+         // An unterminated note has no note-off to pin; its note-on just moves.
+         const int64_t maxTick =
+-            note.unterminated() ? INT64_MAX : int64_t(note.tick + note.duration) - 1;
+-        const uint64_t newTick =
+-            uint64_t(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, maxTick));
++            note.unterminated() ? INT64_MAX : int64_t(note.tick) + int64_t(note.duration) - 1;
++        const Tick newTick = Tick(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, maxTick));
+         EditOp on;
+         on.type = EditOp::InsertEvent;
+         on.smfTrack = note.smfTrack;
+         on.event = m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
+         on.event.tick = newTick;
+         on.preservesNoteId = true;
+         ops.push_back(std::move(on));
+     }
+     ops.insert(ops.end(), trims.begin(), trims.end());
+     pushEdit(tr("resize %n note(s)", nullptr, int(notes.size())), std::move(ops));
+@@ -1461,27 +1461,27 @@ void SongDocument::moveRawEvent(int smfTrack, size_t index, size_t destIndex)
+     std::vector<EditOp> ops;
+     EditOp op;
+     op.type = EditOp::MoveEvent;
+     op.smfTrack = smfTrack;
+     op.index = index;
+     op.indexTo = destIndex;
+     ops.push_back(op);
+     pushEdit(tr("reorder event"), std::move(ops));
+ }
+ 
+-void SongDocument::setTrackEndTick(int smfTrack, uint64_t tick)
++void SongDocument::setTrackEndTick(int smfTrack, Tick tick)
+ {
+     if (smfTrack < 0 || smfTrack >= int(m_smf.tracks.size()))
+         return;
+     const SmfTrack &track = m_smf.tracks[smfTrack];
+     // Ticks are non-decreasing, so the last event is the latest.
+-    const uint64_t minTick = track.events.empty() ? 0 : track.events.back().tick;
++    const Tick minTick = track.events.empty() ? 0 : track.events.back().tick;
+     tick = std::max(tick, minTick);
+     if (tick == track.endTick)
+         return;
+     std::vector<EditOp> ops;
+     EditOp op;
+     op.type = EditOp::SetTrackEnd;
+     op.smfTrack = smfTrack;
+     op.event.tick = tick;
+     ops.push_back(op);
+     pushEdit(tr("move end of track"), std::move(ops));
+@@ -1508,31 +1508,31 @@ void SongDocument::setLoopTick(bool endMarker, int64_t tick)
+         ops.push_back(remove);
+     } else {
+         // New markers go in the first chunk — the only place mid2agb reads
+         // seq events from — as a Marker meta.
+         markerEvent.status = 0xFF;
+         markerEvent.metaType = 0x06;
+         markerEvent.blob = QByteArray(1, endMarker ? ']' : '[');
+         smfTrack = 0;
+     }
+     if (tick >= 0) {
+-        markerEvent.tick = uint64_t(tick);
++        markerEvent.tick = Tick(tick);
+         EditOp insert;
+         insert.type = EditOp::InsertEvent;
+         insert.smfTrack = smfTrack;
+         insert.event = markerEvent;
+         ops.push_back(insert);
+     }
+     pushEdit(endMarker ? tr("set loop end") : tr("set loop start"), std::move(ops));
+ }
+ 
+-void SongDocument::setTimeSig(uint64_t tick, int numerator, int denomPow2)
++void SongDocument::setTimeSig(Tick tick, int numerator, int denomPow2)
+ {
+     if (m_smf.tracks.empty())
+         return;
+     const char nn = char(std::clamp(numerator, 1, 64));
+     const char dd = char(std::clamp(denomPow2, 0, 6));
+     // The bar grid honors the last 0x58 at a tick; modify that one in place
+     // so it keeps its chunk, its position within the tick group, and its
+     // metronome/32nds bytes.
+     DocTimeSig target;
+     bool exists = false;
+@@ -1560,21 +1560,21 @@ void SongDocument::setTimeSig(uint64_t tick, int numerator, int denomPow2)
+         op.event.status = 0xFF;
+         op.event.metaType = 0x58;
+         op.event.blob = QByteArray("\x00\x00\x18\x08", 4);
+     }
+     op.event.blob[0] = nn;
+     op.event.blob[1] = dd;
+     ops.push_back(op);
+     pushEdit(tr("set time signature"), std::move(ops));
+ }
+ 
+-void SongDocument::moveTimeSig(uint64_t fromTick, uint64_t toTick)
++void SongDocument::moveTimeSig(Tick fromTick, Tick toTick)
+ {
+     if (fromTick == toTick)
+         return;
+     const std::vector<DocTimeSig> sigs = timeSigs();
+     std::vector<EditOp> ops;
+     std::vector<EditOp> inserts;
+     for (size_t t = 0; t < m_smf.tracks.size(); t++) {
+         std::vector<size_t> indices;
+         for (const DocTimeSig &sig : sigs) {
+             // A signature already at the destination is overwritten.
+@@ -1591,21 +1591,21 @@ void SongDocument::moveTimeSig(uint64_t fromTick, uint64_t toTick)
+             }
+         }
+         appendRemoveOps(ops, int(t), std::move(indices));
+     }
+     if (inserts.empty())
+         return;
+     ops.insert(ops.end(), inserts.begin(), inserts.end());
+     pushEdit(tr("move time signature"), std::move(ops));
+ }
+ 
+-void SongDocument::deleteTimeSig(uint64_t tick)
++void SongDocument::deleteTimeSig(Tick tick)
+ {
+     std::vector<EditOp> ops;
+     for (size_t t = 0; t < m_smf.tracks.size(); t++) {
+         std::vector<size_t> indices;
+         for (const DocTimeSig &sig : timeSigs()) {
+             if (sig.smfTrack == int(t) && sig.tick == tick)
+                 indices.push_back(sig.index);
+         }
+         appendRemoveOps(ops, int(t), std::move(indices));
+     }
+@@ -1928,21 +1928,21 @@ std::unique_ptr<MidiTimeline> SongDocument::buildTimeline(double sampleRate) con
+     return timeline;
+ }
+ 
+ // The insertion primitive behind EditOp::InsertEvent placement and the
+ // detached export copy; see the declaration in songdocument.h.
+ size_t SongDocument::insertEventIntoTrack(SmfTrack &track, const SmfEvent &event)
+ {
+     auto &events = track.events;
+     auto it = std::upper_bound(
+         events.begin(), events.end(), event.tick,
+-        [](uint64_t tick, const SmfEvent &candidate) { return tick < candidate.tick; });
++        [](Tick tick, const SmfEvent &candidate) { return tick < candidate.tick; });
+     // Canonical placement within the tick group: walk back over same-tick
+     // events the new one is pinned ahead of — a setup event over notes, a
+     // note-end over note-ons. Metas, sysex and unconstrained channel types
+     // are barriers the insertion never crosses.
+     while (it != events.begin()) {
+         const SmfEvent &previous = *std::prev(it);
+         if (previous.tick != event.tick || !pinnedBefore(event, previous))
+             break;
+         --it;
+     }
+diff --git a/src/core/songdocument.h b/src/core/songdocument.h
+index b28b980c..ab1597cf 100644
+--- a/src/core/songdocument.h
++++ b/src/core/songdocument.h
+@@ -65,54 +65,54 @@ struct SongSaveSnapshot {
+ 
+ // A note located in the SMF model: the note-on event plus the event that ends
+ // it, paired exactly as mid2agb pairs them (first same-channel same-key
+ // note-off or velocity-0 note-on after the note-on).
+ struct DocNote {
+     NoteId noteId;
+     int engineTrack = -1;
+     int smfTrack = -1;
+     size_t onIndex = 0;
+     size_t endIndex = SIZE_MAX; // SIZE_MAX = unterminated note-on
+-    uint64_t tick = 0;
++    Tick tick = 0;
+     uint32_t duration = 0; // ticks (0 when unterminated)
+     uint8_t key = 0;
+     uint8_t velocity = 0;
+     uint8_t channel = 0;
+ 
+     bool unterminated() const { return endIndex == SIZE_MAX; }
+ };
+ 
+ // An automation point (CC, pitch bend, or voice change) located in the SMF
+ // model. Same staleness rule as DocNote.
+ struct DocLanePoint {
+     int smfTrack = -1;
+     size_t index = 0;
+-    uint64_t tick = 0;
++    Tick tick = 0;
+     int value = 0; // CoreTimeDefaults::laneValueMinimum/Maximum
+ };
+ 
+ // Tempo-only mutation. Mixed time/range commands apply a typed Tempo payload
+ // through replaceTempoPoints inside their own redo; they must not call
+ // applyTempoEdit (that would push a second undo item).
+ struct TempoEdit {
+     std::vector<TempoPoint> remove;
+     std::vector<TempoPoint> add;
+ 
+     bool empty() const { return remove.empty() && add.empty(); }
+ };
+ 
+ // A time-signature event (meta 0x58) located in the SMF model. Same
+ // staleness rule as DocNote.
+ struct DocTimeSig {
+     int smfTrack = -1;
+     size_t index = 0;
+-    uint64_t tick = 0;
++    Tick tick = 0;
+     uint8_t numerator = 4;
+     uint8_t denomPow2 = 2; // denominator = 1 << denomPow2
+ };
+ 
+ // The editable song document (SPEC.md §4): a full-fidelity SMF model plus the
+ // song's midi.cfg properties, with every mutation undoable. The .mid file is
+ // canonical storage; saving writes it plus (when changed) the song's midi.cfg
+ // line — nothing else in the project is ever touched.
+ class SongDocument : public QObject
+ {
+@@ -164,37 +164,37 @@ class SongDocument : public QObject
+     {
+         m_trackBudget = std::clamp(budget, 0, track_limits::kHardwareCapacity);
+     }
+ 
+     // Lookups. NoteId is the stable identity for note selection and velocity
+     // mutation; physical event locations remain document-owned details.
+     std::vector<DocNote> notesForTrack(int engineTrack) const;
+     // The ids of the track's current notes that were not in the before
+     // snapshot — what an insert (draw commit or paste) added.
+     std::vector<NoteId> insertedNoteIds(int engineTrack, const std::vector<DocNote> &before) const;
+-    bool findNote(int engineTrack, uint64_t tick, uint8_t key, DocNote *out) const;
++    bool findNote(int engineTrack, Tick tick, uint8_t key, DocNote *out) const;
+     bool findNote(NoteId id, DocNote *out) const;
+     uint64_t noteEndTick(const DocNote &note) const;
+     bool containsNoteSpan(int engineTrack, const DocNote &snapshot, uint64_t expectedEndTick) const;
+     std::vector<DocLanePoint> lanePoints(int engineTrack, uint8_t cc) const;
+-    bool findLanePoint(int engineTrack, uint8_t cc, uint64_t tick, DocLanePoint *out) const;
+-    // Loop markers ('[' / ']' text metas); UINT64_MAX when absent.
+-    uint64_t loopTick(bool endMarker) const;
++    bool findLanePoint(int engineTrack, uint8_t cc, Tick tick, DocLanePoint *out) const;
++    // Loop markers ('[' / ']' text metas); kNoTick when absent.
++    Tick loopTick(bool endMarker) const;
+     // Time signatures (meta 0x58), sorted by tick. When several share a tick
+     // the last one is the one the bar grid honors.
+     std::vector<DocTimeSig> timeSigs() const;
+ 
+     // Edits that change document state each push one undoable command and emit documentChanged.
+-    void addNote(int engineTrack, uint64_t tick, uint8_t key, uint32_t duration, uint8_t velocity);
++    void addNote(int engineTrack, Tick tick, uint8_t key, uint32_t duration, uint8_t velocity);
+     // Batch insert (clipboard paste): all notes land in one undoable command.
+     struct NewNote {
+-        uint64_t tick;
++        Tick tick;
+         uint8_t key;
+         uint32_t duration;
+         uint8_t velocity;
+     };
+     void addNotes(int engineTrack, const std::vector<NewNote> &notes);
+     void deleteNotes(const std::vector<DocNote> &notes);
+     // Move by a tick/key delta (note lengths preserved). mergeable marks a
+     // keyboard transpose/nudge press: consecutive mergeable moves of the
+     // same notes collapse into one undo command that re-lands from the
+     // gesture's start, so a neighbor trimmed by a merely-passed-through
+@@ -216,35 +216,35 @@ class SongDocument : public QObject
+     // Left-edge resize: move the note-on by dTick with the note-off pinned
+     // (tick and duration adjust together, at least 1 tick of note remains).
+     void resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dTick);
+     void setNotesVelocity(const std::vector<DocNote> &notes, uint8_t velocity);
+     std::optional<uint64_t> setNotesVelocities(uint64_t expectedRevision,
+                                                const std::vector<NoteVelocity> &velocities);
+ 
+     // Relative velocity change, clamped to 1-127 per note.
+     void nudgeNotesVelocity(const std::vector<DocNote> &notes, int delta);
+ 
+-    void addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int value);
++    void addLanePoint(int engineTrack, uint8_t cc, Tick tick, int value);
+     // Gesture write (freehand sweep / line ramp): replaces every point of the
+     // lane inside [tickBegin, tickEnd] with the given stream, as one undoable
+     // command. Voice uses identity-preserving point operations instead.
+     struct LanePointValue {
+-        uint64_t tick;
++        Tick tick;
+         int value;
+     };
+-    void writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBegin, uint64_t tickEnd,
++    void writeLanePoints(int engineTrack, uint8_t cc, Tick tickBegin, Tick tickEnd,
+                          const std::vector<LanePointValue> &points);
+     struct LanePointMove {
+         int engineTrack = -1;
+         uint8_t cc = 0;
+         DocLanePoint point;
+-        uint64_t newTick = 0;
++        Tick newTick = 0;
+         int newValue = 0;
+     };
+     // Descriptor-lane identities (point.index) are trusted: callers resolve
+     // them fresh, and the canonical plan re-validates every identity — a
+     // stale one rejects the whole command before anything is pushed.
+     void moveLanePoints(const std::vector<LanePointMove> &moves);
+     // Same identity-trust rule as moveLanePoints for descriptor lanes.
+     void deleteLanePoints(int engineTrack, uint8_t cc, const std::vector<DocLanePoint> &points);
+     void applyTempoEdit(const TempoEdit &edit);
+     // Removes raw events and edits the global tempo stream as one undoable
+@@ -299,27 +299,27 @@ class SongDocument : public QObject
+     // signatures) keep the state the shifted content was authored under: the
+     // last in-range point moves to startTick instead of vanishing (unless a
+     // point shifts onto that seam from endTick anyway).
+     // tracks close notes plus every non-note channel event of the track;
+     // wholeSong — the all-tracks cut — ignores tracks/lanes and closes every
+     // engine track plus the global rows: tempo, time signatures, loop markers
+     // and other metas (moved to the seam, never deleted), and each chunk's
+     // end-of-track tick, so the song itself gets shorter. One undoable command;
+     // returns false when nothing would change.
+     struct TimeRange {
+-        uint64_t startTick = 0;
+-        uint64_t endTick = 0;
++        Tick startTick = 0;
++        Tick endTick = 0;
+ 
+         bool empty() const { return endTick <= startTick; }
+-        uint64_t span() const { return empty() ? 0 : endTick - startTick; }
+-        bool contains(uint64_t tick) const { return tick >= startTick && tick < endTick; }
+-        bool overlaps(uint64_t start, uint64_t end) const
++        uint64_t span() const { return empty() ? 0 : uint64_t(endTick) - startTick; }
++        bool contains(Tick tick) const { return tick >= startTick && tick < endTick; }
++        bool overlaps(Tick start, Tick end) const
+         {
+             return startTick < endTick && start < end && startTick < end && start < endTick;
+         }
+     };
+     struct TimeScope {
+         std::vector<int> tracks;                    // engine tracks (ignored when wholeSong)
+         std::vector<std::pair<int, uint8_t>> lanes; // Voice/CC (engineTrack, cc)
+         bool tempo = false;
+         bool wholeSong = false;
+ 
+@@ -371,33 +371,33 @@ class SongDocument : public QObject
+     void moveRawEvent(int smfTrack, size_t index, size_t destIndex);
+     // The inclusive [first, last] range moveRawEvent would accept for the
+     // event at index: its own tick group, minus positions that would put a
+     // setup event after a same-tick note or a note-end after a same-tick
+     // note-on (in either direction — the moved event may not cross an
+     // event the canonical order pins it against). False when index is out
+     // of range.
+     bool rawEventMoveBounds(int smfTrack, size_t index, size_t *first, size_t *last) const;
+     // Move the chunk's end-of-track marker; clamped so it never precedes the
+     // chunk's last event.
+-    void setTrackEndTick(int smfTrack, uint64_t tick);
++    void setTrackEndTick(int smfTrack, Tick tick);
+ 
+     // Move or create a loop marker; tick == -1 removes it.
+     void setLoopTick(bool endMarker, int64_t tick);
+ 
+     // Set the time signature at a tick: modifies the winning 0x58 meta
+     // already there (keeping its chunk and metronome bytes), or inserts a
+     // new one in the seq chunk, like tempo and loop markers. moveTimeSig
+     // relocates every 0x58 at fromTick, overwriting any at toTick;
+     // deleteTimeSig removes every 0x58 at the tick.
+-    void setTimeSig(uint64_t tick, int numerator, int denomPow2);
+-    void moveTimeSig(uint64_t fromTick, uint64_t toTick);
+-    void deleteTimeSig(uint64_t tick);
++    void setTimeSig(Tick tick, int numerator, int denomPow2);
++    void moveTimeSig(Tick fromTick, Tick toTick);
++    void deleteTimeSig(Tick tick);
+ 
+     // Track create/delete. A track needs a channel event to occupy an engine
+     // slot (rebuildTrackMap), so a new track is seeded with a program change
+     // at tick 0 carrying the given voicegroup entry, in a new MTrk chunk
+     // appended on an unused MIDI channel. Returns the new engine track, -1
+     // if none is free.
+     bool canAddTrack() const;
+     int addTrack(int voice);
+     // Copy a track's owned channel events onto a fresh engine slot. The
+     // end-of-track tick is preserved; metadata is never copied. Returns the
+@@ -495,42 +495,42 @@ class SongDocument : public QObject
+     void mintNoteId(SmfEvent *event);
+     bool noteAt(int engineTrack, size_t onIndex, DocNote *out) const;
+     void mintUnassignedNoteIds();
+ 
+     int engineTrackForChunk(int chunk) const; // -1 = no engine slot
+     // Lowest MIDI channel no existing engine track uses; -1 when all 16 are
+     // taken.
+     int freeChannel() const;
+ 
+     // Builder helpers (operate on current state; see applyOps for index rules).
+-    SmfEvent makeChannelEvent(uint8_t typeNibble, uint8_t channel, uint64_t tick, uint8_t data0,
++    SmfEvent makeChannelEvent(uint8_t typeNibble, uint8_t channel, Tick tick, uint8_t data0,
+                               uint8_t data1) const;
+-    void appendNoteInsertOps(std::vector<EditOp> &ops, int smfTrack, uint8_t channel, uint64_t tick,
++    void appendNoteInsertOps(std::vector<EditOp> &ops, int smfTrack, uint8_t channel, Tick tick,
+                              uint8_t key, uint32_t duration, uint8_t velocity) const;
+     void appendRemoveOps(std::vector<EditOp> &ops, int smfTrack, std::vector<size_t> indices) const;
+     // Same-key overlap resolution for edits that write notes. The pairing
+     // rule (every note-on takes the first same-key end after it) cannot
+     // represent two overlapping notes on one key — a written note landing
+     // over a stationary one would silently re-pair the neighbor's end. So
+     // the edited note wins: a stationary same-track same-key note
+     // overlapping a written span keeps its head (end trimmed to the span
+     // start), keeps its tail (start moved to the span end), or is removed
+     // when fully covered — never split. written spans are the notes the
+     // edit is inserting; editNotes are the notes it already rewrites
+     // (excluded from trimming). Victim indices are appended to removals
+     // (per SMF track, for the caller's appendRemoveOps pass) and the
+     // trimmed events re-inserted with their exact bytes via trims (the
+     // caller appends them after all its removals).
+     struct PlannedNote {
+         int engineTrack;
+         uint8_t key;
+-        uint64_t tick;
++        Tick tick;
+         uint64_t endTick; // exclusive
+     };
+     void resolveNoteOverlaps(const std::vector<PlannedNote> &written,
+                              const std::vector<DocNote> &editNotes,
+                              std::vector<std::vector<size_t>> &removals,
+                              std::vector<EditOp> &trims) const;
+     // Note-move op builders, split out so their commands can rebuild the
+     // move with an accumulated delta when merging keyboard presses.
+     // moveNotes rewrites each note's own on/end events (note ids preserved;
+     // unterminated notes keep their patched note-on); moveNotesToPitches
+@@ -541,23 +541,23 @@ class SongDocument : public QObject
+                                                    const std::vector<uint8_t> &destPitches,
+                                                    int64_t dTick) const;
+     // Replace one event: modify in place when the tick is unchanged (the
+     // event keeps its position within its tick group — mid2agb stable-sorts,
+     // so same-tick order is significant), else remove + re-insert so ticks
+     // stay sorted.
+     void appendEventEditOps(std::vector<EditOp> &ops, int smfTrack, size_t index,
+                             const SmfEvent &event) const;
+     bool laneEventMatches(const SmfEvent &ev, uint8_t cc) const;
+     int laneValue(const SmfEvent &ev, uint8_t cc) const;
+-    SmfEvent makeLaneEvent(uint8_t cc, uint8_t channel, uint64_t tick, int value) const;
++    SmfEvent makeLaneEvent(uint8_t cc, uint8_t channel, Tick tick, int value) const;
+     void appendLaneInsertOps(std::vector<EditOp> &ops, int smfTrack, uint8_t channel, uint8_t cc,
+-                             uint64_t tick, int value) const;
++                             Tick tick, int value) const;
+     // The one XCMD adapter for an SMF track: one pass over the chunk's
+     // channel events as a single decoder stream (the same slot playback
+     // uses per engine track), rows carrying each event's chunk index as
+     // identity. Callers project them or rewrite points and translate the
+     // flat Patch via appendXcmdPatchOps; no protocol state is visible here.
+     // TimeEditor and the lane TUs reuse this — no other adapter exists.
+     std::vector<xcmd::Event> xcmdEvents(int smfTrack) const;
+     // Translates one plan's Patch: raw removals land in removals[smfTrack],
+     // and the ordered controller emissions become InsertEvents (canonical CC
+     // events on emission.channel; verbatim re-insertions copy the named
+diff --git a/src/core/songdocument_range.cpp b/src/core/songdocument_range.cpp
+index b9585451..131525a5 100644
+--- a/src/core/songdocument_range.cpp
++++ b/src/core/songdocument_range.cpp
+@@ -122,21 +122,21 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
+                 continue;
+             const auto patch = xcmd::rewritePoints(events, removeIdentities, writes[track]);
+             if (!patch)
+                 return; // semantics unsatisfiable: fail without mutation
+             appendXcmdPatchOps(removals, xcmdInserts, int(track), *patch);
+         }
+         std::vector<PlannedNote> written;
+         for (const RangeEdit::TrackNotes &tn : edit.addNotes) {
+             for (const NewNote &note : tn.notes)
+                 written.push_back({tn.engineTrack, note.key, note.tick,
+-                                   note.tick + std::max<uint32_t>(1, note.duration)});
++                                   uint64_t(note.tick) + std::max<uint32_t>(1, note.duration)});
+         }
+         resolveNoteOverlaps(written, edit.removeNotes, removals, trims);
+         // All removals first (per SMF track, descending — appendRemoveOps sorts
+         // and dedups), so every recorded index stays valid at apply time.
+         for (size_t t = 0; t < m_smf.tracks.size(); t++)
+             appendRemoveOps(ops, int(t), std::move(removals[t]));
+         ops.insert(ops.end(), xcmdInserts.begin(), xcmdInserts.end());
+     }
+     for (const RangeEdit::TrackNotes &tn : edit.addNotes) {
+         if (tn.engineTrack < 0 || tn.engineTrack >= int(engineToSmf.size()))
+@@ -156,21 +156,21 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
+         const uint8_t channel = engineChannels[size_t(lw.engineTrack)];
+         for (const LanePointValue &pt : lw.points)
+             appendLaneInsertOps(ops, smfTrack, channel, lw.cc, pt.tick, pt.value);
+     }
+     ops.insert(ops.end(), trims.begin(), trims.end());
+     if (edit.removeTempo.empty() && edit.addTempo.empty()) {
+         pushEdit(text, std::move(ops));
+         return;
+     }
+     std::vector<TempoPoint> nextTempo = m_tempoPoints;
+-    std::set<uint64_t> removeTicks;
++    std::set<Tick> removeTicks;
+     for (const TempoPoint &point : edit.removeTempo)
+         removeTicks.insert(point.tick);
+     std::erase_if(nextTempo,
+                   [&](const TempoPoint &point) { return removeTicks.contains(point.tick); });
+     nextTempo.insert(nextTempo.end(), edit.addTempo.begin(), edit.addTempo.end());
+     pushEdit(text, std::move(ops), std::move(nextTempo));
+ }
+ 
+ void SongDocument::moveRange(const std::vector<DocNote> &notes,
+                              const std::vector<DocLanePoint> &points, int64_t dTick,
+@@ -251,50 +251,51 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
+         // Ascending + deduped so the raw re-inserts below mirror the removals
+         // exactly and same-tick events keep their relative order.
+         for (std::vector<size_t> &indices : moved) {
+             std::sort(indices.begin(), indices.end());
+             indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
+         }
+         std::vector<PlannedNote> written;
+         for (const DocNote &note : notes) {
+             if (note.unterminated())
+                 continue;
+-            const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
+-            written.push_back({note.engineTrack, note.key, newTick, newTick + note.duration});
++            const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
++            written.push_back(
++                {note.engineTrack, note.key, newTick, uint64_t(newTick) + note.duration});
+         }
+         std::vector<EditOp> trims;
+         resolveNoteOverlaps(written, notes, removals, trims);
+         // All removals first (indices are read at apply time), then the
+         // canonical XCMD emissions, then the events' exact bytes re-inserted
+         // at the shifted ticks.
+         for (size_t t = 0; t < m_smf.tracks.size(); t++)
+             appendRemoveOps(ops, int(t), std::move(removals[t]));
+         ops.insert(ops.end(), xcmdInserts.begin(), xcmdInserts.end());
+         for (size_t t = 0; t < m_smf.tracks.size(); t++) {
+             for (size_t index : moved[t]) {
+                 EditOp op;
+                 op.type = EditOp::InsertEvent;
+                 op.smfTrack = int(t);
+                 op.event = m_smf.tracks[t].events[index];
+-                op.event.tick = uint64_t(std::max<int64_t>(0, int64_t(op.event.tick) + dTick));
++                op.event.tick = Tick(std::max<int64_t>(0, int64_t(op.event.tick) + dTick));
+                 op.preservesNoteId = op.event.isNoteOn();
+                 ops.push_back(op);
+             }
+         }
+         ops.insert(ops.end(), trims.begin(), trims.end());
+     }
+     if (tempo.empty()) {
+         pushEdit(tr("move range"), std::move(ops));
+         return;
+     }
+     std::vector<TempoPoint> nextTempo = m_tempoPoints;
+     std::set<uint64_t> moving;
+     for (const TempoPoint &point : tempo)
+         moving.insert(point.tick);
+     std::erase_if(nextTempo, [&](const TempoPoint &point) { return moving.contains(point.tick); });
+     for (const TempoPoint &point : tempo) {
+         TempoPoint shifted = point;
+-        shifted.tick = uint64_t(std::max<int64_t>(0, int64_t(point.tick) + dTick));
++        shifted.tick = Tick(std::max<int64_t>(0, int64_t(point.tick) + dTick));
+         nextTempo.push_back(shifted);
+     }
+     pushEdit(tr("move range"), std::move(ops), std::move(nextTempo));
+ }
+\ No newline at end of file
+diff --git a/src/core/songdocument_tempo.cpp b/src/core/songdocument_tempo.cpp
+index 651f6f04..d6aa6c29 100644
+--- a/src/core/songdocument_tempo.cpp
++++ b/src/core/songdocument_tempo.cpp
+@@ -17,21 +17,21 @@ namespace {
+         if (i > 0 && points[i - 1].tick >= point.tick)
+             return false;
+     }
+     return true;
+ }
+ 
+ std::vector<TempoPoint> editedTempoPointCandidates(const std::vector<TempoPoint> &current,
+                                                    const TempoEdit &edit)
+ {
+     auto next = current;
+-    std::set<uint64_t> removeTicks;
++    std::set<Tick> removeTicks;
+     for (const TempoPoint &point : edit.remove)
+         removeTicks.insert(point.tick);
+     std::erase_if(next, [&](const TempoPoint &point) { return removeTicks.contains(point.tick); });
+     next.insert(next.end(), edit.add.begin(), edit.add.end());
+     return next;
+ }
+ 
+ } // namespace
+ 
+ std::vector<TempoPoint> SongDocument::normalizeTempoPoints(std::vector<TempoPoint> points)
+diff --git a/src/core/songdocument_timeeditor.cpp b/src/core/songdocument_timeeditor.cpp
+index c903285a..365ffb31 100644
+--- a/src/core/songdocument_timeeditor.cpp
++++ b/src/core/songdocument_timeeditor.cpp
+@@ -245,22 +245,22 @@ bool SongDocument::TimeEditor::consumeTimeEditEvent(std::vector<std::vector<bool
+                                                     int smfTrack, size_t index)
+ {
+     if (smfTrack < 0 || smfTrack >= int(taken.size()) || index >= taken[size_t(smfTrack)].size() ||
+         taken[size_t(smfTrack)][index])
+         return false;
+     taken[size_t(smfTrack)][index] = true;
+     return true;
+ }
+ 
+ void SongDocument::TimeEditor::appendTimeEditInsert(std::vector<SongDocument::EditOp> &inserts,
+-                                                    int smfTrack, const SmfEvent &source,
+-                                                    uint64_t tick, bool preserveNoteId)
++                                                    int smfTrack, const SmfEvent &source, Tick tick,
++                                                    bool preserveNoteId)
+ {
+     SongDocument::EditOp op;
+     op.type = SongDocument::EditOp::InsertEvent;
+     op.smfTrack = smfTrack;
+     op.event = source;
+     op.event.tick = tick;
+     op.preservesNoteId = preserveNoteId && op.event.isNoteOn();
+     inserts.push_back(std::move(op));
+ }
+ 
+@@ -268,21 +268,21 @@ void SongDocument::TimeEditor::appendTimeEditRemove(std::vector<std::vector<size
+                                                     std::vector<std::vector<bool>> &taken,
+                                                     int smfTrack, size_t index) const
+ {
+     if (consumeTimeEditEvent(taken, smfTrack, index))
+         removals[size_t(smfTrack)].push_back(index);
+ }
+ 
+ bool SongDocument::TimeEditor::appendTimeEditMove(std::vector<std::vector<size_t>> &removals,
+                                                   std::vector<SongDocument::EditOp> &inserts,
+                                                   std::vector<std::vector<bool>> &taken,
+-                                                  int smfTrack, size_t index, uint64_t tick,
++                                                  int smfTrack, size_t index, Tick tick,
+                                                   MoveMode mode,
+                                                   std::vector<XcmdEventRecord> &records) const
+ {
+     if (!consumeTimeEditEvent(taken, smfTrack, index))
+         return false;
+     const SmfEvent &event = m_document.m_smf.tracks[size_t(smfTrack)].events[index];
+     if (mode == MoveMode::SkipUnchanged && event.tick == tick)
+         return true;
+     removals[size_t(smfTrack)].push_back(index);
+     appendTimeEditInsert(inserts, smfTrack, event, tick, event.isNoteOn());
+@@ -315,21 +315,21 @@ std::vector<SongDocument::EditOp> SongDocument::TimeEditor::timeEditCloseGapTrac
+         op.type = SongDocument::EditOp::SetTrackEnd;
+         op.smfTrack = int(t);
+         op.event.tick = newEnd;
+         trackEnds.push_back(op);
+     }
+     return trackEnds;
+ }
+ 
+ std::vector<SongDocument::EditOp> SongDocument::TimeEditor::timeEditShiftRightTrackEnds(
+     const std::vector<bool> &affectedTracks, const std::vector<SongDocument::EditOp> &inserts,
+-    uint64_t threshold) const
++    Tick threshold) const
+ {
+     std::vector<SongDocument::EditOp> trackEnds;
+     const uint64_t span = m_range.span();
+     for (size_t t = 0; t < m_document.m_smf.tracks.size(); t++) {
+         const uint64_t end = m_document.m_smf.tracks[t].endTick;
+         uint64_t newEnd = end;
+         if (affectedTracks[t] && end >= threshold)
+             newEnd = end + span;
+         for (const SongDocument::EditOp &insert : inserts) {
+             if (insert.smfTrack == int(t))
+@@ -430,47 +430,47 @@ bool SongDocument::TimeEditor::remove()
+     const uint64_t e = m_range.endTick;
+     const uint64_t span = m_range.span();
+     const TimeEditPlan plan = buildTimeEditPlan();
+     std::vector<std::vector<size_t>> removals(m_document.m_smf.tracks.size());
+     std::vector<SongDocument::EditOp> inserts;
+     std::vector<std::vector<bool>> taken = makeTimeEditTaken();
+     std::vector<XcmdEventRecord> xcmdEventRecords;
+     for (const DocNote &note : plan.notes) {
+         if (note.tick >= e) {
+             appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.onIndex,
+-                               note.tick - span, MoveMode::SkipUnchanged, xcmdEventRecords);
++                               Tick(note.tick - span), MoveMode::SkipUnchanged, xcmdEventRecords);
+             if (!note.unterminated()) {
+-                const uint64_t endTick =
++                const Tick endTick =
+                     m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick;
+                 appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.endIndex,
+-                                   endTick - span, MoveMode::SkipUnchanged, xcmdEventRecords);
++                                   Tick(endTick - span), MoveMode::SkipUnchanged, xcmdEventRecords);
+             }
+         } else if (note.tick >= s) {
+             appendTimeEditRemove(removals, taken, note.smfTrack, note.onIndex);
+             if (!note.unterminated())
+                 appendTimeEditRemove(removals, taken, note.smfTrack, note.endIndex);
+         } else {
+             consumeTimeEditEvent(taken, note.smfTrack, note.onIndex);
+             if (!note.unterminated())
+                 consumeTimeEditEvent(taken, note.smfTrack, note.endIndex);
+         }
+     }
+     // DocNotes consume both events of every paired note. Close any selected
+     // note event left behind as an orphan raw event using half-open semantics.
+     for (const TimeEventRef &ref : plan.events) {
+         if (ref.kind != EventKind::Note || taken[size_t(ref.smfTrack)][ref.index])
+             continue;
+         if (ref.tick < s)
+             consumeTimeEditEvent(taken, ref.smfTrack, ref.index);
+         else if (ref.tick >= e)
+-            appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, ref.tick - span,
+-                               MoveMode::SkipUnchanged, xcmdEventRecords);
++            appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index,
++                               Tick(ref.tick - span), MoveMode::SkipUnchanged, xcmdEventRecords);
+         else
+             appendTimeEditRemove(removals, taken, ref.smfTrack, ref.index);
+     }
+     const auto streams = timeEditStreams(plan);
+     for (const auto &points : streams) {
+         bool seamCovered = false;
+         int winner = -1;
+         for (size_t i = 0; i < points.size(); i++) {
+             if (points[i]->tick == e)
+                 seamCovered = true;
+@@ -482,37 +482,39 @@ bool SongDocument::TimeEditor::remove()
+                     continue;
+                 winner = int(i);
+             }
+         }
+         for (size_t i = 0; i < points.size(); i++) {
+             const TimeEventRef &ref = *points[i];
+             if (ref.tick < s)
+                 consumeTimeEditEvent(taken, ref.smfTrack, ref.index);
+             else if (ref.tick >= e)
+                 appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index,
+-                                   ref.tick - span, MoveMode::SkipUnchanged, xcmdEventRecords);
++                                   Tick(ref.tick - span), MoveMode::SkipUnchanged,
++                                   xcmdEventRecords);
+             else if (int(i) == winner && !seamCovered)
+-                appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, s,
++                appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, Tick(s),
+                                    MoveMode::SkipUnchanged, xcmdEventRecords);
+             else
+                 appendTimeEditRemove(removals, taken, ref.smfTrack, ref.index);
+         }
+     }
+     if (m_scope.wholeSong) {
+         for (const TimeEventRef &ref : plan.events) {
+             if (ref.kind != EventKind::Other)
+                 continue;
+             if (ref.tick >= e)
+                 appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index,
+-                                   ref.tick - span, MoveMode::SkipUnchanged, xcmdEventRecords);
++                                   Tick(ref.tick - span), MoveMode::SkipUnchanged,
++                                   xcmdEventRecords);
+             else if (ref.tick > s)
+-                appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, s,
++                appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, Tick(s),
+                                    MoveMode::SkipUnchanged, xcmdEventRecords);
+             else
+                 consumeTimeEditEvent(taken, ref.smfTrack, ref.index);
+         }
+     }
+     auto opsOpt = xcmdAssembleOps(std::move(removals), std::move(inserts),
+                                   timeEditCloseGapTrackEnds(), xcmdEventRecords);
+     if (!opsOpt)
+         return false; // XCMD reconciliation unrepresentable: fail without mutating
+     std::vector<SongDocument::EditOp> ops = std::move(*opsOpt);
+diff --git a/src/core/songdocument_timeeditor.hpp b/src/core/songdocument_timeeditor.hpp
+index 1423b536..5b93b808 100644
+--- a/src/core/songdocument_timeeditor.hpp
++++ b/src/core/songdocument_timeeditor.hpp
+@@ -27,33 +27,33 @@ class SongDocument::TimeEditor
+     struct StreamIdentity {
+         StreamKind kind = StreamKind::Channel;
+         int smfTrack = -1;
+         uint8_t status = 0;
+         uint8_t data0 = 0;
+         auto operator<=>(const StreamIdentity &) const = default;
+     };
+     struct TimeEventRef {
+         int smfTrack = -1;
+         size_t index = 0;
+-        uint64_t tick = 0;
++        Tick tick = 0;
+         StreamIdentity stream;
+         EventKind kind = EventKind::Other;
+     };
+     struct TimeEditPlan {
+         std::vector<TimeEventRef> events;
+         std::vector<DocNote> notes;
+         std::vector<std::vector<bool>> selected;
+     };
+     struct XcmdEventRecord {
+         int smfTrack = -1;
+         size_t eventIndex = 0; // source event this byte came from
+-        uint64_t newTick = 0;
++        Tick newTick = 0;
+         size_t opIndex = 0;
+         uint8_t channel = 0; // MIDI channel of the relocated source event
+         bool isCopy = false; // source kept (duplicate) vs. moved (removed)
+     };
+     static bool metaIsTimeSig(const SmfEvent &event);
+     static StreamIdentity channelStream(int smfTrack, const SmfEvent &event);
+     std::optional<uint8_t> laneForEvent(int smfTrack, size_t index, const SmfEvent &event) const;
+     // The lane controller a known XCMD point payload projects onto
+     // (std::nullopt when the byte is not a known point payload, lies outside
+     // the edit's scope, or the whole track is covered). XCMD payload bytes
+@@ -61,49 +61,48 @@ class SongDocument::TimeEditor
+     // grouping must use the logical lane, not the raw controller.
+     std::optional<uint8_t> logicalXcmdLane(int smfTrack, size_t index) const;
+     bool eventCovered(int smfTrack, size_t index, int engineTrack, const SmfEvent &event) const;
+     TimeEditPlan buildTimeEditPlan() const;
+     std::vector<std::vector<const TimeEventRef *>> timeEditStreams(const TimeEditPlan &plan) const;
+     std::vector<bool> timeEditAffectedSmfTracks() const;
+     std::vector<std::vector<bool>> makeTimeEditTaken() const;
+     static bool consumeTimeEditEvent(std::vector<std::vector<bool>> &taken, int smfTrack,
+                                      size_t index);
+     static void appendTimeEditInsert(std::vector<SongDocument::EditOp> &inserts, int smfTrack,
+-                                     const SmfEvent &source, uint64_t tick, bool preserveNoteId);
++                                     const SmfEvent &source, Tick tick, bool preserveNoteId);
+     void appendTimeEditRemove(std::vector<std::vector<size_t>> &removals,
+                               std::vector<std::vector<bool>> &taken, int smfTrack,
+                               size_t index) const;
+     bool appendTimeEditMove(std::vector<std::vector<size_t>> &removals,
+                             std::vector<SongDocument::EditOp> &inserts,
+                             std::vector<std::vector<bool>> &taken, int smfTrack, size_t index,
+-                            uint64_t tick, MoveMode mode,
+-                            std::vector<XcmdEventRecord> &records) const;
++                            Tick tick, MoveMode mode, std::vector<XcmdEventRecord> &records) const;
+     std::vector<SongDocument::EditOp> timeEditCloseGapTrackEnds() const;
+     std::vector<SongDocument::EditOp>
+     timeEditShiftRightTrackEnds(const std::vector<bool> &affectedTracks,
+                                 const std::vector<SongDocument::EditOp> &inserts,
+-                                uint64_t threshold) const;
++                                Tick threshold) const;
+     // Per-track XCMD reconciliation (see songdocument_timeeditor_xcmd.cpp):
+     // plans consumed-byte removals/relocations through xcmd::reconcileRaw,
+     // translates each patch via the document's adapter, and assembles with
+     // the generic ops. Returns nullopt when a raw edit is unrepresentable —
+     // the caller then fails without mutating.
+     std::optional<std::vector<SongDocument::EditOp>>
+     xcmdAssembleOps(std::vector<std::vector<size_t>> removals,
+                     std::vector<SongDocument::EditOp> inserts,
+                     std::vector<SongDocument::EditOp> trackEnds,
+                     const std::vector<XcmdEventRecord> &records) const;
+     // Records a moved or duplicated consumed XCMD byte so xcmdAssembleOps can
+     // re-plan it: the generic insert it names (opIndex) is suppressed and the
+     // byte handled by the deep planner instead. Operation-local: records is
+     // the per-edit vector threaded through the pass.
+-    void recordXcmdRelocation(int smfTrack, size_t eventIndex, uint64_t newTick, size_t opIndex,
++    void recordXcmdRelocation(int smfTrack, size_t eventIndex, Tick newTick, size_t opIndex,
+                               bool isCopy, std::vector<XcmdEventRecord> &records) const;
+     // True when a stream point may act as the remove-seam value keeper.
+     // Consumed XCMD bytes are never eligible: their epochs are rebuilt
+     // canonically or removed by the plan, so keeping one as the seam state
+     // would leave a stale protocol byte.
+     bool isSeamKeeperEligible(const TimeEventRef &ref) const;
+     // True when the byte is consumed by the XCMD protocol (selector glue,
+     // known point payloads, opaque epoch members) — the events
+     // xcmdAssembleOps must reconcile through the planner rather than treat
+     // as raw events. Value streams can never keep such a byte as their
+diff --git a/src/core/songdocument_timeeditor_insert.cpp b/src/core/songdocument_timeeditor_insert.cpp
+index 4449d4e4..c9fae540 100644
+--- a/src/core/songdocument_timeeditor_insert.cpp
++++ b/src/core/songdocument_timeeditor_insert.cpp
+@@ -15,85 +15,88 @@ bool SongDocument::TimeEditor::insertBlank()
+ {
+     if (m_range.empty() || m_document.m_smf.tracks.empty())
+         return false;
+     const uint64_t s = m_range.startTick;
+     const uint64_t e = m_range.endTick;
+     const uint64_t span = m_range.span();
+     const TimeEditPlan plan = buildTimeEditPlan();
+     const std::vector<bool> affectedTracks = timeEditAffectedSmfTracks();
+     for (size_t t = 0; t < m_document.m_smf.tracks.size(); t++)
+         if (affectedTracks[t] && m_document.m_smf.tracks[t].endTick >= s &&
+-            m_document.m_smf.tracks[t].endTick > UINT64_MAX - span)
++            Tick(m_document.m_smf.tracks[t].endTick) > CoreTimeDefaults::kMaxTick - Tick(span))
+             return false;
+     for (const TimeEventRef &ref : plan.events)
+-        if (ref.tick >= s && ref.tick > UINT64_MAX - span)
++        if (ref.tick >= s && Tick(ref.tick) > CoreTimeDefaults::kMaxTick - Tick(span))
+             return false;
+     if (m_scope.coversTempo()) {
+         for (const TempoPoint &point : m_document.m_tempoPoints)
+-            if (point.tick >= s && point.tick > UINT64_MAX - span)
++            if (point.tick >= s && point.tick > CoreTimeDefaults::kMaxTick - Tick(span))
+                 return false;
+     }
+     std::vector<std::vector<size_t>> removals(m_document.m_smf.tracks.size());
+     std::vector<SongDocument::EditOp> inserts;
+     std::vector<std::vector<bool>> taken = makeTimeEditTaken();
+     std::vector<XcmdEventRecord> xcmdEventRecords;
+     for (const DocNote &note : plan.notes) {
+-        const uint64_t endTick =
++        const Tick endTick =
+             note.unterminated()
+                 ? 0
+                 : m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick;
+         if (note.tick >= s) {
+             appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.onIndex,
+-                               note.tick + span, MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
++                               Tick(note.tick + span), MoveMode::MoveEvenIfUnchanged,
++                               xcmdEventRecords);
+             if (!note.unterminated())
+                 appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.endIndex,
+-                                   endTick + span, MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
++                                   Tick(endTick + span), MoveMode::MoveEvenIfUnchanged,
++                                   xcmdEventRecords);
+         } else if (!note.unterminated() && endTick == s) {
+             consumeTimeEditEvent(taken, note.smfTrack, note.endIndex);
+         } else if (!note.unterminated() && endTick > s) {
+             const SmfEvent &on =
+                 m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
+             const SmfEvent &end =
+                 m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex];
+             consumeTimeEditEvent(taken, note.smfTrack, note.onIndex);
+             consumeTimeEditEvent(taken, note.smfTrack, note.endIndex);
+             removals[size_t(note.smfTrack)].push_back(note.endIndex);
+-            appendTimeEditInsert(inserts, note.smfTrack, end, s, false);
+-            appendTimeEditInsert(inserts, note.smfTrack, on, e, false);
+-            appendTimeEditInsert(inserts, note.smfTrack, end, endTick + span, false);
++            appendTimeEditInsert(inserts, note.smfTrack, end, Tick(s), false);
++            appendTimeEditInsert(inserts, note.smfTrack, on, Tick(e), false);
++            appendTimeEditInsert(inserts, note.smfTrack, end, Tick(endTick + span), false);
+         } else if (note.unterminated()) {
+             // Keep the original left note-on, close it at the seam, and start
+             // a fresh note-on after the silent interval.
+             const SmfEvent &on =
+                 m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
+             consumeTimeEditEvent(taken, note.smfTrack, note.onIndex);
+-            appendTimeEditInsert(inserts, note.smfTrack,
+-                                 m_document.makeChannelEvent(0x8, note.channel, s, note.key, 0), s,
+-                                 false);
+-            appendTimeEditInsert(inserts, note.smfTrack, on, e, false);
++            appendTimeEditInsert(
++                inserts, note.smfTrack,
++                m_document.makeChannelEvent(0x8, note.channel, Tick(s), note.key, 0), Tick(s),
++                false);
++            appendTimeEditInsert(inserts, note.smfTrack, on, Tick(e), false);
+         }
+     }
+     for (const TimeEventRef &ref : plan.events) {
+         if (taken[size_t(ref.smfTrack)][ref.index])
+             continue;
+         if (ref.tick < s)
+             continue;
+         const SmfEvent &event = m_document.m_smf.tracks[size_t(ref.smfTrack)].events[ref.index];
+-        appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, ref.tick + span,
++        appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, Tick(ref.tick + span),
+                            MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
+         // A time signature at the insertion seam governs the blank bars as
+         // well as the shifted content, so retain it at both ends of the gap.
+         if (ref.kind == EventKind::TimeSig && ref.tick == s)
+-            appendTimeEditInsert(inserts, ref.smfTrack, event, s, false);
++            appendTimeEditInsert(inserts, ref.smfTrack, event, Tick(s), false);
+     }
+     const std::vector<SongDocument::EditOp> trackEnds =
+-        timeEditShiftRightTrackEnds(affectedTracks, inserts, s);
++        timeEditShiftRightTrackEnds(affectedTracks, inserts, Tick(s));
+     auto opsOpt = xcmdAssembleOps(std::move(removals), std::move(inserts), std::move(trackEnds),
+                                   xcmdEventRecords);
+     if (!opsOpt)
+         return false; // XCMD reconciliation unrepresentable: fail without mutating
+     std::vector<SongDocument::EditOp> ops = std::move(*opsOpt);
+     std::vector<TempoPoint> nextTempo = m_document.m_tempoPoints;
+     if (m_scope.coversTempo())
+         nextTempo = time_edit_detail::insertBlankTempoPoints(nextTempo, m_range);
+     if (ops.empty() && nextTempo == m_document.m_tempoPoints)
+         return false;
+@@ -101,125 +104,129 @@ bool SongDocument::TimeEditor::insertBlank()
+         m_document.pushEdit(m_document.tr("insert blank time"), std::move(ops));
+     else
+         m_document.pushEdit(m_document.tr("insert blank time"), std::move(ops),
+                             std::move(nextTempo));
+     return true;
+ }
+ 
+ bool SongDocument::TimeEditor::duplicate()
+ {
+     if (m_range.empty() || m_document.m_smf.tracks.empty() ||
+-        m_range.endTick > UINT64_MAX - m_range.span())
++        m_range.endTick > CoreTimeDefaults::kMaxTick - Tick(m_range.span()))
+         return false;
+     const uint64_t s = m_range.startTick;
+     const uint64_t e = m_range.endTick;
+     const uint64_t span = m_range.span();
+     const uint64_t destinationEnd = e + span;
+     const TimeEditPlan plan = buildTimeEditPlan();
+     const std::vector<bool> affectedTracks = timeEditAffectedSmfTracks();
+     for (size_t t = 0; t < m_document.m_smf.tracks.size(); t++)
+         if (affectedTracks[t] && m_document.m_smf.tracks[t].endTick >= e &&
+-            m_document.m_smf.tracks[t].endTick > UINT64_MAX - span)
++            Tick(m_document.m_smf.tracks[t].endTick) > CoreTimeDefaults::kMaxTick - Tick(span))
+             return false;
+     for (const TimeEventRef &ref : plan.events)
+-        if (ref.tick >= e && ref.tick > UINT64_MAX - span)
++        if (ref.tick >= e && ref.tick > CoreTimeDefaults::kMaxTick - Tick(span))
+             return false;
+     if (m_scope.coversTempo()) {
+         for (const TempoPoint &point : m_document.m_tempoPoints)
+-            if (point.tick >= e && point.tick > UINT64_MAX - span)
++            if (point.tick >= e && point.tick > CoreTimeDefaults::kMaxTick - Tick(span))
+                 return false;
+     }
+     std::vector<std::vector<size_t>> removals(m_document.m_smf.tracks.size());
+     std::vector<SongDocument::EditOp> inserts;
+     std::vector<std::vector<bool>> taken = makeTimeEditTaken();
+     std::vector<XcmdEventRecord> xcmdEventRecords;
+     std::vector<std::vector<bool>> paired(m_document.m_smf.tracks.size());
+     for (size_t t = 0; t < m_document.m_smf.tracks.size(); t++)
+         paired[t].assign(m_document.m_smf.tracks[t].events.size(), false);
+     for (const DocNote &note : plan.notes) {
+         paired[size_t(note.smfTrack)][note.onIndex] = true;
+-        const uint64_t endTick =
++        const Tick endTick =
+             note.unterminated()
+                 ? 0
+                 : m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick;
+         if (!note.unterminated())
+             paired[size_t(note.smfTrack)][note.endIndex] = true;
+         if (note.tick >= e) {
+             appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.onIndex,
+-                               note.tick + span, MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
++                               Tick(note.tick + span), MoveMode::MoveEvenIfUnchanged,
++                               xcmdEventRecords);
+             if (!note.unterminated())
+                 appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.endIndex,
+-                                   endTick + span, MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
++                                   Tick(endTick + span), MoveMode::MoveEvenIfUnchanged,
++                                   xcmdEventRecords);
+         } else if (!note.unterminated() && endTick >= e) {
+             if (endTick == e)
+                 consumeTimeEditEvent(taken, note.smfTrack, note.endIndex);
+             else {
+                 const SmfEvent &on =
+                     m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
+                 const SmfEvent &end =
+                     m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex];
+                 consumeTimeEditEvent(taken, note.smfTrack, note.endIndex);
+                 removals[size_t(note.smfTrack)].push_back(note.endIndex);
+-                appendTimeEditInsert(inserts, note.smfTrack, end, e, false);
+-                appendTimeEditInsert(inserts, note.smfTrack, on, destinationEnd, false);
+-                appendTimeEditInsert(inserts, note.smfTrack, end, endTick + span, false);
++                appendTimeEditInsert(inserts, note.smfTrack, end, Tick(e), false);
++                appendTimeEditInsert(inserts, note.smfTrack, on, Tick(destinationEnd), false);
++                appendTimeEditInsert(inserts, note.smfTrack, end, Tick(endTick + span), false);
+             }
+         }
+     }
+     for (const TimeEventRef &ref : plan.events) {
+         if (taken[size_t(ref.smfTrack)][ref.index])
+             continue;
+         if (ref.tick >= e)
+-            appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, ref.tick + span,
+-                               MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
++            appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index,
++                               Tick(ref.tick + span), MoveMode::MoveEvenIfUnchanged,
++                               xcmdEventRecords);
+     }
+     for (const DocNote &note : plan.notes) {
+         if (note.tick >= e)
+             continue;
+         const uint64_t endTick =
+             note.unterminated()
+                 ? e
+-                : m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick;
+-        const uint64_t sourceStart = std::max(note.tick, s);
++                : uint64_t(
++                      m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick);
++        const uint64_t sourceStart = std::max(uint64_t(note.tick), s);
+         const uint64_t sourceEnd = std::min(endTick, e);
+         if (sourceEnd <= sourceStart)
+             continue;
+         const SmfEvent &on = m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
+-        appendTimeEditInsert(inserts, note.smfTrack, on, e + (sourceStart - s), false);
++        appendTimeEditInsert(inserts, note.smfTrack, on, Tick(e + (sourceStart - s)), false);
+         SmfEvent end;
+         if (!note.unterminated()) {
+             end = m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex];
+         } else {
+-            end = m_document.makeChannelEvent(0x8, note.channel, destinationEnd, note.key, 0);
++            end = m_document.makeChannelEvent(0x8, note.channel, Tick(destinationEnd), note.key, 0);
+         }
+-        end.tick = e + (sourceEnd - s);
++        end.tick = Tick(e + (sourceEnd - s));
+         appendTimeEditInsert(inserts, note.smfTrack, end, end.tick, false);
+     }
+     const auto streams = timeEditStreams(plan);
+     for (const auto &points : streams) {
+         const TimeEventRef *atStart = nullptr;
+         const TimeEventRef *firstInside = nullptr;
+         for (const TimeEventRef *ref : points) {
+             if (ref->tick <= s)
+                 atStart = ref;
+             else if (ref->tick < e && !firstInside)
+                 firstInside = ref;
+         }
+         const TimeEventRef *prototype = atStart ? atStart : firstInside;
+         if (!prototype)
+             continue;
+         if (atStart) {
+             const SmfEvent &source =
+                 m_document.m_smf.tracks[size_t(atStart->smfTrack)].events[atStart->index];
+-            appendTimeEditInsert(inserts, atStart->smfTrack, source, e, false);
+-            recordXcmdRelocation(atStart->smfTrack, atStart->index, e, inserts.size() - 1, true,
+-                                 xcmdEventRecords);
++            appendTimeEditInsert(inserts, atStart->smfTrack, source, Tick(e), false);
++            recordXcmdRelocation(atStart->smfTrack, atStart->index, Tick(e), inserts.size() - 1,
++                                 true, xcmdEventRecords);
+         } else {
+             int defaultValue = -1;
+             if (prototype->kind == EventKind::TimeSig) {
+                 defaultValue = 1;
+             } else {
+                 const SmfEvent &source =
+                     m_document.m_smf.tracks[size_t(prototype->smfTrack)].events[prototype->index];
+                 if (source.typeNibble() == 0xE)
+                     defaultValue = 0;
+                 else if (source.typeNibble() == 0xB)
+@@ -237,53 +244,53 @@ bool SongDocument::TimeEditor::duplicate()
+                     synthetic.blob[2] = 24;
+                     synthetic.blob[3] = 8;
+                     targetTrack = 0;
+                 } else {
+                     const SmfEvent &source = m_document.m_smf.tracks[size_t(prototype->smfTrack)]
+                                                  .events[prototype->index];
+                     const uint8_t type = source.typeNibble();
+                     const uint8_t data0 = type == 0xB ? source.data0 : 0;
+                     const uint8_t data1 = type == 0xE ? 64 : uint8_t(defaultValue);
+                     synthetic =
+-                        m_document.makeChannelEvent(type, source.channel(), e, data0, data1);
++                        m_document.makeChannelEvent(type, source.channel(), Tick(e), data0, data1);
+                 }
+-                appendTimeEditInsert(inserts, targetTrack, synthetic, e, false);
++                appendTimeEditInsert(inserts, targetTrack, synthetic, Tick(e), false);
+             }
+         }
+         for (const TimeEventRef *ref : points) {
+             if (ref->tick <= s || ref->tick >= e)
+                 continue;
+             const SmfEvent &source =
+                 m_document.m_smf.tracks[size_t(ref->smfTrack)].events[ref->index];
+-            appendTimeEditInsert(inserts, ref->smfTrack, source, e + (ref->tick - s), false);
+-            recordXcmdRelocation(ref->smfTrack, ref->index, e + (ref->tick - s), inserts.size() - 1,
+-                                 true, xcmdEventRecords);
++            appendTimeEditInsert(inserts, ref->smfTrack, source, Tick(e + (ref->tick - s)), false);
++            recordXcmdRelocation(ref->smfTrack, ref->index, Tick(e + (ref->tick - s)),
++                                 inserts.size() - 1, true, xcmdEventRecords);
+         }
+     }
+     if (m_scope.wholeSong) {
+         for (const TimeEventRef &ref : plan.events) {
+             if (ref.kind != EventKind::Other || ref.tick < s || ref.tick >= e)
+                 continue;
+             const SmfEvent &source =
+                 m_document.m_smf.tracks[size_t(ref.smfTrack)].events[ref.index];
+-            appendTimeEditInsert(inserts, ref.smfTrack, source, e + (ref.tick - s), false);
++            appendTimeEditInsert(inserts, ref.smfTrack, source, Tick(e + (ref.tick - s)), false);
+         }
+     }
+     for (const TimeEventRef &ref : plan.events) {
+         if (ref.kind != EventKind::Note || paired[size_t(ref.smfTrack)][ref.index] ||
+             ref.tick < s || ref.tick >= e)
+             continue;
+         const SmfEvent &source = m_document.m_smf.tracks[size_t(ref.smfTrack)].events[ref.index];
+-        appendTimeEditInsert(inserts, ref.smfTrack, source, e + (ref.tick - s), false);
++        appendTimeEditInsert(inserts, ref.smfTrack, source, Tick(e + (ref.tick - s)), false);
+     }
+     const std::vector<SongDocument::EditOp> trackEnds =
+-        timeEditShiftRightTrackEnds(affectedTracks, inserts, e);
++        timeEditShiftRightTrackEnds(affectedTracks, inserts, Tick(e));
+     auto opsOpt = xcmdAssembleOps(std::move(removals), std::move(inserts), std::move(trackEnds),
+                                   xcmdEventRecords);
+     if (!opsOpt)
+         return false; // XCMD reconciliation unrepresentable: fail without mutating
+     std::vector<SongDocument::EditOp> ops = std::move(*opsOpt);
+     std::vector<TempoPoint> nextTempo = m_document.m_tempoPoints;
+     if (m_scope.coversTempo())
+         nextTempo = time_edit_detail::duplicateTempoPoints(nextTempo, m_range);
+     if (ops.empty() && nextTempo == m_document.m_tempoPoints)
+         return false;
+diff --git a/src/core/timelineplayer.cpp b/src/core/timelineplayer.cpp
+index 7ddecb42..5821d2ba 100644
+--- a/src/core/timelineplayer.cpp
++++ b/src/core/timelineplayer.cpp
+@@ -265,21 +265,21 @@ void TimelinePlayer::wrapNotes(M4AEngine *engine, const MidiTimeline *timeline)
+                 // exactGate=true: only the raw clock count matters here — the
+                 // duration LUT never moves a note across the 96-clock line.
+                 const int clocks = mid2agbEffectiveDuration(
+                     int64_t(off->tick) - int64_t(m_keyedOnTick[track][key]), timeline->ticksPerBeat,
+                     timeline->extendedClocks, true);
+                 if (clocks > 96)
+                     continue; // TIE + EOT: the EOT is unreachable — held forever
+                 if (m_pendingOffCount < kMaxPendingOffs) {
+                     const uint64_t tick =
+                         timeline->loopStartTick + (uint64_t(off->tick) - timeline->loopEndTick);
+-                    m_pendingOffs[m_pendingOffCount++] = {timeline->sampleForTick(tick), tick,
+-                                                          uint8_t(track), uint8_t(key)};
++                    m_pendingOffs[m_pendingOffCount++] = {timeline->sampleForTick(Tick(tick)),
++                                                          Tick(tick), uint8_t(track), uint8_t(key)};
+                     continue;
+                 }
+             }
+             // No note-off in the file (or no room to carry one): release now.
+             m4a_engine_note_off(engine, track, uint8_t(key));
+             m_keyedOn[track][key] = false;
+         }
+     }
+ }
+diff --git a/src/core/timelineplayer.h b/src/core/timelineplayer.h
+index 5ab60472..dd8c6747 100644
+--- a/src/core/timelineplayer.h
++++ b/src/core/timelineplayer.h
+@@ -35,24 +35,25 @@ class TimelinePlayer
+         m_pos = 0;
+         m_cursor = 0;
+         clearKeyedOn();
+     }
+ 
+     // A note-off rescheduled past a loop wrap (gate-carry), tracked in both
+     // tick and sample domains so later wraps can re-wrap it through the
+     // tempo map, like the channel gate it models.
+     struct PendingOff {
+         uint64_t samplePos;
+-        uint64_t tick;
++        Tick tick;
+         uint8_t track;
+         uint8_t key;
+     };
++    static_assert(sizeof(PendingOff) == 16);
+ 
+     // Repositions for a transport seek. The caller releases the engine's
+     // sounding notes because their note-offs may be behind the new position
+     // or gone entirely.
+     void seek(uint64_t pos, const MidiTimeline *timeline);
+ 
+     // Rebinds playback to a rebuilt timeline at the same position without
+     // disturbing sounding notes or loop gate state.
+     void replaceTimeline(uint64_t pos, const MidiTimeline *timeline);
+     // Chases controller state to `pos`: dispatches each track's most recent

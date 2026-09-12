@@ -1,0 +1,451 @@
+diff --git a/src/checks/editcheck/tst_songdocument_songmoves.cpp b/src/checks/editcheck/tst_songdocument_songmoves.cpp
+index 7c4c3017..84127f81 100644
+--- a/src/checks/editcheck/tst_songdocument_songmoves.cpp
++++ b/src/checks/editcheck/tst_songdocument_songmoves.cpp
+@@ -4,6 +4,29 @@
+ 
+ #include "checks/editcheck/tst_songdocument_support.h"
+ 
++namespace {
++
++// In-memory document with one channel track whose notes sit far below the
++// tick ceiling: adoptSmf accepts the full Tick range a VLQ round-trip
++// through makeDocument cannot stage.
++bool adoptBoundaryDocument(SongDocument *document, QString *error)
++{
++    SmfFile smf;
++    smf.tracks.push_back(songdocument_test::conductor());
++    SmfTrack track;
++    track.events.push_back(songdocument_test::channel(0x90, 0, 60, 100));
++    track.events.push_back(songdocument_test::channel(0x90, 24, 60, 0));
++    track.events.push_back(songdocument_test::channel(0x90, 48, 64, 100));
++    track.events.push_back(songdocument_test::channel(0x90, 72, 64, 0));
++    track.endTick = 96;
++    smf.tracks.push_back(track);
++    SongInfo song;
++    song.label = QStringLiteral("note-move-boundary");
++    return document->adoptSmf(std::move(smf), song, error);
++}
++
++} // namespace
++
+ void EditCheckTest::noteMoveOverlap_data()
+ {
+     addSongRows(SongCapability::EditableTrack);
+@@ -96,6 +119,39 @@ void EditCheckTest::noteMoveMerge()
+     document.didSave(document.captureSaveSnapshot(), true);
+     document.moveNotes({moving}, 0, 1, true);
+     QCOMPARE(document.undoStack()->count(), before + 2);
++    // An accumulated tick delta that no longer fits int64_t declines the
++    // merge: both applied commands stay separate and undo individually.
++    SongDocument boundary;
++    QVERIFY2(adoptBoundaryDocument(&boundary, &error), qPrintable(error));
++    DocNote edge;
++    QVERIFY(boundary.findNote(0, 48, 64, &edge));
++    const int mergeCount = boundary.undoStack()->count();
++    boundary.moveNotes({edge}, INT64_MIN, 0, true);
++    QVERIFY(boundary.findNote(0, 0, 64, &edge));
++    boundary.moveNotes({edge}, -5, 1, true);
++    QCOMPARE(boundary.undoStack()->count(), mergeCount + 2);
++    QVERIFY(boundary.findNote(0, 0, 65, &edge));
++    boundary.undoStack()->undo();
++    QVERIFY(boundary.findNote(0, 0, 64, &edge));
++    boundary.undoStack()->undo();
++    QVERIFY(boundary.findNote(0, 48, 64, &edge));
++    boundary.undoStack()->redo();
++    boundary.undoStack()->redo();
++    QVERIFY(boundary.findNote(0, 0, 65, &edge));
++
++    // Same declined merge for the pitched-move command, driven by the
++    // other fixture note (the first is still at its merged position).
++    DocNote lowEdge;
++    QVERIFY(boundary.findNote(0, 0, 60, &lowEdge));
++    QVERIFY(boundary.moveNotesToPitches({lowEdge}, {uint8_t(61)}, INT64_MIN, true));
++    QVERIFY(boundary.findNote(0, 0, 61, &lowEdge));
++    QVERIFY(boundary.moveNotesToPitches({lowEdge}, {uint8_t(62)}, -5, true));
++    QCOMPARE(boundary.undoStack()->count(), mergeCount + 4);
++    QVERIFY(boundary.findNote(0, 0, 62, &lowEdge));
++    boundary.undoStack()->undo();
++    QVERIFY(boundary.findNote(0, 0, 61, &lowEdge));
++    boundary.undoStack()->undo();
++    QVERIFY(boundary.findNote(0, 0, 60, &lowEdge));
+ }
+ 
+ void EditCheckTest::noteMoveBatch_data()
+@@ -285,4 +341,48 @@ void EditCheckTest::noteMoveRejects()
+     QCOMPARE(document.smf().write(), baseline);
+     QVERIFY(document.findNote(track, firstTick, 115, &first));
+     QVERIFY(document.findNote(track, firstTick + step * 20, 117, &second));
++    // Synthetic boundary document: adoptSmf stages full-range ticks.
++    SongDocument boundary;
++    QVERIFY2(adoptBoundaryDocument(&boundary, &error), qPrintable(error));
++    DocNote edge;
++    QVERIFY(boundary.findNote(0, 0, 60, &edge));
++    const QByteArray boundaryBaseline = boundary.smf().write();
++    const uint64_t boundaryRevision = boundary.revision();
++    const int boundaryUndoCount = boundary.undoStack()->count();
++
++    // A requested upper start shift or a terminated end past kMaxTick
++    // rejects the whole move without touching the document.
++    boundary.moveNotes({edge}, INT64_MAX, 0);
++    boundary.moveNotes({edge}, int64_t(CoreTimeDefaults::kMaxTick) - 23, 0);
++    QCOMPARE(boundary.smf().write(), boundaryBaseline);
++    QCOMPARE(boundary.revision(), boundaryRevision);
++    QCOMPARE(boundary.undoStack()->count(), boundaryUndoCount);
++
++    // The pitched move reports the same rejections on its return value.
++    QVERIFY(!boundary.moveNotesToPitches({edge}, {uint8_t(62)}, INT64_MAX));
++    QVERIFY(!boundary.moveNotesToPitches({edge}, {uint8_t(62)},
++                                         int64_t(CoreTimeDefaults::kMaxTick) - 23));
++    QCOMPARE(boundary.smf().write(), boundaryBaseline);
++    QCOMPARE(boundary.undoStack()->count(), boundaryUndoCount);
++
++    // One invalid destination rejects every member of the batch.
++    DocNote secondEdge;
++    QVERIFY(boundary.findNote(0, 48, 64, &secondEdge));
++    boundary.moveNotes({edge, secondEdge}, int64_t(CoreTimeDefaults::kMaxTick) - 47, 0);
++    QCOMPARE(boundary.smf().write(), boundaryBaseline);
++    QCOMPARE(boundary.undoStack()->count(), boundaryUndoCount);
++
++    // An end landing exactly at kMaxTick is admitted and survives undo/redo.
++    boundary.moveNotes({edge}, int64_t(CoreTimeDefaults::kMaxTick) - 24, 0);
++    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 24, 60, &edge));
++    QCOMPARE(edge.duration, uint32_t(24));
++    boundary.undoStack()->undo();
++    QVERIFY(boundary.findNote(0, 0, 60, &edge));
++    boundary.undoStack()->redo();
++    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 24, 60, &edge));
++
++    // An extreme negative delta still clamps the start at zero.
++    boundary.moveNotes({edge}, INT64_MIN, 0);
++    QVERIFY(boundary.findNote(0, 0, 60, &edge));
++    QCOMPARE(edge.duration, uint32_t(24));
+ }
+diff --git a/src/checks/editcheck/tst_songdocument_songnotes.cpp b/src/checks/editcheck/tst_songdocument_songnotes.cpp
+index f0eaaf27..c11a3510 100644
+--- a/src/checks/editcheck/tst_songdocument_songnotes.cpp
++++ b/src/checks/editcheck/tst_songdocument_songnotes.cpp
+@@ -4,6 +4,29 @@
+ 
+ #include "checks/editcheck/tst_songdocument_support.h"
+ 
++namespace {
++
++// In-memory document with one channel track whose notes sit far below the
++// tick ceiling: adoptSmf accepts the full Tick range a VLQ round-trip
++// through makeDocument cannot stage.
++bool adoptBoundaryDocument(SongDocument *document, QString *error)
++{
++    SmfFile smf;
++    smf.tracks.push_back(songdocument_test::conductor());
++    SmfTrack track;
++    track.events.push_back(songdocument_test::channel(0x90, 0, 60, 100));
++    track.events.push_back(songdocument_test::channel(0x90, 24, 60, 0));
++    track.events.push_back(songdocument_test::channel(0x90, 48, 64, 100));
++    track.events.push_back(songdocument_test::channel(0x90, 72, 64, 0));
++    track.endTick = 96;
++    smf.tracks.push_back(track);
++    SongInfo song;
++    song.label = QStringLiteral("note-boundary");
++    return document->adoptSmf(std::move(smf), song, error);
++}
++
++} // namespace
++
+ void EditCheckTest::noteEditingBasic_data()
+ {
+     addSongRows(SongCapability::EditableTrack);
+@@ -54,6 +77,61 @@ void EditCheckTest::noteEditingBasic()
+     document.deleteNotes({note});
+     QVERIFY(!document.findNote(track, base + step * 6, 63, &note));
+     QVERIFY(songdocument_test::tracksSorted(document.smf()));
++
++    // Synthetic boundary document: adoptSmf stages full-range ticks.
++    SongDocument boundary;
++    QVERIFY2(adoptBoundaryDocument(&boundary, &error), qPrintable(error));
++    QCOMPARE(boundary.engineTrackCount(), 1);
++    DocNote edge;
++    QVERIFY(boundary.findNote(0, 0, 60, &edge));
++    // noteEndTick reports the wide mathematical end even when that end is
++    // not persistable.
++    edge.tick = CoreTimeDefaults::kMaxTick - 20;
++    edge.duration = 30;
++    QCOMPARE(boundary.noteEndTick(edge), uint64_t(CoreTimeDefaults::kMaxTick) + 10);
++
++    // A note ending exactly at kMaxTick is valid; a zero duration
++    // normalizes to one tick before the end check.
++    boundary.addNote(0, CoreTimeDefaults::kMaxTick - 24, 62, 24, 100);
++    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 24, 62, &edge));
++    QCOMPARE(edge.duration, uint32_t(24));
++    boundary.addNote(0, CoreTimeDefaults::kMaxTick - 20, 63, 0, 100);
++    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 20, 63, &edge));
++    QCOMPARE(edge.duration, uint32_t(1));
++
++    // Spec regressions: start 4294967293 + 2 must not write the reserved
++    // 4294967295; start 4294967284 + 20 must not wrap to 8; a one-tick note
++    // at kMaxTick is invalid. Rejection leaves the document, revision, and
++    // undo stack untouched.
++    const QByteArray baseline = boundary.smf().write();
++    const uint64_t revision = boundary.revision();
++    const int undoCount = boundary.undoStack()->count();
++    boundary.addNote(0, CoreTimeDefaults::kMaxTick - 1, 65, 2, 100);
++    boundary.addNote(0, CoreTimeDefaults::kMaxTick - 10, 66, 20, 100);
++    boundary.addNote(0, CoreTimeDefaults::kMaxTick, 67, 1, 100);
++    QCOMPARE(boundary.smf().write(), baseline);
++    QCOMPARE(boundary.revision(), revision);
++    QCOMPARE(boundary.undoStack()->count(), undoCount);
++
++    // Right-resize: an end past kMaxTick rejects; the exact ceiling and an
++    // extreme negative delta (floored at one tick) are admitted.
++    QVERIFY(boundary.findNote(0, 0, 60, &edge));
++    boundary.resizeNotes({edge}, int64_t(CoreTimeDefaults::kMaxTick) - 23);
++    boundary.resizeNotes({edge}, INT64_MAX);
++    QCOMPARE(boundary.smf().write(), baseline);
++    QCOMPARE(boundary.undoStack()->count(), undoCount);
++    boundary.resizeNotes({edge}, int64_t(CoreTimeDefaults::kMaxTick) - 24);
++    QVERIFY(boundary.findNote(0, 0, 60, &edge));
++    QCOMPARE(edge.duration, CoreTimeDefaults::kMaxTick);
++    boundary.undoStack()->undo();
++    QVERIFY(boundary.findNote(0, 0, 60, &edge));
++    QCOMPARE(edge.duration, uint32_t(24));
++    boundary.undoStack()->redo();
++    QVERIFY(boundary.findNote(0, 0, 60, &edge));
++    QCOMPARE(edge.duration, CoreTimeDefaults::kMaxTick);
++    boundary.resizeNotes({edge}, INT64_MIN);
++    QVERIFY(boundary.findNote(0, 0, 60, &edge));
++    QCOMPARE(edge.duration, uint32_t(1));
+ }
+ 
+ void EditCheckTest::noteEditingBatch_data()
+@@ -89,6 +167,31 @@ void EditCheckTest::noteEditingBatch()
+     document.undoStack()->redo();
+     QVERIFY(document.findNote(track, base + step * 20, 64, &first));
+     QVERIFY(document.findNote(track, base + step * 22, 67, &second));
++
++    // Synthetic boundary document: one invalid end rejects the whole batch
++    // before any note lands.
++    SongDocument boundary;
++    QVERIFY2(adoptBoundaryDocument(&boundary, &error), qPrintable(error));
++    const QByteArray baseline = boundary.smf().write();
++    const uint64_t revision = boundary.revision();
++    const int undoCount = boundary.undoStack()->count();
++    boundary.addNotes(0, {{CoreTimeDefaults::kMaxTick - 24, 62, 24, 96},
++                          {CoreTimeDefaults::kMaxTick - 1, 65, 2, 96}});
++    QCOMPARE(boundary.smf().write(), baseline);
++    QCOMPARE(boundary.revision(), revision);
++    QCOMPARE(boundary.undoStack()->count(), undoCount);
++    QCOMPARE(boundary.notesForTrack(0).size(), size_t(2));
++    boundary.addNotes(0, {{CoreTimeDefaults::kMaxTick - 24, 62, 24, 96},
++                          {CoreTimeDefaults::kMaxTick - 48, 66, 24, 96}});
++    QCOMPARE(boundary.undoStack()->count(), undoCount + 1);
++    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 24, 62, &first));
++    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 48, 66, &second));
++    boundary.undoStack()->undo();
++    QVERIFY(!boundary.findNote(0, CoreTimeDefaults::kMaxTick - 24, 62, &first));
++    QVERIFY(!boundary.findNote(0, CoreTimeDefaults::kMaxTick - 48, 66, &second));
++    boundary.undoStack()->redo();
++    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 24, 62, &first));
++    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 48, 66, &second));
+ }
+ 
+ void EditCheckTest::noteEditingAbutting_data()
+diff --git a/src/core/songdocument.cpp b/src/core/songdocument.cpp
+index 864d9b32..af6746b0 100644
+--- a/src/core/songdocument.cpp
++++ b/src/core/songdocument.cpp
+@@ -217,6 +217,11 @@ class MoveNotesCommand : public QUndoCommand
+             const_cast<MoveNotesCommand *>(static_cast<const MoveNotesCommand *>(command));
+         if (!other->m_mergeable || !movesMyOutputs(other->m_notes))
+             return false;
++        // An accumulated delta that no longer fits int64_t cannot be
++        // re-landed; decline the merge and keep both applied commands.
++        if ((other->m_dTick > 0 && m_dTick > INT64_MAX - other->m_dTick) ||
++            (other->m_dTick < 0 && m_dTick < INT64_MIN - other->m_dTick))
++            return false;
+         // Both commands are applied here (the stack redoes the new one
+         // before offering the merge). Rewind to the pre-gesture state, then
+         // land the accumulated move in one hop.
+@@ -244,7 +249,7 @@ class MoveNotesCommand : public QUndoCommand
+         if (next.size() != m_notes.size())
+             return false;
+         for (const DocNote &note : m_notes) {
+-            const Tick outputTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
++            const Tick outputTick = CoreTimeDefaults::shiftTickClamped(note.tick, m_dTick);
+             const uint8_t outputKey = uint8_t(std::clamp(int(note.key) + m_dKey, 0, 127));
+             const auto output =
+                 std::find_if(next.begin(), next.end(), [&](const DocNote &candidate) {
+@@ -304,6 +309,9 @@ class MoveNotesToPitchesCommand : public QUndoCommand
+             static_cast<const MoveNotesToPitchesCommand *>(command));
+         if (!other->m_mergeable || !movesMyOutputs(other->m_notes))
+             return false;
++        if ((other->m_dTick > 0 && m_dTick > INT64_MAX - other->m_dTick) ||
++            (other->m_dTick < 0 && m_dTick < INT64_MIN - other->m_dTick))
++            return false;
+         m_doc->revertOps(other->m_ops);
+         m_doc->revertOps(m_ops);
+         m_destPitches = other->m_destPitches;
+@@ -336,7 +344,7 @@ class MoveNotesToPitchesCommand : public QUndoCommand
+             const DocNote &note = m_notes[i];
+             const Tick tick = note.unterminated()
+                                   ? note.tick
+-                                  : Tick(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
++                                  : CoreTimeDefaults::shiftTickClamped(note.tick, m_dTick);
+             const int key = note.unterminated() ? note.key : m_destPitches[i];
+             mine.push_back(
+                 {note.engineTrack, tick, key, note.duration, note.velocity, note.channel});
+@@ -683,7 +691,7 @@ std::vector<NoteId> SongDocument::insertedNoteIds(int engineTrack,
+ uint64_t SongDocument::noteEndTick(const DocNote &note) const
+ {
+     if (!note.unterminated())
+-        return note.tick + note.duration;
++        return uint64_t(note.tick) + note.duration;
+     if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()))
+         return note.tick;
+     return m_smf.tracks[size_t(note.smfTrack)].endTick;
+@@ -877,7 +885,9 @@ void SongDocument::appendNoteInsertOps(std::vector<EditOp> &ops, int smfTrack, u
+     EditOp end;
+     end.type = EditOp::InsertEvent;
+     end.smfTrack = smfTrack;
+-    end.event = makeChannelEvent(0x9, channel, tick + std::max<uint32_t>(1, duration), key, 0);
++    const uint64_t endTick = uint64_t(tick) + std::max<uint32_t>(1, duration);
++    Q_ASSERT(endTick <= CoreTimeDefaults::kMaxTick);
++    end.event = makeChannelEvent(0x9, channel, Tick(endTick), key, 0);
+     ops.push_back(end);
+ }
+ 
+@@ -1009,6 +1019,11 @@ void SongDocument::addNote(int engineTrack, Tick tick, uint8_t key, uint32_t dur
+     const int smfTrack = smfTrackFor(engineTrack);
+     if (smfTrack < 0)
+         return;
++    // A persisted note end must stay at or below kMaxTick; a zero duration
++    // normalizes to one tick before the check. Reject before planning any
++    // overlap removal so an invalid end leaves the document untouched.
++    if (uint64_t(tick) + std::max<uint32_t>(1, duration) > CoreTimeDefaults::kMaxTick)
++        return;
+     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+     std::vector<EditOp> trims;
+     resolveNoteOverlaps(
+@@ -1029,6 +1044,11 @@ void SongDocument::addNotes(int engineTrack, const std::vector<NewNote> &notes)
+         return;
+     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+     std::vector<PlannedNote> written;
++    // One invalid end rejects the whole batch before overlap planning.
++    for (const NewNote &note : notes) {
++        if (uint64_t(note.tick) + std::max<uint32_t>(1, note.duration) > CoreTimeDefaults::kMaxTick)
++            return;
++    }
+     for (const NewNote &note : notes)
+         written.push_back({engineTrack, note.key, note.tick,
+                            uint64_t(note.tick) + std::max<uint32_t>(1, note.duration)});
+@@ -1071,9 +1091,21 @@ void SongDocument::moveNotes(const std::vector<DocNote> &notes, int64_t dTick, i
+ {
+     if (notes.empty() || (dTick == 0 && dKey == 0))
+         return;
++    // Every participating note must keep its stored start and, when
++    // terminated, its end at or below kMaxTick; one invalid upper
++    // destination rejects the whole batch before anything is planned.
++    for (const DocNote &note : notes) {
++        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()))
++            continue;
++        if (dTick > int64_t(CoreTimeDefaults::kMaxTick) - int64_t(note.tick))
++            return;
++        const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
++        if (!note.unterminated() && uint64_t(newTick) + note.duration > CoreTimeDefaults::kMaxTick)
++            return;
++    }
+     const bool changes =
+         std::any_of(notes.begin(), notes.end(), [dTick, dKey](const DocNote &note) {
+-            return Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick)) != note.tick ||
++            return CoreTimeDefaults::shiftTickClamped(note.tick, dTick) != note.tick ||
+                    uint8_t(std::clamp(int(note.key) + dKey, 0, 127)) != note.key;
+         });
+     if (!changes)
+@@ -1105,6 +1137,20 @@ bool SongDocument::moveNotesToPitches(const std::vector<DocNote> &notes,
+     }
+     if (!anyMove)
+         return true;
++    // Notes the builder skips (invalid track, unterminated, or a no-op
++    // pitch) never move; every rewritten note must keep its stored start
++    // and end at or below kMaxTick or the whole batch is refused.
++    for (size_t i = 0; i < notes.size(); i++) {
++        const DocNote &note = notes[i];
++        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) || note.unterminated() ||
++            (destPitches[i] == note.key && dTick == 0))
++            continue;
++        if (dTick > int64_t(CoreTimeDefaults::kMaxTick) - int64_t(note.tick))
++            return false;
++        const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
++        if (uint64_t(newTick) + note.duration > CoreTimeDefaults::kMaxTick)
++            return false;
++    }
+     m_history.pushDocument(
+         std::make_unique<MoveNotesToPitchesCommand>(this, notes, destPitches, dTick, mergeable));
+     return true;
+@@ -1133,7 +1179,7 @@ void collectMovePlans(const std::vector<DocNote> &notes, int64_t dTick, auto des
+         if (note.unterminated())
+             continue;
+         outRemovals[size_t(note.smfTrack)].push_back(note.endIndex);
+-        const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
++        const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
+         outWritten.push_back(
+             {note.engineTrack, destKey, newTick, uint64_t(newTick) + note.duration});
+     }
+@@ -1165,7 +1211,7 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vec
+         if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
+             shouldSkip(note, destKey))
+             continue;
+-        const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
++        const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
+         EditOp on;
+         on.type = EditOp::InsertEvent;
+         on.smfTrack = note.smfTrack;
+@@ -1179,7 +1225,9 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vec
+             end.type = EditOp::InsertEvent;
+             end.smfTrack = note.smfTrack;
+             end.event = m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex];
+-            end.event.tick = newTick + note.duration;
++            const uint64_t endTick = uint64_t(newTick) + note.duration;
++            Q_ASSERT(endTick <= CoreTimeDefaults::kMaxTick);
++            end.event.tick = Tick(endTick);
+             end.event.data0 = destKey;
+             ops.push_back(std::move(end));
+         }
+@@ -1210,7 +1258,7 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesToPitchesOps(
+         if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
+             shouldSkip(note, destKey))
+             continue;
+-        const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
++        const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
+         appendNoteInsertOps(ops, note.smfTrack, note.channel, newTick, destKey, note.duration,
+                             note.velocity);
+     }
+@@ -1222,6 +1270,18 @@ void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDurat
+ {
+     if (notes.empty() || dDuration == 0)
+         return;
++    // The resized end of every note this writes must stay at or below
++    // kMaxTick. The delta is classified against the remaining duration
++    // headroom before any addition, so extreme signed deltas neither
++    // overflow int64_t nor narrow early; one overflow rejects the batch.
++    for (const DocNote &note : notes) {
++        if (dDuration >
++            int64_t(CoreTimeDefaults::kMaxTick) - int64_t(note.tick) - int64_t(note.duration))
++            return;
++        const int64_t newDuration = std::max<int64_t>(1, int64_t(note.duration) + dDuration);
++        if (uint64_t(note.tick) + uint64_t(newDuration) > CoreTimeDefaults::kMaxTick)
++            return;
++    }
+     const bool changes = std::any_of(notes.begin(), notes.end(), [dDuration](const DocNote &note) {
+         return note.unterminated() ||
+                uint32_t(std::max<int64_t>(1, int64_t(note.duration) + dDuration)) != note.duration;
+@@ -1250,7 +1310,9 @@ void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDurat
+         EditOp end;
+         end.type = EditOp::InsertEvent;
+         end.smfTrack = note.smfTrack;
+-        end.event = makeChannelEvent(0x9, note.channel, note.tick + newDuration, note.key, 0);
++        const uint64_t endTick = uint64_t(note.tick) + newDuration;
++        Q_ASSERT(endTick <= CoreTimeDefaults::kMaxTick);
++        end.event = makeChannelEvent(0x9, note.channel, Tick(endTick), note.key, 0);
+         ops.push_back(end);
+     }
+     ops.insert(ops.end(), trims.begin(), trims.end());
