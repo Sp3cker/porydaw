@@ -198,10 +198,10 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     }
     for (const GhostLane &ghostLane : ghosts) {
         const NodeLaneSlot *slot = ghostLane.slot;
-        // All automation lanes paint in the fixed identity red; ghosting is
-        // conveyed by alpha alone, not a per-track hue.
+        // All automation lanes paint in the theme's automation ink; ghosting
+        // is conveyed by Ableton's non-editable alpha (127/255), not hue.
         QColor ghost = themes::color(themes::Role::song_view_automation_node_ink);
-        ghost.setAlphaF(0.45);
+        ghost.setAlphaF(0.5);
         const NodeLaneQuickPaint::Context ghostContext{
             .scene = scene,
             .lane = *slot->lane,

@@ -354,7 +354,7 @@ void AutomationPresentationTest::ghostTempoPaintsUnderActiveLane()
     const QRect body = canvas->laneBody(LaneHandle{0});
     const QColor ink = themes::color(themes::Role::song_view_automation_node_ink);
     QColor ghostInk = ink;
-    ghostInk.setAlphaF(0.45);
+    ghostInk.setAlphaF(0.5);
     // Single-lane default: only the active lane paints — no dimmed ghost ink.
     QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                              QRegion(body), QPoint{}, ghostInk));

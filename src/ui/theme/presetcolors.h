@@ -112,12 +112,15 @@ enum class PresetColor {
     automation_tab_hover_background,
     /// Automation parameter tab edge: a hairline over the resting chip.
     automation_tab_outline,
+    /// Automation lane node/curve ink and the written-event tab pip: Ableton's
+    /// AutomationColor, authored per theme.
+    automation_ink,
     /// Sentinel for the number of authored preset colors; not rendered.
     count,
 };
 
 inline constexpr auto presetColorCount = static_cast<std::size_t>(PresetColor::count);
-static_assert(presetColorCount == 40);
+static_assert(presetColorCount == 41);
 
 constexpr PresetColor presetColorFor(Role role);
 
@@ -296,7 +299,7 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::automation_tab_hover_background,
     PresetColor::control_pressed_background,
     PresetColor::automation_tab_outline,
-    PresetColor::playhead,
+    PresetColor::automation_ink,
 
     PresetColor::sample_waveform_ink,
     PresetColor::sample_crop_handle,
@@ -364,6 +367,8 @@ constexpr PresetColors makeVanilla()
     colors.color(PresetColor::automation_tab_background) = "#E7E1DB";
     colors.color(PresetColor::automation_tab_hover_background) = "#F0EAE4";
     colors.color(PresetColor::automation_tab_outline) = "#8C857F";
+    // Ableton Default Light Neutral High AutomationColor.
+    colors.color(PresetColor::automation_ink) = "#EA3C3C";
     return colors;
 }
 
@@ -423,6 +428,8 @@ constexpr PresetColors makeDarkNeutralHigh()
     colors.color(PresetColor::automation_tab_background) = "#51555E";
     colors.color(PresetColor::automation_tab_hover_background) = "#5B5F69";
     colors.color(PresetColor::automation_tab_outline) = "#62666F";
+    // Ableton Default Dark Neutral High AutomationColor.
+    colors.color(PresetColor::automation_ink) = "#FF4D47";
     return colors;
 }
 
@@ -479,6 +486,8 @@ constexpr PresetColors makeImmaterial()
     colors.color(PresetColor::automation_tab_background) = "#4A4E59";
     colors.color(PresetColor::automation_tab_hover_background) = "#545864";
     colors.color(PresetColor::automation_tab_outline) = "#616571";
+    // Ableton Immaterial AutomationColor.
+    colors.color(PresetColor::automation_ink) = "#FF91C3";
     return colors;
 }
 
