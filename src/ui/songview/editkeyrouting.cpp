@@ -21,8 +21,6 @@
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/timeruler.h"
 
-#include <QAction>
-
 #include <cstdint>
 
 namespace {
@@ -429,11 +427,11 @@ bool SongView::handleEditKey(const songview::TimelineKeyInput &input, EditKeyOri
         // transpose key is a consumed no-op — while other unavailable
         // commands hand the key back to the local input owner. With no
         // musical target at all the key never belonged to this policy.
-        if (target == SelectionTarget::TimeRange && !editCommandAvailable(*command))
+        if (!editCommandAvailable(*command))
             return policy.ownershipOnUnavailable == songview::EditKeyOwnershipOnUnavailable::OwnsKey
                        ? true
                        : policy.terminalWhenUnmatched;
-        // Pitch-bend opens only on the first key press.
+        // Pitch-bend opens only on the first eligible key press.
         if (target == SelectionTarget::Notes && input.autoRepeat &&
             policy.autoRepeatRule == EditAutoRepeatRule::ConsumeWhenEligible)
             return true;
@@ -441,9 +439,9 @@ bool SongView::handleEditKey(const songview::TimelineKeyInput &input, EditKeyOri
     }
     }
 
-    // The single activation tail: every surviving path activates once.
-    QAction *const action = actions->action(*command);
-    action->trigger();
+    // Revalidate only this canonical action before activation; the manual
+    // key route must not trust or globally rebuild cached menu presentation.
+    (void)actions->activateEditorCommand(*command);
     return true;
 }
 

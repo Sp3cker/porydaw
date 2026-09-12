@@ -412,6 +412,19 @@ std::optional<EditCommand> EditActions::editorCommandForKey(int key,
     return std::nullopt;
 }
 
+void EditActions::activateEditorCommand(EditCommand command)
+{
+    SongView *const boundTarget = m_target.data();
+    if (!boundTarget)
+        return;
+
+    const CommandRow &row = kCommandTable[actionIndex(command)];
+    QAction *const commandAction = action(command);
+    commandAction->setEnabled(liveRowEnabled(*boundTarget, row, focusedTextTarget()));
+    if (commandAction->isEnabled())
+        commandAction->trigger();
+}
+
 void EditActions::rebind(SongView *target)
 {
     SongView *const previousTarget = m_target.data();

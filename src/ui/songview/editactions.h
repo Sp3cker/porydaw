@@ -151,6 +151,10 @@ class EditActions final : public QObject
     void installWindowShortcuts(QWidget &window);
     std::optional<SongView::EditCommand> editorCommandForKey(int key,
                                                              Qt::KeyboardModifiers modifiers) const;
+    // Revalidate one canonical action against the live bound view, then
+    // trigger it once when enabled. Editor key routing uses this instead of
+    // trusting presentation state that may not have refreshed yet.
+    void activateEditorCommand(SongView::EditCommand command);
     bool pasteClipPresent() const;
     // The single transition seam: pass the new view or nullptr. Unbind-then-
     // bind is sequenced inside this call for every transition (A->B, A->null,
