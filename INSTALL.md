@@ -7,7 +7,9 @@
  - [Download Porydaw for macOS (intel)](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-macos-x86_64.zip).
  - [Download Porydaw for Linux](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-linux.zip) (AppImage).
 
-**macOS users**: Porydaw is not notarized with Apple, so macOS quarantines the downloaded app and blocks the first launch. To allow it, copy the app into `/Applications` first, then run `xattr -d com.apple.quarantine /Applications/porydaw.app` in Terminal. These steps are also in `RUN AFTER INSTALL.txt` inside the `.dmg`.
+**macOS users**: Porydaw is not notarized with Apple, so macOS quarantines the downloaded app and blocks the first launch. To allow it, copy the app into `/Applications` first, then run `xattr -d com.apple.quarantine /Applications/porydaw.app` in Terminal. These steps are also in `RUN AFTER INSTALL.txt` inside the `.dmg`. This build uses bundle identifier `com.sp3cker.porydaw` and stores preferences under organization `sp3cker`, so it does not share settings with older `huderlem` releases. Dragging over an existing `/Applications/porydaw.app` still replaces that file — rename the older app first if you want both installed.
+
+**Windows users**: Unzip into a new folder if you want to keep an older install. Preferences are stored under organization `sp3cker` and do not share with older `huderlem` releases. Unzipping over the previous folder replaces the binaries.
 
 Building from source requires CMake 3.21+, a C11/C++20 compiler, and Qt 6.2 or newer (Widgets).
 

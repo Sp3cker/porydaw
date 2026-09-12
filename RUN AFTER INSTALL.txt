@@ -5,7 +5,11 @@ it isn't; this is how macOS treats any app that isn't notarized.)
 After installing, remove the quarantine flag by hand:
 
   1. Drag porydaw.app onto the Applications shortcut in this window
-     (or copy it wherever you keep your apps).
+     (or copy it wherever you keep your apps). This build uses bundle
+     identifier com.sp3cker.porydaw and stores preferences under
+     organization sp3cker, so it does not share settings with older
+     huderlem releases. Rename an existing /Applications/porydaw.app
+     first if you want both versions installed.
 
   2. Open Terminal (Applications > Utilities > Terminal) and run:
 

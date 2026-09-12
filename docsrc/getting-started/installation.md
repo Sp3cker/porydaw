@@ -11,7 +11,7 @@ Porydaw has no other dependencies to run it.  Simply [download the prebuilt Wind
 ## Windows
 
 1. Download the Windows .zip file: [`porydaw-windows.zip`](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-windows.zip)
-2. Unzip the contents
+2. Unzip the contents into a new folder if you want to keep an older install. Preferences are stored under organization `sp3cker` and do not share with older `huderlem` releases.
 3. Run `porydaw.exe`
 4. If the SmartScreen warning apperas, click `More info -> Run anyway`
 
@@ -21,7 +21,7 @@ Porydaw has no other dependencies to run it.  Simply [download the prebuilt Wind
     - Arm: [porydaw-macos-arm64.zip](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-macos-arm64.zip)
     - x86_64 (Intel): [porydaw-macos-x86_64.zip](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-macos-x86_64.zip)
 2. Unzip the contents
-3. Open the DMG and drag to `/Applications`
+3. Open the DMG and drag to `/Applications`. This build uses bundle identifier `com.sp3cker.porydaw` and stores preferences under organization `sp3cker`, so it does not share settings with older `huderlem` releases. Dragging over an existing `/Applications/porydaw.app` still replaces that file — rename the older app first if you want both installed.
 
 Porydaw is not notarized with Apple, so macOS quarantines the downloaded
 app and refuses to launch it. (The warning claims the app is "damaged". It isn't, this is just how macOS treats any app that isn't notarized.)

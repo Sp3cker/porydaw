@@ -13,6 +13,15 @@ macOS note:
     in Terminal after copying the app to /Applications:
         xattr -d com.apple.quarantine /Applications/porydaw.app
     These steps are also in "RUN AFTER INSTALL.txt" inside the .dmg.
+    This build uses bundle identifier com.sp3cker.porydaw and stores
+    preferences under organization sp3cker, so it does not share settings
+    with older huderlem releases. Rename an existing /Applications/porydaw.app
+    before copying this one if you want both versions installed.
+
+Windows note:
+    Unzip this build into a new folder if you want to keep an older install.
+    Preferences are stored under organization sp3cker and do not share with
+    older huderlem releases.
 
 Project home:
     https://github.com/huderlem/porydaw

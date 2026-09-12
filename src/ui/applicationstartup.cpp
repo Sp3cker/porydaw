@@ -47,7 +47,7 @@ bool initializePorydawApplication(QApplication &application)
     QApplication::setStyle(QStringLiteral("fusion"));
     QApplication::setApplicationName(QStringLiteral("porydaw"));
     QApplication::setApplicationVersion(QStringLiteral(PORYDAW_VERSION));
-    QApplication::setOrganizationName(QStringLiteral("huderlem"));
+    QApplication::setOrganizationName(QStringLiteral("sp3cker"));
     auto appIcon = QIcon{};
     for (const auto size : {16, 32, 48, 128, 256})
         appIcon.addFile(QStringLiteral(":/icons/porydaw-%1.png").arg(size));

@@ -853,7 +853,7 @@ if(PORYDAW_BUILD_CHECKS)
             MACOSX_BUNDLE TRUE
             MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
             MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
-            MACOSX_BUNDLE_GUI_IDENTIFIER com.huderlem.porydaw.checks
+            MACOSX_BUNDLE_GUI_IDENTIFIER com.sp3cker.porydaw.checks
             NO_SYSTEM_FROM_IMPORTED ON
         )
         # Keep the cross-platform runner entry path while the resolved executable
@@ -978,7 +978,7 @@ if(APPLE)
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
-        MACOSX_BUNDLE_GUI_IDENTIFIER com.huderlem.porydaw
+        MACOSX_BUNDLE_GUI_IDENTIFIER com.sp3cker.porydaw
         MACOSX_BUNDLE_ICON_FILE porydaw.icns)
     target_sources(porydaw PRIVATE resources/porydaw.icns)
     set_source_files_properties(resources/porydaw.icns PROPERTIES
