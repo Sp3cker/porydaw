@@ -44,8 +44,10 @@ class AutomationPresentationTest final : public QObject
     void parameterLabelsFitGutterAtDerivedMinimum();
     void parameterLabelClicksSwitchActivePlot();
     void tempoUsesFullSharedPlotBody();
+    void ghostTempoPaintsUnderActiveLane();
     void drawerGrowthMovesValueAxisKeepsGridAlignment();
     void selectedInactiveParametersKeepScopeIndicators();
+    void ghostLabelNamesCurveAndFollowsHover();
 
     void pencilCursorUsesPlotGutterBoundary();
     void pencilCursorUsesInputDevicePixelRatio();

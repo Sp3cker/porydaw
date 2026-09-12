@@ -64,6 +64,6 @@ void TempoLane::replaceSpan(uint64_t first, uint64_t last, const std::vector<Nod
     edit.add.reserve(points.size());
     for (const NodePoint &point : points)
         edit.add.push_back(
-            {point.tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
+            {Tick(point.tick), CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
     document->applyTempoEdit(edit);
 }

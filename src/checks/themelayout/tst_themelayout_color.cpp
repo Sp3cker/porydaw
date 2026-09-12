@@ -27,9 +27,9 @@ const themes::Theme themeForName(const QString &name)
         return themes::darkNeutralHigh();
     if (name == QStringLiteral("immaterial"))
         return themes::immaterial();
-    if (name == QStringLiteral("derived-dark"))
-        return themes::derive(QColor(QStringLiteral("#2B2D31")), QColor(QStringLiteral("#66CCFF")));
-    return themes::derive(QColor(QStringLiteral("#F2F2F2")), QColor(QStringLiteral("#0055AA")));
+    QTest::qFail(qPrintable(QStringLiteral("unknown theme name: %1").arg(name)), __FILE__,
+                 __LINE__);
+    return themes::vanilla();
 }
 
 bool completeTheme(const themes::Theme &theme)
@@ -97,15 +97,8 @@ themes::Oklab oklabReference(const QColor &color)
 
 } // namespace
 
-void ThemeLayoutTest::colorPairValidity()
+void ThemeLayoutTest::trackIdentityContrast()
 {
-    QVERIFY(themes::isValidColorPair(QColor(QStringLiteral("#000000")),
-                                     QColor(QStringLiteral("#FFFFFF"))));
-    QVERIFY(!themes::isValidColorPair(QColor(QStringLiteral("#777777")),
-                                      QColor(QStringLiteral("#888888"))));
-    auto translucent = QColor(QStringLiteral("#FFFFFF"));
-    translucent.setAlpha(128);
-    QVERIFY(!themes::isValidColorPair(QColor(QStringLiteral("#000000")), translucent));
     const themes::Theme vanilla = themes::vanilla();
     const QColor light = vanilla.color(themes::Role::song_view_piano_keyboard_natural_key);
     const QColor dark = vanilla.color(themes::Role::song_view_piano_keyboard_black_key);
@@ -148,8 +141,7 @@ void ThemeLayoutTest::themeCompleteness_data()
 {
     QTest::addColumn<QString>("themeName");
     const std::array names{QStringLiteral("vanilla"), QStringLiteral("dark-neutral-high"),
-                           QStringLiteral("immaterial"), QStringLiteral("derived-dark"),
-                           QStringLiteral("derived-light")};
+                           QStringLiteral("immaterial")};
     for (const QString &name : names)
         QTest::newRow(name.toLatin1().constData()) << name;
 }
@@ -162,11 +154,6 @@ void ThemeLayoutTest::themeCompleteness()
     verifyMenuAndControlContracts(theme);
     QVERIFY(themes::contrastRatio(theme.color(themes::Role::disabled_text),
                                   theme.color(themes::Role::window_text)) >= 1.3);
-    if (themeName.startsWith(QStringLiteral("derived"))) {
-        QVERIFY(themes::contrastRatio(theme.color(themes::Role::disabled_text),
-                                      theme.color(themes::Role::window_background)) >= 4.5);
-        return;
-    }
     QCOMPARE(theme.color(themes::Role::combo_drop_down_hover_background),
              theme.color(themes::Role::button_hover_background));
     QCOMPARE(theme.color(themes::Role::focus_outline), theme.color(themes::Role::palette_outline));
@@ -188,8 +175,7 @@ void ThemeLayoutTest::gridContrast_data()
     QTest::addColumn<QString>("themeName");
     QTest::addColumn<int>("contrast");
     const std::array names{QStringLiteral("vanilla"), QStringLiteral("dark-neutral-high"),
-                           QStringLiteral("immaterial"), QStringLiteral("derived-dark"),
-                           QStringLiteral("derived-light")};
+                           QStringLiteral("immaterial")};
     for (const QString &name : names) {
         for (const int contrast : {0, 50, 100})
             QTest::newRow(
@@ -218,8 +204,6 @@ void ThemeLayoutTest::gridContrast()
         QVERIFY(adjustedContrast < originalContrast);
     else
         QVERIFY(adjustedContrast > originalContrast);
-    if (themeName.startsWith(QStringLiteral("derived")))
-        return;
     if (contrast == 0)
         QVERIFY(adjustedGrid.alpha() < originalGrid.alpha());
     else
@@ -241,13 +225,14 @@ void ThemeLayoutTest::laneAndWaveformLegibility_data()
     QTest::addColumn<int>("role");
     QTest::addColumn<int>("surface");
     const std::array names{QStringLiteral("vanilla"), QStringLiteral("dark-neutral-high"),
-                           QStringLiteral("immaterial"), QStringLiteral("derived-dark"),
-                           QStringLiteral("derived-light")};
+                           QStringLiteral("immaterial")};
     const std::array checks{
         std::pair{themes::Role::song_view_edit_preview_outline,
                   themes::Role::song_view_piano_roll_background},
         std::pair{themes::Role::song_view_add_automation_lane_action,
                   themes::Role::song_view_piano_roll_background},
+        std::pair{themes::Role::tab_selected_text,
+                  themes::Role::song_view_automation_tab_active_background},
         std::pair{themes::Role::sample_waveform_ink, themes::Role::item_background},
         std::pair{themes::Role::sample_crop_handle, themes::Role::item_background},
         std::pair{themes::Role::sample_loop_handle, themes::Role::item_background},

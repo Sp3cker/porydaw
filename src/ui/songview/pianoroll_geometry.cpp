@@ -33,8 +33,6 @@ PianoRollGeometry PianoRollGeometry::resolve(int pianoKeyboardWidth)
         .pianoRollNoteEdgeGripReach = lyt::fontPxF(0.25),
         .pianoRollNoteMoveZoneMinimumWidth = lyt::fontPxF(0.5),
         .selectionRingDipWidth = lyt::fontPxF(1.0 / 8.0),
-        .noteBorderDashLength = lyt::fontPx(1.0 / 3.0),
-        .noteBorderDashGap = lyt::fontPx(1.0 / 6.0),
         .keyboardHoverChipHorizontalPadding = lyt::fontPx(2.0 / 3.0),
         .keyboardHoverChipVerticalPadding = lyt::fontPx(1.0 / 6.0),
         .keyboardHoverChipRightInset = lyt::fontPx(1.0 / 6.0),
@@ -209,9 +207,11 @@ QRectF PianoRoll::noteRect(qreal x0, qreal x1, int key) const
 
 QRectF PianoRoll::noteRect(const ViewNote &note) const
 {
+    if (note.duration == 0)
+        return {};
     const qreal dpr = devicePixelRatio();
     return noteRect(m_camera.displayX(double(note.startTick), 0.0, dpr),
-                    m_camera.displayX(double(note.endTick), 0.0, dpr), note.key);
+                    m_camera.displayX(double(note.endTick()), 0.0, dpr), note.key);
 }
 
 QRectF PianoRoll::noteBox(const QRectF &rect) const
@@ -301,11 +301,11 @@ QRectF PianoRoll::displayedNoteRect(const ViewNote &note) const
     int64_t tick, endTick;
     if (m_leftDrag == LeftDrag::ResizeLeft) {
         // The note-off pins the gesture; only the start moves.
-        endTick = int64_t(note.endTick);
+        endTick = int64_t(note.endTick());
         tick = std::clamp<int64_t>(int64_t(note.startTick) + m_dTick, 0, endTick - 1);
     } else {
         tick = std::max<int64_t>(0, int64_t(note.startTick) + m_dTick);
-        endTick = std::max<int64_t>(tick + 1, int64_t(note.endTick) + m_dTick + m_dDur);
+        endTick = std::max<int64_t>(tick + 1, int64_t(note.endTick()) + m_dTick + m_dDur);
     }
     const int key = displayedNoteKey(note);
     const qreal dpr = devicePixelRatio();

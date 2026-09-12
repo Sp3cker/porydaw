@@ -54,8 +54,6 @@ struct PianoRollGeometry {
     qreal pianoRollNoteEdgeGripReach;
     qreal pianoRollNoteMoveZoneMinimumWidth;
     qreal selectionRingDipWidth;
-    int noteBorderDashLength;
-    int noteBorderDashGap;
     int keyboardHoverChipHorizontalPadding;
     int keyboardHoverChipVerticalPadding;
     int keyboardHoverChipRightInset;

@@ -8,6 +8,7 @@
 #include "checks/support/songfixture.h"
 #include "core/midiimport.h"
 #include "core/songdocument.h"
+#include "core/timedefaults.h"
 #include "ui/newsongwizard.h"
 #include "ui/songsettingsdialog.h"
 
@@ -62,7 +63,7 @@ void OnboardingTest::importRescale()
     SmfFile imported;
     QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), imported, error),
              qPrintable(error));
-    rescaleDivision(&imported, 24);
+    QVERIFY2(rescaleDivision(&imported, 24, &error), qPrintable(error));
     QCOMPARE(imported.division, 24);
     QCOMPARE(imported.tracks[1].events[4].tick, uint64_t(28));
     QCOMPARE(imported.tracks[1].events[11].tick, uint64_t(57));
@@ -140,6 +141,73 @@ void OnboardingTest::importDedup()
     QVERIFY(programIndex >= 0 && firstNote > programIndex);
 }
 
+// In-memory SMF at the 32-bit tick boundary: rescaling to 48 clocks would
+// roughly double every tick past kMaxTick, so the preflight rejects the whole
+// operation and the file is left untouched (division included).
+void OnboardingTest::importRescaleOverflow()
+{
+    QString error;
+    SmfFile smf;
+    smf.format = 1;
+    smf.division = 24;
+    smf.tracks.resize(1);
+    SmfEvent ev;
+    ev.tick = CoreTimeDefaults::kMaxTick;
+    ev.status = 0x90;
+    ev.data0 = 60;
+    ev.data1 = 100;
+    smf.tracks[0].events.push_back(ev);
+    smf.tracks[0].endTick = smf.tracks[0].events.back().tick;
+
+    QVERIFY(!rescaleDivision(&smf, 48, &error));
+    QCOMPARE(smf.division, 24);
+    QCOMPARE(smf.tracks[0].events[0].tick, CoreTimeDefaults::kMaxTick);
+    QVERIFY2(
+        error.contains(QStringLiteral("Tick rescale to division 48 exceeds 32-bit tick range")),
+        qPrintable(error));
+}
+
+// The import wizard must fail closed on that same overflow: no song is
+// handed to the caller, and the error carries the rescale text. Division 12
+// (not a multiple of 24) is what makes the wizard offer the rescale checkbox
+// at all; rescaling 12 -> 48 multiplies ticks by 4, so the boundary SMF
+// overflows exactly as the 24 -> 48 case above.
+void OnboardingTest::importWizardOverflow()
+{
+    QString error;
+    std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
+    QVERIFY2(fixture, qPrintable(error));
+    DecompProject project;
+    QVERIFY2(project.open(fixture->root(), &error), qPrintable(error));
+    SmfFile smf;
+    smf.format = 1;
+    smf.division = 12;
+    smf.tracks.resize(1);
+    SmfEvent ev;
+    ev.tick = CoreTimeDefaults::kMaxTick;
+    ev.status = 0x90;
+    ev.data0 = 60;
+    ev.data1 = 100;
+    smf.tracks[0].events.push_back(ev);
+    smf.tracks[0].endTick = smf.tracks[0].events.back().tick;
+    const QStringList voicegroups = SongRegistry::voicegroupArgs(fixture->root());
+    NewSongWizard wizard(&project, smf, QStringLiteral("overflow.mid"), voicegroups);
+    QCheckBox *rescale = wizard.page(0)->findChild<QCheckBox *>();
+    QVERIFY(rescale && rescale->isChecked());
+    QCheckBox *extended = nullptr;
+    for (QCheckBox *candidate : wizard.findChildren<QCheckBox *>())
+        if (candidate->text().contains(QStringLiteral("48 clocks per beat")))
+            extended = candidate;
+    QVERIFY(extended);
+    extended->setChecked(true);
+    SmfFile out;
+    QVERIFY(!wizard.songFile(&out, &error));
+    QVERIFY(out.tracks.empty());
+    QVERIFY2(
+        error.contains(QStringLiteral("Tick rescale to division 48 exceeds 32-bit tick range")),
+        qPrintable(error));
+}
+
 void OnboardingTest::importWizard()
 {
     QString error;
@@ -156,9 +224,13 @@ void OnboardingTest::importWizard()
     QCheckBox *rescale = wizard.page(0)->findChild<QCheckBox *>();
     QVERIFY(rescale);
     QVERIFY(rescale->isChecked());
-    QCOMPARE(wizard.songFile().division, 24);
+    SmfFile rescaledSmf;
+    QVERIFY2(wizard.songFile(&rescaledSmf, &error), qPrintable(error));
+    QCOMPARE(rescaledSmf.division, 24);
     rescale->setChecked(false);
-    QCOMPARE(wizard.songFile().division, 400);
+    SmfFile unrescaledSmf;
+    QVERIFY2(wizard.songFile(&unrescaledSmf, &error), qPrintable(error));
+    QCOMPARE(unrescaledSmf.division, 400);
     QLineEdit *name = nullptr;
     for (QLineEdit *edit : wizard.findChildren<QLineEdit *>())
         if (edit->placeholderText() == QStringLiteral("mus_my_song"))
@@ -198,7 +270,8 @@ void OnboardingTest::importWizard()
     QVERIFY2(midiFixture(QStringLiteral("duplicate_setters.mid"), duplicateSetters, error),
              qPrintable(error));
     NewSongWizard dedupWizard(&project, duplicateSetters, QStringLiteral("dups.mid"), voicegroups);
-    const SmfFile cleaned = dedupWizard.songFile();
+    SmfFile cleaned;
+    QVERIFY2(dedupWizard.songFile(&cleaned, &error), qPrintable(error));
     QCOMPARE(cleaned.tracks.size(), qsizetype{2});
     int cc7 = 0;
     int programs = 0;
@@ -221,7 +294,7 @@ void OnboardingTest::importRoundtrip()
     SmfFile imported;
     QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), imported, error),
              qPrintable(error));
-    rescaleDivision(&imported, 24);
+    QVERIFY2(rescaleDivision(&imported, 24, &error), qPrintable(error));
     SongCfg cfg;
     QVERIFY2(defaultCfg(root, cfg, error), qPrintable(error));
     const QString label = QStringLiteral("mus_onboardcheck_import");
@@ -277,7 +350,7 @@ void OnboardingTest::compilesThroughMid2agb()
         QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), midi, error),
                  qPrintable(error));
     if (kind == QStringLiteral("imported"))
-        rescaleDivision(&midi, 24);
+        QVERIFY2(rescaleDivision(&midi, 24, &error), qPrintable(error));
     const QString mid = midiDirectory(root) + QStringLiteral("/") + label + QStringLiteral(".mid");
     QVERIFY2(midi.writeFile(mid, &error), qPrintable(error));
     QVERIFY2(compile(root, mid, cfg.rawFlags, error), qPrintable(error));

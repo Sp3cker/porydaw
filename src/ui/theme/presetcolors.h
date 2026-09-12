@@ -105,12 +105,17 @@ enum class PresetColor {
     /// Sample Editor seam-end trace: the red domain color, kept legible on the
     /// seam inset's alternate surface.
     sample_seam_end_ink,
+    automation_tab_background,
+    automation_tab_hover_background,
+    automation_tab_outline,
+    automation_ink,
+    automation_ghost_edge,
     /// Sentinel for the number of authored preset colors; not rendered.
     count,
 };
 
 inline constexpr auto presetColorCount = static_cast<std::size_t>(PresetColor::count);
-static_assert(presetColorCount == 37);
+static_assert(presetColorCount == 42);
 
 constexpr PresetColor presetColorFor(Role role);
 
@@ -282,11 +287,15 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::piano_keyboard_label,
     PresetColor::selection_background,
     PresetColor::window_text,
-    PresetColor::selection_background,
-    PresetColor::accent,
     PresetColor::outline,
     PresetColor::secondary_text,
     PresetColor::separator,
+    PresetColor::automation_tab_background,
+    PresetColor::automation_tab_hover_background,
+    PresetColor::control_pressed_background,
+    PresetColor::automation_tab_outline,
+    PresetColor::automation_ink,
+    PresetColor::automation_ghost_edge,
 
     PresetColor::sample_waveform_ink,
     PresetColor::sample_crop_handle,
@@ -340,15 +349,20 @@ constexpr PresetColors makeVanilla()
     colors.color(PresetColor::polyphony_stolen_text) = "#6E4A06";
     colors.color(PresetColor::polyphony_flash) = "#D92626";
     // The accent is too pale for a trace on the light item surface (the raw
-    // selection cyan sat 1.16:1 there); this is the accent hue walked toward
-    // black by the same policy Custom themes use, landing at 5.09:1.
+    // selection cyan sat 1.16:1 there); the accent hue is walked toward black
+    // until it reaches 4.5:1, landing at 5.09:1.
     colors.color(PresetColor::sample_waveform_ink) = "#005B63";
     // The identity amber/blue/red sat 1.47/1.54/2.29:1 on the light surfaces;
-    // each is its hue walked toward black by the Custom-theme policy to the
-    // 3:1 UI-component bar (3.22, 3.33 worst-surface, 3.05:1).
+    // each hue is walked toward black until it reaches the 3:1 UI-component bar
+    // (3.22, 3.33 worst-surface, 3.05:1).
     colors.color(PresetColor::sample_crop_handle) = "#92681F";
     colors.color(PresetColor::sample_loop_handle) = "#2A7292";
     colors.color(PresetColor::sample_seam_end_ink) = "#C54444";
+    colors.color(PresetColor::automation_tab_background) = "#E7E1DB";
+    colors.color(PresetColor::automation_tab_hover_background) = "#F0EAE4";
+    colors.color(PresetColor::automation_tab_outline) = "#8C857F";
+    colors.color(PresetColor::automation_ink) = "#EA3C3C";
+    colors.color(PresetColor::automation_ghost_edge) = "#E0AA2A";
     return colors;
 }
 
@@ -403,6 +417,11 @@ constexpr PresetColors makeDarkNeutralHigh()
     colors.color(PresetColor::sample_crop_handle) = "#E0A030";
     colors.color(PresetColor::sample_loop_handle) = "#4AB4E2";
     colors.color(PresetColor::sample_seam_end_ink) = "#F08D8D";
+    colors.color(PresetColor::automation_tab_background) = "#51555E";
+    colors.color(PresetColor::automation_tab_hover_background) = "#5B5F69";
+    colors.color(PresetColor::automation_tab_outline) = "#62666F";
+    colors.color(PresetColor::automation_ink) = "#FF4D47";
+    colors.color(PresetColor::automation_ghost_edge) = "#E0AA2A";
     return colors;
 }
 
@@ -454,6 +473,11 @@ constexpr PresetColors makeImmaterial()
     colors.color(PresetColor::sample_crop_handle) = "#E0A030";
     colors.color(PresetColor::sample_loop_handle) = "#40B0E0";
     colors.color(PresetColor::sample_seam_end_ink) = "#EF8585";
+    colors.color(PresetColor::automation_tab_background) = "#4A4E59";
+    colors.color(PresetColor::automation_tab_hover_background) = "#545864";
+    colors.color(PresetColor::automation_tab_outline) = "#616571";
+    colors.color(PresetColor::automation_ink) = "#FF91C3";
+    colors.color(PresetColor::automation_ghost_edge) = "#E0AA2A";
     return colors;
 }
 

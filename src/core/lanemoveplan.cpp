@@ -21,12 +21,12 @@ std::optional<LaneMovePlan> planLaneMoves(const std::vector<LaneMovePoint> &exis
         else
             unique[it->second] = request;
     }
-    std::map<uint64_t, uint64_t> destBySourceTick;
+    std::map<Tick, Tick> destBySourceTick;
     for (const LaneMoveRequest &request : unique)
         destBySourceTick[existing[request.sourceId].tick] = request.toTick;
     for (LaneMoveRequest &request : unique)
         request.toTick = destBySourceTick[existing[request.sourceId].tick];
-    std::map<uint64_t, uint64_t> winningSourceTick;
+    std::map<Tick, Tick> winningSourceTick;
     for (const LaneMoveRequest &request : unique)
         winningSourceTick[request.toTick] = existing[request.sourceId].tick;
     std::vector<char> winning(existing.size(), 0);

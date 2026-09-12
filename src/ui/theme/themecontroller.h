@@ -1,9 +1,5 @@
 #pragma once
 
-#include <QColor>
-
-#include <optional>
-
 class QApplication;
 class QSettings;
 
@@ -11,24 +7,18 @@ namespace themes {
 
 struct Theme;
 
-enum class ThemeMode { Vanilla, DarkNeutralHigh, Immaterial, Custom };
-
-struct ColorPair {
-    QColor primary;
-    QColor accent;
-};
+enum class ThemeMode { Vanilla, DarkNeutralHigh, Immaterial };
 
 inline constexpr auto defaultGridLineContrast = 50;
 
 struct ThemeSelection {
     ThemeMode mode = ThemeMode::Vanilla;
-    std::optional<ColorPair> customColors;
     int gridLineContrast = defaultGridLineContrast;
 };
 
 /// Owns the application's current theme.
 ///
-/// Dialogs send the active mode and any valid Custom colors here. They do not
+/// Dialogs send the active mode and grid-line contrast here. They do not
 /// apply colors or write settings themselves, so previews have one known
 /// committed theme to return to.
 class ThemeController
@@ -45,6 +35,7 @@ class ThemeController
   private:
     void writeStoredSelection(const ThemeSelection &selection);
     Theme resolve(const ThemeSelection &selection) const;
+    void removeLegacyCustomKeys();
     ThemeSelection readStoredSelection() const;
 
     QApplication &m_application;

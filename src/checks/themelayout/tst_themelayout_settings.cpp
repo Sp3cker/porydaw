@@ -6,7 +6,6 @@
 #include "ui/theme/themeruntime.h"
 
 #include <QApplication>
-#include <QLineEdit>
 #include <QPushButton>
 #include <QRadioButton>
 #include <QSettings>
@@ -18,11 +17,9 @@
 namespace {
 
 struct DialogControls {
-    QRadioButton *custom = nullptr;
+    QRadioButton *vanilla = nullptr;
     QRadioButton *darkNeutralHigh = nullptr;
     QRadioButton *immaterial = nullptr;
-    QLineEdit *primary = nullptr;
-    QLineEdit *accent = nullptr;
     QSlider *gridLineContrast = nullptr;
     QPushButton *apply = nullptr;
     QPushButton *close = nullptr;
@@ -30,11 +27,9 @@ struct DialogControls {
 
 DialogControls dialogControls(themes::ThemeDialog &dialog)
 {
-    return {dialog.findChild<QRadioButton *>(QStringLiteral("customModeButton")),
+    return {dialog.findChild<QRadioButton *>(QStringLiteral("vanillaModeButton")),
             dialog.findChild<QRadioButton *>(QStringLiteral("darkNeutralHighModeButton")),
             dialog.findChild<QRadioButton *>(QStringLiteral("immaterialModeButton")),
-            dialog.findChild<QLineEdit *>(QStringLiteral("primaryHexEdit")),
-            dialog.findChild<QLineEdit *>(QStringLiteral("accentHexEdit")),
             dialog.findChild<QSlider *>(QStringLiteral("gridLineContrastSlider")),
             dialog.findChild<QPushButton *>(QStringLiteral("themeApplyButton")),
             dialog.findChild<QPushButton *>(QStringLiteral("themeCloseButton"))};
@@ -42,15 +37,8 @@ DialogControls dialogControls(themes::ThemeDialog &dialog)
 
 bool controlsPresent(const DialogControls &controls)
 {
-    return controls.custom && controls.darkNeutralHigh && controls.immaterial && controls.primary &&
-           controls.accent && controls.gridLineContrast && controls.apply && controls.close;
-}
-
-themes::ThemeSelection customSelection()
-{
-    return {themes::ThemeMode::Custom,
-            themes::ColorPair{QColor(QStringLiteral("#000000")), QColor(QStringLiteral("#FFFFFF"))},
-            80};
+    return controls.vanilla && controls.darkNeutralHigh && controls.immaterial &&
+           controls.gridLineContrast && controls.apply && controls.close;
 }
 
 } // namespace
@@ -79,25 +67,26 @@ void ThemeLayoutTest::settingsRepair()
     QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
     settings.setValue(QStringLiteral("theme/mode"), QStringLiteral("custom"));
     settings.setValue(QStringLiteral("theme/primary"), QStringLiteral("#000000"));
-    settings.setValue(QStringLiteral("theme/grid-line-contrast"), QStringLiteral("invalid"));
+    settings.setValue(QStringLiteral("theme/accent"), QStringLiteral("#FFFFFF"));
+    settings.setValue(QStringLiteral("theme/grid-line-contrast"), QStringLiteral("80"));
 
     themes::ThemeController controller(*m_application, settings);
     controller.restore();
 
     QCOMPARE(controller.committedSelection().mode, themes::ThemeMode::Vanilla);
+    QCOMPARE(controller.committedSelection().gridLineContrast, 80);
     QCOMPARE(settings.value(QStringLiteral("theme/mode")).toString(), QStringLiteral("vanilla"));
     QVERIFY(!settings.contains(QStringLiteral("theme/primary")));
     QVERIFY(!settings.contains(QStringLiteral("theme/accent")));
-    QCOMPARE(settings.value(QStringLiteral("theme/grid-line-contrast")).toInt(),
-             themes::defaultGridLineContrast);
+    QCOMPARE(settings.value(QStringLiteral("theme/grid-line-contrast")).toInt(), 80);
 }
 
 void ThemeLayoutTest::themePersistence_data()
 {
     QTest::addColumn<int>("mode");
     QTest::addColumn<QString>("storedName");
-    QTest::newRow("custom") << static_cast<int>(themes::ThemeMode::Custom)
-                            << QStringLiteral("custom");
+    QTest::newRow("vanilla") << static_cast<int>(themes::ThemeMode::Vanilla)
+                             << QStringLiteral("vanilla");
     QTest::newRow("dark-neutral-high") << static_cast<int>(themes::ThemeMode::DarkNeutralHigh)
                                        << QStringLiteral("dark-neutral-high");
     QTest::newRow("immaterial") << static_cast<int>(themes::ThemeMode::Immaterial)
@@ -115,9 +104,7 @@ void ThemeLayoutTest::themePersistence()
     themes::ThemeController writeController(*m_application, writeSettings);
     writeController.restore();
     const auto themeMode = static_cast<themes::ThemeMode>(mode);
-    const themes::ThemeSelection selection = themeMode == themes::ThemeMode::Custom
-                                                 ? customSelection()
-                                                 : themes::ThemeSelection{themeMode};
+    const themes::ThemeSelection selection{themeMode};
     QVERIFY(writeController.commit(selection));
     writeSettings.sync();
 
@@ -127,12 +114,6 @@ void ThemeLayoutTest::themePersistence()
     const themes::ThemeSelection &restored = readController.committedSelection();
     QCOMPARE(restored.mode, themeMode);
     QCOMPARE(readSettings.value(QStringLiteral("theme/mode")).toString(), storedName);
-    if (themeMode == themes::ThemeMode::Custom) {
-        QVERIFY(restored.customColors.has_value());
-        QCOMPARE(restored.customColors->primary, QColor(QStringLiteral("#000000")));
-        QCOMPARE(restored.customColors->accent, QColor(QStringLiteral("#FFFFFF")));
-        QCOMPARE(restored.gridLineContrast, 80);
-    }
 }
 
 void ThemeLayoutTest::dialogCommitAndRevert()
@@ -148,18 +129,12 @@ void ThemeLayoutTest::dialogCommitAndRevert()
     dialog.show();
     QTRY_VERIFY(dialog.isVisible());
 
-    controls.custom->click();
-    controls.primary->setText(QStringLiteral("#000000"));
-    controls.accent->setText(QStringLiteral("#FFFFFF"));
-    QTRY_VERIFY(controls.apply->isEnabled());
+    controls.darkNeutralHigh->click();
     controls.gridLineContrast->setValue(80);
     controls.apply->click();
 
     const themes::ThemeSelection &committed = controller.committedSelection();
-    QCOMPARE(committed.mode, themes::ThemeMode::Custom);
-    QVERIFY(committed.customColors.has_value());
-    QCOMPARE(committed.customColors->primary, QColor(QStringLiteral("#000000")));
-    QCOMPARE(committed.customColors->accent, QColor(QStringLiteral("#FFFFFF")));
+    QCOMPARE(committed.mode, themes::ThemeMode::DarkNeutralHigh);
     QCOMPARE(committed.gridLineContrast, 80);
 
     controls.darkNeutralHigh->click();
@@ -171,10 +146,8 @@ void ThemeLayoutTest::dialogCommitAndRevert()
     controls.gridLineContrast->setValue(10);
     controls.close->click();
 
-    QCOMPARE(themes::color(themes::Role::link_text), QColor(QStringLiteral("#FFFFFF")));
+    const auto committedTheme = themes::withGridLineContrast(themes::darkNeutralHigh(), 80);
+    QCOMPARE(themes::color(themes::Role::link_text), committedTheme.color(themes::Role::link_text));
     QCOMPARE(themes::color(themes::Role::song_view_grid),
-             themes::withGridLineContrast(themes::derive(QColor(QStringLiteral("#000000")),
-                                                         QColor(QStringLiteral("#FFFFFF"))),
-                                          80)
-                 .color(themes::Role::song_view_grid));
+             committedTheme.color(themes::Role::song_view_grid));
 }

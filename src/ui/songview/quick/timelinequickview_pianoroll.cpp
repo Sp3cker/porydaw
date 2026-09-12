@@ -45,13 +45,10 @@ int fittedFrameThickness(const QRectF &rect, int requestedPixels, int insetPixel
                       lyt::space(Space::Zero), requestedPixels);
 }
 
-int addFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
-             const QColor &color, int requestedPixels, int insetPixels, qreal dpr,
-             const QRectF &clip)
+void addFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
+              const QColor &color, int thicknessPixels, int insetPixels, qreal dpr,
+              const QRectF &clip)
 {
-    const int thicknessPixels = fittedFrameThickness(rect, requestedPixels, insetPixels, dpr);
-    if (thicknessPixels <= 0)
-        return 0;
     const qreal pixel = logicalPhysicalPixel(dpr);
     const qreal inset = insetPixels * pixel;
     const qreal thickness = thicknessPixels * pixel;
@@ -67,7 +64,6 @@ int addFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &
     addRect(scene.layer(layer),
             QRectF(frame.right() - thickness, frame.top() + thickness, thickness, sideHeight),
             color, clip);
-    return thicknessPixels;
 }
 
 void addDashedFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
@@ -84,45 +80,16 @@ void addDashedFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const Q
 }
 
 void addNoteBorder(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &noteBox,
-                   bool unterminated, int dashLength, int dashGap, int insetPixels, qreal dpr,
-                   const QRectF &clip)
+                   int insetPixels, qreal dpr, const QRectF &clip)
 {
     const int requested = noteBorderPixels(dpr);
     const int fitted = fittedFrameThickness(noteBox, requested, insetPixels, dpr);
     const qreal pixel = logicalPhysicalPixel(dpr);
-    if (fitted > 0 && !unterminated) {
-        addFrame(scene, layer, noteBox, Qt::black, requested, insetPixels, dpr, clip);
-        return;
-    }
-    if (fitted > 0) {
-        for (int framePixel = 0; framePixel < fitted; ++framePixel) {
-            const qreal inset = (insetPixels + framePixel) * pixel;
-            const QRectF frame =
-                noteBox.adjusted(0, 0, -pixel, -pixel).adjusted(inset, inset, -inset, -inset);
-            addDashedFrame(scene, layer, frame, Qt::black, pixel, dashLength, dashGap, clip);
-        }
-        return;
-    }
     QColor color(Qt::black);
-    color.setAlphaF(
-        std::clamp((std::min)(noteBox.width(), noteBox.height()) / (3.0 * pixel), 0.25, 0.85));
-    const qreal inset = insetPixels * pixel;
-    const QRectF frame = noteBox.adjusted(inset, inset, -inset, -inset);
-    if (unterminated) {
-        addDashedFrame(scene, layer, frame, color, pixel, dashLength, dashGap, clip);
-    } else {
-        addRect(scene.layer(layer), QRectF(frame.left(), frame.top(), frame.width(), pixel), color,
-                clip);
-        addRect(scene.layer(layer),
-                QRectF(frame.left(), frame.bottom() - pixel, frame.width(), pixel), color, clip);
-        addRect(scene.layer(layer),
-                QRectF(frame.left(), frame.top() + pixel, pixel, frame.height() - 2.0 * pixel),
-                color, clip);
-        addRect(
-            scene.layer(layer),
-            QRectF(frame.right() - pixel, frame.top() + pixel, pixel, frame.height() - 2.0 * pixel),
-            color, clip);
-    }
+    if (fitted == 0)
+        color.setAlphaF(
+            std::clamp((std::min)(noteBox.width(), noteBox.height()) / (3.0 * pixel), 0.25, 0.85));
+    addFrame(scene, layer, noteBox, color, std::max(1, fitted), insetPixels, dpr, clip);
 }
 
 void addLoopGlow(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
@@ -306,16 +273,15 @@ void TimelineQuickView::rebuildNoteBordersAndSelection()
             ? selection.resolvedTrackScope(usedTracks)
             : 0;
 
-    const auto addSelectionRing = [&](const QRectF &box, const ViewNote &note) {
+    const auto addSelectionRing = [&](const QRectF &box) {
         const int requested =
             (std::max)(lyt::singlePixel(), qRound(roll.m_geometry.selectionRingDipWidth * dpr));
-        const int ring = addFrame(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box,
-                                  themes::color(themes::Role::item_selected_background), requested,
-                                  0, dpr, plot);
+        const int ring = fittedFrameThickness(box, requested, 0, dpr);
         if (ring > 0) {
-            addNoteBorder(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box,
-                          note.unterminated, roll.m_geometry.noteBorderDashLength,
-                          roll.m_geometry.noteBorderDashGap, ring, dpr, plot);
+            addFrame(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box,
+                     themes::color(themes::Role::item_selected_background), ring, 0, dpr, plot);
+            addNoteBorder(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box, ring, dpr,
+                          plot);
         } else {
             addRect(scene.layer(TimelineQuickLayer::PianoNoteBordersAndSelection), box,
                     themes::color(themes::Role::item_selected_background), plot);
@@ -337,10 +303,10 @@ void TimelineQuickView::rebuildNoteBordersAndSelection()
                 continue;
             const QRectF box = roll.noteBox(noteRect);
             const bool timeSelected = (timeSelectedTracks & (1u << note.track)) &&
-                                      timeRange.overlaps(note.startTick, note.endTick);
+                                      timeRange.overlaps(note.startTick, note.endTick());
             if (ghost) {
                 if (timeSelected)
-                    addSelectionRing(box, note);
+                    addSelectionRing(box);
                 continue;
             }
             const bool selected =
@@ -351,11 +317,10 @@ void TimelineQuickView::rebuildNoteBordersAndSelection()
                      roll.m_bandAud.begin(), roll.m_bandAud.end(),
                      [&](const ViewNote &covered) { return covered.noteId == note.noteId; }));
             if (selected) {
-                addSelectionRing(box, note);
+                addSelectionRing(box);
             } else {
-                addNoteBorder(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box,
-                              note.unterminated, roll.m_geometry.noteBorderDashLength,
-                              roll.m_geometry.noteBorderDashGap, 0, dpr, plot);
+                addNoteBorder(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box, 0, dpr,
+                              plot);
             }
         }
     }
@@ -379,9 +344,7 @@ void TimelineQuickView::rebuildOverlay()
             roll.m_camera.displayX(double(roll.m_drawTick + uint64_t(roll.m_drawDur)), 0.0, dpr);
         const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
         const QRectF box = roll.noteBox(previewRect);
-        addNoteBorder(scene, TimelineQuickLayer::PianoOverlay, box, false,
-                      roll.m_geometry.noteBorderDashLength, roll.m_geometry.noteBorderDashGap, 0,
-                      dpr, plot);
+        addNoteBorder(scene, TimelineQuickLayer::PianoOverlay, box, 0, dpr, plot);
     }
 
     const auto &selection = roll.m_sv->selectionModel();

@@ -170,11 +170,15 @@ enum class Role {
     song_view_piano_keyboard_label,
     song_view_track_header_selection,
     song_view_track_header_selection_text,
-    song_view_automation_default_curve,
-    song_view_automation_tempo_curve,
     song_view_file_event_marker,
     song_view_add_automation_lane_action,
     song_view_psg_velocity_levels,
+    song_view_automation_tab_background,
+    song_view_automation_tab_hover_background,
+    song_view_automation_tab_active_background,
+    song_view_automation_tab_outline,
+    song_view_automation_node_ink,
+    song_view_automation_ghost_edge,
 
     // Sample Editor waveform trace, painted on the item surface behind it.
     sample_waveform_ink,

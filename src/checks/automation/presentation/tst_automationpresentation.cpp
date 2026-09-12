@@ -121,7 +121,7 @@ songview::TimelinePointerInput plotPointerInput(QPointF position, songview::Time
 
 SmfEvent programChange(uint64_t tick, uint8_t program)
 {
-    return {.tick = tick, .status = 0xC0, .data0 = program};
+    return {.tick = Tick(tick), .status = 0xC0, .data0 = program};
 }
 
 } // namespace

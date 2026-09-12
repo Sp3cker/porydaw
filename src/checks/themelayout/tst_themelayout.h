@@ -20,7 +20,7 @@ class ThemeLayoutTest final : public QObject
   private slots:
     void init();
     void cleanup();
-    void colorPairValidity();
+    void trackIdentityContrast();
     void colorMath_data();
     void colorMath();
     void themeCompleteness_data();
@@ -83,7 +83,6 @@ class ThemeLayoutScaleTest final : public QObject
     void initializationIsProcessScoped();
 
     void layoutScale();
-    void pickerPaintingMatchesHitTesting();
     void polyphonyLayoutScales();
 
   private:

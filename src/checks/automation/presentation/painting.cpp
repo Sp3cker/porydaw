@@ -168,7 +168,10 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
         centers.push_back(bounds.center());
         labelBounds.push_back(bounds);
 
-        QQuickItem *const text = tab->property("contentItem").value<QQuickItem *>();
+        QQuickItem *const content = tab->property("contentItem").value<QQuickItem *>();
+        QVERIFY2(content, "a catalog label rendered without its content item");
+        QQuickItem *const text = content->findChild<QQuickItem *>(
+            QStringLiteral("automationParameterTabText"), Qt::FindDirectChildrenOnly);
         QVERIFY2(text, "a catalog label rendered without its Text item");
         QCOMPARE(text->property("text").toString(), expected.at(index));
         const qreal contentWidth = text->property("contentWidth").toReal();
@@ -178,6 +181,17 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
                  "the rendered fitted Text exceeds its label width");
         QVERIFY2(contentHeight <= text->height() + 0.5,
                  "the rendered fitted Text exceeds its label height");
+    }
+
+    const QVariantList pips = canvas->parameterPips();
+    QCOMPARE(pips.size(), expected.size());
+    for (int index = 0; index < expected.size(); ++index) {
+        const auto row = canvas->parameterRow(index);
+        QVERIFY(row.has_value());
+        const bool written = row->kind == EditorAutomationRowKind::Tempo
+                                 ? !m_document->tempoPoints().empty()
+                                 : !m_document->lanePoints(row->track, row->controller).empty();
+        QCOMPARE(pips.at(index).toBool(), written);
     }
 
     // The selector keeps the catalog's grouping visible: each related pair
@@ -254,7 +268,7 @@ void AutomationPresentationTest::parameterLabelClicksSwitchActivePlot()
     const QRegion volumeNode = nodeRegion(lanePoint(volumeHandle, 24, 48));
     const QRegion panNode = nodeRegion(lanePoint(panHandle, 48, 32));
     const QRegion lfoNode = nodeRegion(lanePoint(lfoHandle, 96, 96));
-    const QColor ccColor = themes::trackIdentityColor(kTrack % themes::trackIdentityColorCount);
+    const QColor ccColor = themes::color(themes::Role::song_view_automation_node_ink);
 
     QVERIFY(activateParameter(volume));
     QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes),
@@ -282,11 +296,12 @@ void AutomationPresentationTest::parameterLabelClicksSwitchActivePlot()
     const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
     QVERIFY(activateParameter(tempo));
     const QRect body = canvas->laneBody(LaneHandle{0});
-    const QColor tempoColor = themes::color(themes::Role::song_view_automation_tempo_curve);
+    const QColor tempoColor = themes::color(themes::Role::song_view_automation_node_ink);
     QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                 QRegion(body), QPoint{}, tempoColor));
     QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
-                             QRegion(body), QPoint{}, ccColor));
+                             QRegion(body), QPoint{},
+                             themes::trackIdentityColor(kTrack % themes::trackIdentityColorCount)));
 }
 
 void AutomationPresentationTest::tempoUsesFullSharedPlotBody()
@@ -313,9 +328,47 @@ void AutomationPresentationTest::tempoUsesFullSharedPlotBody()
     edit.add = {{kHeldTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(120)}};
     m_document->applyTempoEdit(edit);
     refreshDocumentPresentation();
-    const QColor tempoColor = themes::color(themes::Role::song_view_automation_tempo_curve);
+    const QColor tempoColor = themes::color(themes::Role::song_view_automation_node_ink);
     QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                 QRegion(tempoBody), QPoint{}, tempoColor));
+}
+
+void AutomationPresentationTest::ghostTempoPaintsUnderActiveLane()
+{
+    AutomationPage *const automationPage = page();
+    songview::TimelineQuickScene *const scene = quickScene();
+    AutomationCanvas *const canvas = automationPage ? automationPage->canvas() : nullptr;
+    QVERIFY(automationPage);
+    QVERIFY(scene);
+    QVERIFY(canvas);
+    const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
+    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, kTrack,
+                                       CoreTimeDefaults::kCcVolume};
+    QVERIFY(activateParameter(volume));
+    TempoEdit edit;
+    edit.remove = m_document->tempoPoints();
+    edit.add = {{kHeldTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(120)}};
+    m_document->applyTempoEdit(edit);
+    refreshDocumentPresentation();
+    const QRect body = canvas->laneBody(LaneHandle{0});
+    const QColor ink = themes::color(themes::Role::song_view_automation_node_ink);
+    QColor ghostInk = ink;
+    ghostInk.setAlphaF(0.5);
+    QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                             QRegion(body), QPoint{}, ghostInk));
+    QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                                QRegion(body), QPoint{}, ink));
+    const int tempoIndex = checks::support::automationParameterIndex(*canvas, tempo);
+    QVERIFY(tempoIndex >= 0);
+    canvas->toggleGhostParameter(tempoIndex);
+    QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                                QRegion(body), QPoint{}, ghostInk));
+    QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                                QRegion(body), QPoint{}, ink));
+    canvas->toggleGhostParameter(tempoIndex);
+    QVERIFY(canvas->ghostParameters().isEmpty());
+    QTRY_VERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                                 QRegion(body), QPoint{}, ghostInk));
 }
 
 void AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment()
@@ -436,7 +489,8 @@ void AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators()
     QVERIFY(band);
     const QImage image = checks::support::captureQuickBand(m_rig->view(), band->rect);
     QVERIFY(!image.isNull());
-    const QColor outline = appearance.value(QStringLiteral("selectionOutline")).value<QColor>();
+    const QColor selectionBar =
+        appearance.value(QStringLiteral("tabSelectedBackground")).value<QColor>();
     const auto containsOutline = [&image](const QRect &rect, QColor color) {
         color.setAlpha(255);
         const QRect pixels = checks::support::devicePixelRect(image, rect);
@@ -453,10 +507,15 @@ void AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators()
             .toAlignedRect()
             .translated(-band->rect.topLeft());
     };
-    QVERIFY2(containsOutline(localBounds(lfoTab), outline),
+    QVERIFY2(containsOutline(localBounds(lfoTab), selectionBar),
              "the inactive LFO label has no visible shared-selection indicator");
-    QVERIFY2(containsOutline(localBounds(tempoTab), outline),
+    QVERIFY2(containsOutline(localBounds(tempoTab), selectionBar),
              "the inactive Tempo label has no visible shared-selection indicator");
+    const QColor ghostRule = appearance.value(QStringLiteral("selectionOutline")).value<QColor>();
+    QVERIFY2(!containsOutline(localBounds(lfoTab), ghostRule),
+             "the shared selection leaked onto the ghost rule");
+    QVERIFY2(!containsOutline(localBounds(tempoTab), ghostRule),
+             "the shared selection leaked onto the ghost rule");
 }
 
 void AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord()
@@ -489,4 +548,59 @@ void AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord()
     const QImage after = checks::support::captureQuickBand(m_rig->view(), band->rect);
     QVERIFY(!after.isNull());
     QVERIFY(after != before);
+}
+
+void AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover()
+{
+    AutomationPage *const automationPage = page();
+    songview::TimelineQuickScene *const scene = quickScene();
+    AutomationCanvas *const canvas = automationPage ? automationPage->canvas() : nullptr;
+    QVERIFY(automationPage);
+    QVERIFY(scene);
+    QVERIFY(canvas);
+    const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
+    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, kTrack,
+                                       CoreTimeDefaults::kCcVolume};
+    QVERIFY(activateParameter(volume));
+    TempoEdit edit;
+    edit.remove = m_document->tempoPoints();
+    edit.add = {{kHeldTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(120)}};
+    m_document->applyTempoEdit(edit);
+    refreshDocumentPresentation();
+    const QRectF viewport(QPointF{}, QSizeF(automationPage->automationViewportSize()));
+    const QAbstractItemModel *const ghostModel = scene->automationGhostTextModel();
+    QVERIFY(ghostModel);
+
+    const int tempoIndex = checks::support::automationParameterIndex(*canvas, tempo);
+    QVERIFY(tempoIndex >= 0);
+    canvas->toggleGhostParameter(tempoIndex);
+
+    std::optional<QRectF> label;
+    QTRY_VERIFY(
+        (label = findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport)).has_value());
+    QVERIFY2(label->right() <= viewport.right() && label->right() > viewport.right() * 0.5,
+             "the ghost name label no longer hugs the plot's right edge");
+    TempoLane lane(*m_document);
+    const QRect body = canvas->laneBody(LaneHandle{0});
+    const qreal curveY = nodelane::valueY(lane, body, AutomationGeometry::resolve(), 120);
+    QVERIFY2(std::abs(label->center().y() - curveY) <= label->height(),
+             "the ghost name label no longer tracks its curve's height");
+    QVERIFY(!findTextRecord(ghostModel, QStringLiteral("Volume"), viewport).has_value());
+
+    const QPointF hoverPoint(viewport.width() / 2.0, curveY);
+    mouseMove(*m_plotInput, hoverPoint);
+    QTRY_VERIFY((label = findTextRecord(scene->automationHoverTextModel(), QStringLiteral("Tempo"),
+                                        viewport))
+                    .has_value());
+    QVERIFY2(std::abs(label->center().x() - hoverPoint.x()) <= label->width(),
+             "the ghost hover label no longer tracks the pointer horizontally");
+    QVERIFY2(label->bottom() <= curveY, "the ghost hover label no longer sits above the nodeline");
+    QVERIFY(!findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport).has_value());
+
+    canvas->toggleGhostParameter(tempoIndex);
+    QVERIFY(canvas->ghostParameters().isEmpty());
+    QTRY_VERIFY(!findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport).has_value());
+    QTRY_VERIFY(
+        !findTextRecord(scene->automationHoverTextModel(), QStringLiteral("Tempo"), viewport)
+             .has_value());
 }

@@ -17,7 +17,7 @@ namespace {
 
 TempoPoint tempoPointForBpm(uint64_t tick, int bpm)
 {
-    return {tick, uint32_t(std::lround(60000000.0 / bpm))};
+    return {Tick(tick), uint32_t(std::lround(60000000.0 / bpm))};
 }
 
 } // namespace
@@ -59,7 +59,7 @@ void EventTableModel::queueTempoEdit(const TempoEdit &edit, uint64_t selectTick)
 bool EventTableModel::handleTempoTick(const TempoPoint &point, const QVariant &value)
 {
     const auto tick = uint64_t(value.toULongLong());
-    queueTempoEdit({{point}, {{tick, point.microsecondsPerQuarterNote}}}, tick);
+    queueTempoEdit({{point}, {{Tick(tick), point.microsecondsPerQuarterNote}}}, tick);
     return true;
 }
 

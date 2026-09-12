@@ -46,7 +46,7 @@ int emptyRollKey(PianoRollFixture &check, const SnappedRows &rows, uint64_t midT
         const bool occupied = std::any_of(
             check.view().model().notes.cbegin(), check.view().model().notes.cend(),
             [midTick, key](const ViewNote &note) {
-                return note.key == key && note.startTick <= midTick && midTick < note.endTick;
+                return note.key == key && note.startTick <= midTick && midTick < note.endTick();
             });
         if (!occupied)
             return key;

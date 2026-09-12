@@ -115,7 +115,8 @@ bool TimeRuler::pointerMove(const TimelinePointerInput &input)
                 for (const ViewNote &note : m_owner.model().notes) {
                     if (note.startTick >= selection.endTick)
                         break;
-                    if (note.track >= 0 && note.track < 16 && selection.startTick < note.endTick) {
+                    if (note.track >= 0 && note.track < 16 &&
+                        selection.startTick < note.endTick()) {
                         trackMask |= 1u << note.track;
                     }
                 }

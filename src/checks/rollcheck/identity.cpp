@@ -133,8 +133,8 @@ void PianoRollTest::timelineProjection()
     }
 
     const ViewNote &note = ordinary.notes.front();
-    if (note.noteId.isAssigned() || note.startTick != 240 || note.endTick != 288 ||
-        note.key != 65 || note.velocity != 83 || note.track != 2 || note.unterminated) {
+    if (note.noteId.isAssigned() || note.startTick != 240 || note.endTick() != 288 ||
+        note.key != 65 || note.velocity != 83 || note.track != 2) {
         QFAIL("ordinary unassigned timeline note changed during projection");
     }
 }
@@ -189,7 +189,8 @@ void PianoRollTest::viewStateRoundTrip()
         m_fixture->timeline().tracks[perturbed.selectedTrack].used) {
         expected.selectedTrack = perturbed.selectedTrack;
     }
-    expected.editCursorTick = std::min(perturbed.editCursorTick, m_fixture->timeline().lengthTicks);
+    expected.editCursorTick =
+        std::min(perturbed.editCursorTick, uint64_t(m_fixture->timeline().lengthTicks));
     expected.gridMinDenom = perturbed.gridMinDenom == 4 || perturbed.gridMinDenom == 8 ||
                                     perturbed.gridMinDenom == 16 || perturbed.gridMinDenom == 32
                                 ? perturbed.gridMinDenom

@@ -34,7 +34,7 @@ uint64_t appendTick(const SongDocument &document)
 {
     uint64_t end = 0;
     for (const SmfTrack &track : document.smf().tracks)
-        end = std::max(end, track.endTick);
+        end = std::max(end, uint64_t(track.endTick));
     return end + 96;
 }
 

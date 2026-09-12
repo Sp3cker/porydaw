@@ -3,11 +3,12 @@
 #include <algorithm>
 
 #include "smf.h"
+#include "timedefaults.h"
 
 namespace {
 
 struct RawEvent {
-    uint64_t tick;
+    Tick tick;
     uint16_t smfTrack;
     uint8_t type;
     uint8_t data0;
@@ -20,7 +21,7 @@ struct RawEvent {
 // Parsed-but-not-played data destined for MidiTimeline::otherEvents; the
 // engine track is resolved after all tracks are mapped.
 struct RawOther {
-    uint64_t tick;
+    Tick tick;
     uint16_t smfTrack;
     QString label;
 };
@@ -88,13 +89,13 @@ uint64_t quantizedSampleForTick(uint64_t tick, const std::vector<TempoMapPoint> 
     return uint64_t(tp->samplePos + segment + 0.5);
 }
 
-TimelineEvent makeTempoEvent(uint64_t samplePos, uint64_t tick, double bpm)
+TimelineEvent makeTempoEvent(uint64_t samplePos, Tick tick, double bpm)
 {
     int b = static_cast<int>(bpm + 0.5);
     b = std::clamp(b, 1, 0x3FFF);
     TimelineEvent ev;
     ev.samplePos = samplePos;
-    ev.tick = static_cast<uint32_t>(tick);
+    ev.tick = tick;
     ev.type = TIMELINE_EVT_TEMPO;
     ev.track = 0;
     ev.data0 = static_cast<uint8_t>(b & 0x7F);
@@ -144,8 +145,8 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
     std::vector<TimeSigPoint> timeSigs;
     std::vector<RawOther> rawOthers;
     std::vector<QString> trackNames(numTracks);
-    uint64_t loopStartTick = UINT64_MAX;
-    uint64_t loopEndTick = UINT64_MAX;
+    Tick loopStartTick = CoreTimeDefaults::kNoTick;
+    Tick loopEndTick = CoreTimeDefaults::kNoTick;
 
     for (int t = 0; t < numTracks; t++) {
         // Channel Prefix scoping (SmfChannelPrefix, the shared rule):
@@ -154,7 +155,7 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
         // 0x03s, and they are never the chunk's name.
         SmfChannelPrefix prefix;
         for (const SmfEvent &sev : smf.tracks[t].events) {
-            const uint64_t tick = sev.tick;
+            const Tick tick = sev.tick;
             prefix.observe(sev);
 
             if (sev.isChannel()) {
@@ -220,10 +221,10 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
                     // Text-type meta: check for loop markers ('[' / ']').
                     const uint32_t len = uint32_t(std::min<int>(blob.size(), 32));
                     if (textIsLoopMarker(blob.constData(), len, '[') &&
-                        loopStartTick == UINT64_MAX) {
+                        loopStartTick == CoreTimeDefaults::kNoTick) {
                         loopStartTick = tick;
                     } else if (textIsLoopMarker(blob.constData(), len, ']') &&
-                               loopEndTick == UINT64_MAX) {
+                               loopEndTick == CoreTimeDefaults::kNoTick) {
                         loopEndTick = tick;
                     } else {
                         static const char *const kTextMetaNames[] = {
@@ -286,7 +287,7 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
 
         TimelineEvent ev;
         ev.samplePos = quantizedSampleForTick(re.tick, timeline->tempoMap, tpqn, sampleRate);
-        ev.tick = static_cast<uint32_t>(re.tick);
+        ev.tick = re.tick;
         ev.type = re.type;
         ev.track = static_cast<uint8_t>(engineTrack);
         ev.data0 = re.data0;
@@ -320,20 +321,19 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
 
     for (const TimelineEvent &ev : timeline->events) {
         timeline->lengthSamples = std::max(timeline->lengthSamples, ev.samplePos);
-        timeline->lengthTicks = std::max(timeline->lengthTicks, uint64_t(ev.tick));
+        timeline->lengthTicks = std::max(timeline->lengthTicks, ev.tick);
     }
 
     timeline->loopStartTick = loopStartTick;
     timeline->loopEndTick = loopEndTick;
-    if (loopStartTick != UINT64_MAX)
+    if (loopStartTick != CoreTimeDefaults::kNoTick)
         timeline->loopStartSample =
             quantizedSampleForTick(loopStartTick, timeline->tempoMap, tpqn, sampleRate);
-    if (loopEndTick != UINT64_MAX)
+    if (loopEndTick != CoreTimeDefaults::kNoTick)
         timeline->loopEndSample =
             quantizedSampleForTick(loopEndTick, timeline->tempoMap, tpqn, sampleRate);
-    if (timeline->loopEndTick != UINT64_MAX)
+    if (timeline->loopEndTick != CoreTimeDefaults::kNoTick)
         timeline->lengthTicks = std::max(timeline->lengthTicks, timeline->loopEndTick);
-
     // stable: the bar grid honors the last same-tick signature in file order.
     std::stable_sort(timeSigs.begin(), timeSigs.end(),
                      [](const TimeSigPoint &a, const TimeSigPoint &b) { return a.tick < b.tick; });
@@ -371,7 +371,7 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf,
     return buildTimeline(smf, tempoPoints, sampleRate);
 }
 
-uint64_t MidiTimeline::sampleForTick(uint64_t tick) const
+uint64_t MidiTimeline::sampleForTick(Tick tick) const
 {
     return quantizedSampleForTick(tick, tempoMap, ticksPerBeat, sampleRate);
 }

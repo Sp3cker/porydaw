@@ -32,7 +32,7 @@ namespace {
 
 SmfEvent noteEvent(uint8_t status, uint64_t tick, uint8_t key, uint8_t velocity)
 {
-    return {.tick = tick, .status = status, .data0 = key, .data1 = velocity};
+    return {.tick = Tick(tick), .status = status, .data0 = key, .data1 = velocity};
 }
 
 SmfFile voiceSmf()

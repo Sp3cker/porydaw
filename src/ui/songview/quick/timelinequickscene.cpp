@@ -328,6 +328,7 @@ TimelineQuickScene::TimelineQuickScene(QObject *parent) : QObject(parent)
     m_voiceChangesHoverTextModel = new TimelineQuickTextModel(this);
     m_automationHoverTextModel = new TimelineQuickTextModel(this);
     m_automationTransientTextModel = new TimelineQuickTextModel(this);
+    m_automationGhostTextModel = new TimelineQuickTextModel(this);
 }
 
 QAbstractItemModel *TimelineQuickScene::pianoNoteTextModel() const noexcept
@@ -385,6 +386,11 @@ QAbstractItemModel *TimelineQuickScene::automationTransientTextModel() const noe
     return m_automationTransientTextModel;
 }
 
+QAbstractItemModel *TimelineQuickScene::automationGhostTextModel() const noexcept
+{
+    return m_automationGhostTextModel;
+}
+
 void TimelineQuickScene::setRulerTextRecords(
     std::span<const TimelineQuickTextModel::Record> records)
 {
@@ -431,6 +437,12 @@ void TimelineQuickScene::setAutomationTransientTextRecords(
     std::span<const TimelineQuickTextModel::Record> records)
 {
     m_automationTransientTextModel->setRecords(records);
+}
+
+void TimelineQuickScene::setAutomationGhostTextRecords(
+    std::span<const TimelineQuickTextModel::Record> records)
+{
+    m_automationGhostTextModel->setRecords(records);
 }
 
 const TimelineQuickLayerData &TimelineQuickScene::layer(TimelineQuickLayer layer) const noexcept

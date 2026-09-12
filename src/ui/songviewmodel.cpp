@@ -75,11 +75,10 @@ SongViewModel buildSongViewModel(const MidiTimeline &tl)
             ViewNote note;
             note.noteId = ev.noteId;
             note.startTick = ev.tick;
-            note.endTick = ev.tick;
+            note.duration = 0;
             note.key = ev.data0 & 0x7F;
             note.velocity = ev.data1;
             note.track = ev.track;
-            note.unterminated = true;
             open[ev.track * 128 + note.key].push_back(model.notes.size());
             model.notes.push_back(note);
             model.minNoteKey = std::min(model.minNoteKey, int(note.key));
@@ -97,8 +96,7 @@ SongViewModel buildSongViewModel(const MidiTimeline &tl)
             }
             for (size_t idx : stack) {
                 ViewNote &note = model.notes[idx];
-                note.endTick = ev.tick;
-                note.unterminated = false;
+                note.duration = ev.tick >= note.startTick ? ev.tick - note.startTick : 0;
             }
             stack.clear();
             break;
@@ -135,10 +133,6 @@ SongViewModel buildSongViewModel(const MidiTimeline &tl)
 
     for (const auto &stack : open)
         model.unpairedNoteOns += stack.size();
-    // Unterminated notes stay visible: extend them to the end of the song.
-    for (ViewNote &note : model.notes)
-        if (note.unterminated)
-            note.endTick = uint32_t(tl.lengthTicks);
     for (const OtherEvent &oe : tl.otherEvents)
         model.strip.push_back({oe.tick, oe.track, oe.label});
 

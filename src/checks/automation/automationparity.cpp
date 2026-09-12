@@ -45,8 +45,8 @@ void setPoints(SongDocument &document, int adapter, const std::vector<NodePoint>
         edit.remove = document.tempoPoints();
         edit.add.reserve(points.size());
         for (const NodePoint &point : points) {
-            edit.add.push_back(
-                {point.tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
+            edit.add.push_back({Tick(point.tick),
+                                CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
         }
         if (edit.remove != edit.add)
             document.applyTempoEdit(edit);

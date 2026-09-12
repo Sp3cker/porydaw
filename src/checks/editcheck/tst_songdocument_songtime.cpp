@@ -76,7 +76,7 @@ void EditCheckTest::songWholeSongRemove()
     const auto maxEnd = [&document] {
         uint64_t end = 0;
         for (const SmfTrack &chunk : document.smf().tracks)
-            end = std::max(end, chunk.endTick);
+            end = std::max(end, uint64_t(chunk.endTick));
         return end;
     };
     const TempoPoint originalTempo = songdocument_test::tempo(base + step * 63, 150);

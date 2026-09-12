@@ -56,7 +56,7 @@ SmfTrack conductor()
 
 TempoPoint tempo(uint64_t tick, uint32_t bpm)
 {
-    return {tick, 60'000'000U / bpm};
+    return {Tick(tick), 60'000'000U / bpm};
 }
 
 bool containsTempo(const SongDocument &document, const TempoPoint &point)
@@ -138,7 +138,7 @@ uint64_t distantBase(const SongDocument &document)
 {
     uint64_t endTick = 0;
     for (const SmfTrack &track : document.smf().tracks)
-        endTick = std::max(endTick, track.endTick);
+        endTick = std::max(endTick, uint64_t(track.endTick));
     return endTick + uint64_t(document.ticksPerClock()) * 100;
 }
 

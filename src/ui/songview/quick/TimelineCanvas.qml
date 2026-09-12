@@ -358,6 +358,11 @@ Item {
         }
         TimelineTextLayer {
             parent: automationBand.plotSide
+            textModel: timelineScene.automationGhostTextModel
+            z: 6
+        }
+        TimelineTextLayer {
+            parent: automationBand.plotSide
             textModel: timelineScene.automationHoverTextModel
             z: 7
         }

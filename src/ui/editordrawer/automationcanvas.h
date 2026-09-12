@@ -158,18 +158,26 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     Q_PROPERTY(int activeParameter READ activeParameter NOTIFY activeParameterChanged FINAL)
     Q_PROPERTY(QList<int> selectedParameters READ selectedParameters NOTIFY
                    parameterSelectionChanged FINAL)
+    Q_PROPERTY(QList<int> ghostParameters READ ghostParameters NOTIFY ghostParametersChanged FINAL)
     Q_PROPERTY(QVariantMap parameterAppearance READ parameterAppearance NOTIFY
                    parameterPresentationChanged FINAL)
     Q_PROPERTY(
         bool parametersEnabled READ parametersEnabled NOTIFY parameterPresentationChanged FINAL)
+    Q_PROPERTY(
+        QVariantList parameterPips READ parameterPips NOTIFY parameterPresentationChanged FINAL)
     QStringList parameterLabels() const;
     int activeParameter() const noexcept;
     QList<int> selectedParameters() const;
+    QList<int> ghostParameters() const;
     QVariantMap parameterAppearance() const;
+    QVariantList parameterPips() const;
     bool parametersEnabled() const noexcept;
     std::optional<EditorAutomationRowId> parameterRow(int index) const;
     Q_INVOKABLE void activateParameter(int index);
     Q_INVOKABLE void openParameterMenu(int index, qreal sceneX, qreal sceneY);
+    Q_INVOKABLE void toggleGhostParameter(int index);
+    Q_INVOKABLE void parameterPressed(int index, Qt::KeyboardModifiers modifiers);
+    Q_INVOKABLE void parameterClicked(int index);
     // Binds the shared canvas popup session once TimelineQuickView exists;
     // the automation menus are typed QuickMenuHost adapters over it.
     void setPopupSession(songview::QuickPopupSession *session);
@@ -192,6 +200,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void ccDeletePromptChanged();
     void activeParameterChanged();
     void parameterSelectionChanged();
+    void ghostParametersChanged();
     void parameterPresentationChanged();
 
   private:
@@ -208,6 +217,20 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void invalidateSelectedNodeMultiplicity() const noexcept;
     bool hasMultipleSelectedNodes(
         const std::optional<std::pair<uint64_t, uint64_t>> &selectedTickRange) const;
+    static int parameterCount() noexcept;
+    template <class Predicate>
+    QList<int> parameterIndexesWhere(Predicate &&predicate) const
+    {
+        QList<int> indexes;
+        for (int index = 0; index < parameterCount(); ++index) {
+            const std::optional<EditorAutomationRowId> row = parameterRow(index);
+            if (row && predicate(*row))
+                indexes.append(index);
+        }
+        return indexes;
+    }
+    bool parameterHasEvents(const EditorAutomationRowId &row) const;
+    bool canGhostParameter(int index) const;
     struct NodeLaneSlot {
         EditorAutomationRowId id;
         NodeLane *lane = nullptr;
@@ -408,4 +431,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     NodeDoubleClickGuard m_deletedNodeClick;
     // Active CC controller; nullopt selects Tempo (see Q_PROPERTY docs).
     std::optional<uint8_t> m_activeController = CoreTimeDefaults::kCcVolume;
+    std::vector<uint8_t> m_ghostControllers;
+    bool m_ghostTempo = false;
 };

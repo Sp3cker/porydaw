@@ -7,6 +7,7 @@
 
 #include "noteid.h"
 #include "tempo.h"
+#include "timedefaults.h"
 #include "tracklimits.h"
 
 // Event type codes: MIDI status nibbles 0x8 (note off), 0x9 (note on),
@@ -18,7 +19,7 @@ constexpr uint8_t TIMELINE_EVT_TEMPO = 0x1;
 
 struct TimelineEvent {
     uint64_t samplePos;
-    uint32_t tick; // absolute SMF tick (viewer grid position)
+    Tick tick; // absolute SMF tick (viewer grid position)
     uint8_t type;
     uint8_t track; // engine track index (0-15), already mapped from SMF track/channel
     uint8_t data0;
@@ -46,7 +47,7 @@ struct TimelineTrack {
 // the length math must use microsecondsPerQuarterNote, not a value derived
 // from bpm.
 struct TempoMapPoint {
-    uint64_t tick;
+    Tick tick;
     double samplePos; // unrounded; see above
     double bpm;
     uint32_t microsecondsPerQuarterNote;
@@ -55,16 +56,17 @@ struct TempoMapPoint {
 // Time signature change from SMF meta 0x58 (viewer grid data; 4/4 assumed
 // when absent).
 struct TimeSigPoint {
-    uint64_t tick;
+    Tick tick;
     uint8_t numerator;
     uint8_t denomPow2; // denominator = 1 << denomPow2
 };
+static_assert(sizeof(TimeSigPoint) == 8);
 
 // Anything parsed out of the file that playback ignores (aftertouch, channel
 // pressure, sysex, non-loop text metas, ...). Kept so the viewer can show
 // every event: nothing in the file is silently invisible.
 struct OtherEvent {
-    uint64_t tick;
+    Tick tick;
     uint64_t samplePos;
     int track; // engine track (0-15), or -1 for file-level metas
     QString label;
@@ -115,9 +117,9 @@ class MidiTimeline
 
     // Viewer data (never touched by the audio thread).
     uint32_t ticksPerBeat = 24;
-    uint64_t lengthTicks = 0;
-    uint64_t loopStartTick = UINT64_MAX;
-    uint64_t loopEndTick = UINT64_MAX;
+    Tick lengthTicks = 0;
+    Tick loopStartTick = CoreTimeDefaults::kNoTick;
+    Tick loopEndTick = CoreTimeDefaults::kNoTick;
     std::vector<TempoMapPoint> tempoMap; // sorted by tick, first entry at tick 0
     std::vector<TimeSigPoint> timeSigs;  // sorted by tick, may be empty
     std::vector<OtherEvent> otherEvents; // sorted by tick
@@ -132,6 +134,6 @@ class MidiTimeline
     // (viewer/UI thread). sampleForTick rounds once after the segment's
     // unrounded origin plus its exact length; tickForSample is the inverse
     // in fractional ticks against the same unrounded origins.
-    uint64_t sampleForTick(uint64_t tick) const;
+    uint64_t sampleForTick(Tick tick) const;
     double tickForSample(uint64_t samplePos) const;
 };

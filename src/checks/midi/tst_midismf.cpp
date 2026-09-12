@@ -655,6 +655,33 @@ void MidiSmfTest::noteOnsRejectOutOfRangeKeys()
         QVERIFY((fixture.engine().pcmChannels[channel].status & CHN_ON) == 0);
 }
 
+// VLQ deltas are capped at 28 bits each, so the only way an absolute tick
+// reaches the 32-bit boundary is by accumulating deltas. The uint64
+// accumulator must fail there rather than wrap: sixteen 0x0FFFFFFF deltas
+// put the tick at 0xFFFFFFF0, and one more delta of 0x10 crosses the bound
+// while 0x0E (a total of UINT32_MAX-1) must still parse.
+void MidiSmfTest::overlongTickFailsParsing()
+{
+    const auto delta = QByteArray::fromHex("ffffff7f");
+    const auto filler = QByteArray::fromHex("904040");
+    auto smf = SmfFile{};
+    auto error = QString{};
+
+    auto overlongBody = QByteArray{};
+    for (int i = 0; i < 16; ++i)
+        overlongBody.append(delta).append(filler);
+    overlongBody.append(QByteArray::fromHex("10"));
+    QVERIFY2(!SmfFile::read(format0Bytes(overlongBody), &smf, &error), "overlong tick parsed");
+    QVERIFY2(error.contains(QStringLiteral("tick position exceeds 32-bit tick range")),
+             qPrintable(error));
+
+    auto justInsideBody = overlongBody;
+    justInsideBody.chop(1);
+    justInsideBody.append(QByteArray::fromHex("0eff2f00"));
+    QVERIFY2(SmfFile::read(format0Bytes(justInsideBody), &smf, &error), qPrintable(error));
+    QCOMPARE(qulonglong(smf.tracks[1].endTick), qulonglong(UINT32_MAX - 1));
+}
+
 void MidiSmfTest::tempoConversionSchedulesExactSamples()
 {
     auto smf = SmfFile{};

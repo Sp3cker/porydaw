@@ -5,6 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include "core/timedefaults.h"
+
 void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
 {
     if (edit.empty())
@@ -79,7 +81,7 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
                 for (const LanePointValue &point : lw.points) {
                     const int clamped = std::clamp(point.value, int(descriptor->minimumValue),
                                                    int(descriptor->maximumValue));
-                    trackWrites.push_back({point.tick, lw.cc, uint8_t(clamped),
+                    trackWrites.push_back({Tick(point.tick), lw.cc, uint8_t(clamped),
                                            uint8_t(lw.engineTrack),
                                            engineChannels[size_t(lw.engineTrack)]});
                 }
@@ -238,7 +240,7 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
                 if (!std::binary_search(removeIdentities.begin(), removeIdentities.end(),
                                         point.index))
                     continue;
-                writes.push_back({uint64_t(std::max<int64_t>(0, int64_t(point.tick) + dTick)),
+                writes.push_back({Tick(std::max<int64_t>(0, int64_t(point.tick) + dTick)),
                                   point.lane, uint8_t(point.value), point.stream, point.channel});
             }
             const auto patch = xcmd::rewritePoints(events, removeIdentities, writes);

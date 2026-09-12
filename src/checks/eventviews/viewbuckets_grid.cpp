@@ -128,8 +128,10 @@ void ViewBucketsGridTest::quirkProjection()
     const SongViewModel model = buildSongViewModel(*timeline);
     QCOMPARE(model.unpairedNoteOns, size_t(1));
     QCOMPARE(model.orphanNoteOffs, size_t(1));
-    QVERIFY(std::any_of(model.notes.begin(), model.notes.end(),
-                        [](const ViewNote &note) { return note.unterminated; }));
+    QVERIFY(std::any_of(model.notes.begin(), model.notes.end(), [](const ViewNote &note) {
+        return note.key == 72 && note.startTick == 100 && note.duration == 0 &&
+               note.endTick() == 100;
+    }));
 
     SmfFile overfull;
     overfull.format = 1;

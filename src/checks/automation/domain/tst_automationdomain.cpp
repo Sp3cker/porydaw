@@ -27,7 +27,7 @@ constexpr uint32_t kFractionalTempoUs = 398406;
 
 TempoPoint tempoPoint(uint64_t tick, int bpm)
 {
-    return {tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(bpm)};
+    return {Tick(tick), CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(bpm)};
 }
 
 } // namespace

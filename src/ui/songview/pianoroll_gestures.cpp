@@ -180,12 +180,12 @@ void PianoRoll::armNoteDrag(const ViewNote &note, QPointF position)
 {
     if (nearRightEdge(note, position)) {
         activateLeftDrag(LeftDrag::Resize);
-        m_gripTick = note.endTick;
+        m_gripTick = note.endTick();
         m_gripOpposite = note.startTick;
     } else if (nearLeftEdge(note, position)) {
         activateLeftDrag(LeftDrag::ResizeLeft);
         m_gripTick = note.startTick;
-        m_gripOpposite = note.endTick;
+        m_gripOpposite = note.endTick();
     } else {
         activateLeftDrag(LeftDrag::Move);
     }
@@ -265,7 +265,7 @@ void PianoRoll::beginDraw()
     m_sv->selectionModel().clearNoteSelection();
     ViewNote pending{};
     pending.startTick = uint32_t(m_drawTick);
-    pending.endTick = uint32_t(m_drawTick + uint64_t(m_drawDur));
+    pending.duration = uint32_t(m_drawDur);
     pending.key = uint8_t(m_drawKey);
     pending.velocity = m_lastVelocity;
     pending.track = uint8_t(m_sv->selectionModel().primaryTrack());
@@ -289,7 +289,8 @@ void PianoRoll::auditionBandEntrants(const QRectF &band)
             std::find_if(m_bandAud.begin(), m_bandAud.end(),
                          [&](const ViewNote &old) { return old.noteId == note.noteId; });
         if (found == m_bandAud.end())
-            m_sv->auditionTimed(note.track, note.key, note.velocity, note.startTick, note.endTick);
+            m_sv->auditionTimed(note.track, note.key, note.velocity, note.startTick,
+                                note.endTick());
         inBand.push_back(note);
     }
     for (const ViewNote &old : m_bandAud) {

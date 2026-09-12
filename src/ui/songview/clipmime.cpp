@@ -170,7 +170,7 @@ std::optional<TempoPoint> decodeTempo(const QJsonValue &value)
     if (!requireUint(object, "relTick", UINT64_MAX, relTick) ||
         !requireUint(object, "microsecondsPerQuarterNote", UINT32_MAX, microseconds))
         return std::nullopt;
-    return TempoPoint{relTick, uint32_t(microseconds)};
+    return TempoPoint{Tick(relTick), uint32_t(microseconds)};
 }
 
 uint64_t scaleTick(uint64_t tick, uint32_t sourceTicksPerBeat, uint32_t destinationTicksPerBeat,

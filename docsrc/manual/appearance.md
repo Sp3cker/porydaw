@@ -2,8 +2,9 @@
 
 ## Themes
 
-<!-- TODO: View → Theme; screenshot strip of the presets (light/dark/...);
-persisted per user. -->
+Three built-in themes — Vanilla, Dark Neutral High, and Immaterial — are
+selectable in View → Theme, alongside a grid-line contrast slider. The choice
+is persisted per user.
 
 ## Use System Font
 
