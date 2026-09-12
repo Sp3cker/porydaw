@@ -175,6 +175,12 @@ enum class Role {
     song_view_file_event_marker,
     song_view_add_automation_lane_action,
     song_view_psg_velocity_levels,
+    // Automation parameter tabs in the SongView gutter: raised chips over the
+    // piano-roll surface, with the active tab on the theme's vivid fill.
+    song_view_automation_tab_background,
+    song_view_automation_tab_hover_background,
+    song_view_automation_tab_active_background,
+    song_view_automation_tab_outline,
 
     // Sample Editor waveform trace, painted on the item surface behind it.
     sample_waveform_ink,

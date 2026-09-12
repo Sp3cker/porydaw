@@ -253,16 +253,18 @@ QVariantMap AutomationCanvas::parameterAppearance() const
     appearance.insert(QStringLiteral("selectionOutline"),
                       themes::color(themes::Role::song_view_selection_edge));
     appearance.insert(QStringLiteral("focusOutline"), themes::color(themes::Role::focus_outline));
-    appearance.insert(QStringLiteral("tabBackground"), themes::color(themes::Role::tab_background));
+    appearance.insert(QStringLiteral("tabBackground"),
+                      themes::color(themes::Role::song_view_automation_tab_background));
     appearance.insert(QStringLiteral("tabHoverBackground"),
-                      themes::color(themes::Role::tab_hover_background));
+                      themes::color(themes::Role::song_view_automation_tab_hover_background));
     appearance.insert(QStringLiteral("tabSelectedBackground"),
-                      themes::color(themes::Role::tab_selected_background));
+                      themes::color(themes::Role::song_view_automation_tab_active_background));
     appearance.insert(QStringLiteral("tabText"), themes::color(themes::Role::tab_text));
     appearance.insert(QStringLiteral("tabHoverText"), themes::color(themes::Role::tab_hover_text));
     appearance.insert(QStringLiteral("tabSelectedText"),
                       themes::color(themes::Role::tab_selected_text));
-    appearance.insert(QStringLiteral("tabOutline"), themes::color(themes::Role::tab_outline));
+    appearance.insert(QStringLiteral("tabOutline"),
+                      themes::color(themes::Role::song_view_automation_tab_outline));
     return appearance;
 }
 
