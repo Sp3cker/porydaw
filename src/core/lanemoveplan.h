@@ -1,5 +1,6 @@
 #pragma once
 
+#include "timedefaults.h"
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -13,19 +14,21 @@
 // is a no-op. Output ids index `existing` so core can modify-vs-insert while
 // RangeEdit can remove-then-write.
 struct LaneMovePoint {
-    uint64_t tick = 0;
+    Tick tick = 0;
     int value = 0;
 };
 
+static_assert(sizeof(LaneMovePoint) == 8, "LaneMovePoint must stay 8 bytes");
+
 struct LaneMoveRequest {
     size_t sourceId = 0;
-    uint64_t toTick = 0;
+    Tick toTick = 0;
     int toValue = 0;
 };
 
 struct LaneMoveWrite {
     size_t sourceId = 0;
-    uint64_t tick = 0;
+    Tick tick = 0;
     int value = 0;
 };
 

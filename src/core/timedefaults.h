@@ -2,9 +2,18 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <limits>
 #include <optional>
 
+// Canonical musical position. A position is always a Tick — content streams
+// (DocNote, TempoPoint, timeline events), SMF storage, and viewer fields all
+// share it. Not a strong type: ticks mix with uint32_t durations, int64_t
+// deltas, and start + duration sums that can exceed the Tick range.
+using Tick = uint32_t;
+
 namespace CoreTimeDefaults {
+inline constexpr Tick kNoTick = std::numeric_limits<Tick>::max(); // absent loop; parse bound
+inline constexpr Tick kMaxTick = Tick(kNoTick - 1);               // highest representable tick
 
 inline constexpr int kTempoBpm = 120;
 inline constexpr int kMinTempoBpm = 20;

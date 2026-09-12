@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/timedefaults.h"
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -76,7 +77,7 @@ constexpr bool isLaneController(uint8_t controller) noexcept
 
 struct Event {
     uint64_t index = 0;
-    uint64_t tick = 0;
+    Tick tick = 0;
     uint8_t stream = 0; // decoder stream identity (engine track ordinal)
     uint8_t controller = 0;
     uint8_t value = 0;
@@ -85,7 +86,7 @@ struct Event {
 
 struct Point {
     uint8_t lane = 0;   // descriptor laneController (known points only)
-    uint64_t tick = 0;  // terminal payload byte tick
+    Tick tick = 0;      // terminal payload byte tick
     uint32_t value = 0; // decoded payload value
     uint64_t index = 0; // raw index of the payload byte (identity)
     uint8_t stream = 0;
@@ -112,7 +113,7 @@ Projection projectEvents(std::span<const Event> events) noexcept;
 // ---------------------------------------------------------------------------
 
 struct PointWrite {
-    uint64_t tick = 0;
+    Tick tick = 0;
     uint8_t lane = 0; // descriptor laneController
     uint8_t value = 0;
     uint8_t stream = 0;
@@ -131,7 +132,7 @@ struct PointWrite {
 
 struct Relocation {
     uint64_t index = 0; // raw index of the event to re-insert
-    uint64_t tick = 0;  // destination tick
+    Tick tick = 0;      // destination tick
     uint8_t channel = 0;
 };
 
@@ -143,7 +144,7 @@ struct Relocation {
 // ---------------------------------------------------------------------------
 
 struct Emission {
-    uint64_t tick = 0;
+    Tick tick = 0;
     uint8_t controller = 0;
     uint8_t value = 0;
     uint64_t sourceIndex = SIZE_MAX; // verbatim re-insertion source

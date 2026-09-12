@@ -143,7 +143,7 @@ void SongDocument::addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int 
         const int clamped =
             std::clamp(value, int(descriptor->minimumValue), int(descriptor->maximumValue));
         const std::vector<xcmd::PointWrite> writes{
-            {tick, cc, uint8_t(clamped), uint8_t(engineTrack), channelFor(engineTrack)}};
+            {Tick(tick), cc, uint8_t(clamped), uint8_t(engineTrack), channelFor(engineTrack)}};
         const auto patch = xcmd::rewritePoints(events, removeIdentities, writes);
         if (!patch)
             return; // semantics unsatisfiable: fail without mutation
@@ -194,8 +194,8 @@ void SongDocument::writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBeg
         for (const LanePointValue &point : points) {
             const int clamped = std::clamp(point.value, int(descriptor->minimumValue),
                                            int(descriptor->maximumValue));
-            writes.push_back(
-                {point.tick, cc, uint8_t(clamped), uint8_t(engineTrack), channelFor(engineTrack)});
+            writes.push_back({Tick(point.tick), cc, uint8_t(clamped), uint8_t(engineTrack),
+                              channelFor(engineTrack)});
         }
         const auto patch = xcmd::rewritePoints(events, removeIdentities, writes);
         if (!patch)
@@ -255,7 +255,7 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
         lane.existingPoints = lanePoints(engineTrack, cc);
         lane.existing.reserve(lane.existingPoints.size());
         for (const DocLanePoint &point : lane.existingPoints)
-            lane.existing.push_back({point.tick, point.value});
+            lane.existing.push_back({Tick(point.tick), point.value});
         lanes.push_back(std::move(lane));
         return lanes.size() - 1;
     };
@@ -290,7 +290,7 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
         }
         if (sourceId >= lane.existingPoints.size())
             continue;
-        lane.requests.push_back({sourceId, move.newTick, move.newValue});
+        lane.requests.push_back({sourceId, Tick(move.newTick), move.newValue});
         singularCc = move.cc;
         ++validCount;
     }

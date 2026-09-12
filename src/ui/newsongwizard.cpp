@@ -600,16 +600,21 @@ QString NewSongWizard::newVoicegroupName() const
     return m_sound->newVoicegroupSelected() ? m_identity->label() : QString();
 }
 
-SmfFile NewSongWizard::songFile() const
+bool NewSongWizard::songFile(SmfFile *out, QString *error) const
 {
-    if (!m_importMode)
-        return SongRegistry::blankSong();
+    if (!m_importMode) {
+        *out = SongRegistry::blankSong();
+        return true;
+    }
     SmfFile smf = m_imported;
     // Before the rescale, so only duplicates present in the source collapse —
     // tick collisions the floor rescale itself creates were distinct points
     // the author drew, and they play the same either way.
     removeRedundantSetterEvents(&smf);
-    if (m_analysisPage->rescaleSelected())
-        rescaleDivision(&smf, m_sound->cfg().extendedClocks ? 48 : 24);
-    return smf;
+    if (m_analysisPage->rescaleSelected() &&
+        !rescaleDivision(&smf, m_sound->cfg().extendedClocks ? 48 : 24, error)) {
+        return false; // caller keeps the source division instead of a half-rescaled file
+    }
+    *out = std::move(smf);
+    return true;
 }

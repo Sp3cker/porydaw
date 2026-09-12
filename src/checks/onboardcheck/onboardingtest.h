@@ -52,8 +52,10 @@ class OnboardingTest final : public QObject
     void importAnalysis_data();
     void importAnalysis();
     void importRescale();
+    void importRescaleOverflow();
     void importDedup();
     void importWizard();
+    void importWizardOverflow();
     void importRoundtrip();
     void compilesThroughMid2agb_data();
     void compilesThroughMid2agb();

@@ -4,6 +4,8 @@
 #include <span>
 #include <utility>
 
+#include "core/timedefaults.h"
+
 // ---------------------------------------------------------------------------
 // TimeEditor XCMD reconciliation adapter.
 //
@@ -47,7 +49,7 @@ std::optional<std::vector<SongDocument::EditOp>> SongDocument::TimeEditor::xcmdA
         if (record.smfTrack < 0 || record.smfTrack >= int(trackCount))
             continue;
         relocated[size_t(record.smfTrack)].push_back(record.eventIndex);
-        const xcmd::Relocation relocation{uint64_t(record.eventIndex), record.newTick,
+        const xcmd::Relocation relocation{uint64_t(record.eventIndex), Tick(record.newTick),
                                           record.channel};
         std::vector<xcmd::Relocation> &target =
             record.isCopy ? rawCopies[size_t(record.smfTrack)] : rawMoves[size_t(record.smfTrack)];

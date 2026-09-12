@@ -51,9 +51,10 @@ class NewSongWizard : public QWizard
     QString constant() const;
     QString player() const;
     SongCfg cfg() const;
-    // The song to write: the blank template, or the import with the
-    // optional division rescale applied.
-    SmfFile songFile() const;
+    // The song to write: the blank template, or the import with the optional
+    // division rescale applied. On failure *out is untouched and *error (when
+    // non-null) carries the reason; the song that would be created is not.
+    bool songFile(SmfFile *out, QString *error) const;
     // Non-empty when the user chose "(create a new voicegroup for this song)"
     // on the Sound page: the voicegroup to create (named after the song; cfg()
     // already carries its -G arg). Empty for an existing voicegroup.

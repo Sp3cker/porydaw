@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "noteid.h"
+#include "timedefaults.h"
 #include "tracklimits.h"
 
 // Full-fidelity Standard MIDI File model. Unlike MidiTimeline (a lossy,
@@ -21,7 +22,7 @@
 // their position (mid2agb uses the EOT tick when merging tracks, so it must
 // survive a round-trip).
 struct SmfEvent {
-    uint64_t tick = 0;
+    Tick tick = 0;
     uint8_t status = 0;   // 0x80-0xEF channel voice; 0xF0/0xF7 sysex; 0xFF meta
     uint8_t metaType = 0; // valid when status == 0xFF
     uint8_t data0 = 0;    // channel-voice data bytes
@@ -53,7 +54,7 @@ inline bool operator==(const SmfEvent &a, const SmfEvent &b)
 
 struct SmfTrack {
     std::vector<SmfEvent> events; // non-decreasing ticks, original in-file order
-    uint64_t endTick = 0;         // tick of the End-of-track meta
+    Tick endTick = 0;
 };
 
 // The marker vocabulary mid2agb reads from ANY text meta (0x01-0x07) in the

@@ -29,9 +29,9 @@ std::vector<TempoPoint> removeTempoPoints(const std::vector<TempoPoint> &src,
         if (point.tick < s)
             out.push_back(point);
         else if (point.tick >= e)
-            out.push_back({point.tick - span, point.microsecondsPerQuarterNote});
+            out.push_back({Tick(point.tick - span), point.microsecondsPerQuarterNote});
         else if (i == winner && !seamCovered)
-            out.push_back({s, point.microsecondsPerQuarterNote});
+            out.push_back({Tick(s), point.microsecondsPerQuarterNote});
     }
     return out;
 }
@@ -45,7 +45,7 @@ std::vector<TempoPoint> insertBlankTempoPoints(const std::vector<TempoPoint> &sr
     out.reserve(src.size());
     for (const TempoPoint &point : src) {
         if (point.tick >= s)
-            out.push_back({point.tick + span, point.microsecondsPerQuarterNote});
+            out.push_back({Tick(point.tick + span), point.microsecondsPerQuarterNote});
         else
             out.push_back(point);
     }
@@ -70,17 +70,17 @@ std::vector<TempoPoint> duplicateTempoPoints(const std::vector<TempoPoint> &src,
     out.reserve(src.size() + 2);
     for (const TempoPoint &point : src) {
         if (point.tick >= e)
-            out.push_back({point.tick + span, point.microsecondsPerQuarterNote});
+            out.push_back({Tick(point.tick + span), point.microsecondsPerQuarterNote});
         else
             out.push_back(point);
     }
     if (atStart)
-        out.push_back({e, atStart->microsecondsPerQuarterNote});
+        out.push_back({Tick(e), atStart->microsecondsPerQuarterNote});
     else if (firstInside)
-        out.push_back({e, CoreTimeDefaults::kDefaultTempoUspqn});
+        out.push_back({Tick(e), CoreTimeDefaults::kDefaultTempoUspqn});
     for (const TempoPoint &point : src) {
         if (point.tick > s && point.tick < e)
-            out.push_back({e + (point.tick - s), point.microsecondsPerQuarterNote});
+            out.push_back({Tick(e + (point.tick - s)), point.microsecondsPerQuarterNote});
     }
     return out;
 }
@@ -333,7 +333,7 @@ std::vector<SongDocument::EditOp> SongDocument::TimeEditor::timeEditShiftRightTr
             newEnd = end + span;
         for (const SongDocument::EditOp &insert : inserts) {
             if (insert.smfTrack == int(t))
-                newEnd = std::max(newEnd, insert.event.tick);
+                newEnd = std::max(newEnd, uint64_t(insert.event.tick));
         }
         if (newEnd == end)
             continue;

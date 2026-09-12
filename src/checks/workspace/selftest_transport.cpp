@@ -175,7 +175,7 @@ void WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport()
     window.m_audio.setLoopEnabled(false);
     QVERIFY(startObserved(window, *tab, *view));
     const uint64_t seekTick =
-        (std::min)(timeline->lengthTicks / 2, uint64_t(timeline->ticksPerBeat) * 16);
+        (std::min)(uint64_t(timeline->lengthTicks) / 2, uint64_t(timeline->ticksPerBeat) * 16);
     const uint64_t seekSample = timeline->sampleForTick(seekTick);
     view->commitEditCursor(seekTick);
     QTRY_VERIFY(window.m_audio.transport() == Transport::Playing &&

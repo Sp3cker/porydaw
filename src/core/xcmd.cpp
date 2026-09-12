@@ -1,4 +1,5 @@
 #include "core/xcmd.h"
+#include "core/timedefaults.h"
 
 #include <algorithm>
 #include <array>
@@ -29,16 +30,16 @@ enum class SelectorBlockKind : uint8_t {
 struct SelectorBlock {
     SelectorBlockKind kind = SelectorBlockKind::OpaqueEpoch;
     uint8_t stream = 0;
-    uint8_t selector = 0;              // epoch selector value
-    size_t selectorEvent = SIZE_MAX;   // ordinal of the selector event, if any
-    std::vector<size_t> payloadEvents; // event ordinals in scan order
-    uint64_t firstTick = UINT64_MAX;   // occupied tick span
-    uint64_t lastTick = 0;
+    uint8_t selector = 0;                       // epoch selector value
+    size_t selectorEvent = SIZE_MAX;            // ordinal of the selector event, if any
+    std::vector<size_t> payloadEvents;          // event ordinals in scan order
+    Tick firstTick = CoreTimeDefaults::kNoTick; // occupied tick span
+    Tick lastTick = 0;
 };
 
 struct ProtocolEvent {
     const Event *source = nullptr; // caller's event (identity/bytes)
-    uint64_t tick = 0;
+    Tick tick = 0;
     uint8_t stream = 0;
     uint8_t value = 0;
     uint8_t channel = 0;
@@ -199,7 +200,7 @@ struct BlockOperation {
     bool mixed = false;
 };
 
-void appendCanonicalPoint(std::vector<Emission> &inserts, uint64_t tick, uint8_t selector,
+void appendCanonicalPoint(std::vector<Emission> &inserts, Tick tick, uint8_t selector,
                           uint8_t value, uint8_t channel) noexcept
 {
     inserts.push_back({tick, kSelectorController, selector, SIZE_MAX, channel});

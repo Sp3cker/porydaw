@@ -6,6 +6,7 @@
 #include <map>
 
 #include "core/m4asemantics.h"
+#include "core/timedefaults.h"
 #include "core/tracklimits.h"
 
 namespace {
@@ -255,17 +256,31 @@ int removeRedundantSetterEvents(SmfFile *smf)
     return removed;
 }
 
-void rescaleDivision(SmfFile *smf, uint16_t newDivision)
+bool rescaleDivision(SmfFile *smf, uint16_t newDivision, QString *error)
 {
     if (newDivision == 0 || smf->division == 0 || smf->division == newDivision)
-        return;
+        return true;
     // Floor scaling is monotonic, so each track's non-decreasing tick order
     // (and same-tick event order) survives the rescale.
     const uint64_t oldDivision = smf->division;
+    // Preflight the largest tick before touching anything: reject, never clamp.
+    uint64_t maxTick = 0;
+    for (const SmfTrack &track : smf->tracks) {
+        for (const SmfEvent &ev : track.events)
+            maxTick = std::max(maxTick, uint64_t(ev.tick));
+        maxTick = std::max(maxTick, uint64_t(track.endTick));
+    }
+    if (maxTick * newDivision / oldDivision > CoreTimeDefaults::kMaxTick) {
+        if (error)
+            *error = QObject::tr("Tick rescale to division %1 exceeds 32-bit tick range")
+                         .arg(newDivision);
+        return false;
+    }
     for (SmfTrack &track : smf->tracks) {
         for (SmfEvent &ev : track.events)
-            ev.tick = ev.tick * newDivision / oldDivision;
-        track.endTick = track.endTick * newDivision / oldDivision;
+            ev.tick = Tick(uint64_t(ev.tick) * newDivision / oldDivision);
+        track.endTick = Tick(uint64_t(track.endTick) * newDivision / oldDivision);
     }
     smf->division = newDivision;
+    return true;
 }

@@ -461,7 +461,8 @@ void SongView::copyTimeSelection()
         clip.lanes.push_back(std::move(clipLane));
     }
     for (const TempoPoint &point : contents.tempo) {
-        clip.tempo.push_back({point.tick - range.startTick, point.microsecondsPerQuarterNote});
+        clip.tempo.push_back(
+            {Tick(point.tick - range.startTick), point.microsecondsPerQuarterNote});
         ++pointCount;
     }
     writeClipboard(clip, m_timeline->ticksPerBeat);
@@ -716,7 +717,7 @@ void SongView::pasteRangeAtEditCursor(const Clip &clip)
     }
     if (!clip.tempo.empty()) {
         for (const auto &point : clip.tempo)
-            edit.addTempo.push_back({s + point.tick, point.microsecondsPerQuarterNote});
+            edit.addTempo.push_back({Tick(s + point.tick), point.microsecondsPerQuarterNote});
         appendExactTickRemovals(m_document->tempoPoints(), edit.addTempo, edit.removeTempo);
     }
     if (edit.empty()) {

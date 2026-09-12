@@ -5,6 +5,8 @@
 #include <array>
 #include <cstring>
 
+#include "timedefaults.h"
+
 namespace {
 
 struct Reader {
@@ -85,7 +87,7 @@ bool parseTrack(Reader &r, size_t end, int trackIndex, SmfTrack *track, QString 
         if (!r.readVlq(&delta))
             return fail(error, QStringLiteral("Track %1: truncated delta time").arg(trackIndex));
         tick += delta;
-        if (tick >= UINT32_MAX)
+        if (tick >= CoreTimeDefaults::kNoTick)
             return fail(error, QStringLiteral("Track %1: tick position exceeds 32-bit tick range")
                                    .arg(trackIndex));
 
@@ -276,7 +278,7 @@ QByteArray SmfFile::write() const
 
     for (const SmfTrack &track : tracks) {
         QByteArray body;
-        uint64_t tick = 0;
+        Tick tick = 0;
         uint8_t runningStatus = 0;
         for (const SmfEvent &ev : track.events) {
             writeVlq(body, uint32_t(ev.tick - tick));
@@ -356,7 +358,7 @@ void convertToFormat1(SmfFile *smf)
 
     SmfTrack conductor;
     std::array<SmfTrack, 16> channels;
-    uint64_t endTick = 0;
+    Tick endTick = 0;
 
     // A format-0 file has one chunk; out-of-spec extras get the same
     // treatment, merged into the shared buckets.

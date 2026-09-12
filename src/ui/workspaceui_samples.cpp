@@ -74,8 +74,14 @@ void WorkspaceUi::submitCreateSong(NewSongWizard &wizard)
 {
     if (!m_state.snapshot.isOpen() || projectBusy() || m_dialogOps > 0)
         return;
+    SmfFile smf;
+    QString error;
+    if (!wizard.songFile(&smf, &error)) {
+        QMessageBox::warning(&m_host, tr("Import MIDI"), error);
+        return;
+    }
     CreateSongInput input{wizard.label(), wizard.constant(),          wizard.player(),
-                          wizard.cfg(),   wizard.newVoicegroupName(), wizard.songFile()};
+                          wizard.cfg(),   wizard.newVoicegroupName(), std::move(smf)};
     m_pendingCreatedLabel = input.label;
     m_pendingCreatedNewVoicegroup = !input.newVoicegroup.isEmpty();
     m_dialogOps++;

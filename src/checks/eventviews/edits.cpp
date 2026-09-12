@@ -302,9 +302,9 @@ void EventViewsEditsTest::rawTempoAtomic()
 
     uint64_t conversionTick = document.smf().tracks[0].endTick;
     for (const SmfEvent &event : document.smf().tracks[0].events)
-        conversionTick = std::max(conversionTick, event.tick);
+        conversionTick = std::max(conversionTick, uint64_t(event.tick));
     for (const TempoPoint &point : document.tempoPoints())
-        conversionTick = std::max(conversionTick, point.tick);
+        conversionTick = std::max(conversionTick, uint64_t(point.tick));
     conversionTick++;
 
     SmfEvent conversionEvent;

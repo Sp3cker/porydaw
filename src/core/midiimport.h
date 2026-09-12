@@ -76,7 +76,9 @@ QString instrumentFallbackNoticeText();
 // editor grid becomes exact. Note durations may still differ from an as-is
 // import by one clock, because mid2agb floors onset and duration
 // independently while a tick rescale floors onset and note-off.
-void rescaleDivision(SmfFile *smf, uint16_t newDivision);
+// Fails closed: when any rescaled tick would exceed the Tick range the
+// caller gets false with *error set and the file is left untouched.
+bool rescaleDivision(SmfFile *smf, uint16_t newDivision, QString *error);
 
 // Drop same-tick duplicate state-setters, keeping the last of each run in
 // place. Exporters commonly emit a channel-init block several times over

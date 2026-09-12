@@ -610,7 +610,8 @@ void EventListController::addEvent()
         return;
     if (currentChunk == 0) {
         if (const auto tempo = m_model->tempoPointForRow(m_currentRow)) {
-            const TempoPoint copy{m_songView->editCursorTick(), tempo->microsecondsPerQuarterNote};
+            const TempoPoint copy{Tick(m_songView->editCursorTick()),
+                                  tempo->microsecondsPerQuarterNote};
             m_document->applyTempoEdit({{}, {copy}});
             selectRowAtTick(currentChunk, copy.tick);
             return;

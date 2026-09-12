@@ -38,7 +38,7 @@ const TempoPoint *tempoAtTick(const std::vector<TempoPoint> &points, uint64_t ti
 TempoPoint tempoDestination(const TempoPoint &source, const NodePoint &to)
 {
     const int currentBpm = qRound(CoreTimeDefaults::tempoBpm(source.microsecondsPerQuarterNote));
-    TempoPoint destination{to.tick, source.microsecondsPerQuarterNote};
+    TempoPoint destination{Tick(to.tick), source.microsecondsPerQuarterNote};
     if (to.value != currentBpm)
         destination.microsecondsPerQuarterNote =
             CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(to.value);
@@ -104,7 +104,7 @@ std::optional<CcResolvedMoves> resolveCcMoves(const SongDocument &document, int 
     }
     for (size_t rawId = 0; rawId < raw.size(); ++rawId) {
         idsByTick[raw[rawId].tick].push_back(existing.size());
-        existing.push_back({raw[rawId].tick, raw[rawId].value});
+        existing.push_back({Tick(raw[rawId].tick), raw[rawId].value});
         rawIdByPoint.push_back(rawId);
     }
     for (const NodePointMove &move : moves) {
@@ -119,7 +119,7 @@ std::optional<CcResolvedMoves> resolveCcMoves(const SongDocument &document, int 
         for (size_t index = 0; index < group.size(); ++index) {
             const size_t id = group[index];
             const int value = index + 1 == group.size() ? newValue : existing[id].value;
-            requests.push_back({id, move.to.tick, value});
+            requests.push_back({id, Tick(move.to.tick), value});
         }
     }
     const auto plan = planLaneMoves(existing, requests);

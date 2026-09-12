@@ -41,7 +41,7 @@ std::optional<EditWindow> emptyTailWindow(const SongDocument &document, int trac
 {
     uint64_t lastEnd = 0;
     for (const SmfTrack &smfTrack : document.smf().tracks)
-        lastEnd = std::max(lastEnd, smfTrack.endTick);
+        lastEnd = std::max(lastEnd, uint64_t(smfTrack.endTick));
     constexpr uint64_t kRequiredTail = 96 + 528;
     if (lastEnd > std::numeric_limits<uint64_t>::max() - kRequiredTail)
         return std::nullopt;

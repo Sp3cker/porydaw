@@ -194,7 +194,7 @@ void WorkspaceTabsTest::editUndoIsPerTab()
     QVERIFY(document.engineTrackCount() > 0);
     uint64_t end = 0;
     for (const SmfTrack &track : document.smf().tracks)
-        end = (std::max)(end, track.endTick);
+        end = (std::max)(end, uint64_t(track.endTick));
     document.addNote(0, end + 96, 72, 24, 93);
     QVERIFY(first->document().isDirty());
     QVERIFY(!second->document().isDirty());
@@ -236,7 +236,7 @@ void WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt()
     SongDocument &document = tab->document();
     uint64_t end = 0;
     for (const SmfTrack &track : document.smf().tracks)
-        end = (std::max)(end, track.endTick);
+        end = (std::max)(end, uint64_t(track.endTick));
     document.addNote(0, end + 96, 72, 24, 93);
     workspace->requestUndo();
     QVERIFY(!document.isDirty());
@@ -317,7 +317,7 @@ void WorkspaceTabsTest::dirtyCloseUsesProductionGate()
 
     uint64_t end = 0;
     for (const SmfTrack &track : tab->document().smf().tracks)
-        end = (std::max)(end, track.endTick);
+        end = (std::max)(end, uint64_t(track.endTick));
     const uint64_t insertedTick = end + 96;
     tab->document().addNote(0, insertedTick, 72, 24, 93);
     QVERIFY(tab->document().isDirty());
