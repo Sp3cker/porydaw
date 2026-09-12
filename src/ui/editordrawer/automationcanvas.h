@@ -217,10 +217,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void invalidateSelectedNodeMultiplicity() const noexcept;
     bool hasMultipleSelectedNodes(
         const std::optional<std::pair<uint64_t, uint64_t>> &selectedTickRange) const;
-    // Nine identities: the supported CC catalog plus song-global Tempo.
     static int parameterCount() noexcept;
-    // Catalog indexes whose resolved row satisfies `predicate` — the shared
-    // projection behind selectedParameters/ghostParameters.
     template <class Predicate>
     QList<int> parameterIndexesWhere(Predicate &&predicate) const
     {
@@ -232,6 +229,8 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
         }
         return indexes;
     }
+    bool parameterHasEvents(const EditorAutomationRowId &row) const;
+    bool canGhostParameter(int index) const;
     struct NodeLaneSlot {
         EditorAutomationRowId id;
         NodeLane *lane = nullptr;
@@ -430,10 +429,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     NodeDoubleClickGuard m_deletedNodeClick;
     // Active CC controller; nullopt selects Tempo (see Q_PROPERTY docs).
     std::optional<uint8_t> m_activeController = CoreTimeDefaults::kCcVolume;
-    // User ghost-enabled CC controllers; m_ghostTempo covers song-global Tempo.
-    // Controller identities (never catalog indexes) so pins rebind across the
-    // primary track exactly like the active parameter. View-local, never
-    // persisted; toggling touches neither selection, document, nor undo.
     std::vector<uint8_t> m_ghostControllers;
     bool m_ghostTempo = false;
 };

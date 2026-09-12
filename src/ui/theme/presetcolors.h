@@ -105,18 +105,10 @@ enum class PresetColor {
     /// Sample Editor seam-end trace: the red domain color, kept legible on the
     /// seam inset's alternate surface.
     sample_seam_end_ink,
-    /// Automation parameter tab resting surface: a raised chip over the
-    /// SongView gutter, tinted toward the theme's chromatic hue.
     automation_tab_background,
-    /// Automation parameter tab hover surface, one step above the resting chip.
     automation_tab_hover_background,
-    /// Automation parameter tab edge: a hairline over the resting chip.
     automation_tab_outline,
-    /// Automation lane node/curve ink and the written-event tab pip: Ableton's
-    /// AutomationColor, authored per theme.
     automation_ink,
-    /// Ghost-enabled automation parameter tab bottom rule: Ableton's amber
-    /// Clip13, identical in every theme.
     automation_ghost_edge,
     /// Sentinel for the number of authored preset colors; not rendered.
     count,
@@ -366,12 +358,9 @@ constexpr PresetColors makeVanilla()
     colors.color(PresetColor::sample_crop_handle) = "#92681F";
     colors.color(PresetColor::sample_loop_handle) = "#2A7292";
     colors.color(PresetColor::sample_seam_end_ink) = "#C54444";
-    // Automation parameter tabs: raised warm chips over the #D4CCC7 gutter
-    // (1.22:1), hover one step up; the active tab takes the amber pressed fill.
     colors.color(PresetColor::automation_tab_background) = "#E7E1DB";
     colors.color(PresetColor::automation_tab_hover_background) = "#F0EAE4";
     colors.color(PresetColor::automation_tab_outline) = "#8C857F";
-    // Ableton Default Light Neutral High AutomationColor.
     colors.color(PresetColor::automation_ink) = "#EA3C3C";
     colors.color(PresetColor::automation_ghost_edge) = "#E0AA2A";
     return colors;
@@ -428,12 +417,9 @@ constexpr PresetColors makeDarkNeutralHigh()
     colors.color(PresetColor::sample_crop_handle) = "#E0A030";
     colors.color(PresetColor::sample_loop_handle) = "#4AB4E2";
     colors.color(PresetColor::sample_seam_end_ink) = "#F08D8D";
-    // Automation parameter tabs: raised cool chips over the #454545 gutter
-    // (1.28:1); the active tab takes the cyan pressed fill.
     colors.color(PresetColor::automation_tab_background) = "#51555E";
     colors.color(PresetColor::automation_tab_hover_background) = "#5B5F69";
     colors.color(PresetColor::automation_tab_outline) = "#62666F";
-    // Ableton Default Dark Neutral High AutomationColor.
     colors.color(PresetColor::automation_ink) = "#FF4D47";
     colors.color(PresetColor::automation_ghost_edge) = "#E0AA2A";
     return colors;
@@ -487,12 +473,9 @@ constexpr PresetColors makeImmaterial()
     colors.color(PresetColor::sample_crop_handle) = "#E0A030";
     colors.color(PresetColor::sample_loop_handle) = "#40B0E0";
     colors.color(PresetColor::sample_seam_end_ink) = "#EF8585";
-    // Automation parameter tabs: raised cool chips over the #3C3F46 gutter
-    // (1.27:1); the active tab takes the pink pressed fill.
     colors.color(PresetColor::automation_tab_background) = "#4A4E59";
     colors.color(PresetColor::automation_tab_hover_background) = "#545864";
     colors.color(PresetColor::automation_tab_outline) = "#616571";
-    // Ableton Immaterial AutomationColor.
     colors.color(PresetColor::automation_ink) = "#FF91C3";
     colors.color(PresetColor::automation_ghost_edge) = "#E0AA2A";
     return colors;

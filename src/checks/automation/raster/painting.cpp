@@ -379,10 +379,6 @@ void AutomationRasterTest::curvesNodesAndSelectedRingsRender()
     QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationNodes).revision > awayNodesBefore);
     NodeLane &awayLane = awayKind == LaneKind::Tempo ? static_cast<NodeLane &>(tempoLane)
                                                      : static_cast<NodeLane &>(ccLane);
-    // Both lanes share the identity-red ink, so the stale-geometry proof is
-    // positional: the old lane's second-node site must be ink-free while the
-    // away lane's node site paints. The first node shares its tick with the
-    // away lane's vertical step, so it cannot isolate stale geometry.
     const int awayNode = awayKind == LaneKind::Tempo ? kTempoNode : kCcNode;
     const qreal awayNodeY =
         nodelane::valueY(awayLane, geometry.body, fixture().geometry(), awayNode);

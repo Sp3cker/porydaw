@@ -104,6 +104,7 @@ class AutomationEditingTest final : public QObject
     void multiLaneSelectionDragAbortsOnDocumentRebuild();
     void multiCcLaneSelectionDragExcludesTempoAndVolume();
     void ghostToggleIsViewOnlyAndSurvivesActivation();
+    void ghostToggleSkipsEventlessLane();
 
     // Menu and clipboard coverage.
     void contextMenuRoutingAndAvailableLanes();
@@ -293,8 +294,6 @@ class AutomationEditingTest final : public QObject
 
     // Activates a supported parameter through its real rendered gutter label.
     bool activateParameter(const EditorAutomationRowId &row);
-    // Clicks a rendered gutter label with real event modifiers — drives the
-    // canvas's modifier dispatch, unlike a direct toggle call.
     bool clickParameterTab(const EditorAutomationRowId &row,
                            Qt::KeyboardModifiers modifiers = Qt::NoModifier);
 

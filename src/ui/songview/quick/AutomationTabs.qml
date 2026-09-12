@@ -1,7 +1,6 @@
 // Compact parameter selector for the automation gutter: the nine standard
 // parameter identities as native Basic TabButtons in two columns, one related
 // pair per row in catalog order (mix, pitch, echo), with song-global Tempo
-// spanning the last row. Qt owns focus, activation and accessibility
 // plumbing; the canvas owns parameter identity, the parameter menu and
 // shared-selection semantics. The grid scrolls inside the gutter: a
 // Flickable owns the vertical overflow, so the tab stack may be taller than
@@ -24,13 +23,8 @@ Item {
     // instead of one per-tab copy.
     readonly property var selectedParams: root.canvas.selectedParameters
 
-    // One shared pip list for the whole grid, same one-snapshot discipline:
-    // one bool per catalog index, true where the document holds written
-    // events for that identity.
     readonly property var pips: root.canvas.parameterPips
 
-    // One shared ghost list, same one-snapshot discipline: catalog indexes
-    // the user ghost-enabled for display-only plot curves.
     readonly property var ghostParams: root.canvas.ghostParameters
 
     Flickable {
@@ -68,15 +62,8 @@ Item {
                         tab.index === root.canvas.parameterLabels.length - 1
                     readonly property bool selectionIncluded:
                         root.selectedParams.includes(tab.index)
-                    // Ghost-enabled tabs show their nodes as ineditable ghosts
-                    // in the plot; the bottom rule is that user toggle.
-                    // Shared-selection inclusion keeps its own mark instead.
                     readonly property bool ghostShown:
                         root.ghostParams.includes(tab.index)
-                    // The selection bar marks scope beyond the lane being
-                    // edited: the active tab already carries the checked
-                    // fill, so inclusion is only drawn where it adds
-                    // information.
                     readonly property bool inclusionMarked:
                         tab.selectionIncluded && !tab.checked
                     readonly property bool hasEvents: root.pips[tab.index] === true
@@ -93,21 +80,9 @@ Item {
                     Layout.minimumHeight: root.appearance.minimumCellHeight
                     Layout.columnSpan: tab.tempoParameter ? 2 : 1
 
-                    // Display-only indicator: the canvas stays the sole
-                    // parameter authority, so neither a click, Space, nor an
-                    // exclusivity group may write `checked` — the explicit
-                    // press/click handlers below own activation.
                     checkable: false
                     checked: root.canvas.activeParameter === tab.index
 
-                    // Press-down dispatch through the canvas with the mouse
-                    // event's modifiers — AbstractButton signals carry none,
-                    // so a MouseArea observes the press and reports them:
-                    // plain press activates (matching QTabBar), command-press
-                    // toggles the ghost. Clicked stays the fallback for
-                    // assistive-tech presses and keyboard activation; a real
-                    // command-click already toggled on press, so the canvas
-                    // never toggles twice.
                     down: pressArea.pressed
                     onClicked: root.canvas.parameterClicked(tab.index, Qt.NoModifier)
 
@@ -172,11 +147,6 @@ Item {
                         root.canvas.openParameterMenu(tab.index, p.x, p.y)
                     }
 
-                    // The pip lives in the text row so it centers on the text
-                    // line, not the cell box — a cell-centered pip rasterizes
-                    // a pixel low on fractional heights. It always occupies
-                    // its cell (transparent when the parameter has no events)
-                    // so every label shares one left edge.
                     contentItem: RowLayout {
                         spacing: root.appearance.inset
 
@@ -209,11 +179,6 @@ Item {
                     }
 
                     // Distinct indicators: the active tab takes the selected
-                    // tab fill, a user ghost-enabled tab takes the yellow
-                    // bottom rule, shared-selection inclusion takes the
-                    // right-edge bar (never a full-cell outline, never on the
-                    // tab being edited), and keyboard focus paints the inner
-                    // focus ring over every state.
                     background: Rectangle {
                         color: tab.checked ? root.appearance.tabSelectedBackground
                                            : tab.hovered ? root.appearance.tabHoverBackground
@@ -221,9 +186,6 @@ Item {
                         border.width: root.appearance.stroke
                         border.color: root.appearance.tabOutline
 
-                        // Ghost toggle: bottom rule, drawn even on the active
-                        // tab — a pin there waits until another lane
-                        // activates.
                         Rectangle {
                             visible: tab.ghostShown
                             anchors.left: parent.left
@@ -234,8 +196,6 @@ Item {
                             color: root.appearance.ghostEdge
                         }
 
-                        // Shared-selection inclusion: right-edge bar using the
-                        // selected fill, so the two marks never share geometry.
                         Rectangle {
                             visible: tab.inclusionMarked
                             anchors.top: parent.top

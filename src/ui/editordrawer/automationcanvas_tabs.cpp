@@ -87,8 +87,6 @@ QList<int> AutomationCanvas::selectedParameters() const
         [this](const EditorAutomationRowId &row) { return m_laneSelection.coversNodes(row); });
 }
 
-// User ghost-enabled identities: the catalog-index projection of the
-// controller-identity ghost set, mirroring selectedParameters.
 QList<int> AutomationCanvas::ghostParameters() const
 {
     return parameterIndexesWhere([this](const EditorAutomationRowId &row) {
@@ -99,9 +97,30 @@ QList<int> AutomationCanvas::ghostParameters() const
     });
 }
 
-// Ghost toggling is view-only like activation: selection, document, undo,
-// and hover are untouched; only the ghost set and its notification change.
-// Command-clicking the active tab collapses back to a single shown lane.
+bool AutomationCanvas::parameterHasEvents(const EditorAutomationRowId &row) const
+{
+    const SongDocument *document = m_page.document();
+    if (!document)
+        return false;
+    return row.kind == EditorAutomationRowKind::Tempo
+               ? !document->tempoPoints().empty()
+               : !document->lanePoints(row.track, row.controller).empty();
+}
+
+bool AutomationCanvas::canGhostParameter(int index) const
+{
+    const std::optional<EditorAutomationRowId> row = parameterRow(index);
+    if (!row || !parametersEnabled())
+        return false;
+    if (index == activeParameter())
+        return !m_ghostControllers.empty() || m_ghostTempo;
+    const bool ghosted = row->kind == EditorAutomationRowKind::Tempo
+                             ? m_ghostTempo
+                             : std::find(m_ghostControllers.begin(), m_ghostControllers.end(),
+                                         row->controller) != m_ghostControllers.end();
+    return ghosted || parameterHasEvents(*row);
+}
+
 void AutomationCanvas::toggleGhostParameter(int index)
 {
     const auto row = parameterRow(index);
@@ -120,6 +139,8 @@ void AutomationCanvas::toggleGhostParameter(int index)
     }
     bool nowGhosted = false;
     if (row->kind == EditorAutomationRowKind::Tempo) {
+        if (!m_ghostTempo && !parameterHasEvents(*row))
+            return;
         m_ghostTempo = !m_ghostTempo;
         nowGhosted = m_ghostTempo;
     } else if (const auto position =
@@ -127,6 +148,8 @@ void AutomationCanvas::toggleGhostParameter(int index)
                position != m_ghostControllers.end()) {
         m_ghostControllers.erase(position);
     } else {
+        if (!parameterHasEvents(*row))
+            return;
         m_ghostControllers.push_back(row->controller);
         nowGhosted = true;
     }
@@ -165,11 +188,9 @@ void AutomationCanvas::activateParameter(int index)
     requestFullQuickUpdate();
 }
 
-// The QML tab handlers pass the mouse event's modifiers through — AbstractButton
-// signals carry none — so dispatch stays testable and never reads global state.
 void AutomationCanvas::parameterPressed(int index, Qt::KeyboardModifiers modifiers)
 {
-    if (modifiers & Qt::ControlModifier)
+    if ((modifiers & Qt::ControlModifier) && canGhostParameter(index))
         toggleGhostParameter(index);
     else
         activateParameter(index);
@@ -177,8 +198,6 @@ void AutomationCanvas::parameterPressed(int index, Qt::KeyboardModifiers modifie
 
 void AutomationCanvas::parameterClicked(int index, Qt::KeyboardModifiers modifiers)
 {
-    // A real command-click already toggled on press; never toggle twice.
-    // Assistive activation without modifiers still activates.
     if (modifiers & Qt::ControlModifier)
         return;
     activateParameter(index);
@@ -234,26 +253,13 @@ QVariantMap AutomationCanvas::parameterAppearance() const
     return appearance;
 }
 
-// Written-event pips: one bool per catalog index, in parameterLabels order.
-// Uniform rule for every identity — Vol/Pan/Tempo included, no carve-outs:
-// Tempo reads the song-global tempoPoints, CC rows read lanePoints. Adapter
-// projections (Volume/Pan synthetic tick-0 node, Tempo 120 BPM leadIn) are
-// never consulted, so an unpainted default shows no pip.
 QVariantList AutomationCanvas::parameterPips() const
 {
     QVariantList pips;
     pips.reserve(parameterCount());
-    const SongDocument *document = m_page.document();
     for (int index = 0; index < parameterCount(); ++index) {
-        bool hasEvents = false;
-        if (document) {
-            if (const std::optional<EditorAutomationRowId> row = parameterRow(index)) {
-                hasEvents = row->kind == EditorAutomationRowKind::Tempo
-                                ? !document->tempoPoints().empty()
-                                : !document->lanePoints(row->track, row->controller).empty();
-            }
-        }
-        pips.append(hasEvents);
+        const std::optional<EditorAutomationRowId> row = parameterRow(index);
+        pips.append(row && parameterHasEvents(*row));
     }
     return pips;
 }

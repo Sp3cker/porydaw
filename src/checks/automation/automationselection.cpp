@@ -571,8 +571,6 @@ void AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation()
     QVERIFY(volumeIndex >= 0);
     QVERIFY(panIndex >= 0);
     QVERIFY(activateParameter(volume));
-    // Command-click drives the real modifier dispatch: the QML MouseArea
-    // reports the event's modifiers to parameterPressed.
     const QByteArray documentBefore = tab().document().smf().write();
     const uint64_t revisionBefore = tab().document().revision();
     const int undoIndexBefore = tab().document().undoStack()->index();
@@ -588,23 +586,35 @@ void AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation()
     QCOMPARE(tab().document().undoStack()->index(), undoIndexBefore);
     QCOMPARE(tab().document().undoStack()->count(), undoCountBefore);
 
-    // Pins survive activation cycling.
     QVERIFY(activateParameter(tempo));
     QVERIFY(activateParameter(volume));
     QCOMPARE(canvas->ghostParameters(), QList<int>{panIndex});
 
-    // Plain-clicking a ghosted tab activates it and keeps the pin waiting:
-    // the ghost pass skips the active row, the active pass paints it.
     QVERIFY(activateParameter(pan));
     QCOMPARE(canvas->activeParameter(), panIndex);
     QCOMPARE(canvas->ghostParameters(), QList<int>{panIndex});
 
-    // Command-clicking the active tab collapses back to a single lane.
     QVERIFY(clickParameterTab(pan, Qt::ControlModifier));
     QTRY_VERIFY(canvas->ghostParameters().isEmpty());
     QCOMPARE(canvas->activeParameter(), panIndex);
-    // Invalid indexes are no-ops.
     canvas->toggleGhostParameter(-1);
     canvas->toggleGhostParameter(canvas->parameterLabels().size());
+    QVERIFY(canvas->ghostParameters().isEmpty());
+}
+
+void AutomationEditingTest::ghostToggleSkipsEventlessLane()
+{
+    AutomationCanvas *const canvas = page().canvas();
+    QVERIFY(canvas);
+    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, kTrack,
+                                       kVolumeController};
+    QVERIFY(activateParameter(volume));
+    const EditorAutomationRowId modulation{EditorAutomationRowKind::ControlChange, kTrack,
+                                           CoreTimeDefaults::kCcModulation};
+    QVERIFY(tab().document().lanePoints(kTrack, CoreTimeDefaults::kCcModulation).empty());
+    QVERIFY(clickParameterTab(modulation, Qt::ControlModifier));
+    const int modulationIndex = checks::support::automationParameterIndex(*canvas, modulation);
+    QVERIFY(modulationIndex >= 0);
+    QTRY_COMPARE(canvas->activeParameter(), modulationIndex);
     QVERIFY(canvas->ghostParameters().isEmpty());
 }

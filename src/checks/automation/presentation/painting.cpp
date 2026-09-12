@@ -168,8 +168,6 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
         centers.push_back(bounds.center());
         labelBounds.push_back(bounds);
 
-        // The content item is a RowLayout (pip cell + fitted Text); the Text
-        // carries a stable objectName.
         QQuickItem *const content = tab->property("contentItem").value<QQuickItem *>();
         QVERIFY2(content, "a catalog label rendered without its content item");
         QQuickItem *const text = content->findChild<QQuickItem *>(
@@ -185,9 +183,6 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
                  "the rendered fitted Text exceeds its label height");
     }
 
-    // Written-event pips mirror the document — never adapter projections
-    // (synthetic tick-0 node, Tempo leadIn): nine entries, each agreeing
-    // with lanePoints/tempoPoints for its resolved row.
     const QVariantList pips = canvas->parameterPips();
     QCOMPARE(pips.size(), expected.size());
     for (int index = 0; index < expected.size(); ++index) {
@@ -304,7 +299,6 @@ void AutomationPresentationTest::parameterLabelClicksSwitchActivePlot()
     const QColor tempoColor = themes::color(themes::Role::song_view_automation_node_ink);
     QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                 QRegion(body), QPoint{}, tempoColor));
-    // Every lane shares the identity-red ink; no per-track hue may leak in.
     QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                              QRegion(body), QPoint{},
                              themes::trackIdentityColor(kTrack % themes::trackIdentityColorCount)));
@@ -360,7 +354,6 @@ void AutomationPresentationTest::ghostTempoPaintsUnderActiveLane()
     const QColor ink = themes::color(themes::Role::song_view_automation_node_ink);
     QColor ghostInk = ink;
     ghostInk.setAlphaF(0.5);
-    // Single-lane default: only the active lane paints — no dimmed ghost ink.
     QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                              QRegion(body), QPoint{}, ghostInk));
     QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
@@ -368,7 +361,6 @@ void AutomationPresentationTest::ghostTempoPaintsUnderActiveLane()
     const int tempoIndex = checks::support::automationParameterIndex(*canvas, tempo);
     QVERIFY(tempoIndex >= 0);
     canvas->toggleGhostParameter(tempoIndex);
-    // The ghost paints beneath: dimmed ink curve plus the active lane.
     QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                 QRegion(body), QPoint{}, ghostInk));
     QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
@@ -519,8 +511,6 @@ void AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators()
              "the inactive LFO label has no visible shared-selection indicator");
     QVERIFY2(containsOutline(localBounds(tempoTab), selectionBar),
              "the inactive Tempo label has no visible shared-selection indicator");
-    // The yellow bottom rule is the ghost toggle now, not selection: with no
-    // ghosts enabled it must not paint on selection-covered tabs.
     const QColor ghostRule = appearance.value(QStringLiteral("selectionOutline")).value<QColor>();
     QVERIFY2(!containsOutline(localBounds(lfoTab), ghostRule),
              "the shared selection leaked onto the ghost rule");
@@ -585,8 +575,6 @@ void AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover()
     QVERIFY(tempoIndex >= 0);
     canvas->toggleGhostParameter(tempoIndex);
 
-    // Persistent label: the ghost's tab name hugs the plot's right edge at
-    // the curve's Y for the last visible tick.
     std::optional<QRectF> label;
     QTRY_VERIFY(
         (label = findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport)).has_value());
@@ -599,8 +587,6 @@ void AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover()
              "the ghost name label no longer tracks its curve's height");
     QVERIFY(!findTextRecord(ghostModel, QStringLiteral("Volume"), viewport).has_value());
 
-    // Hover near the ghost curve swaps the right-edge label for an in-line
-    // name below the nodeline at the pointer's X.
     const QPointF hoverPoint(viewport.width() / 2.0, curveY);
     mouseMove(*m_plotInput, hoverPoint);
     QTRY_VERIFY((label = findTextRecord(scene->automationHoverTextModel(), QStringLiteral("Tempo"),
@@ -611,7 +597,6 @@ void AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover()
     QVERIFY2(label->bottom() <= curveY, "the ghost hover label no longer sits above the nodeline");
     QVERIFY(!findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport).has_value());
 
-    // Unpinning clears both labels without further pointer movement.
     canvas->toggleGhostParameter(tempoIndex);
     QVERIFY(canvas->ghostParameters().isEmpty());
     QTRY_VERIFY(!findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport).has_value());
