@@ -47,13 +47,11 @@ bool SongView::revealNote(int track, uint8_t key, uint64_t tick)
     if (track < 0 || track > 15)
         return false;
     selectTrack(track);
-    // Notes are sorted by startTick, so the last match is the note that was
-    // sounding (or had just finished fading) at the event's position.
     const ViewNote *found = nullptr;
     for (const ViewNote &note : m_model.notes) {
         if (note.startTick > tick)
             break;
-        if (note.track == track && note.key == key)
+        if (note.track == track && note.key == key && tick < note.endTick())
             found = &note;
     }
     if (!found)
@@ -455,8 +453,7 @@ void SongView::auditionTimed(int track, int key, int velocity, uint64_t startTic
     if (!m_timeline || endTick <= startTick)
         return;
     uint64_t dur = m_timeline->sampleForTick(endTick) - m_timeline->sampleForTick(startTick);
-    // Safety cap: an unterminated note's span runs to the end of the song,
-    // which is not a useful audition length.
+    // Keep long notes from producing an excessive audition length.
     const uint64_t cap = uint64_t(m_timeline->sampleRate * 10.0);
     if (cap > 0)
         dur = std::min(dur, cap);

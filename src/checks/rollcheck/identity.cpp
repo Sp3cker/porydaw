@@ -131,8 +131,8 @@ void PianoRollTest::timelineProjection()
     }
 
     const ViewNote &note = ordinary.notes.front();
-    if (note.noteId.isAssigned() || note.startTick != 240 || note.endTick != 288 ||
-        note.key != 65 || note.velocity != 83 || note.track != 2 || note.unterminated) {
+    if (note.noteId.isAssigned() || note.startTick != 240 || note.endTick() != 288 ||
+        note.key != 65 || note.velocity != 83 || note.track != 2) {
         QFAIL("ordinary unassigned timeline note changed during projection");
     }
 }

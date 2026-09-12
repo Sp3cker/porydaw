@@ -199,7 +199,7 @@ void PianoRollTest::timelineRulerScope()
     for (const ViewNote &note : view.model().notes) {
         if (note.startTick >= endTick)
             break;
-        if (startTick < note.endTick) {
+        if (startTick < note.endTick()) {
             expectedScope |= uint32_t{1} << note.track;
             if (note.track != track && !scopedGhost)
                 scopedGhost = &note;
@@ -234,7 +234,7 @@ void PianoRollTest::timelineRulerScope()
     const SnappedRows ghostRows{view, roll};
     const QRectF ghostPlotBox = ghostRows.noteBox(ghostRows.noteRect(
         view.camera().displayX(double(scopedGhost->startTick), 0.0, ghostRows.dpr()),
-        view.camera().displayX(double(scopedGhost->endTick), 0.0, ghostRows.dpr()),
+        view.camera().displayX(double(scopedGhost->endTick()), 0.0, ghostRows.dpr()),
         scopedGhost->key));
     const QRectF ghostBandBox = ghostPlotBox.translated(pianoKeyboardWidth, 0.0);
     const QRectF visibleGhostBox = ghostBandBox.intersected(
@@ -446,7 +446,7 @@ void PianoRollTest::keyboardTimeSelectionShortcuts()
                                           [track, key, emptyTick](const ViewNote &note) {
                                               return note.track == track && note.key == key &&
                                                      note.startTick <= emptyTick &&
-                                                     emptyTick < note.endTick;
+                                                     emptyTick < note.endTick();
                                           });
         if (!occupied)
             emptyKey = key;

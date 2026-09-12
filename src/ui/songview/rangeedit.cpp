@@ -938,7 +938,7 @@ void SongView::announceNote(const ViewNote &note)
         return;
     const bool ext = m_document && m_document->cfg().extendedClocks;
     const bool exact = m_document && m_document->cfg().exactGate;
-    const int64_t ticks = int64_t(note.endTick) - int64_t(note.startTick);
+    const int64_t ticks = note.duration;
     emit statusMessage(
         tr("%1 · velocity %2 → plays %3 · length %4 ticks → %5 clocks")
             .arg(keyName(note.key))

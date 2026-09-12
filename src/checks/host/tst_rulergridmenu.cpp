@@ -405,7 +405,7 @@ class RulerGridMenuTest final : public QObject
             const bool occupied =
                 std::any_of(view.model().notes.cbegin(), view.model().notes.cend(),
                             [key](const ViewNote &note) {
-                                return note.key == key && note.startTick <= 6 && 6 < note.endTick;
+                                return note.key == key && note.startTick <= 6 && 6 < note.endTick();
                             });
             if (!occupied)
                 emptyKey = key;

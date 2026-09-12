@@ -17,11 +17,12 @@
 struct ViewNote {
     NoteId noteId; // source document identity; unassigned for ordinary timeline notes
     uint32_t startTick;
-    uint32_t endTick;
+    uint32_t duration; // 0 = unpaired note-on or same-tick pair
     uint8_t key;
     uint8_t velocity;
     uint8_t track;
-    bool unterminated; // note-on with no matching note-off; drawn to song end
+
+    uint64_t endTick() const { return uint64_t(startTick) + duration; }
 };
 
 struct LanePoint {
@@ -59,9 +60,8 @@ struct SongViewModel {
     int minNoteKey = 127;
     int maxNoteKey = 0;
 
-    // Coverage stats for --viewcheck.
-    size_t unpairedNoteOns = 0; // rendered anyway (unterminated), but reported
-    size_t orphanNoteOffs = 0;  // shown in the strip
+    size_t unpairedNoteOns = 0;
+    size_t orphanNoteOffs = 0; // shown in the strip
 
     const CcLane *findLane(int track, uint8_t cc) const
     {
