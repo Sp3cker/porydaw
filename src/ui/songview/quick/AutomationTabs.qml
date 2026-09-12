@@ -85,12 +85,10 @@ Item {
                     text: modelData
                     font: root.appearance.font
                     padding: root.appearance.inset
-                    // Reserve the pip cell only when the dot draws, so the
-                    // fitted label never collides with it.
-                    leftPadding: tab.hasEvents
-                                     ? root.appearance.inset + root.appearance.pipExtent
-                                           + root.appearance.inset
-                                     : root.appearance.inset
+                    // The pip cell is always reserved — drawn or not — so every
+                    // label's left edge aligns down the gutter.
+                    leftPadding: root.appearance.inset + root.appearance.pipExtent
+                                 + root.appearance.inset
                     focusPolicy: Qt.StrongFocus
                     // The QTabBar-style hover fill must not depend on the
                     // platform's useHoverEffects default.
@@ -177,9 +175,8 @@ Item {
                         fontSizeMode: Text.HorizontalFit
                         minimumPixelSize: root.appearance.minimumFont.pixelSize
                         textFormat: Text.PlainText
-                        wrapMode: Text.NoWrap
+                        horizontalAlignment: Text.AlignLeft
                         elide: Text.ElideNone
-                        horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         color: tab.checked ? root.appearance.tabSelectedText
                                            : tab.hovered ? root.appearance.tabHoverText
@@ -200,9 +197,9 @@ Item {
                         border.width: root.appearance.stroke
                         border.color: root.appearance.tabOutline
 
-                        // Written-event pip: fixed green for all themes, drawn
-                        // on the active tab too; independent of the inclusion
-                        // rule and the checked fill.
+                        // Written-event pip: the same fixed identity red as the
+                        // lane nodes, drawn on the active tab too; independent
+                        // of the inclusion rule and the checked fill.
                         Rectangle {
                             visible: tab.hasEvents
                             anchors.left: parent.left
@@ -211,7 +208,7 @@ Item {
                             width: root.appearance.pipExtent
                             height: root.appearance.pipExtent
                             radius: width / 2
-                            color: "#86D78F"
+                            color: root.appearance.pipColor
                             Accessible.ignored: true
                         }
 

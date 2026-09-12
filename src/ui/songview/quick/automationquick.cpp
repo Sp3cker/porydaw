@@ -198,10 +198,9 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     }
     for (const GhostLane &ghostLane : ghosts) {
         const NodeLaneSlot *slot = ghostLane.slot;
-        QColor ghost =
-            slot->isTempo()
-                ? themes::color(themes::Role::song_view_automation_tempo_curve)
-                : themes::trackIdentityColor(slot->id.track % themes::trackIdentityColorCount);
+        // All automation lanes paint in the fixed identity red; ghosting is
+        // conveyed by alpha alone, not a per-track hue.
+        QColor ghost = themes::color(themes::Role::song_view_automation_node_ink);
         ghost.setAlphaF(0.45);
         const NodeLaneQuickPaint::Context ghostContext{
             .scene = scene,
@@ -238,10 +237,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
 
     if (active) {
         const VisibleLane &lane = *active;
-        const QColor color =
-            lane.tempo
-                ? themes::color(themes::Role::song_view_automation_tempo_curve)
-                : themes::trackIdentityColor(lane.slot->id.track % themes::trackIdentityColorCount);
+        const QColor color = themes::color(themes::Role::song_view_automation_node_ink);
         // Unchanged phantom handoff: a provisional phantom gesture paints its
         // own held origin; otherwise the lane's origin phantom is derived from
         // its points.

@@ -268,7 +268,7 @@ void AutomationPresentationTest::parameterLabelClicksSwitchActivePlot()
     const QRegion volumeNode = nodeRegion(lanePoint(volumeHandle, 24, 48));
     const QRegion panNode = nodeRegion(lanePoint(panHandle, 48, 32));
     const QRegion lfoNode = nodeRegion(lanePoint(lfoHandle, 96, 96));
-    const QColor ccColor = themes::trackIdentityColor(kTrack % themes::trackIdentityColorCount);
+    const QColor ccColor = themes::color(themes::Role::song_view_automation_node_ink);
 
     QVERIFY(activateParameter(volume));
     QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes),
@@ -296,11 +296,13 @@ void AutomationPresentationTest::parameterLabelClicksSwitchActivePlot()
     const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
     QVERIFY(activateParameter(tempo));
     const QRect body = canvas->laneBody(LaneHandle{0});
-    const QColor tempoColor = themes::color(themes::Role::song_view_automation_tempo_curve);
+    const QColor tempoColor = themes::color(themes::Role::song_view_automation_node_ink);
     QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                 QRegion(body), QPoint{}, tempoColor));
+    // Every lane shares the identity-red ink; no per-track hue may leak in.
     QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
-                             QRegion(body), QPoint{}, ccColor));
+                             QRegion(body), QPoint{},
+                             themes::trackIdentityColor(kTrack % themes::trackIdentityColorCount)));
 }
 
 void AutomationPresentationTest::tempoUsesFullSharedPlotBody()
@@ -327,7 +329,7 @@ void AutomationPresentationTest::tempoUsesFullSharedPlotBody()
     edit.add = {{kHeldTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(120)}};
     m_document->applyTempoEdit(edit);
     refreshDocumentPresentation();
-    const QColor tempoColor = themes::color(themes::Role::song_view_automation_tempo_curve);
+    const QColor tempoColor = themes::color(themes::Role::song_view_automation_node_ink);
     QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                 QRegion(tempoBody), QPoint{}, tempoColor));
 }
@@ -350,25 +352,26 @@ void AutomationPresentationTest::ghostTempoPaintsUnderActiveLane()
     m_document->applyTempoEdit(edit);
     refreshDocumentPresentation();
     const QRect body = canvas->laneBody(LaneHandle{0});
-    const QColor tempoColor = themes::color(themes::Role::song_view_automation_tempo_curve);
-    const QColor ccColor = themes::trackIdentityColor(kTrack % themes::trackIdentityColorCount);
-    // Single-lane default: only the active lane paints.
+    const QColor ink = themes::color(themes::Role::song_view_automation_node_ink);
+    QColor ghostInk = ink;
+    ghostInk.setAlphaF(0.45);
+    // Single-lane default: only the active lane paints — no dimmed ghost ink.
     QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
-                             QRegion(body), QPoint{}, tempoColor));
+                             QRegion(body), QPoint{}, ghostInk));
+    QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                                QRegion(body), QPoint{}, ink));
     const int tempoIndex = checks::support::automationParameterIndex(*canvas, tempo);
     QVERIFY(tempoIndex >= 0);
     canvas->toggleGhostParameter(tempoIndex);
-    QColor ghostTempo = tempoColor;
-    ghostTempo.setAlphaF(0.45);
-    // The ghost paints beneath: dimmed tempo curve plus the active lane.
+    // The ghost paints beneath: dimmed ink curve plus the active lane.
     QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
-                                QRegion(body), QPoint{}, ghostTempo));
+                                QRegion(body), QPoint{}, ghostInk));
     QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
-                                QRegion(body), QPoint{}, ccColor));
+                                QRegion(body), QPoint{}, ink));
     canvas->toggleGhostParameter(tempoIndex);
     QVERIFY(canvas->ghostParameters().isEmpty());
     QTRY_VERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
-                                 QRegion(body), QPoint{}, ghostTempo));
+                                 QRegion(body), QPoint{}, ghostInk));
 }
 
 void AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment()

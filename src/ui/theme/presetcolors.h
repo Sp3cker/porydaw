@@ -289,8 +289,6 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::piano_keyboard_label,
     PresetColor::selection_background,
     PresetColor::window_text,
-    PresetColor::selection_background,
-    PresetColor::accent,
     PresetColor::outline,
     PresetColor::secondary_text,
     PresetColor::separator,
@@ -298,6 +296,7 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::automation_tab_hover_background,
     PresetColor::control_pressed_background,
     PresetColor::automation_tab_outline,
+    PresetColor::playhead,
 
     PresetColor::sample_waveform_ink,
     PresetColor::sample_crop_handle,

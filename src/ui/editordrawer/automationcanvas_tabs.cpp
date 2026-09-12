@@ -265,6 +265,8 @@ QVariantMap AutomationCanvas::parameterAppearance() const
                       themes::color(themes::Role::tab_selected_text));
     appearance.insert(QStringLiteral("tabOutline"),
                       themes::color(themes::Role::song_view_automation_tab_outline));
+    appearance.insert(QStringLiteral("pipColor"),
+                      themes::color(themes::Role::song_view_automation_node_ink));
     return appearance;
 }
 
