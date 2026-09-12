@@ -168,7 +168,17 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
         centers.push_back(bounds.center());
         labelBounds.push_back(bounds);
 
-        QQuickItem *const text = tab->property("contentItem").value<QQuickItem *>();
+        // The content item is a RowLayout (pip cell + fitted Text); find the
+        // Text child carrying the label.
+        QQuickItem *const content = tab->property("contentItem").value<QQuickItem *>();
+        QVERIFY2(content, "a catalog label rendered without its content item");
+        QQuickItem *text = nullptr;
+        for (QQuickItem *const child : content->childItems()) {
+            if (child->property("text").isValid()) {
+                text = child;
+                break;
+            }
+        }
         QVERIFY2(text, "a catalog label rendered without its Text item");
         QCOMPARE(text->property("text").toString(), expected.at(index));
         const qreal contentWidth = text->property("contentWidth").toReal();

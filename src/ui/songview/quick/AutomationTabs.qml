@@ -85,10 +85,6 @@ Item {
                     text: modelData
                     font: root.appearance.font
                     padding: root.appearance.inset
-                    // The pip cell is always reserved — drawn or not — so every
-                    // label's left edge aligns down the gutter.
-                    leftPadding: root.appearance.inset + root.appearance.pipExtent
-                                 + root.appearance.inset
                     focusPolicy: Qt.StrongFocus
                     // The QTabBar-style hover fill must not depend on the
                     // platform's useHoverEffects default.
@@ -169,19 +165,39 @@ Item {
                         root.canvas.openParameterMenu(tab.index, p.x, p.y)
                     }
 
-                    contentItem: Text {
-                        text: tab.text
-                        font: tab.font
-                        fontSizeMode: Text.HorizontalFit
-                        minimumPixelSize: root.appearance.minimumFont.pixelSize
-                        textFormat: Text.PlainText
-                        horizontalAlignment: Text.AlignLeft
-                        elide: Text.ElideNone
-                        verticalAlignment: Text.AlignVCenter
-                        color: tab.checked ? root.appearance.tabSelectedText
-                                           : tab.hovered ? root.appearance.tabHoverText
-                                                         : root.appearance.tabText
-                        Accessible.ignored: true
+                    // The pip lives in the text row so it centers on the text
+                    // line, not the cell box — a cell-centered pip rasterizes
+                    // a pixel low on fractional heights. It always occupies
+                    // its cell (transparent when the parameter has no events)
+                    // so every label shares one left edge.
+                    contentItem: RowLayout {
+                        spacing: root.appearance.inset
+
+                        Rectangle {
+                            visible: tab.hasEvents
+                            Layout.preferredWidth: root.appearance.pipExtent
+                            Layout.preferredHeight: root.appearance.pipExtent
+                            Layout.alignment: Qt.AlignVCenter
+                            radius: width / 2
+                            color: root.appearance.pipColor
+                            Accessible.ignored: true
+                        }
+
+                        Text {
+                            text: tab.text
+                            font: tab.font
+                            fontSizeMode: Text.HorizontalFit
+                            minimumPixelSize: root.appearance.minimumFont.pixelSize
+                            textFormat: Text.PlainText
+                            horizontalAlignment: Text.AlignLeft
+                            elide: Text.ElideNone
+                            verticalAlignment: Text.AlignVCenter
+                            Layout.fillWidth: true
+                            color: tab.checked ? root.appearance.tabSelectedText
+                                               : tab.hovered ? root.appearance.tabHoverText
+                                                             : root.appearance.tabText
+                            Accessible.ignored: true
+                        }
                     }
 
                     // Distinct indicators: the active tab takes the selected
@@ -196,21 +212,6 @@ Item {
                                                          : root.appearance.tabBackground
                         border.width: root.appearance.stroke
                         border.color: root.appearance.tabOutline
-
-                        // Written-event pip: the same fixed identity red as the
-                        // lane nodes, drawn on the active tab too; independent
-                        // of the inclusion rule and the checked fill.
-                        Rectangle {
-                            visible: tab.hasEvents
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            anchors.leftMargin: root.appearance.inset
-                            width: root.appearance.pipExtent
-                            height: root.appearance.pipExtent
-                            radius: width / 2
-                            color: root.appearance.pipColor
-                            Accessible.ignored: true
-                        }
 
                         // Ghost toggle: bottom rule, drawn even on the active
                         // tab — a pin there waits until another lane

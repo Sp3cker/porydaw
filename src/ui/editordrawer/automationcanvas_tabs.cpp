@@ -247,7 +247,7 @@ QVariantMap AutomationCanvas::parameterAppearance() const
     appearance.insert(QStringLiteral("font"), QVariant::fromValue(font));
     appearance.insert(QStringLiteral("minimumFont"), QVariant::fromValue(minimumFont));
     appearance.insert(QStringLiteral("minimumCellHeight"), layout::fontPxF(4.0 / 3.0));
-    appearance.insert(QStringLiteral("pipExtent"), layout::fontPxF(0.5));
+    appearance.insert(QStringLiteral("pipExtent"), layout::fontPx(0.5));
     appearance.insert(QStringLiteral("inset"), layout::space(layout::Space::One));
     appearance.insert(QStringLiteral("stroke"), layout::singlePixel());
     appearance.insert(QStringLiteral("ghostEdge"),
