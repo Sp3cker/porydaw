@@ -125,12 +125,10 @@ jobs:
         run: cmake --build build -j3
 
       - name: Create Disk Image
-        # macdeployqt adds Qt frameworks/plugins to the bundle, which breaks
-        # the ad-hoc signature the linker gave the binary; Gatekeeper then
-        # refuses the app ("code has no resources but signature indicates
-        # they must be present"). -codesign=- re-signs the whole bundle
-        # ad-hoc after deployment, before the dmg is built. The verify step
-        # fails the job if the seal is still broken.
+        # macdeployqt scans the embedded QML sources so runtime modules such as
+        # QtQuick.Controls.Basic and QtQuick.Layouts are included. Deployment
+        # changes the linker-provided ad-hoc signature, so -codesign=- signs the
+        # completed bundle before the verification step.
         #
         # The dmg is built with hdiutil rather than macdeployqt -dmg so the
         # window that opens on mount also shows "RUN AFTER INSTALL.txt" (the
@@ -139,7 +137,7 @@ jobs:
         # hdiutil create is occasionally flaky on CI runners ("resource
         # busy"), hence the retry loop.
         run: |
-          macdeployqt build/porydaw.app -codesign=-
+          macdeployqt build/porydaw.app -qmldir=src/ui/songview/quick -codesign=-
           codesign --verify --deep --strict --verbose=2 build/porydaw.app
           mkdir dmg-root
           cp -R build/porydaw.app dmg-root/
