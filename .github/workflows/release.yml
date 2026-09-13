@@ -1,9 +1,9 @@
 name: Release
 
-# Cutting a release (docs/RELEASING.md): finalize CHANGELOG.md + bump the
-# CMake project version on main, then `git tag X.Y.Z && git push --tags`.
-# This workflow creates the GitHub release with that version's changelog
-# section as the body and attaches self-contained Linux, macOS, and Windows builds.
+# Cutting a release: bump the CMake project version on fork-main, then
+# `git tag X.Y.Z && git push origin fork-main X.Y.Z`.
+# This workflow creates an empty-body GitHub release and attaches
+# self-contained Linux, macOS, and Windows builds.
 
 permissions:
   contents: write
@@ -31,13 +31,8 @@ jobs:
             exit 1
           fi
 
-      - name: Extract release notes from CHANGELOG.md
-        run: tools/extract_changelog.sh "$GITHUB_REF_NAME" > release-notes.md
-
       - name: Create the release
         uses: softprops/action-gh-release@v2
-        with:
-          body_path: release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
