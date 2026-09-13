@@ -1,12 +1,51 @@
 #include "ui/songview/quick/quickmenumodel.h"
 
+#include <QAction>
+#include <QKeySequence>
+#include <QStringView>
 #include <QVariant>
 
 namespace songview {
+namespace {
+
+/// Removes mnemonic markers while preserving an escaped "&&".
+QString stripAccelerator(QStringView text)
+{
+    QString stripped;
+    stripped.reserve(text.size());
+    for (qsizetype index = 0; index < text.size(); ++index) {
+        if (text.at(index) != u'&') {
+            stripped += text.at(index);
+            continue;
+        }
+        if (index + 1 < text.size() && text.at(index + 1) == u'&') {
+            stripped += u'&';
+            ++index;
+        }
+    }
+    return stripped;
+}
+
+} // namespace
+
 QuickMenuItem QuickMenuItem::makeSeparator()
 {
     QuickMenuItem item;
     item.separator = true;
+    return item;
+}
+
+QuickMenuItem QuickMenuItem::fromAction(QAction &source, int id)
+{
+    QuickMenuItem item;
+    item.id = id;
+    item.enabled = source.isEnabled();
+    item.checkable = source.isCheckable();
+    item.checked = source.isChecked();
+    item.shortcutText = source.shortcut().toString(QKeySequence::NativeText);
+    item.backing = Backing::Action;
+    item.action = &source;
+    item.text = stripAccelerator(source.text());
     return item;
 }
 

@@ -7,15 +7,20 @@
 #include <algorithm>
 #include <array>
 
+#include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
+#include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
+#include <QKeyCombination>
+#include <QKeySequence>
 #include <QMenu>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QSignalSpy>
 #include <QtTest>
 
 namespace checks::host {
@@ -359,6 +364,47 @@ class RulerGridMenuTest final : public QObject
                  "the dismissal probe point does not act on the ruler");
     }
 
+    void rulerGridMenusSurviveSelectionAndCursorChanges()
+    {
+        SyntheticHost host;
+        QString error;
+        QVERIFY2(host.prepare(&error), qPrintable(error));
+        SongView &view = host.view();
+        const RulerGridSurface surface = rulerGridSurface(view);
+        QVERIFY2(surface.valid(), "could not discover the Quick ruler grid controls");
+        const quick_popup::PromptGuard guard(view);
+
+        const RulerGridMenu divisionMenu = openRulerGridMenu(view, *surface.division);
+        QVERIFY2(divisionMenu.session, qUtf8Printable(divisionMenu.diagnostic));
+
+        // Ruler-menu retirement is scoped to the ruler loop menu's root
+        // model: a selection change and a committed cursor move must leave
+        // the division menu sharing the host open and fully functional.
+        songview::EditorSelectionModel::TimeSelection range;
+        range.startTick = 0;
+        range.endTick = 48;
+        range.scope = songview::EditorSelectionModel::TimeSelection::Tracks;
+        view.selectionModel().setTimeSelection(range);
+        QCoreApplication::processEvents();
+        QVERIFY2(divisionMenu.session && divisionMenu.session->isOpen(),
+                 "a selection change dismissed the open division menu");
+
+        view.commitEditCursor(view.editCursorTick() + 96);
+        QCoreApplication::processEvents();
+        QVERIFY2(divisionMenu.session && divisionMenu.session->isOpen(),
+                 "a committed cursor move dismissed the open division menu");
+
+        const int targetDivision = view.viewState().gridMinDenom == 8 ? 16 : 8;
+        const int targetDivisionRow = divisionMenu.model->rowForId(targetDivision);
+        QVERIFY2(targetDivisionRow >= 0, "the division menu omitted the chosen denominator");
+        QVERIFY2(quick_popup::clickMenuRow(*divisionMenu.session, targetDivisionRow),
+                 "the division row did not receive a real click");
+        QCoreApplication::processEvents();
+        QVERIFY2(!divisionMenu.session->isOpen(), "a division pick left the shared menu open");
+        QCOMPARE(view.viewState().gridMinDenom, targetDivision);
+        view.selectionModel().clearTimeSelection();
+    }
+
     void rulerGridClosePopupsCancelsOwnedNotForeignPopups()
     {
         SyntheticHost host;
@@ -441,6 +487,188 @@ class RulerGridMenuTest final : public QObject
         QVERIFY(reopenedGrid.model->itemAt(reusedCheckedRow)->checked);
         QCOMPARE(view.viewState().gridMinDenom, before.gridMinDenom);
         QCOMPARE(view.viewState().gridTriplet, before.gridTriplet);
+    }
+    void actionBackedQuickRowsCloseBeforeTriggerAndRetire()
+    {
+        SyntheticHost host;
+        QString error;
+        QVERIFY2(host.prepare(&error), qPrintable(error));
+        SongView &view = host.view();
+        const RulerGridSurface surface = rulerGridSurface(view);
+        QVERIFY2(surface.valid(), "could not discover the Quick ruler grid controls");
+        const quick_popup::PromptGuard guard(view);
+        view.selectionModel().clearTimeSelection();
+
+        songview::QuickPopupSession *const session = quick_popup::popupSession(view);
+        QVERIFY2(session && session->window(), "the timeline Quick canvas has no popup session");
+        songview::QuickMenuHost actionHost;
+        actionHost.setPopupSession(session);
+        const QPointF menuPosition = surface.division->mapToScene(
+            QPointF(surface.division->width() / 2.0, surface.division->height() / 2.0));
+        const auto openActionMenu = [&actionHost, session,
+                                     &menuPosition](songview::QuickMenuModel &model) {
+            actionHost.open(&model, menuPosition);
+            return QTest::qWaitFor(
+                [session] { return session->isOpen() && quick_popup::menuPanel(*session); });
+        };
+
+        QAction formAction(QStringLiteral("&Insert && Time"));
+        formAction.setShortcut(
+            QKeySequence(QKeyCombination(Qt::ControlModifier | Qt::ShiftModifier, Qt::Key_I)));
+        formAction.setCheckable(true);
+        formAction.setChecked(true);
+        songview::QuickMenuModel formModel;
+        formModel.setItems({songview::QuickMenuItem::fromAction(formAction, 100)});
+        const songview::QuickMenuItem *const formItem = formModel.itemAt(0);
+        QVERIFY(formItem);
+        QVERIFY(formItem->isActionBacked());
+        QVERIFY(formItem->action.data() == &formAction);
+        QCOMPARE(formItem->text, QStringLiteral("Insert & Time"));
+        QCOMPARE(formItem->shortcutText, formAction.shortcut().toString(QKeySequence::NativeText));
+        QVERIFY(formItem->enabled);
+        QVERIFY(formItem->checkable);
+        QVERIFY(formItem->checked);
+
+        QSignalSpy formTriggered(&formAction, &QAction::triggered);
+        QSignalSpy actionActivated(&actionHost, &songview::QuickMenuHost::actionActivated);
+        QVERIFY(formTriggered.isValid());
+        QVERIFY(actionActivated.isValid());
+        bool menuClosedBeforeForm = false;
+        bool completionFollowedTrigger = false;
+        connect(&formAction, &QAction::triggered, &actionHost, [&] {
+            menuClosedBeforeForm = !actionHost.isOpen() && !session->isOpen();
+            view.insertTime();
+        });
+        connect(&actionHost, &songview::QuickMenuHost::actionActivated, &actionHost,
+                [&](QAction *action) {
+                    completionFollowedTrigger = formTriggered.count() == 1 && action == &formAction;
+                });
+        QVERIFY2(openActionMenu(formModel), "the QAction row did not render as a Quick menu");
+        QVERIFY2(quick_popup::clickMenuRow(*session, 0),
+                 "the rendered QAction row did not receive a real click");
+        QTRY_VERIFY2(quick_popup::promptItem(*session, QLatin1String("insertTimePrompt")),
+                     "triggering the QAction row did not open the Insert Time form");
+        QVERIFY(menuClosedBeforeForm);
+        QVERIFY(completionFollowedTrigger);
+        QCOMPARE(formTriggered.count(), 1);
+        QCOMPARE(actionActivated.count(), 1);
+        QVERIFY(!formAction.isChecked());
+        session->cancel();
+        QCoreApplication::processEvents();
+        QVERIFY2(!session->isOpen(), "cancelling the form left the shared popup session open");
+
+        QAction *closeDestroyedAction = new QAction(QStringLiteral("Destroy after close"));
+        songview::QuickMenuModel closeDestroyedModel;
+        closeDestroyedModel.setItems(
+            {songview::QuickMenuItem::fromAction(*closeDestroyedAction, 101)});
+        QPointer<QAction> closeDestroyedGuard{closeDestroyedAction};
+        QSignalSpy closeDestroyedTriggered(closeDestroyedAction, &QAction::triggered);
+        QSignalSpy closeDestroyedActivated(&actionHost, &songview::QuickMenuHost::actionActivated);
+        const QMetaObject::Connection destroyAfterClose =
+            connect(&actionHost, &songview::QuickMenuHost::closed, &actionHost, [&] {
+                delete closeDestroyedAction;
+                closeDestroyedAction = nullptr;
+            });
+        QVERIFY2(openActionMenu(closeDestroyedModel),
+                 "the post-close destruction row did not render as a Quick menu");
+        QVERIFY2(quick_popup::clickMenuRow(*session, 0),
+                 "the post-close destruction row did not receive a real click");
+        QCoreApplication::processEvents();
+        QVERIFY(!closeDestroyedGuard);
+        QCOMPARE(closeDestroyedTriggered.count(), 0);
+        QCOMPARE(closeDestroyedActivated.count(), 0);
+        QObject::disconnect(destroyAfterClose);
+
+        QAction *destroyedAction = new QAction(QStringLiteral("Destroyed"));
+        songview::QuickMenuModel destroyedModel;
+        destroyedModel.setItems({songview::QuickMenuItem::fromAction(*destroyedAction, 102)});
+        QPointer<QAction> destroyedGuard{destroyedAction};
+        QSignalSpy destroyedTriggered(destroyedAction, &QAction::triggered);
+        QVERIFY2(openActionMenu(destroyedModel),
+                 "the destruction-observed QAction row did not render as a Quick menu");
+        delete destroyedAction;
+        QCoreApplication::processEvents();
+        QVERIFY(!destroyedGuard);
+        QVERIFY2(!session->isOpen(), "destroying an action-backed row did not cancel its menu");
+        QCOMPARE(destroyedTriggered.count(), 0);
+
+        QAction disabledAction(QStringLiteral("Disabled"));
+        disabledAction.setEnabled(false);
+        songview::QuickMenuModel disabledModel;
+        disabledModel.setItems({songview::QuickMenuItem::fromAction(disabledAction, 103)});
+        QSignalSpy disabledTriggered(&disabledAction, &QAction::triggered);
+        QVERIFY2(openActionMenu(disabledModel),
+                 "the disabled QAction row did not render as a Quick menu");
+        QVERIFY2(quick_popup::clickMenuRow(*session, 0),
+                 "the disabled QAction row did not receive a real click");
+        QCoreApplication::processEvents();
+        QVERIFY2(session->isOpen(), "clicking a disabled QAction row closed its menu");
+        QCOMPARE(disabledTriggered.count(), 0);
+        session->cancel();
+        QCoreApplication::processEvents();
+
+        QAction submenuAction(QStringLiteral("Unopened submenu action"));
+        songview::QuickMenuItem submenu;
+        submenu.id = 104;
+        submenu.text = QStringLiteral("Commands");
+        submenu.children.push_back(songview::QuickMenuItem::fromAction(submenuAction, 105));
+        songview::QuickMenuModel submenuModel;
+        submenuModel.setItems({submenu});
+        QVERIFY2(openActionMenu(submenuModel),
+                 "the unopened-submenu QAction row did not render its root menu");
+        submenuAction.setText(QStringLiteral("Changed while unopened"));
+        QCoreApplication::processEvents();
+        QVERIFY2(session->isOpen(),
+                 "changing an unopened submenu action retired its unobserved root");
+
+        QVERIFY2(openActionMenu(submenuModel),
+                 "the reopened submenu QAction root did not render as a Quick menu");
+        QTest::keyClick(session->window(), Qt::Key_Down);
+        QTest::keyClick(session->window(), Qt::Key_Right);
+        QTRY_VERIFY2(actionHost.currentModel() != &submenuModel,
+                     "the action-backed submenu did not open");
+        QTest::keyClick(session->window(), Qt::Key_Left);
+        QCOMPARE(actionHost.currentModel(), &submenuModel);
+        submenuAction.setText(QStringLiteral("Changed after submenu pop"));
+        QCoreApplication::processEvents();
+        QVERIFY2(session->isOpen(),
+                 "changing a popped submenu action retired its detached level's former root");
+
+        QAction resetAction(QStringLiteral("Reset root"));
+        songview::QuickMenuModel resetModel;
+        resetModel.setItems({songview::QuickMenuItem::fromAction(resetAction, 106)});
+        QVERIFY2(openActionMenu(resetModel),
+                 "the action-backed reset root did not render as a Quick menu");
+        resetModel.setItems({songview::QuickMenuItem::fromAction(resetAction, 106)});
+        QCoreApplication::processEvents();
+        QVERIFY2(session->isOpen(),
+                 "resetting an action-backed root rebuilt it in place instead of cancelling");
+
+        songview::QuickMenuItem stayOpenItem;
+        stayOpenItem.id = 107;
+        stayOpenItem.text = QStringLiteral("Local filter");
+        stayOpenItem.checkable = true;
+        stayOpenItem.checked = true;
+        stayOpenItem.stayOpen = true;
+        songview::QuickMenuModel stayOpenModel;
+        stayOpenModel.setItems({stayOpenItem});
+        QSignalSpy stayOpenActivated(&stayOpenModel, &songview::QuickMenuModel::activated);
+        QVERIFY2(openActionMenu(stayOpenModel),
+                 "the value-only stay-open row did not render as a Quick menu");
+        stayOpenModel.setItems({stayOpenItem});
+        QCoreApplication::processEvents();
+        QVERIFY2(session->isOpen(), "resetting a value-only root unexpectedly cancelled its menu");
+        QVERIFY2(quick_popup::clickMenuRow(*session, 0),
+                 "the value-only stay-open row did not receive a real click");
+        QCoreApplication::processEvents();
+        const songview::QuickMenuItem *const stayOpenResult = stayOpenModel.itemAt(0);
+        QVERIFY(stayOpenResult);
+        QVERIFY2(!stayOpenResult->checked,
+                 "the value-only stay-open row did not retain its checked-state behavior");
+        QCOMPARE(stayOpenActivated.count(), 1);
+        QVERIFY2(session->isOpen(), "the value-only stay-open row unexpectedly closed its menu");
+        session->cancel();
+        QCoreApplication::processEvents();
     }
 };
 } // namespace

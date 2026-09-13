@@ -270,8 +270,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/voicegroupbrowser.h
     src/ui/keymap.cpp
     src/ui/keymap.h
-    src/ui/keyboardshortcutsdialog.cpp
-    src/ui/keyboardshortcutsdialog.h
     src/ui/enginesettingsdialog.cpp
     src/ui/enginesettingsdialog.h
     src/ui/songsettingsdialog.cpp
@@ -326,6 +324,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/timecamera.h
     src/ui/songview/rangeedit.cpp
     src/ui/songview/editkeyrouting.cpp
+    src/ui/songview/editactions.cpp
+    src/ui/songview/editactions.h
     src/ui/songview/scalecontroller.cpp
     src/ui/songview/scalecontroller.h
     src/ui/songview/clipmime.cpp
@@ -541,6 +541,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/support/quickframebuffer.h
         src/checks/support/songfixture.cpp
         src/checks/support/songfixture.h
+        src/checks/support/support.cpp
+        src/checks/support/support.h
         src/checks/support/voicegroupbrowserdriver.cpp
         src/checks/support/voicegroupbrowserdriver.h
         src/checks/clipboard/clipcheck_test.h
@@ -749,7 +751,6 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp
         src/checks/keyboard/tst_keymapcheck.h
         src/checks/keyboard/keymapregistry.cpp
-        src/checks/keyboard/keyboardshortcuts.cpp
         src/checks/keyboard/tst_velocitymodel.h
         src/checks/keyboard/tst_velocitymodel.cpp
         src/checks/keyboard/tst_settingsdialog.h

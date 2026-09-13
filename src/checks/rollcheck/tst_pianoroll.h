@@ -66,6 +66,8 @@ class PianoRollTest final : public QObject
     void timeSignaturePromptCancelStale();
     void timeSignaturePromptMenuEntries_data();
     void timeSignaturePromptMenuEntries();
+    void timeSignaturePromptCursorEntry_data();
+    void timeSignaturePromptCursorEntry();
     void gestureInterlock();
     void selectionBandSweep();
     void selectionPressAudition();
@@ -88,9 +90,12 @@ class PianoRollTest final : public QObject
     void timelineInsertBlankTimeLanes();
     void timeSelectionMenuOpensWithPasteEnablement();
     void timeSelectionMenuStaleAndCancelNoOp();
+    void timeSelectionMenuInsertTimeAndStaleNoOp();
+    void timeSelectionMenuSweepKeepsCanonicalEnablement();
     void rulerLoopMenuSetAndTwoStepUndo();
     void rulerLoopMenuEnablementSelectionContext();
     void rulerLoopMenuStaleCancelNoWrite();
+    void rulerLoopMenuInsertTimeAndStaleNoOp();
     void quickLifecycle();
     void headerPanFollow();
     void headerRename();

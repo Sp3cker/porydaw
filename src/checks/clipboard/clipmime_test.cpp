@@ -9,8 +9,8 @@
 #include <memory>
 #include <optional>
 
+#include "core/timedefaults.h"
 #include "ui/songview/clip.h"
-#include "ui/songview/clipmime.h"
 
 namespace {
 

@@ -133,18 +133,6 @@ void SongView::showDrawerPageNoteStatus(std::optional<DrawerPageNoteStatus> stat
     }
 }
 
-void SongView::requestDrawerPageUndo()
-{
-    if (m_document)
-        m_document->undoStack()->undo();
-}
-
-void SongView::requestDrawerPageRedo()
-{
-    if (m_document)
-        m_document->undoStack()->redo();
-}
-
 DrawerPageLiveState SongView::drawerPageLiveState() const
 {
     return {

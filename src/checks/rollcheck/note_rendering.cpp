@@ -17,6 +17,7 @@
 #include "checks/rollcheck/rollcheck.h"
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
+#include "core/timedefaults.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
@@ -624,7 +625,8 @@ void PianoRollTest::velocityValueRaster()
                         blocked = blocked || check.isOccupied(tick, 2 * dur, neighborKey, true);
                     const auto nearSpan = [&](Tick overlay) {
                         return overlay != CoreTimeDefaults::kNoTick &&
-                               uint64_t(overlay) + dur >= tick && overlay <= tick + 3 * dur;
+                               uint64_t(overlay) + dur >= tick &&
+                               overlay <= uint64_t(tick) + 3 * uint64_t(dur);
                     };
                     if (blocked || nearSpan(check.timeline().loopStartTick) ||
                         nearSpan(check.timeline().loopEndTick) || nearSpan(overlayTick))

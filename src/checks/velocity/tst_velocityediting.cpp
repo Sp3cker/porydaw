@@ -14,6 +14,7 @@
 #include <optional>
 #include <utility>
 
+#include "checks/support/support.h"
 #include "core/songdocument.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
@@ -107,6 +108,7 @@ void VelocityEditingTest::init()
 
     QTRY_VERIFY(m_tab->isReady());
     QVERIFY(m_tab->voicegroupLease().get() == &m_bank);
+    checks::support::bindEditActionsForTest(m_tab->view());
 
     const std::vector<DocNote> notes = m_tab->document().notesForTrack(0);
     QVERIFY2(notes.size() == 3, "the fixture track must carry exactly three notes");

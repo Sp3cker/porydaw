@@ -20,6 +20,7 @@
 
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
+#include "checks/support/support.h"
 #include "checks/support/timelinequickcheck.h"
 #include "core/miditimeline.h"
 #include "core/timedefaults.h"
@@ -310,8 +311,9 @@ void AutomationRasterFixture::setAutomationScroll(double scroll)
 
 void AutomationRasterFixture::setPersistentPencil(bool enabled)
 {
-    if (QAction *const action = m_page->pencilModeAction())
-        action->setChecked(enabled);
+    if (QAction *const action = m_page->pencilModeAction();
+        action && action->isChecked() != enabled)
+        action->trigger();
 }
 
 void AutomationRasterFixture::documentChanged()
@@ -406,6 +408,7 @@ bool AutomationRasterFixture::initialize(QString &error)
     }
     m_view->setDocument(&songDocument);
     m_view->setSong(m_timeline.get(), m_voicegroup.get());
+    checks::support::bindEditActionsForTest(*m_view);
     m_view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
     m_view->setDrawerSectionHeight(EditorDrawerPage::VoiceChanges, 180);
     m_view->setDrawerActivePage(EditorDrawerPage::Automations);

@@ -12,7 +12,6 @@
 #include "ui/songviewmodel.h"
 
 class QAction;
-class QEvent;
 class AutomationCanvas;
 class TempoLane;
 class CCLanes;
@@ -36,20 +35,15 @@ class AutomationPage final : public QObject
 
   public:
     explicit AutomationPage(SongView &owner, QObject *parent);
-    ~AutomationPage() override;
 
     AutomationCanvas *canvas() noexcept { return m_canvas; }
     const AutomationCanvas *canvas() const noexcept { return m_canvas; }
-    // Pencil-mode toggle; the shortcut dispatch lives in this page's
-    // application event filter, which triggers the action on the configured
-    // key. Exposed for settings-driven discovery.
-    QAction *pencilModeAction() const noexcept { return m_pencilModeAction; }
+    // Borrow the canonical Pencil action while the owning view is bound.
+    QPointer<QAction> pencilModeAction() const noexcept;
     QSize automationViewportSize() const noexcept;
     void synchronizeAutomationViewport(QSize viewportSize);
-    bool eventFilter(QObject *watched, QEvent *event) override;
-    // The Quick window that delivers this page's timeline input; the pencil
-    // shortcut guard identifies its targets through it. Injected by SongView
-    // after the shared Quick host is constructed.
+    // The Quick window that delivers this page's timeline input. Injected by
+    // SongView after the shared Quick host is constructed.
     void setInputWindow(QWindow *window) noexcept;
     const EditorViewState &automationViewState() const noexcept { return m_viewState; }
     const SongViewModel &model() const noexcept;
@@ -103,13 +97,11 @@ class AutomationPage final : public QObject
     void commitEditCursor(Tick tick) const;
     void announce(const QString &message) const;
 
-    bool matchesPencilShortcut(int key, Qt::KeyboardModifiers modifiers) const noexcept;
-    bool belongsToPageWindow(const QObject *target) const noexcept;
+    QMetaObject::Connection m_inputWindowDeactivationConnection;
 
     Geometry m_geometry;
     SongView &m_owner;
     const songview::Grid &m_grid;
-    QAction *m_pencilModeAction = nullptr;
     DrawerPageLiveState m_liveState;
     EditorViewState m_viewState;
     AutomationCanvas *m_canvas = nullptr;

@@ -70,8 +70,10 @@ struct SharedRulerMenu {
 
 // Right-presses and releases the ruler at tick and waits for the shared
 // session to render its typed menu. The deferred-open gesture is the
-// production one: the menu anchors at the release, the action tick is the
-// snapped press tick.
+// production one: the menu anchors at the release, and target
+// establishment consumes the raw/exact press coordinate — a press inside
+// the active interval keeps selection and cursor, a press outside commits
+// the clicked edit cursor.
 SharedRulerMenu openRulerMenu(SongView &view, songview::TimelineInputItem &input, Tick tick,
                               qreal rowFraction = 0.25)
 {
@@ -198,7 +200,11 @@ void PianoRollTest::rulerLoopMenuSetAndTwoStepUndo()
     const Tick selectionStart = startTick - snapCell;
     view.selectionModel().setTimeSelection(
         {selectionStart, startTick, songview::EditorSelectionModel::TimeSelection::Tracks});
-    const SharedRulerMenu selectionMenu = openRulerMenu(view, *input, endTick);
+    // The press must land strictly inside the half-open interval: an
+    // outside click — including the boundary, where device-pixel rounding
+    // can drop the raw coordinate below the start — takes the cursor path
+    // and clears the selection before opening.
+    const SharedRulerMenu selectionMenu = openRulerMenu(view, *input, startTick - 1);
     QVERIFY2(selectionMenu.session, qUtf8Printable(selectionMenu.diagnostic));
     const int loopSelectionRow =
         rulerRow(*selectionMenu.model, songview::RulerMenuAction::LoopFromSelection);
@@ -247,24 +253,28 @@ void PianoRollTest::rulerLoopMenuEnablementSelectionContext()
     const quick_popup::PromptGuard guard(view);
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
-
-    // No markers and no selection: Remove loop renders disabled, the
-    // selection-scoped rows are absent, and the explicit chip enables Remove
-    // time signature.
+    // No markers and no selection: the press takes the cursor path, so
+    // Remove loop renders disabled, the selection-scoped rows are absent,
+    // Insert Time is offered at the cursor, and the explicit chip's exact
+    // tick commits as the edit cursor — enabling Remove time signature.
     const SharedRulerMenu opened = openRulerMenu(view, *input, chipTick);
     QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
+    QVERIFY2(view.editCursorTick() == chipTick,
+             "the chip press did not commit its exact tick as the edit cursor");
     const int removeLoopRow = rulerRow(*opened.model, songview::RulerMenuAction::RemoveLoop);
     QVERIFY2(removeLoopRow >= 0 && !opened.model->itemAt(removeLoopRow)->enabled,
              "Remove loop markers was enabled while both markers were absent");
     QVERIFY2(rulerRow(*opened.model, songview::RulerMenuAction::LoopFromSelection) < 0 &&
-                 rulerRow(*opened.model, songview::RulerMenuAction::InsertBlank) < 0 &&
                  rulerRow(*opened.model, songview::RulerMenuAction::Duplicate) < 0 &&
                  rulerRow(*opened.model, songview::RulerMenuAction::RemoveContents) < 0 &&
                  rulerRow(*opened.model, songview::RulerMenuAction::ClearSelection) < 0,
              "the ruler menu exposed selection-scoped rows without an active selection");
+    const int insertRow = rulerRow(*opened.model, songview::RulerMenuAction::InsertBlank);
+    QVERIFY2(insertRow >= 0 && opened.model->itemAt(insertRow)->enabled,
+             "the cursor menu omitted an enabled Insert Time row");
     const int removeSigRow = rulerRow(*opened.model, songview::RulerMenuAction::RemoveTimeSig);
     QVERIFY2(removeSigRow >= 0 && opened.model->itemAt(removeSigRow)->enabled,
-             "Remove time signature was disabled on an explicit signature chip");
+             "Remove time signature was disabled at an explicit signature cursor");
     QVERIFY2(rulerRow(*opened.model, songview::RulerMenuAction::EditTimeSig) >= 0,
              "the ruler menu has no time-signature edit row");
 
@@ -288,16 +298,16 @@ void PianoRollTest::rulerLoopMenuEnablementSelectionContext()
                  "the Remove time signature row did not remove the explicit chip");
     QCOMPARE(doc.undoStack()->index(), undo + 1);
     doc.undoStack()->undo();
-
     // The tick row sits below production's marker-row chip hit-test, so this
-    // press provably hits no chip: Remove time signature must render disabled
-    // (and a real click be a no-op) without an explicit chip press.
-    const SharedRulerMenu implicitMenu = openRulerMenu(view, *input, chipTick, 0.75);
+    // press provably hits no chip; the committed cursor lands on a tick with
+    // no explicit signature, so Remove time signature must render disabled
+    // (and a real click be a no-op).
+    const SharedRulerMenu implicitMenu = openRulerMenu(view, *input, chipTick + 2 * snapCell, 0.75);
     QVERIFY2(implicitMenu.session, qUtf8Printable(implicitMenu.diagnostic));
     const int implicitRemoveRow =
         rulerRow(*implicitMenu.model, songview::RulerMenuAction::RemoveTimeSig);
     QVERIFY2(implicitRemoveRow >= 0 && !implicitMenu.model->itemAt(implicitRemoveRow)->enabled,
-             "Remove time signature was enabled without an explicit chip press");
+             "Remove time signature was enabled without an explicit signature at the cursor");
     QVERIFY2(quick_popup::clickMenuRow(*implicitMenu.session, implicitRemoveRow),
              "the disabled Remove time signature row did not receive a real click");
     QCoreApplication::processEvents();
@@ -309,6 +319,22 @@ void PianoRollTest::rulerLoopMenuEnablementSelectionContext()
     QCoreApplication::processEvents();
     QVERIFY2(implicitMenu.session && !implicitMenu.session->isOpen(),
              "Escape did not dismiss the ruler menu");
+    // A chip press commits the chip's exact event tick even off the snap
+    // grid: this signature sits one tick past the snap-aligned chip, and
+    // the press still lands the cursor on that exact tick.
+    doc.setTimeSig(chipTick + 1, 7, 2);
+    const SharedRulerMenu exactChip = openRulerMenu(view, *input, chipTick + 1);
+    QVERIFY2(exactChip.session, qUtf8Printable(exactChip.diagnostic));
+    QVERIFY2(view.editCursorTick() == chipTick + 1,
+             "the chip press did not commit the chip's exact event tick");
+    const int exactRemoveRow = rulerRow(*exactChip.model, songview::RulerMenuAction::RemoveTimeSig);
+    QVERIFY2(exactRemoveRow >= 0 && exactChip.model->itemAt(exactRemoveRow)->enabled,
+             "Remove time signature was disabled at the exact chip tick");
+    QTest::keyClick(exactChip.session->window(), Qt::Key_Escape);
+    QCoreApplication::processEvents();
+    QVERIFY2(exactChip.session && !exactChip.session->isOpen(),
+             "Escape did not dismiss the exact-chip ruler menu");
+    doc.undoStack()->undo();
 
     // With a selection active the scoped rows appear; Clear selection runs
     // its command and the rebuilt menu drops the scoped rows again.
@@ -368,9 +394,14 @@ void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
     const uint64_t revision = doc.revision();
 
     // Escape cancels without a command and the shared restore-focus contract
-    // returns focus to the ruler band that opened the menu.
+    // returns focus to the ruler band that opened the menu. The outside
+    // press commits the clicked edit cursor before the menu opens; Escape
+    // dismisses without restoring the old cursor.
+    view.commitEditCursor(seed->cell.tick);
     const SharedRulerMenu opened = openRulerMenu(view, *input, tick);
     QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
+    QVERIFY2(view.editCursorTick() == tick,
+             "the outside ruler press did not commit the clicked edit cursor");
     QTest::keyClick(opened.session->window(), Qt::Key_Escape);
     QCoreApplication::processEvents();
     QVERIFY2(opened.session && !opened.session->isOpen(), "Escape did not dismiss the ruler menu");
@@ -379,44 +410,39 @@ void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
              "dismissing the ruler menu mutated the document");
     QTRY_VERIFY2(input->hasActiveFocus(),
                  "dismissing the ruler menu did not return focus to the ruler band");
+    QVERIFY2(view.editCursorTick() == tick,
+             "dismissing the ruler menu restored the old edit cursor");
 
-    // A document revision change after the open owns stale retirement: the
-    // loop-start click consumes the stale target as a silent no-op.
+    // A document edit after the open retires the menu at the invalidation
+    // seam with the ordinary focus policy, and no loop-start write follows.
     const SharedRulerMenu stale = openRulerMenu(view, *input, tick);
     QVERIFY2(stale.session, qUtf8Printable(stale.diagnostic));
     doc.setTimeSig(tick + 4 * snapCell, 7, 2);
     const QByteArray afterIntervening = doc.smf().write();
     const int staleUndo = doc.undoStack()->index();
     const uint64_t staleRevision = doc.revision();
-    const int setStartRow = rulerRow(*stale.model, songview::RulerMenuAction::SetLoopStart);
-    QVERIFY2(setStartRow >= 0, "the stale ruler menu lost its Set loop start row");
-    QVERIFY2(quick_popup::clickMenuRow(*stale.session, setStartRow),
-             "the stale Set loop start row did not receive a real click");
     QCoreApplication::processEvents();
     QVERIFY2(stale.session && !stale.session->isOpen(),
-             "a stale activation left the ruler menu open");
+             "a document edit did not dismiss the open ruler menu");
+    QTRY_VERIFY2(input->hasActiveFocus(),
+                 "the document-edit dismissal did not return focus to the ruler band");
     QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == staleUndo &&
                  doc.revision() == staleRevision &&
                  check.timeline().loopStartTick == CoreTimeDefaults::kNoTick,
-             "a stale loop-start activation wrote a marker");
+             "the document-edit dismissal wrote a loop marker");
 
-    // A selection change after the open invalidates the captured scope the
-    // same way.
+    // A selection change after the open retires the menu the same way, so
+    // the captured scope can never dispatch a stale range command.
     view.selectionModel().setTimeSelection(
         {tick, tick + 2 * snapCell, songview::EditorSelectionModel::TimeSelection::Tracks});
-    const SharedRulerMenu scoped = openRulerMenu(view, *input, tick);
+    const SharedRulerMenu scoped = openRulerMenu(view, *input, tick + snapCell, 0.75);
     QVERIFY2(scoped.session, qUtf8Printable(scoped.diagnostic));
     view.selectionModel().clearTimeSelection();
-    const int loopSelectionRow =
-        rulerRow(*scoped.model, songview::RulerMenuAction::LoopFromSelection);
-    QVERIFY2(loopSelectionRow >= 0, "the stale ruler menu lost its Set loop to selection row");
-    QVERIFY2(quick_popup::clickMenuRow(*scoped.session, loopSelectionRow),
-             "the stale Set loop to selection row did not receive a real click");
     QCoreApplication::processEvents();
     QVERIFY2(scoped.session && !scoped.session->isOpen(),
-             "a stale selection activation left the ruler menu open");
+             "a selection change did not dismiss the open ruler menu");
     QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == staleUndo,
-             "a stale loop-from-selection activation wrote markers");
+             "the selection-change dismissal wrote markers");
 
     // An outside left press dismisses through the menu frame without
     // retargeting the menu and without any document effect.
@@ -451,4 +477,89 @@ void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
              "the outside dismissal retargeted the ruler menu");
     QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == staleUndo,
              "the outside dismissal mutated the document");
+}
+
+void PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp()
+{
+    PianoRollFixture &check = *m_fixture;
+    SongView &view = check.view();
+    const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+    QVERIFY(seed.has_value());
+    songview::TimelineInputItem *input = rulerInput(view);
+    QVERIFY2(input, "could not find the time ruler Quick input");
+    SongDocument &doc = check.document();
+    const Tick snapCell = seed->snapCell;
+    const Tick insertStart = seed->cell.tick + snapCell;
+    const Tick insertEnd = seed->cell.tick + 2 * snapCell;
+    QVERIFY2(view.grid().snapTick(double(insertStart)) == insertStart &&
+                 view.grid().snapTick(double(insertEnd)) == insertEnd,
+             "the ruler insert fixture ticks are not snap-aligned");
+    DocNote movedNote;
+    QVERIFY2(doc.findNote(check.track(), seed->cell.tick, uint8_t(seed->cell.key), &movedNote),
+             "the ruler insert seed note was not found");
+    doc.moveNotes({movedNote}, int64_t(snapCell), 0);
+    DocNote selected;
+    QVERIFY2(doc.findNote(check.track(), insertStart, uint8_t(seed->cell.key), &selected),
+             "the ruler insert seed did not reach its expected state");
+
+    const quick_popup::PromptGuard guard(view);
+
+    // A selection-scoped ruler menu opened at a raw coordinate inside the
+    // interval that would snap to its end: the selection path finishes
+    // before snapping is reachable, so the selection and edit cursor stay
+    // untouched and the rendered Insert Time row inserts over the
+    // selection, not the click position.
+    view.selectionModel().setTimeSelection(
+        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks});
+    const Tick cursorBefore = view.editCursorTick();
+    const QByteArray before = doc.smf().write();
+    const int undoIndex = doc.undoStack()->index();
+    const SharedRulerMenu opened = openRulerMenu(view, *input, insertEnd - 1);
+    QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
+    QVERIFY2(view.selectionModel().timeSelection().active() &&
+                 view.editCursorTick() == cursorBefore,
+             "the inside press snapped or moved the edit cursor");
+    const int insertRow = rulerRow(*opened.model, songview::RulerMenuAction::InsertBlank);
+    QVERIFY2(insertRow >= 0, "the ruler menu has no Insert Time row");
+    QVERIFY2(opened.model->itemAt(insertRow)->enabled,
+             "the ruler menu rendered an enabled Insert Time row as disabled");
+    QVERIFY2(quick_popup::clickMenuRow(*opened.session, insertRow),
+             "the Insert Time row did not receive a real click");
+    QCoreApplication::processEvents();
+    QVERIFY2(opened.session && !opened.session->isOpen(),
+             "the Insert Time activation left the ruler menu open");
+    QVERIFY2(doc.undoStack()->index() == undoIndex + 1 &&
+                 doc.findNote(check.track(), insertEnd, selected.key, &selected),
+             "the ruler Insert Time row did not shift the selected note one undo at a time");
+    const songview::EditorSelectionModel::TimeSelection insertedSelection =
+        view.selectionModel().timeSelection();
+    QVERIFY2(insertedSelection.active() && insertedSelection.startTick == insertStart &&
+                 insertedSelection.endTick == insertEnd,
+             "the ruler Insert Time row did not retain the selection over the blank span");
+    QVERIFY2(view.editCursorTick() == insertStart,
+             "the ruler Insert Time row did not commit the edit cursor to the seam");
+    QVERIFY2(doc.undoStack()->count() == undoIndex + 1,
+             "the ruler Insert Time row did not commit exactly one undo transaction");
+    QVERIFY2(doc.smf().write() != before,
+             "the ruler Insert Time row did not change the song bytes");
+    doc.undoStack()->undo();
+    QTRY_VERIFY2(doc.smf().write() == before,
+                 "one undo did not restore the bytes after the ruler insertion");
+
+    // A press exactly at the interval end is outside the half-open
+    // selection: it clears the selection, commits the snapped end tick as
+    // the edit cursor, and opens the cursor menu.
+    view.selectionModel().setTimeSelection(
+        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks});
+    const SharedRulerMenu atEnd = openRulerMenu(view, *input, insertEnd);
+    QVERIFY2(atEnd.session, qUtf8Printable(atEnd.diagnostic));
+    QVERIFY2(!view.selectionModel().timeSelection().active(),
+             "the exact-end press did not clear the time selection");
+    QVERIFY2(view.editCursorTick() == insertEnd,
+             "the exact-end press did not commit the snapped end tick");
+    QVERIFY2(rulerRow(*atEnd.model, songview::RulerMenuAction::LoopFromSelection) < 0 &&
+                 rulerRow(*atEnd.model, songview::RulerMenuAction::SetLoopStart) >= 0,
+             "the exact-end press did not open the cursor menu");
+    QTest::keyClick(atEnd.session->window(), Qt::Key_Escape);
+    QCoreApplication::processEvents();
 }

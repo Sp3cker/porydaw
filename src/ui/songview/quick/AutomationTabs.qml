@@ -1,7 +1,6 @@
 // Compact parameter selector for the automation gutter: the nine standard
 // parameter identities as native Basic TabButtons in two columns, one related
 // pair per row in catalog order (mix, pitch, echo), with song-global Tempo
-// spanning the last row. Qt owns checking, focus, activation and accessibility
 // plumbing; the canvas owns parameter identity, the parameter menu and
 // shared-selection semantics. The grid scrolls inside the gutter: a
 // Flickable owns the vertical overflow, so the tab stack may be taller than
@@ -23,6 +22,10 @@ Item {
     // a QList per read, so the tabs read a single root-level snapshot
     // instead of one per-tab copy.
     readonly property var selectedParams: root.canvas.selectedParameters
+
+    readonly property var pips: root.canvas.parameterPips
+
+    readonly property var ghostParams: root.canvas.ghostParameters
 
     Flickable {
         id: gutterScroller
@@ -59,6 +62,11 @@ Item {
                         tab.index === root.canvas.parameterLabels.length - 1
                     readonly property bool selectionIncluded:
                         root.selectedParams.includes(tab.index)
+                    readonly property bool ghostShown:
+                        root.ghostParams.includes(tab.index)
+                    readonly property bool inclusionMarked:
+                        tab.selectionIncluded && !tab.checked
+                    readonly property bool hasEvents: root.pips[tab.index] === true
 
                     objectName: "automationParameterTab" + index
                     text: modelData
@@ -71,18 +79,26 @@ Item {
                     Layout.fillWidth: true
                     Layout.minimumHeight: root.appearance.minimumCellHeight
                     Layout.columnSpan: tab.tempoParameter ? 2 : 1
+                    Layout.topMargin: root.appearance.stroke
+                    Layout.bottomMargin: root.appearance.stroke
+                    Layout.rightMargin: (tab.tempoParameter || tab.index % 2 === 1)
+                                        ? root.appearance.pointHitRadius : 0
 
-                    // Native checkable/autoExclusive presentation; the canvas
-                    // stays the sole parameter authority.
+                    checkable: false
                     checked: root.canvas.activeParameter === tab.index
 
-                    // Press-down activation: the press itself switches the
-                    // parameter, matching QTabBar; clicked stays the fallback
-                    // for assistive-tech presses and keyboard activation. The
-                    // double fire is free — activateParameter early-returns on
-                    // the active index.
-                    onPressed: root.canvas.activateParameter(tab.index)
-                    onClicked: root.canvas.activateParameter(tab.index)
+                    down: pressArea.pressed
+                    onClicked: root.canvas.parameterClicked(tab.index)
+
+                    MouseArea {
+                        id: pressArea
+                        acceptedButtons: Qt.LeftButton
+                        anchors.fill: parent
+                        onPressed: (mouse) => {
+                            tab.forceActiveFocus()
+                            root.canvas.parameterPressed(tab.index, mouse.modifiers)
+                        }
+                    }
 
                     // Keyboard focus or a checked change must never leave the
                     // tab outside the Flickable viewport: scroll by the
@@ -136,27 +152,38 @@ Item {
                         root.canvas.openParameterMenu(tab.index, p.x, p.y)
                     }
 
-                    contentItem: Text {
-                        text: tab.text
-                        font: tab.font
-                        fontSizeMode: Text.HorizontalFit
-                        minimumPixelSize: root.appearance.minimumFont.pixelSize
-                        textFormat: Text.PlainText
-                        wrapMode: Text.NoWrap
-                        elide: Text.ElideNone
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        color: tab.checked ? root.appearance.tabSelectedText
-                                           : tab.hovered ? root.appearance.tabHoverText
-                                                         : root.appearance.tabText
-                        Accessible.ignored: true
+                    contentItem: RowLayout {
+                        spacing: root.appearance.inset
+
+                        Rectangle {
+                            opacity: tab.hasEvents ? 1.0 : 0.0
+                            Layout.preferredWidth: root.appearance.pipExtent
+                            Layout.preferredHeight: root.appearance.pipExtent
+                            Layout.alignment: Qt.AlignVCenter
+                            radius: width / 2
+                            color: root.appearance.pipColor
+                            Accessible.ignored: true
+                        }
+
+                        Text {
+                            objectName: "automationParameterTabText"
+                            text: tab.text
+                            font: tab.font
+                            fontSizeMode: Text.HorizontalFit
+                            minimumPixelSize: root.appearance.minimumFont.pixelSize
+                            textFormat: Text.PlainText
+                            horizontalAlignment: Text.AlignLeft
+                            elide: Text.ElideNone
+                            verticalAlignment: Text.AlignVCenter
+                            Layout.fillWidth: true
+                            color: tab.checked ? root.appearance.tabSelectedText
+                                               : tab.hovered ? root.appearance.tabHoverText
+                                                             : root.appearance.tabText
+                            Accessible.ignored: true
+                        }
                     }
 
                     // Distinct indicators: the active tab takes the selected
-                    // tab fill, shared-selection inclusion demotes to a
-                    // secondary bottom underline (never a full-cell outline),
-                    // and keyboard focus paints the inner focus ring over every
-                    // state.
                     background: Rectangle {
                         color: tab.checked ? root.appearance.tabSelectedBackground
                                            : tab.hovered ? root.appearance.tabHoverBackground
@@ -165,13 +192,25 @@ Item {
                         border.color: root.appearance.tabOutline
 
                         Rectangle {
-                            visible: tab.selectionIncluded
+                            visible: tab.ghostShown
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.bottom: parent.bottom
                             anchors.margins: root.appearance.stroke
                             height: root.appearance.stroke
-                            color: root.appearance.selectionOutline
+                            color: root.appearance.ghostEdge
+                        }
+
+                        Rectangle {
+                            visible: tab.inclusionMarked
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.topMargin: root.appearance.stroke
+                            anchors.rightMargin: root.appearance.stroke
+                            anchors.bottomMargin: root.appearance.stroke
+                            width: root.appearance.pipExtent
+                            color: root.appearance.tabSelectedBackground
                         }
 
                         Rectangle {
@@ -193,6 +232,7 @@ Item {
                         + (tab.selectionIncluded
                            ? qsTr("; included in shared selection")
                            : qsTr("; not in shared selection"))
+                        + (tab.ghostShown ? qsTr("; shown as ghost nodes") : "")
                 }
             }
         }

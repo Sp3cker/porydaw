@@ -8,21 +8,18 @@
 #include <QVariantMap>
 
 #include "core/m4asemantics.h"
+#include "core/songdocument.h"
 #include "core/xcmd.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/cclanes.h"
 #include "ui/layout.h"
 #include "ui/theme/themeruntime.h"
 
-namespace {
-
 // Nine identities: the supported CC catalog plus song-global Tempo.
-int parameterCount() noexcept
+int AutomationCanvas::parameterCount() noexcept
 {
     return int(CCLanes::supportedControllers().size()) + 1;
 }
-
-} // namespace
 
 std::optional<EditorAutomationRowId> AutomationCanvas::parameterRow(int index) const
 {
@@ -85,13 +82,81 @@ LaneHandle AutomationCanvas::activeLane() const noexcept
 // stored nodes; unpainted lanes and global Tempo are included when covered.
 QList<int> AutomationCanvas::selectedParameters() const
 {
-    QList<int> selected;
-    for (int index = 0; index < parameterCount(); ++index) {
-        const std::optional<EditorAutomationRowId> row = parameterRow(index);
-        if (row && m_laneSelection.coversNodes(*row))
-            selected.append(index);
+    return parameterIndexesWhere(
+        [this](const EditorAutomationRowId &row) { return m_laneSelection.coversNodes(row); });
+}
+
+QList<int> AutomationCanvas::ghostParameters() const
+{
+    return parameterIndexesWhere([this](const EditorAutomationRowId &row) {
+        const bool pinned = row.kind == EditorAutomationRowKind::Tempo
+                                ? m_ghostTempo
+                                : std::find(m_ghostControllers.begin(), m_ghostControllers.end(),
+                                            row.controller) != m_ghostControllers.end();
+        return pinned && parameterHasEvents(row);
+    });
+}
+
+bool AutomationCanvas::parameterHasEvents(const EditorAutomationRowId &row) const
+{
+    const SongDocument *document = m_page.document();
+    if (!document)
+        return false;
+    return row.kind == EditorAutomationRowKind::Tempo
+               ? !document->tempoPoints().empty()
+               : !document->lanePoints(row.track, row.controller).empty();
+}
+
+bool AutomationCanvas::canGhostParameter(int index) const
+{
+    const std::optional<EditorAutomationRowId> row = parameterRow(index);
+    if (!row || !parametersEnabled())
+        return false;
+    if (index == activeParameter())
+        return !m_ghostControllers.empty() || m_ghostTempo;
+    const bool ghosted = row->kind == EditorAutomationRowKind::Tempo
+                             ? m_ghostTempo
+                             : std::find(m_ghostControllers.begin(), m_ghostControllers.end(),
+                                         row->controller) != m_ghostControllers.end();
+    return ghosted || parameterHasEvents(*row);
+}
+
+void AutomationCanvas::toggleGhostParameter(int index)
+{
+    const auto row = parameterRow(index);
+    if (!row || !parametersEnabled())
+        return;
+    const QString label = parameterLabels().value(index);
+    if (index == activeParameter()) {
+        if (m_ghostControllers.empty() && !m_ghostTempo)
+            return;
+        m_ghostControllers.clear();
+        m_ghostTempo = false;
+        emit ghostParametersChanged();
+        requestFullQuickUpdate();
+        m_page.announce(tr("Showing only %1").arg(label));
+        return;
     }
-    return selected;
+    bool nowGhosted = false;
+    if (row->kind == EditorAutomationRowKind::Tempo) {
+        if (!m_ghostTempo && !parameterHasEvents(*row))
+            return;
+        m_ghostTempo = !m_ghostTempo;
+        nowGhosted = m_ghostTempo;
+    } else if (const auto position =
+                   std::find(m_ghostControllers.begin(), m_ghostControllers.end(), row->controller);
+               position != m_ghostControllers.end()) {
+        m_ghostControllers.erase(position);
+    } else {
+        if (!parameterHasEvents(*row))
+            return;
+        m_ghostControllers.push_back(row->controller);
+        nowGhosted = true;
+    }
+    emit ghostParametersChanged();
+    requestFullQuickUpdate();
+    m_page.announce(nowGhosted ? tr("%1 ghost shown").arg(label)
+                               : tr("%1 ghost hidden").arg(label));
 }
 
 bool AutomationCanvas::parametersEnabled() const noexcept
@@ -123,6 +188,21 @@ void AutomationCanvas::activateParameter(int index)
     requestFullQuickUpdate();
 }
 
+void AutomationCanvas::parameterPressed(int index, Qt::KeyboardModifiers modifiers)
+{
+    if (modifiers & Qt::ControlModifier) {
+        if (canGhostParameter(index))
+            toggleGhostParameter(index);
+        return;
+    }
+    activateParameter(index);
+}
+
+void AutomationCanvas::parameterClicked(int index)
+{
+    activateParameter(index);
+}
+
 // The selector's context menu: activate the target parameter, then open the
 // existing lane menu for its resolved row at the pointer. Invalid indexes and
 // requests without a bound document do nothing.
@@ -150,20 +230,37 @@ QVariantMap AutomationCanvas::parameterAppearance() const
     appearance.insert(QStringLiteral("font"), QVariant::fromValue(font));
     appearance.insert(QStringLiteral("minimumFont"), QVariant::fromValue(minimumFont));
     appearance.insert(QStringLiteral("minimumCellHeight"), layout::fontPxF(4.0 / 3.0));
+    appearance.insert(QStringLiteral("pipExtent"), layout::fontPx(0.5));
     appearance.insert(QStringLiteral("inset"), layout::space(layout::Space::One));
     appearance.insert(QStringLiteral("stroke"), layout::singlePixel());
-    appearance.insert(QStringLiteral("selectionOutline"),
-                      themes::color(themes::Role::song_view_selection_edge));
+    appearance.insert(QStringLiteral("pointHitRadius"), m_geometry.pointHitRadius);
+    appearance.insert(QStringLiteral("ghostEdge"),
+                      themes::color(themes::Role::song_view_automation_ghost_edge));
     appearance.insert(QStringLiteral("focusOutline"), themes::color(themes::Role::focus_outline));
-    appearance.insert(QStringLiteral("tabBackground"), themes::color(themes::Role::tab_background));
+    appearance.insert(QStringLiteral("tabBackground"),
+                      themes::color(themes::Role::song_view_automation_tab_background));
     appearance.insert(QStringLiteral("tabHoverBackground"),
-                      themes::color(themes::Role::tab_hover_background));
+                      themes::color(themes::Role::song_view_automation_tab_hover_background));
     appearance.insert(QStringLiteral("tabSelectedBackground"),
-                      themes::color(themes::Role::tab_selected_background));
+                      themes::color(themes::Role::song_view_automation_tab_active_background));
     appearance.insert(QStringLiteral("tabText"), themes::color(themes::Role::tab_text));
     appearance.insert(QStringLiteral("tabHoverText"), themes::color(themes::Role::tab_hover_text));
     appearance.insert(QStringLiteral("tabSelectedText"),
                       themes::color(themes::Role::tab_selected_text));
-    appearance.insert(QStringLiteral("tabOutline"), themes::color(themes::Role::tab_outline));
+    appearance.insert(QStringLiteral("tabOutline"),
+                      themes::color(themes::Role::song_view_automation_tab_outline));
+    appearance.insert(QStringLiteral("pipColor"),
+                      themes::color(themes::Role::song_view_automation_node_ink));
     return appearance;
+}
+
+QVariantList AutomationCanvas::parameterPips() const
+{
+    QVariantList pips;
+    pips.reserve(parameterCount());
+    for (int index = 0; index < parameterCount(); ++index) {
+        const std::optional<EditorAutomationRowId> row = parameterRow(index);
+        pips.append(row && parameterHasEvents(*row));
+    }
+    return pips;
 }

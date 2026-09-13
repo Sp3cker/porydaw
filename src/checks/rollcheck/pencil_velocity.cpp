@@ -149,10 +149,10 @@ void PianoRollTest::velocityNoteMenuRetarget()
     QCOMPARE(doc.smf().write(), before);
 }
 
-// The menu's velocity target is guarded by document identity and revision.
-// The document may also end the session when it changes; whether the menu
-// survives the edit or not, a stale activation must never open the prompt on
-// the outdated target or write to the song.
+// The note menu's rows are projections of the canonical commands, so a
+// document edit retires the open menu synchronously through
+// contextMenusInvalidated instead of leaving a stale row to click. The
+// dismissal must write nothing and leave the edit's undo entry intact.
 void PianoRollTest::velocityNoteMenuStaleActivation()
 {
     auto &check = *m_fixture;
@@ -175,26 +175,12 @@ void PianoRollTest::velocityNoteMenuStaleActivation()
 
     doc.setNotesVelocity({seed->noteB}, 40);
     QCoreApplication::processEvents();
-    QQuickItem *const survivor = quick_popup::menuPanel(*menu);
-    if (survivor) {
-        // The menu outlived the edit: activating its stale velocity row must
-        // close the session silently instead of opening the prompt.
-        songview::QuickMenuModel *const staleModel = quick_popup::menuModel(*survivor);
-        QVERIFY2(staleModel, "the surviving note menu has no typed model");
-        const int staleRow =
-            staleModel->rowForId(int(songview::pianoroll_detail::NoteMenuAction::Velocity));
-        QVERIFY2(staleRow >= 0, "the surviving note menu has no velocity action");
-        QVERIFY2(quick_popup::clickMenuRow(*menu, staleRow),
-                 "the stale note menu lost its rendered velocity row");
-        QCoreApplication::processEvents();
-    }
-    songview::QuickPopupSession *const after = quick_popup::popupSession(view);
-    QVERIFY2(after && !after->isOpen(), "the stale menu activation left a popup open");
+    QVERIFY2(!menu->isOpen(), "the document edit did not dismiss the note menu");
     DocNote stale;
     QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &stale) &&
                  stale.velocity == 40 && doc.revision() == revision + 1 &&
                  doc.undoStack()->count() == undoCount + 1 && doc.undoStack()->index() == undo + 1,
-             "the stale menu activation wrote to the song");
+             "the note menu dismissal wrote to the song");
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
         doc.undoStack()->undo();
     QCOMPARE(doc.smf().write(), before);

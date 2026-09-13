@@ -9,7 +9,10 @@
 #include "ui/songview/detail.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/quickmenumodel.h"
+#include "ui/songview/quick/quickpopupsession.h"
+#include "ui/songview/quick/retirehostmenu.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timeruler.h"
 #include "ui/typography.h"
 
 #include <QFontMetrics>
@@ -47,17 +50,30 @@ PianoRoll::PianoRoll(SongView *sv)
             hoverMetrics.horizontalAdvance(midiKeyName(key));
 
     // The note menu is a typed adapter over the shared canvas popup session;
-    // the session itself is assigned later by the Quick host view. The host
-    // closes the session before emitting activated(), so the guarded open-
-    // time target survives until handleNoteMenuAction consumes it — only a
-    // cancellation (Escape, outside press, foreign replacement) clears it.
+    // the session itself is assigned later by the Quick host view. Every row
+    // is an action projection triggered through the host, so activation
+    // arrives as actionActivated() — used only for terminal focus
+    // completion, and only when no follow-on popup (the velocity form)
+    // already owns the session.
     m_noteMenuHost = new QuickMenuHost(this);
     m_noteMenuModel = new QuickMenuModel(this);
-    connect(m_noteMenuModel, &QuickMenuModel::activated, this,
-            [this](int action) { handleNoteMenuAction(action); });
-    connect(m_noteMenuHost, &QuickMenuHost::cancelled, this, [this] { m_pendingNoteMenu.reset(); });
     connect(m_noteMenuHost, &QuickMenuHost::outsideRightPressed, this,
             [this](QPointF scenePos) { retargetNoteMenu(scenePos); });
+    connect(m_noteMenuHost, &QuickMenuHost::actionActivated, this, [this](QAction *) {
+        restoreFocusUnlessFormOpen(*m_sv, [this] {
+            if (m_inputHost)
+                m_inputHost->requestFocus(Qt::PopupFocusReason);
+        });
+    });
+    // Selection, document and rebinding invalidation retire only this roll's
+    // note menu. Its dedicated root identity leaves velocity forms and
+    // foreign session content with their own lifetimes; ordinary
+    // invalidation restores focus, teardown passes restoreFocus=false.
+    connect(m_sv, &SongView::contextMenusInvalidated, this, [this](bool restoreFocus) {
+        TimelineQuickView *const quick = m_sv->quickView();
+        retireHostMenu(quick ? quick->popupSession() : nullptr, m_noteMenuHost, m_noteMenuModel,
+                       restoreFocus);
+    });
 }
 
 void PianoRoll::setPopupSession(QuickPopupSession *session)

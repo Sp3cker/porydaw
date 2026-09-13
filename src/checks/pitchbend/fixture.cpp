@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "checks/support/eventsynth.h"
+#include "checks/support/support.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
 #include "project/voicegroupsource.h"
@@ -91,6 +92,7 @@ bool PitchBendFixture::setUp(bool unterminated, bool duplicateNote)
         m_tab->voicegroupLease().get() != &m_bank) {
         return false;
     }
+    checks::support::bindEditActionsForTest(m_tab->view());
 
     const std::vector<DocNote> notes = m_tab->document().notesForTrack(0);
     if (notes.size() != (duplicateNote ? 2 : 1))

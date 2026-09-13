@@ -1,5 +1,7 @@
 #include "checks/eventviews/eventview_fixture.h"
 #include "checks/eventviews/tst_eventviews.h"
+#include "checks/quickpopupguard.h"
+#include "checks/support/asyncwait.h"
 
 #include <QCoreApplication>
 #include <QQuickItem>
@@ -14,6 +16,7 @@
 #include "ui/eventtabletypes.h"
 #include "ui/keymap.h"
 #include "ui/songview.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -82,15 +85,14 @@ bool dragRow(const EventWidgets &widgets, int fromRow, int toRow)
 
 std::optional<QKeyCombination> firstSingleBinding(const QString &command)
 {
-    const QList<QKeySequence> bindings = keymap::Registry::instance().bindings(command);
-    if (bindings.isEmpty() || bindings.front().count() != 1)
-        return std::nullopt;
-    return bindings.front()[0];
+    return keymap::Registry::instance().singleStroke(command);
 }
 
 int undoCount(SongDocument &document)
 {
-    return document.undoStack()->count();
+    // index(), not count(): a push after an undo replaces the undone command
+    // in place, so count() stays flat while the stack position still advances.
+    return document.undoStack()->index();
 }
 } // namespace
 
@@ -169,28 +171,31 @@ void EventViewsEditsTest::tickHighBitExact()
         checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn);
     QVERIFY(row >= 0);
 
+    SongDocument &document = opened.fixture->document();
     const int chunk = widgets.model->chunk();
-    const int beforeIndex = opened.fixture->document().undoStack()->index();
+    const int beforeIndex = document.undoStack()->index();
     QVERIFY(!widgets.model->setData(widgets.model->index(row, EventTableModel::ColTick),
                                     QString::number(CoreTimeDefaults::kNoTick), Qt::EditRole));
     QCoreApplication::processEvents();
-    QCOMPARE(opened.fixture->document().undoStack()->index(), beforeIndex);
+    QCOMPARE(document.undoStack()->index(), beforeIndex);
+    QVERIFY(checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn) >= 0);
 
     QVERIFY(widgets.model->setData(widgets.model->index(row, EventTableModel::ColTick),
                                    QString::number(CoreTimeDefaults::kMaxTick), Qt::EditRole));
-    QTRY_COMPARE(opened.fixture->document().undoStack()->index(), beforeIndex + 1);
-    const SmfTrack &track = opened.fixture->document().smf().tracks[chunk];
+    QTRY_COMPARE(document.undoStack()->index(), beforeIndex + 1);
+    const SmfTrack &track = document.smf().tracks[chunk];
     QVERIFY(!track.events.empty());
     QCOMPARE(track.events.back().tick, CoreTimeDefaults::kMaxTick);
     QVERIFY(checks::eventviews::trackIsSorted(track));
 
-    opened.fixture->document().undoStack()->undo();
+    document.undoStack()->undo();
     QTRY_VERIFY(checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn) >=
                 0);
 }
 
-// Same boundary through the rendered Tick TextInput: the proof that the page
-// hands the editor's QString straight to the model instead of a JS Number.
+// The same boundary through the rendered Tick TextInput: the reserved
+// kNoTick must be rejected without changing the document, while kMaxTick
+// commits exactly and can be undone.
 void EventViewsEditsTest::tickHighBitThroughEditor()
 {
     const auto opened = checks::eventviews::openTabFixture(FixtureShape::Basic);
@@ -201,21 +206,31 @@ void EventViewsEditsTest::tickHighBitThroughEditor()
         checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn);
     QVERIFY(row >= 0);
     const int chunk = widgets.model->chunk();
-
+    SongDocument &document = opened.fixture->document();
+    const int beforeIndex = document.undoStack()->index();
+    const QByteArray before = document.smf().write();
     QQuickItem *editor = nullptr;
     QVERIFY(checks::eventviews::openCellEditor(widgets, row, EventTableModel::ColTick,
                                                QStringLiteral("eventListTickEditor"), &editor));
     QVERIFY(QMetaObject::invokeMethod(editor, "selectAll"));
-    typeDigits(*widgets.quickWindow, QStringLiteral("4294967294"));
+    typeDigits(*widgets.quickWindow, QString::number(CoreTimeDefaults::kNoTick));
+    QTest::keyClick(widgets.quickWindow, Qt::Key_Return);
+    QCoreApplication::processEvents();
+    QCOMPARE(document.undoStack()->index(), beforeIndex);
+
+    QCOMPARE(document.smf().write(), before);
+    checks::eventviews::closeCellEditor(widgets);
+    QVERIFY(checks::eventviews::openCellEditor(widgets, row, EventTableModel::ColTick,
+                                               QStringLiteral("eventListTickEditor"), &editor));
+    QVERIFY(QMetaObject::invokeMethod(editor, "selectAll"));
+    typeDigits(*widgets.quickWindow, QString::number(CoreTimeDefaults::kMaxTick));
     QTest::keyClick(widgets.quickWindow, Qt::Key_Return);
     QCoreApplication::processEvents();
 
-    QTRY_COMPARE(opened.fixture->document().smf().tracks[chunk].events.back().tick,
-                 CoreTimeDefaults::kMaxTick);
-    const SmfTrack &track = opened.fixture->document().smf().tracks[chunk];
+    QTRY_COMPARE(document.undoStack()->index(), beforeIndex + 1);
+    const SmfTrack &track = document.smf().tracks[chunk];
     QVERIFY(!track.events.empty());
     QCOMPARE(track.events.back().tick, CoreTimeDefaults::kMaxTick);
-
     const int movedRow = checks::eventviews::rowForTickAndType(
         *widgets.model, CoreTimeDefaults::kMaxTick, eventlist::TypeNoteOn);
     QVERIFY(movedRow >= 0);
@@ -223,10 +238,10 @@ void EventViewsEditsTest::tickHighBitThroughEditor()
                  ->data(widgets.model->index(movedRow, EventTableModel::ColTick),
                         EventTableModel::EventRoles::TickStringRole)
                  .toString(),
-             QStringLiteral("4294967294"));
+             QString::number(CoreTimeDefaults::kMaxTick));
     QVERIFY(checks::eventviews::trackIsSorted(track));
 
-    opened.fixture->document().undoStack()->undo();
+    document.undoStack()->undo();
     QTRY_VERIFY(checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn) >=
                 0);
 }
@@ -507,11 +522,74 @@ void EventViewsEditsTest::sameTickReorder()
     QCOMPARE(indexOf(document.smf().tracks[chunk], pinnedOff), offRow);
     QCOMPARE(indexOf(document.smf().tracks[chunk], pinnedOn), onRow);
     QCOMPARE(undoCount(document), orderBeforePin);
-    QVERIFY(!widgets.controller->isEditing());
+    // The row menu's Move row is the canonical MoveEventDown QAction: one
+    // activation triggers it exactly once on the current row, and the key
+    // binding reaches the same action for the same swap. The legal same-tick
+    // move here is the setup pair — ccB (at first) down past ccA — since the
+    // pin rules keep setup events ahead of the note-on. Both push one undo
+    // step that restores the prior order.
+    const songview::EditActions *const actions = opened.fixture->view().editActions();
+    QVERIFY2(actions, "the rig has no production action set");
+    QAction *const moveDownAction = actions->action(SongView::EditCommand::MoveEventDown);
+    QVERIFY(moveDownAction);
+    const QPointF menuCell =
+        checks::eventviews::cellSceneCenter(widgets, first, EventTableModel::ColData);
+    QVERIFY(!menuCell.isNull());
+    QTest::mouseClick(widgets.quickWindow, Qt::RightButton, Qt::NoModifier, menuCell.toPoint());
+    QTRY_VERIFY(widgets.controller->menuOpen());
+    QTRY_COMPARE(widgets.controller->currentRow(), first);
+    QQuickItem *const menuPanel = checks::eventviews::activeMenuPanel(widgets);
+    QVERIFY(menuPanel);
+    songview::QuickMenuModel *const menuModel = quick_popup::menuModel(*menuPanel);
+    QVERIFY(menuModel);
+    int moveDownRow = -1;
+    for (int row = 0; row < menuModel->rowCount(); ++row) {
+        const songview::QuickMenuItem *const item = menuModel->itemAt(row);
+        if (item && item->isActionBacked() && item->action.data() == moveDownAction)
+            moveDownRow = row;
+    }
+    QVERIFY2(moveDownRow >= 0, "the row menu did not project the MoveEventDown action");
+    const int undoBeforeMenuMove = undoCount(document);
+    QSignalSpy triggered(moveDownAction, &QAction::triggered);
+    QVERIFY(triggered.isValid());
+    QVERIFY(quick_popup::clickMenuRow(*widgets.popupSession, moveDownRow));
+    QTRY_VERIFY(!widgets.controller->menuOpen());
+    QCOMPARE(triggered.count(), 1);
+    QCOMPARE(indexOf(document.smf().tracks[chunk], ccA), first);
+    QCOMPARE(indexOf(document.smf().tracks[chunk], ccB), second);
+    QCOMPARE(indexOf(document.smf().tracks[chunk], noteOn), note);
+    QCOMPARE(undoCount(document), undoBeforeMenuMove + 1);
+    document.undoStack()->undo();
+    QTRY_COMPARE(indexOf(document.smf().tracks[chunk], ccA), second);
+    QCOMPARE(indexOf(document.smf().tracks[chunk], ccB), first);
+
+    // The key binding reaches the same canonical command: the shared editor
+    // arbitration dispatches MoveEventDown onto the same current-row move.
+    // The EventListOnly origin requires the page's input item to hold live
+    // active focus, which resolves asynchronously after requestFocus.
+    songview::TimelineQuickView *const quick = opened.fixture->view().quickView();
+    QVERIFY(quick);
+    QVERIFY(quick->focusEventListInput(Qt::OtherFocusReason));
+    QVERIFY2(checks::async_wait::waitUntil([] { return true; },
+                                           [quick] { return quick->eventListSurfaceFocused(); },
+                                           5000, 10) == checks::async_wait::Result::Ready,
+             "the event-list input did not acquire Quick focus");
+    widgets.controller->selectRow(first, Qt::NoModifier);
+    QCoreApplication::processEvents();
+    const auto moveDown = firstSingleBinding(QStringLiteral("eventlist.move_down"));
+    QVERIFY2(moveDown.has_value(), "eventlist.move_down has no single binding");
+    const int undoBeforeKeyMove = undoCount(document);
+    QTest::keyClick(widgets.quickWindow, moveDown->key(), moveDown->keyboardModifiers());
+    QCoreApplication::processEvents();
+    QCOMPARE(indexOf(document.smf().tracks[chunk], ccA), first);
+    QCOMPARE(indexOf(document.smf().tracks[chunk], ccB), second);
+    QCOMPARE(undoCount(document), undoBeforeKeyMove + 1);
+    document.undoStack()->undo();
+    QTRY_COMPARE(indexOf(document.smf().tracks[chunk], ccA), second);
 
     // The registered move key at the run boundary is a no-op.
     QVERIFY(opened.fixture->view().quickView() != nullptr);
-    opened.fixture->view().quickView()->focusEventListInput(Qt::OtherFocusReason);
+    quick->focusEventListInput(Qt::OtherFocusReason);
     widgets.controller->selectRow(first, Qt::NoModifier);
     QCoreApplication::processEvents();
     const int orderBeforeBoundaryMove = undoCount(document);

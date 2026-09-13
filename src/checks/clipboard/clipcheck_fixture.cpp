@@ -17,11 +17,13 @@ extern "C" {
 }
 
 #include "checks/support/quickframebuffer.h"
+#include "checks/support/support.h"
 #include "core/smf.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
 #include "project/voicegroupsource.h"
 #include "ui/songtab.h"
+#include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 
@@ -95,6 +97,7 @@ std::unique_ptr<ClipTabRig> ClipTabRig::create(uint16_t ticksPerBeat, QString &e
         error = QStringLiteral("synthetic song tab did not become ready");
         return nullptr;
     }
+    checks::support::bindEditActionsForTest(rig->m_tab->view());
 
     rig->m_tab->show();
     QCoreApplication::processEvents();

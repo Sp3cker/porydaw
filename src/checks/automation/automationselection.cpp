@@ -557,3 +557,65 @@ void AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume()
     QCOMPARE(valuesAt(tab().document(), kPanController, kDestinationTick), movedPan);
     QCOMPARE(valuesAt(tab().document(), kLfoController, kDestinationTick), movedLfo);
 }
+
+void AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation()
+{
+    AutomationCanvas *const canvas = page().canvas();
+    QVERIFY(canvas);
+    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, kTrack,
+                                       kVolumeController};
+    const EditorAutomationRowId pan{EditorAutomationRowKind::ControlChange, kTrack, kPanController};
+    const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
+    const int volumeIndex = checks::support::automationParameterIndex(*canvas, volume);
+    const int panIndex = checks::support::automationParameterIndex(*canvas, pan);
+    QVERIFY(volumeIndex >= 0);
+    QVERIFY(panIndex >= 0);
+    QVERIFY(activateParameter(volume));
+    const QByteArray documentBefore = tab().document().smf().write();
+    const uint64_t revisionBefore = tab().document().revision();
+    const int undoIndexBefore = tab().document().undoStack()->index();
+    const int undoCountBefore = tab().document().undoStack()->count();
+    const QList<int> selectionBefore = canvas->selectedParameters();
+
+    QVERIFY(clickParameterTab(pan, Qt::ControlModifier));
+    QTRY_COMPARE(canvas->ghostParameters(), QList<int>({panIndex}));
+    QCOMPARE(canvas->activeParameter(), volumeIndex);
+    QCOMPARE(canvas->selectedParameters(), selectionBefore);
+    QCOMPARE(tab().document().smf().write(), documentBefore);
+    QCOMPARE(tab().document().revision(), revisionBefore);
+    QCOMPARE(tab().document().undoStack()->index(), undoIndexBefore);
+    QCOMPARE(tab().document().undoStack()->count(), undoCountBefore);
+
+    QVERIFY(activateParameter(tempo));
+    QVERIFY(activateParameter(volume));
+    QCOMPARE(canvas->ghostParameters(), QList<int>{panIndex});
+
+    QVERIFY(activateParameter(pan));
+    QCOMPARE(canvas->activeParameter(), panIndex);
+    QCOMPARE(canvas->ghostParameters(), QList<int>{panIndex});
+
+    QVERIFY(clickParameterTab(pan, Qt::ControlModifier));
+    QTRY_VERIFY(canvas->ghostParameters().isEmpty());
+    QCOMPARE(canvas->activeParameter(), panIndex);
+    canvas->toggleGhostParameter(-1);
+    canvas->toggleGhostParameter(canvas->parameterLabels().size());
+    QVERIFY(canvas->ghostParameters().isEmpty());
+}
+
+void AutomationEditingTest::ghostToggleSkipsEventlessLane()
+{
+    AutomationCanvas *const canvas = page().canvas();
+    QVERIFY(canvas);
+    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, kTrack,
+                                       kVolumeController};
+    QVERIFY(activateParameter(volume));
+    const int volumeIndex = checks::support::automationParameterIndex(*canvas, volume);
+    QVERIFY(volumeIndex >= 0);
+    const EditorAutomationRowId modulation{EditorAutomationRowKind::ControlChange, kTrack,
+                                           CoreTimeDefaults::kCcModulation};
+    QVERIFY(tab().document().lanePoints(kTrack, CoreTimeDefaults::kCcModulation).empty());
+    QVERIFY(clickParameterTab(modulation, Qt::ControlModifier));
+    QVERIFY(checks::support::automationParameterIndex(*canvas, modulation) >= 0);
+    QTRY_COMPARE(canvas->activeParameter(), volumeIndex);
+    QVERIFY(canvas->ghostParameters().isEmpty());
+}

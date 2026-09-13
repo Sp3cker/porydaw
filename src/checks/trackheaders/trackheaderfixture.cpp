@@ -13,12 +13,14 @@
 
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
+#include "checks/support/support.h"
 #include "checks/trackheaders/trackheaderoracles.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
 #include "project/voicegroupsource.h"
 #include "ui/activity/trackactivity.h"
 #include "ui/songtab.h"
+#include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/trackheadermodel.h"
@@ -100,6 +102,7 @@ bool TrackHeadersFixture::create(QString &error)
         error = QStringLiteral("TrackHeaders SongTab did not reach ready state");
         return false;
     }
+    checks::support::bindEditActionsForTest(candidate->view());
 
     SongView &songView = candidate->view();
     m_headers =

@@ -7,6 +7,7 @@
 #include <QQuickWindow>
 
 #include "checks/support/quickframebuffer.h"
+#include "checks/support/support.h"
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
@@ -39,6 +40,7 @@ std::unique_ptr<EditorRig> EditorRig::create(SongDocument &document, const Edito
     // Production wiring order (SongTab): document first, then song.
     rig->m_view->setDocument(&document);
     rig->m_view->setSong(rig->m_timeline.get(), config.voicegroup);
+    support::bindEditActionsForTest(*rig->m_view);
     if (config.track >= 0)
         rig->m_view->selectTrack(config.track);
     rig->m_view->setDrawerActivePage(config.activePage);

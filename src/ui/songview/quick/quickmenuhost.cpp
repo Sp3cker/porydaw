@@ -26,6 +26,21 @@ namespace {
 constexpr int kPanelZ = 1000000;
 constexpr int kTypeAheadResetMs = 1000;
 
+/// The level's own action-backed rows, deduplicated. Children are not walked:
+/// each submenu level observes its own rows when it is pushed.
+std::vector<QAction *> levelActionRows(const std::vector<QuickMenuItem> &items)
+{
+    std::vector<QAction *> actions;
+    for (const QuickMenuItem &item : items) {
+        if (!item.isActionBacked())
+            continue;
+        QAction *const action = item.action.data();
+        if (action && std::find(actions.cbegin(), actions.cend(), action) == actions.cend())
+            actions.push_back(action);
+    }
+    return actions;
+}
+
 int firstActivatableRow(const QuickMenuModel &model)
 {
     for (int row = 0; row < model.rowCount(); ++row) {
@@ -207,6 +222,10 @@ void QuickMenuHost::activateRow(QQuickItem *panel, int row)
     const QuickMenuItem *item = level->model->itemAt(row);
     if (!item || item->separator || !item->enabled)
         return;
+    if (item->isActionBacked()) {
+        triggerActionBackedRow(item->action.data());
+        return;
+    }
     QuickMenuModel *const source = level->model.data();
     if (item->checkable && item->stayOpen) {
         source->setItemChecked(row, !item->checked);
@@ -217,6 +236,22 @@ void QuickMenuHost::activateRow(QQuickItem *panel, int row)
     if (m_popupSession)
         m_popupSession->close(); // clear the session before owner command
     emit source->activated(id);
+}
+
+void QuickMenuHost::triggerActionBackedRow(QAction *action)
+{
+    const QPointer<QuickMenuHost> host{this};
+    const QPointer<QAction> guard{action};
+    const QPointer<QuickPopupSession> session{m_popupSession};
+    if (!host || !guard || !session)
+        return;
+    // close() precedes trigger(): the handler may reenter open() for a new session.
+    session->close();
+    if (!host || !guard || !guard->isEnabled())
+        return;
+    guard->trigger();
+    if (host && guard)
+        emit actionActivated(guard.data());
 }
 
 bool QuickMenuHost::eventFilter(QObject *watched, QEvent *event)
@@ -323,6 +358,33 @@ void QuickMenuHost::pushLevel(QuickMenuModel *model, const QRectF &anchor, bool 
                 m_popupSession->cancel(false);
         });
     }
+    // Each level observes only its own action-backed rows: a changed or
+    // destroyed action retires that level (the root retires the session, as
+    // before) and never touches levels below it.
+    const std::vector<QAction *> actions = levelActionRows(model->items());
+    if (!actions.empty()) {
+        const QPointer<QuickMenuModel> levelModel{model};
+        const auto levelIndex = m_levels.size() - 1;
+        const auto retireActionLevel = [this, levelModel, levelIndex] {
+            if (!m_sessionActive || !levelModel || levelIndex >= m_levels.size() ||
+                m_levels[levelIndex].model.data() != levelModel.data()) {
+                return;
+            }
+            if (levelIndex == 0) {
+                cancel();
+                return;
+            }
+            while (m_levels.size() > levelIndex)
+                popLevel();
+        };
+        stored.actionConnections.reserve(actions.size() * 2);
+        for (QAction *const action : actions) {
+            stored.actionConnections.push_back(
+                connect(action, &QAction::changed, this, retireActionLevel));
+            stored.actionConnections.push_back(
+                connect(action, &QObject::destroyed, this, retireActionLevel));
+        }
+    }
     applyLevel(stored, layout, anchor, rootLevel);
     setHighlight(stored, -1);
 }
@@ -334,6 +396,8 @@ void QuickMenuHost::popLevel(bool notifyState)
     const Level level = m_levels.takeLast();
     QObject::disconnect(level.resetConnection);
     QObject::disconnect(level.modelDestroyedConnection);
+    for (const QMetaObject::Connection &connection : level.actionConnections)
+        QObject::disconnect(connection);
     if (level.panel) {
         level.panel->setParentItem(nullptr);
         level.panel->deleteLater();

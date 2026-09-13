@@ -103,6 +103,8 @@ class AutomationEditingTest final : public QObject
     void multiLaneSelectionDeleteAndEmptyDeleteNoop();
     void multiLaneSelectionDragAbortsOnDocumentRebuild();
     void multiCcLaneSelectionDragExcludesTempoAndVolume();
+    void ghostToggleIsViewOnlyAndSurvivesActivation();
+    void ghostToggleSkipsEventlessLane();
 
     // Menu and clipboard coverage.
     void contextMenuRoutingAndAvailableLanes();
@@ -138,7 +140,6 @@ class AutomationEditingTest final : public QObject
     void actionShortcutLatching();
     void actionTextInputImmunity();
     void actionRepeatImmunity();
-    void actionCustomBinding();
     void actionHeldKeyGestures();
     void projectionPartialCell();
     void projectionValueBounds();
@@ -292,6 +293,8 @@ class AutomationEditingTest final : public QObject
 
     // Activates a supported parameter through its real rendered gutter label.
     bool activateParameter(const EditorAutomationRowId &row);
+    bool clickParameterTab(const EditorAutomationRowId &row,
+                           Qt::KeyboardModifiers modifiers = Qt::NoModifier);
 
     // Pilot baseline setup retained with its original literals and assertions.
     void arrangeCcLane();

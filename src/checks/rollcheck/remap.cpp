@@ -11,6 +11,7 @@
 #include "checks/rollcheck/headerchecksupport.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
+#include "checks/support/support.h"
 #include "checks/trackheaders/trackheaderoracles.h"
 #include "core/smf.h"
 #include "core/songdocument.h"
@@ -35,6 +36,7 @@ struct RemapFixture {
             return false;
         view.setSong(timeline.get(), nullptr);
         view.setDocument(&document);
+        checks::support::bindEditActionsForTest(view);
         QObject::connect(&document, &SongDocument::tracksRemapped, &view,
                          [this] { order.push_back(QStringLiteral("remap")); });
         QObject::connect(&document, &SongDocument::documentChanged, &view, [this] {

@@ -289,6 +289,71 @@ void AutomationEditingTest::outsideRightClickDismissesPointMenu()
     QTest::keyClick(fallback.session->window(), Qt::Key_Escape);
     QCoreApplication::processEvents();
     QVERIFY2(!fallback.session->isOpen(), "Escape did not dismiss the fallback menu");
+
+    // A selection transition retires the open point menu through SongView's
+    // context-menu seam. It must not mutate the point or leak a fallback
+    // activation into the newly selected interval.
+    const QByteArray beforeInvalidation = songTab.document().smf().write();
+    const uint64_t revisionBeforeInvalidation = songTab.document().revision();
+    const int undoIndexBeforeInvalidation = songTab.document().undoStack()->index();
+    const NodePointMenu selectionInvalidated = openNodePointMenu(
+        cc, kPointTick, kPointValue,
+        QStringLiteral("the node point menu did not reopen for selection invalidation"));
+    QVERIFY2(selectionInvalidated.session, qUtf8Printable(selectionInvalidated.diagnostic));
+    selection.endTick += kPointTick;
+    songTab.view().selectionModel().setTimeSelection(selection);
+    QCoreApplication::processEvents();
+    QVERIFY2(!selectionInvalidated.session->isOpen(),
+             "a selection change did not dismiss the owned point menu");
+    QVERIFY2(!quick_popup::popupSession(songTab.view())->isOpen(),
+             "point-menu invalidation left a replacement popup open");
+    QCOMPARE(songTab.document().revision(), revisionBeforeInvalidation);
+    QCOMPARE(songTab.document().undoStack()->index(), undoIndexBeforeInvalidation);
+    QCOMPARE(songTab.document().smf().write(), beforeInvalidation);
+
+    // The same seam must not cancel the independent node-value transaction.
+    // Its own Escape path still drops the guarded draft without a write.
+    const NodePointMenu valueMenu = openNodePointMenu(
+        cc, kPointTick, kPointValue,
+        QStringLiteral("the node point menu did not reopen for the value prompt"));
+    QVERIFY2(valueMenu.session, qUtf8Printable(valueMenu.diagnostic));
+    QVERIFY2(quick_popup::clickMenuRow(*valueMenu.session, valueMenu.setValueRow),
+             "the Set Value row did not receive a real click");
+    DrawerChrome &chrome = songTab.view().editorDrawer()->chrome();
+    QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
+    selection.startTick = 0;
+    songTab.view().selectionModel().setTimeSelection(selection);
+    QCoreApplication::processEvents();
+    QVERIFY2(automation_valueprompt::promptVisible(chrome),
+             "a selection change cancelled the independent node-value prompt");
+    QTest::keyClick(&quickWindow(), Qt::Key_Escape);
+    QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome));
+    QCOMPARE(songTab.document().revision(), revisionBeforeInvalidation);
+    QCOMPARE(songTab.document().undoStack()->index(), undoIndexBeforeInvalidation);
+    QCOMPARE(songTab.document().smf().write(), beforeInvalidation);
+
+    // The lane-delete confirmation is another independent guarded draft. A
+    // selection transition leaves it live; its own Cancel button resolves it
+    // without document mutation.
+    const CcDeletePrompt laneDelete = openCcDeletePrompt(
+        {EditorAutomationRowKind::ControlChange, 0, kController},
+        QStringLiteral("the RemoveLane pick did not open the delete confirmation"));
+    QVERIFY2(laneDelete.session && laneDelete.root && laneDelete.cancelButton,
+             qUtf8Printable(laneDelete.diagnostic));
+    selection.endTick += kPointTick;
+    songTab.view().selectionModel().setTimeSelection(selection);
+    QCoreApplication::processEvents();
+    QVERIFY2(laneDelete.session->isOpen(),
+             "a selection change cancelled the independent lane-delete confirmation");
+    QVERIFY2(quick_popup::promptItem(*laneDelete.session, QLatin1String("ccDeleteConfirm")) !=
+                 nullptr,
+             "the selection change removed the lane-delete confirmation content");
+    QVERIFY2(quick_popup::clickPromptButton(*laneDelete.session, QLatin1String("cancelButton")),
+             "the confirmation Cancel button did not receive a real click");
+    QTRY_VERIFY(!laneDelete.session->isOpen());
+    QCOMPARE(songTab.document().revision(), revisionBeforeInvalidation);
+    QCOMPARE(songTab.document().undoStack()->index(), undoIndexBeforeInvalidation);
+    QCOMPARE(songTab.document().smf().write(), beforeInvalidation);
 }
 
 // A projected engine-default node with no written event at its tick cannot
@@ -315,6 +380,11 @@ void AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePr
         {EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume}));
     QTRY_VERIFY(!laneBody(volume).isEmpty());
     QVERIFY(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).empty());
+    const int volumeIndex = checks::support::automationParameterIndex(
+        *page().canvas(), {EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume});
+    QVERIFY(volumeIndex >= 0);
+    QCOMPARE(page().canvas()->parameterPips().size(), 9);
+    QVERIFY(!page().canvas()->parameterPips().at(volumeIndex).toBool());
 
     const QByteArray before = songTab.document().smf().write();
     const uint64_t revision = songTab.document().revision();

@@ -351,6 +351,20 @@ void AutomationEditingTest::outsidePressDismissesLaneMenuWithoutSideEffects()
     const AutomationMenu menu = openLabelMenu(
         songTab, *canvas, ccRow, "the lane label right-press did not open the shared menu");
     QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic));
+    // A selection-only change publishes context-menu invalidation, but the
+    // canvas retires only a menu whose open root carries the typed fallback
+    // ClearTimeSelection row: this lane menu shares the host and model, so
+    // it must keep its lifetime, rows, and eventual outside-press dismissal.
+    songview::EditorSelectionModel::TimeSelection selection;
+    selection.startTick = kPointTick;
+    selection.endTick = kOtherPointTick + kPointTick;
+    selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
+    selection.lanes.push_back({0, kController});
+    songTab.view().selectionModel().setTimeSelection(selection);
+    QCoreApplication::processEvents();
+    QVERIFY2(menu.session->isOpen(), "a selection change dismissed the open lane menu");
+    QVERIFY2(menu.model->rowForId(int(CanvasMenuAction::Copy)) >= 0,
+             "the lane menu lost its rows across the selection change");
 
     // An outside right press dismisses through the frame without leaking into
     // a replacement menu. Nothing is written and focus stays with the band.

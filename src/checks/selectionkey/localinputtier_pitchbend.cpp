@@ -12,6 +12,7 @@
 
 #include "ui/pitchbendeditor.hpp"
 #include "ui/pitchbendgraph.hpp"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
@@ -113,6 +114,20 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
     const auto mute = selectionkey::firstBinding(QStringLiteral("roll.mute_tracks"));
     QVERIFY2(opener.has_value() && solo.has_value() && copy.has_value() && mute.has_value(),
              "pitch-bend/Solo/Copy/Mute have no single-key bindings");
+    const songview::EditActions *const actions = view.editActions();
+    QVERIFY2(actions, "the pitch-bend scenario has no canonical action set");
+    QAction *const pitchBendAction = actions->action(SongView::EditCommand::PitchBend);
+    QVERIFY2(pitchBendAction, "the pitch-bend scenario has no canonical action");
+    QSignalSpy pitchBendTriggered(pitchBendAction, &QAction::triggered);
+    view.selectionModel().clearNoteSelection();
+    view.selectionModel().clearTimeSelection();
+    const songview::TimelineKeyInput unavailablePitchBend{
+        .key = opener->key(),
+        .modifiers = opener->keyboardModifiers(),
+    };
+    QVERIFY2(!view.handleEditKey(unavailablePitchBend, SongView::EditKeyOrigin::Timeline),
+             "unavailable pitch-bend key was consumed by shared routing");
+    QCOMPARE(pitchBendTriggered.count(), 0);
 
     view.selectTrack(kTrack);
     view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
@@ -168,6 +183,10 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
                                      ? quickWindow->activeFocusItem()->objectName()
                                      : QStringLiteral("none"),
                                  applicationFocusState())));
+    // The manual key route must use live eligibility even if this one
+    // action's presentation cache has not caught up.
+    pitchBendAction->setEnabled(false);
+    QVERIFY2(!pitchBendAction->isEnabled(), "the disabled action state was not staged");
 
     const auto visiblePopup = [&]() -> songview::PitchBendEditor * {
         auto *popup = view.findChild<songview::PitchBendEditor *>(QStringLiteral("pitchBendPopup"),
@@ -196,6 +215,15 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
     const QByteArray before = document.smf().write();
     const int undoBefore = document.undoStack()->index();
     QPointer<songview::PitchBendEditor> popup = openPopup();
+    QCOMPARE(pitchBendTriggered.count(), 1);
+    const songview::TimelineKeyInput repeatedPitchBend{
+        .key = opener->key(),
+        .modifiers = opener->keyboardModifiers(),
+        .autoRepeat = true,
+    };
+    QVERIFY2(view.handleEditKey(repeatedPitchBend, SongView::EditKeyOrigin::Timeline),
+             "eligible pitch-bend repeat was not consumed");
+    QCOMPARE(pitchBendTriggered.count(), 1);
     QVERIFY2(
         popup,
         qPrintable(

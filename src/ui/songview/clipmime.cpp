@@ -1,5 +1,7 @@
 #include "ui/songview/clipmime.h"
 
+#include "core/timedefaults.h"
+
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QJsonArray>

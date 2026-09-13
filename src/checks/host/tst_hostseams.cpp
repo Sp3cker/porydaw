@@ -1,5 +1,6 @@
 #include "checks/fwd.hpp"
 #include "checks/host/hosttestsupport.h"
+#include "checks/support/support.h"
 #include "checks/support/timelinequickcheck.h"
 #include <memory>
 
@@ -17,6 +18,7 @@
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
 #include "ui/songtabquickhost.h"
+#include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
 
 namespace checks::host {
@@ -71,8 +73,6 @@ class HostSeamsTest final : public QObject
         view.setFollowScrollPaused(true);
         view.focusContent();
         view.announce(QStringLiteral("host-seams"));
-        view.requestDrawerPageUndo();
-        view.requestDrawerPageRedo();
         const SongView::ViewState runtime = view.viewState();
         QVERIFY(runtime.valid);
         QCOMPARE(runtime.scrollPx, 96.0);
@@ -139,6 +139,7 @@ class HostSeamsTest final : public QObject
         bool detachWhileWindowValid = false;
         {
             auto view = std::make_unique<SongView>();
+            checks::support::bindEditActionsForTest(*view);
             songview::TimelineQuickView *const quick = view->quickView();
             QVERIFY(quick);
             window = quick->quickWindow();
@@ -187,6 +188,7 @@ class HostSeamsTest final : public QObject
     void unhostedDetachEmitsOnceDestroysWindowAndClearsGetters()
     {
         auto view = std::make_unique<SongView>();
+        checks::support::bindEditActionsForTest(*view);
         songview::TimelineQuickView *const quick = view->quickView();
         QVERIFY(quick);
         QVERIFY(quick->rootObject());

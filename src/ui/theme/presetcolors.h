@@ -56,10 +56,13 @@ enum class PresetColor {
     scrollbar_handle,
     /// SongView grid lines.
     grid_line,
-    /// SongView piano-roll note area background; its lightness selects the
-    /// authored accidental-lane color.
+    /// SongView piano-roll note area background: the pre-roll mask and the
+    /// pitch-bend plot. Natural rows are unpainted over a transparent view, so
+    /// the surface they show is the window background below.
     piano_roll_background,
-    /// SongView piano-roll accidental-note lane background.
+    /// SongView piano-roll accidental-note lane background: the window surface
+    /// scaled to 0.919 of its OKLCh lightness at this preset's own hue and
+    /// chroma — vanilla's authored step. A fixed ΔL over-darkens the dark themes.
     piano_roll_accidental_lane,
     /// SongView scale highlight: a fixed lavender (#B595FC) shared by every theme.
     scale_highlight,
@@ -105,12 +108,17 @@ enum class PresetColor {
     /// Sample Editor seam-end trace: the red domain color, kept legible on the
     /// seam inset's alternate surface.
     sample_seam_end_ink,
+    automation_tab_background,
+    automation_tab_hover_background,
+    automation_tab_outline,
+    automation_ink,
+    automation_ghost_edge,
     /// Sentinel for the number of authored preset colors; not rendered.
     count,
 };
 
 inline constexpr auto presetColorCount = static_cast<std::size_t>(PresetColor::count);
-static_assert(presetColorCount == 37);
+static_assert(presetColorCount == 42);
 
 constexpr PresetColor presetColorFor(Role role);
 
@@ -282,11 +290,15 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::piano_keyboard_label,
     PresetColor::selection_background,
     PresetColor::window_text,
-    PresetColor::selection_background,
-    PresetColor::accent,
     PresetColor::outline,
     PresetColor::secondary_text,
     PresetColor::separator,
+    PresetColor::automation_tab_background,
+    PresetColor::automation_tab_hover_background,
+    PresetColor::control_pressed_background,
+    PresetColor::automation_tab_outline,
+    PresetColor::automation_ink,
+    PresetColor::automation_ghost_edge,
 
     PresetColor::sample_waveform_ink,
     PresetColor::sample_crop_handle,
@@ -323,7 +335,9 @@ constexpr PresetColors makeVanilla()
     colors.color(PresetColor::scrollbar_handle) = "#A49D97";
     colors.color(PresetColor::grid_line) = "#3F040000";
     colors.color(PresetColor::piano_roll_background) = "#D4CCC7";
-    colors.color(PresetColor::piano_roll_accidental_lane) = "#B7AFA9";
+    // Window surface #C9C1BB × 0.919 L at hue 59.5: 1.26:1. Source ratio for
+    // the other presets.
+    colors.color(PresetColor::piano_roll_accidental_lane) = "#B4ACA6";
     colors.color(PresetColor::scale_highlight) = "#B595FC";
     colors.color(PresetColor::playhead) = "#E24242";
     colors.color(PresetColor::piano_natural_key) = "#F4F4F4";
@@ -349,6 +363,11 @@ constexpr PresetColors makeVanilla()
     colors.color(PresetColor::sample_crop_handle) = "#92681F";
     colors.color(PresetColor::sample_loop_handle) = "#2A7292";
     colors.color(PresetColor::sample_seam_end_ink) = "#C54444";
+    colors.color(PresetColor::automation_tab_background) = "#E7E1DB";
+    colors.color(PresetColor::automation_tab_hover_background) = "#F0EAE4";
+    colors.color(PresetColor::automation_tab_outline) = "#8C857F";
+    colors.color(PresetColor::automation_ink) = "#EA3C3C";
+    colors.color(PresetColor::automation_ghost_edge) = "#E0AA2A";
     return colors;
 }
 
@@ -379,7 +398,8 @@ constexpr PresetColors makeDarkNeutralHigh()
     colors.color(PresetColor::scrollbar_handle) = "#262626";
     colors.color(PresetColor::grid_line) = "#54030303";
     colors.color(PresetColor::piano_roll_background) = "#454545";
-    colors.color(PresetColor::piano_roll_accidental_lane) = "#363636";
+    // Window surface #373737 × 0.919 L; neutral, so no hue to keep: 1.11:1.
+    colors.color(PresetColor::piano_roll_accidental_lane) = "#303030";
     colors.color(PresetColor::scale_highlight) = "#B595FC";
     colors.color(PresetColor::playhead) = "#E24242";
     colors.color(PresetColor::piano_natural_key) = "#F4F4F4";
@@ -403,6 +423,11 @@ constexpr PresetColors makeDarkNeutralHigh()
     colors.color(PresetColor::sample_crop_handle) = "#E0A030";
     colors.color(PresetColor::sample_loop_handle) = "#4AB4E2";
     colors.color(PresetColor::sample_seam_end_ink) = "#F08D8D";
+    colors.color(PresetColor::automation_tab_background) = "#51555E";
+    colors.color(PresetColor::automation_tab_hover_background) = "#5B5F69";
+    colors.color(PresetColor::automation_tab_outline) = "#62666F";
+    colors.color(PresetColor::automation_ink) = "#FF4D47";
+    colors.color(PresetColor::automation_ghost_edge) = "#E0AA2A";
     return colors;
 }
 
@@ -431,7 +456,8 @@ constexpr PresetColors makeImmaterial()
     colors.color(PresetColor::scrollbar_handle) = "#212225";
     colors.color(PresetColor::grid_line) = "#54030606";
     colors.color(PresetColor::piano_roll_background) = "#3C3F46";
-    colors.color(PresetColor::piano_roll_accidental_lane) = "#2F3239";
+    // Window surface #2E3138 × 0.919 L at hue 267: 1.09:1.
+    colors.color(PresetColor::piano_roll_accidental_lane) = "#282B32";
     colors.color(PresetColor::scale_highlight) = "#B595FC";
     colors.color(PresetColor::playhead) = "#E24242";
     colors.color(PresetColor::piano_natural_key) = "#F4F4F4";
@@ -454,6 +480,11 @@ constexpr PresetColors makeImmaterial()
     colors.color(PresetColor::sample_crop_handle) = "#E0A030";
     colors.color(PresetColor::sample_loop_handle) = "#40B0E0";
     colors.color(PresetColor::sample_seam_end_ink) = "#EF8585";
+    colors.color(PresetColor::automation_tab_background) = "#4A4E59";
+    colors.color(PresetColor::automation_tab_hover_background) = "#545864";
+    colors.color(PresetColor::automation_tab_outline) = "#616571";
+    colors.color(PresetColor::automation_ink) = "#FF91C3";
+    colors.color(PresetColor::automation_ghost_edge) = "#E0AA2A";
     return colors;
 }
 

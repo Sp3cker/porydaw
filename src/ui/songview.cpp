@@ -8,12 +8,14 @@
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/quickpopupsession.h"
+#include "ui/songview/quick/retirehostmenu.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheadermodel.h"
@@ -22,7 +24,9 @@
 #include <QEvent>
 #include <QFontMetrics>
 #include <QGuiApplication>
+#include <QKeyEvent>
 #include <QPointer>
+#include <QQuickItem>
 #include <QQuickWindow>
 
 #include <algorithm>
@@ -303,15 +307,25 @@ SongView::SongView(QObject *parent)
     m_strip->setParent(this);
     m_roll->setParent(this);
     // Shared time-selection context menu (roll + drawer): a typed host over
-    // the canvas popup session, bound lazily on first open. Activation is a
-    // single model signal; dismissal focus is decided by the session's
-    // restoreFocus flag through bindTimeSelectionMenuSession.
+    // the canvas popup session, bound lazily on first open. Every row is an
+    // action projection triggered through the host, so activation arrives as
+    // actionActivated() — used only for terminal focus completion, and only
+    // when no follow-on popup already owns the session.
     m_timeSelectionMenuHost = new songview::QuickMenuHost(this);
     m_timeSelectionMenuModel = new songview::QuickMenuModel(this);
-    connect(m_timeSelectionMenuModel, &songview::QuickMenuModel::activated, this,
-            &SongView::handleTimeSelectionAction);
-    connect(m_timeSelectionMenuHost, &songview::QuickMenuHost::cancelled, this,
-            [this] { m_pendingTimeSelectionMenu.reset(); });
+    connect(m_timeSelectionMenuHost, &songview::QuickMenuHost::actionActivated, this,
+            [this](QAction *) {
+                songview::restoreFocusUnlessFormOpen(*this, [this] { focusActiveSurface(); });
+            });
+    // Selection/document/cursor transitions retire only this menu: the open
+    // session must belong to this host AND be rooted at the time-selection
+    // model, so foreign forms sharing the session keep their independent
+    // lifetimes.
+    connect(this, &SongView::contextMenusInvalidated, this, [this](bool restoreFocus) {
+        songview::TimelineQuickView *const quick = quickView();
+        songview::retireHostMenu(quick ? quick->popupSession() : nullptr, m_timeSelectionMenuHost,
+                                 m_timeSelectionMenuModel, restoreFocus);
+    });
     m_playheadOverlay = new PlayheadOverlay(*this, timelineBandLayout());
     m_selectionModel.setObserver(
         [this](const songview::EditorSelectionModel::SelectionTransition &transition) {
@@ -335,6 +349,8 @@ SongView::SongView(QObject *parent)
 
 SongView::~SongView()
 {
+    if (m_editActions)
+        m_editActions->rebind(nullptr);
     if (QGuiApplication::instance())
         QGuiApplication::instance()->removeEventFilter(this);
     // Detach FIRST: unload QML and cancel window-level popup/gesture state
@@ -352,6 +368,11 @@ SongView::~SongView()
     cancelVoicePicker(/*restoreFocus=*/false);
     cancelInsertTimePromptWithoutFocus();
     cancelTimeSelectionMenuWithoutFocus();
+}
+
+const songview::EditActions *SongView::editActions() const noexcept
+{
+    return m_editActions.data();
 }
 
 songview::TimelineQuickView *SongView::quickView() const noexcept
@@ -761,7 +782,8 @@ void SongView::cancelTransientInput()
 
 void SongView::setDocument(SongDocument *document)
 {
-    if (m_document != document) {
+    const bool documentChanged = m_document != document;
+    if (documentChanged) {
         if (m_roll) {
             m_roll->cancelVelocityPromptWithoutFocus();
             m_roll->cancelPitchBendPopup();
@@ -776,6 +798,7 @@ void SongView::setDocument(SongDocument *document)
             connect(document, &SongDocument::documentChanged, this, [this] {
                 // Any document edit invalidates a preview captured at the
                 // previous revision before the normal page refresh.
+                invalidateContextMenus(/*restoreFocus=*/true);
                 cancelActiveInteractions();
                 cancelInsertTimePromptWithoutFocus();
                 if (m_ruler)
@@ -793,6 +816,12 @@ void SongView::setDocument(SongDocument *document)
     m_selectionModel.clearNoteSelection();
     m_headers->rebuild(m_trackActivity, m_playing);
     notifyDrawerSongChanged();
+    if (documentChanged) {
+        if (m_editActions)
+            m_editActions->rebind(this);
+        else
+            invalidateContextMenus(/*restoreFocus=*/false);
+    }
 }
 
 bool SongView::eventListVisible() const
@@ -910,6 +939,11 @@ void SongView::setVoicegroup(const LoadedVoiceGroup *voicegroup)
     refreshTimelineViews(PianoRollQuickDirty::All);
 }
 
+void SongView::invalidateContextMenus(bool restoreFocus)
+{
+    emit contextMenusInvalidated(restoreFocus);
+}
+
 void SongView::coordinateSelectionChange(
     const songview::EditorSelectionModel::SelectionTransition &transition)
 {
@@ -925,6 +959,10 @@ void SongView::coordinateSelectionChange(
         changed(songview::EditorSelectionModel::SelectionChange::NoteSelection);
     const bool timeSelectionChanged =
         changed(songview::EditorSelectionModel::SelectionChange::TimeSelection);
+    if (primaryChanged || trackScopeChanged || noteSelectionChanged || timeSelectionChanged) {
+        invalidateContextMenus(/*restoreFocus=*/true);
+        emit selectionContextChanged();
+    }
     // Roll layers already requested in this transition; later branches only
     // request the missing union members (a projection rebuild covers All).
     PianoRollQuickDirtySet rollDirty = PianoRollQuickDirty::None;
@@ -977,6 +1015,30 @@ void SongView::coordinateSelectionChange(
 // and screen changes ride the Quick coordinator's viewportChanged instead.
 bool SongView::eventFilter(QObject *watched, QEvent *event)
 {
+    // The manual key route owns Quick-scene keys only: claim the override
+    // while a QQuick focus object (band input, scene root, popup field) will
+    // deliver the press through TimelineQuickView into handleEditKey. A native
+    // QWidget focus stays with Qt delivery, where the installed window actions
+    // own Window commands and the widget owns its local keys; claiming those
+    // would stand Qt's shortcut matching down with no manual follow-through.
+    // (The application filter observes every receiver; watched is the focused
+    // object here, not just qApp itself.)
+    if (event->type() == QEvent::ShortcutOverride && watched == QGuiApplication::focusObject()) {
+        QObject *const focus = QGuiApplication::focusObject();
+        const bool quickFocus =
+            focus != nullptr && (qobject_cast<QQuickItem *>(focus) != nullptr ||
+                                 qobject_cast<QQuickWindow *>(focus) != nullptr);
+        if (quickFocus) {
+            const auto *const keyEvent = static_cast<const QKeyEvent *>(event);
+            if (const songview::EditActions *const actions = editActions();
+                actions && actions->target() == this &&
+                actions->editorCommandForKey(keyEvent->key(), keyEvent->modifiers())) {
+                event->accept();
+                return true;
+            }
+        }
+    }
+
     if (watched == QGuiApplication::instance()) {
         switch (event->type()) {
         case QEvent::ApplicationPaletteChange:

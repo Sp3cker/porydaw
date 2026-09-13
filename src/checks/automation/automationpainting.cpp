@@ -77,18 +77,18 @@ void setCc(SongDocument &document, const std::vector<SongDocument::LanePointValu
 
 LanePaint lanePaint(AutomationPage &page, LaneKind kind)
 {
+    const QColor ink = themes::color(themes::Role::song_view_automation_node_ink);
     if (kind == LaneKind::Tempo) {
         const LaneHandle handle{0};
-        return {handle, page.canvas()->laneBody(handle),
-                themes::color(themes::Role::song_view_automation_tempo_curve),
-                CoreTimeDefaults::kMinTempoBpm, CoreTimeDefaults::kMaxTempoBpm};
+        return {handle, page.canvas()->laneBody(handle), ink, CoreTimeDefaults::kMinTempoBpm,
+                CoreTimeDefaults::kMaxTempoBpm};
     }
 
     const auto &rows = page.canvas()->rows();
     for (int row = 0; row < int(rows.size()); ++row) {
         if (rows[std::size_t(row)].id.controller == kController) {
             const LaneHandle handle{row + 1};
-            return {handle, page.canvas()->laneBody(handle), themes::trackIdentityColor(0), 0, 127};
+            return {handle, page.canvas()->laneBody(handle), ink, 0, 127};
         }
     }
     return {};

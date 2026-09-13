@@ -1,5 +1,6 @@
 #include "ui/songview/timeaxis.h"
 
+#include "core/timedefaults.h"
 #include <algorithm>
 #include <cstddef>
 

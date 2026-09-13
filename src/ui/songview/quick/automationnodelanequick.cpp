@@ -83,8 +83,8 @@ void addNode(TimelineQuickScene &scene, TimelineQuickLayer layer,
         return;
     }
     addEllipse(scene.layer(layer), center, context.geometry.nodePaintRadius,
-               context.geometry.nodePaintRadius,
-               themes::color(themes::Role::song_view_piano_roll_background), context.overflow);
+               context.geometry.nodePaintRadius, themes::color(themes::Role::window_background),
+               context.overflow);
     addEllipseRing(scene.layer(layer), center, context.geometry.nodePaintRadius,
                    context.geometry.nodePaintRadius, context.geometry.nodeOutlineDipWidth * 2.0,
                    color, context.overflow);

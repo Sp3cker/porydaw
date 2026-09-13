@@ -6,6 +6,14 @@
 #include "checks/trackheaders/trackheaderoracles.h"
 #include "core/timedefaults.h"
 
+#include "checks/support/eventsynth.h"
+#include "core/songdocument.h"
+#include "ui/songview.h"
+#include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/trackheadermodel.h"
 #include <QByteArray>
 #include <QColor>
 #include <QCoreApplication>
@@ -17,17 +25,8 @@
 #include <QtTest>
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <optional>
-#include <vector>
-
-#include "checks/support/eventsynth.h"
-#include "core/songdocument.h"
-#include "ui/songview.h"
-#include "ui/songview/pianoroll.h"
-#include "ui/songview/quick/pianorollquick.h"
-#include "ui/songview/quick/timelineinputitem.h"
-#include "ui/songview/quick/timelinequickview.h"
-#include "ui/songview/trackheadermodel.h"
 
 using namespace checks::rollcheck;
 
@@ -574,8 +573,13 @@ void PianoRollTest::timelineInsertBlankTimeTracks()
     trackSelection.startTick = insertStart;
     trackSelection.endTick = insertEnd;
     view.selectionModel().setTimeSelectionAndTrackScope(trackSelection, 1u << track);
+    // The unified command must anchor on the selection span, not the edit
+    // cursor parked past the range end.
+    view.commitEditCursor(insertEnd + snapCell);
+    QVERIFY2(view.editCursorTick() == insertEnd + snapCell,
+             "could not park the edit cursor away from the range start");
     const int insertUndoIndex = doc.undoStack()->index();
-    view.insertBlankTime();
+    view.insertTime();
     DocNote otherAfter;
     DocNote selectedAfter;
     const bool otherStable =
@@ -590,7 +594,59 @@ void PianoRollTest::timelineInsertBlankTimeTracks()
                  insertedSelection.endTick == insertEnd &&
                  insertedSelection.scope == songview::EditorSelectionModel::TimeSelection::Tracks &&
                  view.editCursorTick() == insertStart,
-             "Insert Blank Time changed scope, cursor, or an unselected track");
+             "Insert Time changed scope, cursor, or an unselected track");
+    while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+        doc.undoStack()->undo();
+    QCOMPARE(doc.smf().write(), before);
+
+    // An active but unresolved scope is a rejected command: the unified
+    // entry must refuse without falling through to the whole-song prompt.
+    int unusedTrack = -1;
+    for (int candidate = 0;
+         candidate < static_cast<int>(std::size(check.timeline().tracks)) && unusedTrack < 0;
+         ++candidate)
+        if (!check.timeline().tracks[candidate].used)
+            unusedTrack = candidate;
+    QVERIFY2(unusedTrack >= 0, "the insert fixture has no timeline-unused track");
+    view.selectTrack(unusedTrack);
+    songview::EditorSelectionModel::TimeSelection rejectedSelection;
+    rejectedSelection.startTick = insertStart;
+    rejectedSelection.endTick = insertEnd;
+    rejectedSelection.scope = songview::EditorSelectionModel::TimeSelection::Tracks;
+    view.selectionModel().setTimeSelection(rejectedSelection);
+    QVERIFY2(view.selectionModel().primaryTrack() == unusedTrack &&
+                 view.selectionModel().storedTrackScope() == (uint32_t{1} << unusedTrack) &&
+                 !check.timeline().tracks[unusedTrack].used &&
+                 view.selectionModel().timeSelection().active() &&
+                 view.selectionModel().timeSelection().startTick == insertStart &&
+                 view.selectionModel().timeSelection().endTick == insertEnd &&
+                 view.selectionModel().timeSelection().scope ==
+                     songview::EditorSelectionModel::TimeSelection::Tracks,
+             "could not build the invalid active time-selection scope");
+
+    const quick_popup::PromptGuard guard(view);
+    const QByteArray rejectedBefore = doc.smf().write();
+    const int rejectedUndoIndex = doc.undoStack()->index();
+    const int rejectedUndoCount = doc.undoStack()->count();
+    const uint64_t rejectedRevision = doc.revision();
+    const uint64_t rejectedCursor = view.editCursorTick();
+    view.insertTime();
+    QCoreApplication::processEvents();
+    QVERIFY2(!quick_popup::popupSession(view)->isOpen(),
+             "the rejected Insert Time opened a prompt");
+    QVERIFY2(doc.smf().write() == rejectedBefore && doc.revision() == rejectedRevision &&
+                 doc.undoStack()->index() == rejectedUndoIndex &&
+                 doc.undoStack()->count() == rejectedUndoCount &&
+                 view.editCursorTick() == rejectedCursor &&
+                 view.selectionModel().timeSelection().active() &&
+                 view.selectionModel().timeSelection().startTick == insertStart &&
+                 view.selectionModel().timeSelection().endTick == insertEnd &&
+                 view.selectionModel().primaryTrack() == unusedTrack &&
+                 view.selectionModel().storedTrackScope() == (uint32_t{1} << unusedTrack),
+             "the rejected Insert Time changed document, cursor, or selection state");
+
+    // Restore the fixture state after the rejected scenario.
+    view.selectTrack(track);
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
         doc.undoStack()->undo();
     QCOMPARE(doc.smf().write(), before);
@@ -630,8 +686,13 @@ void PianoRollTest::timelineInsertBlankTimeLanes()
     laneSelection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
     laneSelection.lanes = {{track, laneCc}};
     view.selectionModel().setTimeSelection(laneSelection);
+    // The unified command must anchor on the selection span, not the edit
+    // cursor parked past the range end.
+    view.commitEditCursor(insertEnd + snapCell);
+    QVERIFY2(view.editCursorTick() == insertEnd + snapCell,
+             "could not park the edit cursor away from the range start");
     const int insertUndoIndex = doc.undoStack()->index();
-    view.insertBlankTime();
+    view.insertTime();
     DocLanePoint shiftedLanePoint;
     DocNote laneNoteAfter;
     const bool laneShifted =
@@ -649,7 +710,7 @@ void PianoRollTest::timelineInsertBlankTimeLanes()
                  insertedSelection.lanes == laneSelection.lanes &&
                  insertedSelection.startTick == insertStart &&
                  insertedSelection.endTick == insertEnd && view.editCursorTick() == insertStart,
-             "lane-scoped Insert Blank Time widened its scope or moved the band");
+             "lane-scoped Insert Time widened its scope or moved the band");
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
         doc.undoStack()->undo();
     QCOMPARE(doc.smf().write(), before);

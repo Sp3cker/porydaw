@@ -15,6 +15,7 @@
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
+#include "checks/support/support.h"
 #include "checks/trackheaders/trackheaderoracles.h"
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
@@ -280,6 +281,7 @@ class TrackHeaderModelTest final : public QObject
                 return false;
             view.setSong(timeline.get(), nullptr);
             view.setDocument(&document);
+            checks::support::bindEditActionsForTest(view);
             headers =
                 view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
             if (!headers)

@@ -14,6 +14,7 @@
 #include <QQuickItem>
 #include <QWheelEvent>
 
+#include "checks/support/support.h"
 #include "checks/support/timelinequickcheck.h"
 #include "core/timedefaults.h"
 #include "core/tracklimits.h"
@@ -24,6 +25,7 @@
 #include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/tempolane.h"
+#include "ui/songview.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
 
@@ -198,6 +200,7 @@ bool AutomationEditingTest::stageSong(SmfFile smf)
     candidate->applyVoicegroupBound(*identity);
     if (!candidate->isReady() || candidate->voicegroupLease().get() != &m_bank)
         return false;
+    checks::support::bindEditActionsForTest(candidate->view());
 
     SongView &view = candidate->view();
     view.setDrawerActivePage(EditorDrawerPage::Automations);
@@ -372,8 +375,8 @@ QPointF AutomationEditingTest::voicePoint(uint64_t tick) const
 
 void AutomationEditingTest::setPencilMode(bool enabled)
 {
-    if (QAction *const action = pencilModeAction())
-        action->setChecked(enabled);
+    if (QAction *const action = pencilModeAction(); action && action->isChecked() != enabled)
+        action->trigger();
 }
 
 QAction *AutomationEditingTest::pencilModeAction() const
@@ -602,6 +605,17 @@ bool AutomationEditingTest::focusAutomationBand()
 bool AutomationEditingTest::activateParameter(const EditorAutomationRowId &row)
 {
     const int index = checks::support::automationParameterIndex(*page().canvas(), row);
+    if (index < 0)
+        return false;
+    if (!clickParameterTab(row))
+        return false;
+    return QTest::qWaitFor([this, index] { return page().canvas()->activeParameter() == index; });
+}
+
+bool AutomationEditingTest::clickParameterTab(const EditorAutomationRowId &row,
+                                              Qt::KeyboardModifiers modifiers)
+{
+    const int index = checks::support::automationParameterIndex(*page().canvas(), row);
     if (index < 0 || !m_quickWindow)
         return false;
     auto *quick = tab().view().quickView();
@@ -614,8 +628,8 @@ bool AutomationEditingTest::activateParameter(const EditorAutomationRowId &row)
         return false;
     const QPoint where =
         item->mapToScene(QPointF(item->width() / 2.0, item->height() / 2.0)).toPoint();
-    QTest::mouseClick(m_quickWindow, Qt::LeftButton, Qt::NoModifier, where);
-    return QTest::qWaitFor([this, index] { return page().canvas()->activeParameter() == index; });
+    QTest::mouseClick(m_quickWindow, Qt::LeftButton, modifiers, where);
+    return true;
 }
 
 void AutomationEditingTest::arrangeCcLane()

@@ -12,6 +12,7 @@
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
+#include "checks/support/support.h"
 #include "checks/support/timelinequickcheck.h"
 #include "core/velocitymodel.h"
 #include "ui/editordrawer/drawerchrome.h"
@@ -101,6 +102,7 @@ void VelocityPageTest::fixtureRoute101AndInputGeometry()
     QVERIFY(quick);
     view.setDocument(&song->document());
     view.setSong(timeline.get(), &voices);
+    checks::support::bindEditActionsForTest(view);
     view.setDrawerActivePage(EditorDrawerPage::Velocity);
     view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
     QVERIFY(checks::support::showQuickViewport(view, QSize(960, 480)));

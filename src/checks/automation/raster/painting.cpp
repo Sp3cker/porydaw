@@ -197,13 +197,9 @@ EditorAutomationRowId laneRow(LaneKind kind)
 LaneGeometry laneGeometry(const AutomationRasterFixture &fixture, LaneKind kind)
 {
     LaneGeometry geometry;
-    if (kind == LaneKind::Tempo) {
-        geometry.handle = AutomationRasterFixture::kTempoHandle;
-        geometry.curveColor = themes::color(themes::Role::song_view_automation_tempo_curve);
-    } else {
-        geometry.handle = fixture.handleFor(fixture.pan);
-        geometry.curveColor = themes::trackIdentityColor(0);
-    }
+    geometry.handle = kind == LaneKind::Tempo ? AutomationRasterFixture::kTempoHandle
+                                              : fixture.handleFor(fixture.pan);
+    geometry.curveColor = themes::color(themes::Role::song_view_automation_node_ink);
     geometry.body = fixture.bodyFor(geometry.handle);
     return geometry;
 }
@@ -381,18 +377,18 @@ void AutomationRasterTest::curvesNodesAndSelectedRingsRender()
     QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationCurves).revision >
             awayCurvesBefore);
     QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationNodes).revision > awayNodesBefore);
-    const QRectF bodyProbe(geometry.body);
-    QVERIFY(!layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationCurves), bodyProbe,
-                             geometry.curveColor));
-    QVERIFY(!layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationNodes), bodyProbe,
-                             geometry.curveColor));
-    QVERIFY(layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationCurves), bodyProbe,
-                            awayGeometry.curveColor));
     NodeLane &awayLane = awayKind == LaneKind::Tempo ? static_cast<NodeLane &>(tempoLane)
                                                      : static_cast<NodeLane &>(ccLane);
     const int awayNode = awayKind == LaneKind::Tempo ? kTempoNode : kCcNode;
     const qreal awayNodeY =
         nodelane::valueY(awayLane, geometry.body, fixture().geometry(), awayNode);
+    const int second = kind == LaneKind::Tempo ? kTempoSecond : kCcSecond;
+    const qreal secondY = nodelane::valueY(lane, geometry.body, fixture().geometry(), second);
+    const qreal secondX = fixture().projection().displayX(kSecondTick, fixture().automationDpr());
+    QVERIFY(!layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationNodes),
+                             nodeProbe(secondX, secondY, nodeRadius), geometry.curveColor));
+    QVERIFY(layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationNodes),
+                            nodeProbe(nodeX, awayNodeY, nodeRadius), awayGeometry.curveColor));
     const QImage away = fixture().renderAutomationViewport(&error);
     QVERIFY2(error.isEmpty() && !away.isNull(), qPrintable(error));
     QVERIFY(framebufferHasColorNear(away, framebufferOrigin + QPointF(nodeX, awayNodeY),

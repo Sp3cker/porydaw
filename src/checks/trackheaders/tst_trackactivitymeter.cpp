@@ -14,6 +14,7 @@
 #include <optional>
 
 #include "checks/support/quickframebuffer.h"
+#include "checks/support/support.h"
 #include "checks/trackheaders/trackheaderoracles.h"
 #include "core/miditimeline.h"
 #include "ui/activity/trackactivityrender.h"
@@ -91,6 +92,7 @@ void TrackActivityMeterTest::init()
     m_timeline->tracks[kTrack].used = true;
     m_timeline->usedTrackCount = 1;
     m_view->setSong(m_timeline.get(), nullptr);
+    checks::support::bindEditActionsForTest(*m_view);
     QVERIFY(checks::support::showQuickViewport(*m_view, QSize(720, 520)));
     m_quick = m_view->quickView();
     m_window = m_quick ? m_quick->quickWindow() : nullptr;

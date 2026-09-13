@@ -1,10 +1,12 @@
 // Selection keyboard routing, protected-local-input tier: the event list page.
-// Row-local navigation, Select All, and the registered reorder binding stay
-// inside the page/controller, Copy with event-list focus fires exactly once
-// through its one window owner, and Delete removes exactly the selected
-// raw-event rows while a note selected in the song — but not in the page —
-// survives untouched (plan 11). Every key posts into the production Quick
-// window; the destructive Delete runs last in the case.
+// Row-local navigation, Select All, and Delete stay inside the
+// page/controller, the registered reorder binding fires once through the
+// shared MoveEventRow command while an unrelated note selection survives
+// untouched, Copy with event-list focus fires exactly once through its one
+// window owner, and Delete removes exactly the selected raw-event rows while
+// a note selected in the song — but not in the page — survives untouched
+// (plan 11). Every key posts into the production Quick window; the
+// destructive Delete runs last in the case.
 #include "checks/selectionkey/tst_localinputtier.h"
 
 #include "ui/eventtablemodel.h"
@@ -96,10 +98,15 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
     selectionkey::settle();
     QCOMPARE(controller->selectedRows().count(), rows);
 
-    // The registered reorder binding swaps adjacent rows without changing the
-    // event set.
+    // The registered reorder binding routes once through the shared
+    // MoveEventRow command and swaps adjacent rows without changing the
+    // event set. An unrelated note selected in the song neither disables
+    // nor retargets the move and survives untouched.
     const auto moveUp = selectionkey::firstBinding(QStringLiteral("eventlist.move_up"));
     QVERIFY2(moveUp.has_value(), "eventlist.move_up has no single binding");
+    const std::vector<DocNote> fixtureNotes = document.notesForTrack(kTrack);
+    QVERIFY2(!fixtureNotes.empty(), "the fixture has no note for the unrelated selection");
+    const DocNote unrelatedNote = fixtureNotes.front();
     const int totalBefore = totalEvents(document);
     const QString row0Before = rowSummary(model, 0);
     const QString row1Before = rowSummary(model, 1);
@@ -107,13 +114,19 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
     selectionkey::settle();
     QVERIFY2(focusAndStageInput(),
              "the event-list input did not reacquire native Quick-window focus");
+    view.selectionModel().setNoteSelection({unrelatedNote.noteId});
+    selectionkey::settle();
     QTest::keyClick(quickWindow, moveUp->key(), moveUp->keyboardModifiers());
     selectionkey::settle();
     QVERIFY2(rowSummary(model, 0) == row1Before && rowSummary(model, 1) == row0Before,
              "the reorder key did not swap the first two rows");
     QVERIFY2(model->rowCount() == rows && totalEvents(document) == totalBefore,
              "reordering changed the event count");
-
+    const std::optional<DocNote> unrelatedAfter =
+        selectionkey::noteById(document, unrelatedNote.noteId);
+    QVERIFY2(unrelatedAfter.has_value() && unrelatedAfter->tick == unrelatedNote.tick &&
+                 unrelatedAfter->key == unrelatedNote.key,
+             "the reorder key mutated the unrelated note selection");
     // Copy with event-list focus keeps exactly one window Copy owner; the
     // delivery is window-scoped, so the shell must be the active window.
     const auto copy = selectionkey::firstBinding(QStringLiteral("roll.copy"));

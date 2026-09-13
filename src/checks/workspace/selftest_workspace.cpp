@@ -262,8 +262,8 @@ void WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose()
     SongTab *tab = workspace_test::openReady(*workspace, *name);
     QVERIFY(tab);
     const SongTarget songTarget{tab->document().cfg(), tab->document().label()};
-    SettingsDialog dialog(window.m_engineSettings, songTarget, project.catalog.groupArgs,
-                          SettingsDialog::Tab::Engine, &window);
+    SettingsDialog dialog(window.m_engineSettings, songTarget, project.catalog.groupArgs, false,
+                          &window);
     Q_UNUSED(dialog);
     SongView &view = tab->view();
     const EditorViewState original = view.editorViewState();

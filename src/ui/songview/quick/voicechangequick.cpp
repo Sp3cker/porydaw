@@ -86,7 +86,7 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene, boo
     const QColor secondaryText = themes::color(themes::Role::song_view_secondary_text);
     SongDocument *document = m_owner.document();
     if (!horizontalPan) {
-        const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
+        const QColor background = themes::color(themes::Role::window_background);
         constexpr TimelineQuickLayer gutterChromeLayer =
             TimelineQuickLayer::VoiceChangesGutterChrome;
         constexpr TimelineQuickLayer chromeLayer = TimelineQuickLayer::VoiceChangesChrome;

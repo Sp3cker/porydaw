@@ -1,9 +1,8 @@
 // Entry point and per-case lifecycle for the selection-keyboard-routing
-// gesture Qt Test: exactly one qExec, the live-keymap reset with RAII
-// restore, fresh-rig staging, and the failure-safe held-input cleanup. The
-// scenarios live beside this file in gesturevelocity.cpp,
-// gesturecommands.cpp, and gesturethumbs.cpp; their shared contract is
-// gesturecheck.h.
+// gesture Qt Test: exactly one qExec, fresh-rig staging, and the failure-safe
+// held-input cleanup. The scenarios live beside this file in
+// gesturevelocity.cpp, gesturecommands.cpp, and gesturethumbs.cpp; their
+// shared contract is gesturecheck.h.
 
 #include "checks/selectionkey/gesturecheck.h"
 
@@ -50,15 +49,6 @@ std::vector<SongDocument::NewNote> SelectionKeyGestureTest::gestureNoteSpecs()
 void SelectionKeyGestureTest::prepareGestureDocument(SongDocument &document)
 {
     document.addLanePoint(kTrack, kAutomationController, kFollowingTick, 64);
-}
-
-void SelectionKeyGestureTest::initTestCase()
-{
-    // Snapshot before wiping, exactly like the legacy runner: every scenario
-    // resolves roll.delete through the live keymap, and the RAII restore
-    // puts any catalog-level overrides back when the test object dies.
-    mKeymapRestore.emplace();
-    mKeymapRestore->registry().resetAll();
 }
 
 void SelectionKeyGestureTest::init()

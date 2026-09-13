@@ -55,6 +55,7 @@ struct TrackRemap;
 
 namespace songview {
 class TimeRuler;
+class EditActions;
 class TrackHeaderModel;
 class EditorSelectionModel;
 class PianoRoll;
@@ -457,14 +458,16 @@ class SongView : public QObject
     // when a selection gesture commits.
     void announceTimeSelection();
 
-    // Canonical Copy command (defined in src/ui/songview/editkeyrouting.cpp
-    // beside the dispatch): an active time selection owns the command;
-    // otherwise the selected notes are copied.
+    // The single canonical musical Copy (defined in
+    // src/ui/songview/editkeyrouting.cpp beside the dispatch): an active
+    // time selection owns the command; otherwise the selected notes are
+    // copied.
     void copySelection();
-    // Range operations on the time selection. Copy captures notes plus every
-    // editable lane (including voice changes) of the scoped tracks — or just
-    // the scoped lanes — with ticks relative to the range start. Paste
-    // merges at the edit cursor: notes are additive, and only exact-tick
+
+    // Time selection copy captures notes plus every editable lane
+    // (including voice changes) of the scoped tracks — or just the scoped
+    // lanes — with ticks relative to the range start. Paste merges at the
+    // edit cursor: notes are additive, and only exact-tick
     // lane/tempo conflicts are replaced. A single-source-track clip retargets
     // to the selected track. Each non-empty operation is one undoable command.
     void copyTimeSelection();
@@ -475,10 +478,16 @@ class SongView : public QObject
     // partial scope shifts only its own tracks or lanes so the rest of the
     // song keeps its alignment.
     void removeTimeSelectionContents();
-    // Global Insert Time command: asks for bars, beats, and quarter-beat
-    // fractions, then inserts that much whole-song time at the live playhead
-    // or the edit cursor while stopped.
-    void insertTimeAtPlaybackCursor();
+    // Unified Insert Time command. An active time selection supplies the
+    // inserted span, its start, and the resolved track/lane/tempo scope:
+    // insertion runs without a prompt, keeps the selection over the new
+    // blank span, and commits the edit cursor to its start. An active but
+    // unresolved selection rejects the command silently. Without an active
+    // selection the command asks for bars, beats, and quarter-beat
+    // fractions and inserts that much whole-song time at the edit cursor,
+    // captured when the form opens even while playback advances the
+    // playhead.
+    void insertTime();
     // Typed Quick-modal bridge for Insert Time. The SongView retains the
     // guarded document/cursor snapshot; QML owns only its numeric drafts.
     Q_INVOKABLE void acceptInsertTimePrompt(int bars, int beats, int fractions);
@@ -494,8 +503,6 @@ class SongView : public QObject
     static constexpr int insertTimePromptMaximumBeatFractions() noexcept { return 3; }
     QString insertTimePromptTitle() const;
     QVariantMap insertTimePromptAppearance() const;
-    // Insert and duplicate operate only on an active half-open time selection.
-    void insertBlankTime();
     void duplicateTimeSelection();
     void pasteRangeAtEditCursor(const songview::Clip &clip);
     // Single paste entry from every surface (roll keys, drawer-canvas keys,
@@ -512,23 +519,71 @@ class SongView : public QObject
     // ruler grid line and the covered contents (notes and automation
     // points) move with it; the band follows.
     void nudgeTimeSelection(bool right);
+    // Closed semantic edit surface shared by keyboard routing and the
+    // canonical actions. Invocation origin remains a routing concern; these
+    // commands resolve their existing musical targets from current state.
+    enum class EditCommand {
+        Copy,
+        Cut,
+        DuplicateTime,
+        Paste,
+        SelectAll,
+        Delete,
+        PitchBend,
+        TransposeUp,
+        TransposeDown,
+        TransposeUpOctave,
+        TransposeDownOctave,
+        NudgeLeft,
+        NudgeRight,
+        MuteTracks,
+        SoloTracks,
+        InsertTime,
+        DeleteTime,
+        ClearTimeSelection,
+        // Document-global and selection-resolving commands. Their
+        // canonical operation arms resolve from cursor, interval, marker,
+        // and signature state in editkeyrouting.cpp.
+        SetVelocity,
+        SetLoopStart,
+        SetLoopEnd,
+        LoopFromSelection,
+        RemoveLoop,
+        EditTimeSignature,
+        RemoveTimeSignature,
+        PencilMode,
+        MoveEventUp,
+        MoveEventDown,
+    };
+    // Domain availability for the canonical action set. It does not encode
+    // keyboard origin or focus routing. The transient pointer-gesture gate
+    // stays on for live dispatch (keys, execute) but presentation refresh
+    // passes ignorePointerGesture: cached QAction state must describe the
+    // committed selection, never the gesture that produced it, or every
+    // menu snapshot taken after a sweep renders grey.
+    bool editCommandAvailable(EditCommand command, bool ignorePointerGesture = false) const;
+    // Semantic execution for every presentation. Gesture and readiness
+    // protection lives here, not in individual keyboard or menu owners.
+    void executeEditCommand(EditCommand command);
+    // The currently bound canonical actions. This guarded borrow is read-only;
+    // EditActions::rebind is the sole binding mutation and accepts only
+    // nullptr (unbind) or this view (bind) — never a handover to another
+    // live view.
+    const songview::EditActions *editActions() const noexcept;
     // Which surface routed the key to the shared policy: Timeline — the
     // roll-page bands and Quick surfaces whose note canvas is the live
     // editing target — or EventList, the Quick event page whose input item
     // owns the row-local table commands.
     enum class EditKeyOrigin { Timeline, EventList };
-    enum class SharedShortcutOwner { SongView, Window };
-    // Shared command policy entry (src/ui/songview/editkeyrouting.cpp):
-    // resolves shared keymap commands — note, range, and selection edits —
-    // against the live selection. Returns true only when a target consumes
-    // the command; unavailable targets deliberately decline it.
+    // Shared editor-key policy: recognizes canonical Editor-routed actions,
+    // preserves origin eligibility and terminal consumption, and activates
+    // each enabled action once.
     bool handleEditKey(const songview::TimelineKeyInput &input,
                        EditKeyOrigin origin = EditKeyOrigin::Timeline);
     // Release tail of the shared policy: finishes the keyboard transpose
     // audition from whichever surface the chord came up on. It reports
     // whether that release actually stopped an audition.
     bool handleEditKeyRelease(const songview::TimelineKeyInput &input);
-    void setSharedShortcutOwner(SharedShortcutOwner owner);
     // Shared Copy/Cut/Delete/Insert-blank/Duplicate/Remove-contents/Paste/
     // Clear context menu on the active selection, rendered through the
     // timeline Quick popup session. scenePos is a Quick-window scene
@@ -559,8 +614,6 @@ class SongView : public QObject
     void setFollowScrollPaused(bool paused);
     void showDrawerPageTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequest &request);
     void showDrawerPageNoteStatus(std::optional<DrawerPageNoteStatus> status);
-    void requestDrawerPageUndo();
-    void requestDrawerPageRedo();
     DrawerPageLiveState drawerPageLiveState() const;
     void cancelActiveInteractions();
     // Public observation of live pointer ownership. Follow-scroll state and
@@ -615,6 +668,10 @@ class SongView : public QObject
     void muteMaskChanged(uint32_t mask);
     void soloMaskChanged(uint32_t mask);
     void selectedTrackChanged(int track);
+    // Primary track, stored track scope, note, or time-selection context changed.
+    void selectionContextChanged();
+    // Relevant context menus must retire; forms keep their independent lifetime.
+    void contextMenusInvalidated(bool restoreFocus);
     void scaleHighlightChanged();
     void scaleFoldChanged();
     void scaleRootChanged();
@@ -657,6 +714,7 @@ class SongView : public QObject
     friend class songview::PianoRoll;
     friend class songview::TrackHeaderModel;
     friend class songview::VoicePicker;
+    friend class songview::EditActions;
     struct Geometry {
         int trackHeaderWidth;
         int pianoKeyboardWidth;
@@ -793,7 +851,12 @@ class SongView : public QObject
     };
     void coordinateSelectionChange(
         const songview::EditorSelectionModel::SelectionTransition &transition);
+    void invalidateContextMenus(bool restoreFocus);
     std::optional<TimeScopeResolution> resolveTimeSelectionScope() const;
+    // Selection-only insertion half of the unified Insert Time command; the
+    // unified entry is its sole dispatch. An unresolved selection rejects
+    // silently; the prompt path never reaches here.
+    void insertBlankTime();
     // Engine tracks a track-scoped time selection resolves to (used and
     // document-mapped), and the copyable lane identities of one track (its
     // model lanes plus the voice changes).
@@ -839,23 +902,9 @@ class SongView : public QObject
     songview::VoicePicker *m_voicePicker = nullptr;
     std::optional<songview::Clip> readClipboardClip();
 
-    // The selection snapshot taken when the shared time-selection menu
-    // opened, held through the session close until activation consumes it.
-    // Document identity plus revision and exact selection equality make a
-    // stale target a silent no-write.
-    struct PendingTimeSelectionMenu {
-        SongDocument *document = nullptr;
-        uint64_t documentRevision = 0;
-        songview::EditorSelectionModel::TimeSelection selection;
-        songview::TrackMask trackScope = 0;
-    };
     // Pure builder: rows, order, shortcut text, and build-time paste
     // enablement exactly as the former native menu.
     std::vector<songview::QuickMenuItem> buildTimeSelectionItems() const;
-    // QuickMenuModel::activated() sink; consumes the pending target, runs
-    // the owner command after the session already closed, then returns
-    // focus to the active surface.
-    void handleTimeSelectionAction(int actionId);
     // Binds the menu host and the dismissal-focus sink to the shared
     // canvas popup session (one session per view lifetime).
     void bindTimeSelectionMenuSession(songview::QuickPopupSession *session);
@@ -864,16 +913,12 @@ class SongView : public QObject
     songview::QuickMenuHost *m_timeSelectionMenuHost = nullptr;
     songview::QuickMenuModel *m_timeSelectionMenuModel = nullptr;
     QPointer<songview::QuickPopupSession> m_timeSelectionMenuSession;
-    std::optional<PendingTimeSelectionMenu> m_pendingTimeSelectionMenu;
-    // Open flag owned by SongView alone: the host tears down before the
-    // shared session's cancelled(restoreFocus) signal arrives, so ownership
-    // of a dismissed session cannot be re-derived at signal time.
-    bool m_timeSelectionMenuOpen = false;
 
     songview::TimeAxis m_timeAxis;            // musical time; fallback until a song binds
     const MidiTimeline *m_timeline = nullptr; // loaded content only
     const LoadedVoiceGroup *m_voicegroup = nullptr;
     SongDocument *m_document = nullptr;
+    QPointer<songview::EditActions> m_editActions;
     uint64_t m_transientInputGeneration = 0; // advanced only by cancelTransientInput()
     SongViewModel m_model;
     songview::EditorSelectionModel m_selectionModel;
@@ -901,7 +946,6 @@ class SongView : public QObject
 
     EditorViewState m_editorViewState;
     EditorDrawer *m_editorDrawer = nullptr;
-    SharedShortcutOwner m_sharedShortcutOwner = SharedShortcutOwner::SongView;
     bool m_followScrollPaused = false;
     VelocityGestureModel m_velocityGesture;
     std::unique_ptr<songview::TimeRuler> m_ruler;

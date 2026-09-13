@@ -2,11 +2,15 @@
 
 #include "core/smf.h"
 #include "core/songdocument.h"
+#include "core/timedefaults.h"
 #include "ui/eventtabletypes.h"
 #include "ui/keymap.h"
 #include "ui/songview.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/quickpopupsession.h"
+#include "ui/songview/quick/retirehostmenu.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 
@@ -76,6 +80,25 @@ EventListController::EventListController(SongView *songView, QObject *parent)
     if (m_songView) {
         connect(m_songView, &SongView::selectedTrackChanged, this,
                 [this](int) { syncTrackSelection(); });
+        // The owned row menu retires whenever its target context moves:
+        // row/chunk/filter/selection changes on this controller and the
+        // view's document/selection invalidation. The session lookup stays
+        // lazy so an unhosted controller never touches the canvas.
+        const auto retireRowMenu = [this](bool restoreFocus) {
+            songview::TimelineQuickView *const quick =
+                m_songView ? m_songView->quickView() : nullptr;
+            songview::retireHostMenu(quick ? quick->popupSession() : nullptr, m_menuHost, m_rowMenu,
+                                     restoreFocus);
+        };
+        connect(m_songView, &SongView::contextMenusInvalidated, this, retireRowMenu);
+        connect(this, &EventListController::currentRowChanged, this,
+                [retireRowMenu] { retireRowMenu(true); });
+        connect(this, &EventListController::chunkChanged, this,
+                [retireRowMenu] { retireRowMenu(true); });
+        connect(this, &EventListController::filterMaskChanged, this,
+                [retireRowMenu] { retireRowMenu(true); });
+        connect(this, &EventListController::selectedRowsChanged, this,
+                [retireRowMenu] { retireRowMenu(true); });
     }
     connect(m_chunkMenu, &songview::QuickMenuModel::activated, this,
             &EventListController::chunkPicked);
@@ -100,15 +123,9 @@ EventListController::EventListController(SongView *songView, QObject *parent)
             }
             break;
         }
-        case kRowMenuMoveUp:
-        case kRowMenuMoveDown:
-            if (const auto source = m_model->rawEventIndexForRow(m_menuRow)) {
-                const qlonglong destination =
-                    moveDestForRow(m_menuRow, id == kRowMenuMoveUp ? -1 : 1);
-                if (destination >= 0)
-                    reorderRawEvent(*source, size_t(destination));
-            }
-            break;
+        // Move up/down are action-backed rows: the host triggers the
+        // canonical MoveEventUp/MoveEventDown QActions directly, so no
+        // activated case exists for them.
         case kRowMenuDelete:
             deleteSelected();
             break;
@@ -823,6 +840,12 @@ qlonglong EventListController::moveDestForRow(int row, int delta) const
     return moveDestForRow(row, delta, nullptr);
 }
 
+bool EventListController::canMoveCurrentRow(int delta) const
+{
+    return m_visible && !isEditing() && m_currentRow >= 0 &&
+           moveDestForRow(m_currentRow, delta) >= 0;
+}
+
 void EventListController::moveCurrentRow(int delta)
 {
     QString why;
@@ -850,12 +873,13 @@ bool EventListController::editValueFor(int row, int column, const QString &text,
 
     bool ok = false;
     switch (column) {
-    case eventlist::EventTableModel::ColTick:
+    case eventlist::EventTableModel::ColTick: {
         text.toULongLong(&ok);
-        if (!ok)
+        if (!ok || text.toULongLong() > CoreTimeDefaults::kMaxTick)
             return false;
         *value = text;
         return true;
+    }
     case eventlist::EventTableModel::ColType: {
         const int type = text.toInt(&ok);
         if (!ok || type < 0 || type >= eventlist::TypeKindCount ||
@@ -1038,11 +1062,20 @@ void EventListController::rebuildRowMenu(int row)
             items.push_back(menuItem(kRowMenuShowVoice, tr("Show voice in voicegroup")));
     }
     if (source) {
-        items.push_back(songview::QuickMenuItem::makeSeparator());
-        items.push_back(
-            menuItem(kRowMenuMoveUp, tr("Move up within tick"), moveDestForRow(row, -1) >= 0));
-        items.push_back(
-            menuItem(kRowMenuMoveDown, tr("Move down within tick"), moveDestForRow(row, 1) >= 0));
+        // The canonical actions carry text, shortcut and live eligibility;
+        // the host triggers them directly on the current row established
+        // before open.
+        const songview::EditActions *const actions =
+            m_songView ? m_songView->editActions() : nullptr;
+        QAction *const moveUp =
+            actions ? actions->action(SongView::EditCommand::MoveEventUp) : nullptr;
+        QAction *const moveDown =
+            actions ? actions->action(SongView::EditCommand::MoveEventDown) : nullptr;
+        if (moveUp && moveDown) {
+            items.push_back(songview::QuickMenuItem::makeSeparator());
+            items.push_back(songview::QuickMenuItem::fromAction(*moveUp, kRowMenuMoveUp));
+            items.push_back(songview::QuickMenuItem::fromAction(*moveDown, kRowMenuMoveDown));
+        }
     }
     items.push_back(songview::QuickMenuItem::makeSeparator());
 
@@ -1192,14 +1225,9 @@ bool EventListController::handleLocalKey(int key, Qt::KeyboardModifiers modifier
         selectAll();
         return true;
     }
-    if (keys.matches(key, modifiers, QStringLiteral("eventlist.move_up"))) {
-        moveCurrentRow(-1);
-        return true;
-    }
-    if (keys.matches(key, modifiers, QStringLiteral("eventlist.move_down"))) {
-        moveCurrentRow(1);
-        return true;
-    }
+    // eventlist.move_up/move_down deliberately have no local matcher: the
+    // shared editor arbitration triggers the canonical MoveEventRow actions,
+    // which delegate to canMoveCurrentRow/moveCurrentRow.
     return false;
 }
 

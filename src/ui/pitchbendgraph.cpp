@@ -211,7 +211,7 @@ bool PitchBendGraph::handleKeyPress(QKeyEvent *event)
         return true;
     }
     const auto &keys = keymap::Registry::instance();
-    if (keys.matches(event, QStringLiteral("transport.play_pause"))) {
+    if (keys.matches(event->key(), event->modifiers(), QStringLiteral("transport.play_pause"))) {
         if (!event->isAutoRepeat())
             notifyAuditionRequested();
         event->accept();

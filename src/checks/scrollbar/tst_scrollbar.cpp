@@ -18,6 +18,7 @@
 
 #include "checks/fwd.hpp"
 #include "checks/support/songfixture.h"
+#include "checks/support/support.h"
 #include "checks/support/timelinequickcheck.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
@@ -191,6 +192,7 @@ void ScrollbarTest::init()
 
     QTRY_VERIFY(m_tab->isReady());
     QVERIFY(m_tab->voicegroupLease().get() == &m_bank);
+    checks::support::bindEditActionsForTest(m_tab->view());
 
     SongView &songView = view();
     songView.setDrawerActivePage(EditorDrawerPage::Automations);

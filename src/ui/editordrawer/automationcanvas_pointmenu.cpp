@@ -10,6 +10,7 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/quickpopupsession.h"
+#include "ui/songview/quick/retirehostmenu.h"
 
 namespace {
 
@@ -45,6 +46,13 @@ void AutomationCanvas::ensureNodeMenuAdapters()
     // pending target.
     connect(m_nodeMenuHost, &songview::QuickMenuHost::cancelled, this,
             [this] { m_pendingNodeMenu.reset(); });
+    // Selection and context changes retire only the active point menu. Its
+    // dedicated root identity leaves value prompts and CC-lane-delete forms
+    // with their own Escape/Cancel paths.
+    connect(&m_page.m_owner, &SongView::contextMenusInvalidated, this, [this](bool restoreFocus) {
+        songview::retireHostMenu(m_menuSession.data(), m_nodeMenuHost, m_nodeMenuModel,
+                                 restoreFocus);
+    });
     // Outside-right retarget: the session dismissed this host's menu and the
     // paired release is swallowed; the press may move the menu onto another
     // node or leave it dismissed on a miss.

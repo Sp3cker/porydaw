@@ -231,6 +231,8 @@ void ThemeLayoutTest::laneAndWaveformLegibility_data()
                   themes::Role::song_view_piano_roll_background},
         std::pair{themes::Role::song_view_add_automation_lane_action,
                   themes::Role::song_view_piano_roll_background},
+        std::pair{themes::Role::tab_selected_text,
+                  themes::Role::song_view_automation_tab_active_background},
         std::pair{themes::Role::sample_waveform_ink, themes::Role::item_background},
         std::pair{themes::Role::sample_crop_handle, themes::Role::item_background},
         std::pair{themes::Role::sample_loop_handle, themes::Role::item_background},

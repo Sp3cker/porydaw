@@ -5,7 +5,9 @@
 
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/songview/editactions.h"
 
+#include <QAction>
 #include <QEvent>
 #include <QQuickWindow>
 #include <QUndoStack>
@@ -125,10 +127,8 @@ void SelectionKeyCoreTest::automationRangeAndReboundDelete()
         m_fixture->view().selectionModel().noteSelection().empty();
     QVERIFY2(rangeReady, "actual automation range did not replace note selection with lane scope");
 
-    m_keymap->registry().setBinding(QStringLiteral("roll.delete"),
-                                    QKeySequence(QStringLiteral("Alt+Backspace")));
-    QVERIFY2(deliverKey(quick, Qt::Key_Backspace, Qt::AltModifier),
-             "rebound Delete did not reach the Quick automation surface");
+    QVERIFY2(deliverKey(quick, Qt::Key_Delete),
+             "shipped Delete did not reach the Quick automation surface");
     QVERIFY2(
         !m_fixture->document().findLanePoint(kTrack, kController, kFirstPointTick, nullptr) &&
             !m_fixture->document().findLanePoint(kTrack, kController, kInsidePointTick, nullptr) &&
@@ -153,8 +153,8 @@ void SelectionKeyCoreTest::pencilHoverDeletePrecedence()
     const bool miss = kind == PencilScenario::HoverMiss;
 
     // The shipped roll.delete defaults ("Delete;Backspace") drive the
-    // precedence matrix; automationRangeAndReboundDelete is the explicit
-    // rebound-binding coverage, and init() resets overrides between cases.
+    // precedence matrix; the automation-range scenario separately delivers
+    // unmodified Delete.
     const auto deleteKey = firstBinding(QStringLiteral("roll.delete"));
     QVERIFY2(deleteKey.has_value(),
              "roll.delete has no single-key default binding for the pencil-hover surface");
@@ -271,10 +271,8 @@ void SelectionKeyCoreTest::keyboardClipboardParity()
     // even when the row aborts, so clipboard state cannot leak across rows.
     const clipcheck_support::ClipboardStateGuard clipboardGuard;
 
-    const auto copy = firstBinding(QStringLiteral("roll.copy"));
     const auto paste = firstBinding(QStringLiteral("roll.paste"));
-    QVERIFY2(copy.has_value() && paste.has_value(),
-             "keyboard clipboard commands have no single-key binding");
+    QVERIFY2(paste.has_value(), "keyboard Paste has no single-key binding");
 
     m_fixture = createFixture(drawerPageForBand(band));
     QVERIFY2(
@@ -286,8 +284,13 @@ void SelectionKeyCoreTest::keyboardClipboardParity()
     songView.selectionModel().setNoteSelection({m_fixture->notes()[0]});
     QVERIFY2(m_fixture->focusBand(songview::TimelineBand::Roll),
              "could not focus the roll for keyboard Copy");
-    QVERIFY2(deliverKey(quick, copy->key(), copy->keyboardModifiers()),
-             "Quick window did not accept the keyboard Copy binding");
+    // Copy is Window-class: the unhosted rig registers no shortcut owner, so
+    // the stimulus is the bound production action, not a raw key.
+    const songview::EditActions *const actions = songView.editActions();
+    QVERIFY2(actions, "the unhosted rig has no production action set");
+    QAction *const copy = actions->action(SongView::EditCommand::Copy);
+    QVERIFY2(copy && copy->isEnabled(), "the rig has no enabled production Copy action");
+    copy->trigger();
     songView.selectionModel().clearNoteSelection();
     songView.commitEditCursor(kPasteTick);
     QVERIFY2(m_fixture->focusBand(band), "could not focus paste destination band");

@@ -7,6 +7,7 @@
 
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
+#include "core/timedefaults.h"
 #include "ui/layout.h"
 #include "ui/songtab.h"
 #include "ui/songview/pianoroll.h"
@@ -138,7 +139,7 @@ bool PianoRollFixture::isOccupied(Tick tick, uint32_t dur, int key, bool checkAl
                 continue;
             const uint64_t end = note.unterminated() ? CoreTimeDefaults::kNoTick
                                                      : uint64_t(note.tick) + note.duration + dur;
-            if (note.tick < tick + 2 * dur && end > tick)
+            if (note.tick < uint64_t(tick) + 2 * uint64_t(dur) && end > tick)
                 return true;
         }
     }
@@ -169,7 +170,7 @@ Cell PianoRollFixture::findFreeCell(int firstProbe, bool checkAllTracks)
                 continue;
             const auto markerInSpan = [&](Tick markerTick) {
                 return markerTick != CoreTimeDefaults::kNoTick && markerTick >= tick &&
-                       markerTick <= tick + 2 * dur;
+                       markerTick <= uint64_t(tick) + 2 * uint64_t(dur);
             };
             if (markerInSpan(timeline().loopStartTick) || markerInSpan(timeline().loopEndTick))
                 continue;

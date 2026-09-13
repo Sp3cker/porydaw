@@ -7,6 +7,7 @@
 #include <cmath>
 #include <utility>
 
+#include "checks/support/support.h"
 #include "core/miditimeline.h"
 #include "ui/songview.h"
 
@@ -110,6 +111,7 @@ std::unique_ptr<SongViewRig> SongViewRig::create(std::unique_ptr<LoadedSong> loa
         new SongViewRig(std::move(loadedSong), std::move(timeline), sampleRate));
     rig->m_view->setSong(rig->m_timeline.get(), nullptr);
     rig->m_view->setDocument(&rig->m_song->document());
+    support::bindEditActionsForTest(*rig->m_view);
     return rig;
 }
 

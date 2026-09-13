@@ -8,6 +8,7 @@
 
 #include "checks/rollcheck/rollcheck.h"
 #include "checks/support/songfixture.h"
+#include "checks/support/support.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
 #include "ui/songtab.h"
@@ -50,6 +51,7 @@ void PianoRollTest::init()
     m_tab->applyVoicegroupBound(*bankId);
     QTRY_VERIFY(m_tab->isReady());
 
+    checks::support::bindEditActionsForTest(m_tab->view());
     m_fixture = std::make_unique<checks::rollcheck::PianoRollFixture>(*m_tab, m_songLabel);
     QVERIFY(m_fixture->prepare());
 }

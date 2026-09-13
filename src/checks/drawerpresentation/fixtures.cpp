@@ -13,6 +13,7 @@
 #include "checks/support/editorrig.h"
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
+#include "checks/support/support.h"
 #include "core/miditimeline.h"
 #include "core/smf.h"
 #include "core/tracklimits.h"
@@ -199,6 +200,7 @@ bool DrawerFixture::create(QString &error)
         error = QStringLiteral("drawer fixture did not become ready");
         return false;
     }
+    checks::support::bindEditActionsForTest(candidate->view());
     candidate->show();
     pump();
     view = &candidate->view();
@@ -384,6 +386,7 @@ bool VoiceTransactionFixture::create(QString &error)
         error = QStringLiteral("voice transaction fixture did not become ready");
         return false;
     }
+    checks::support::bindEditActionsForTest(candidate->view());
     candidate->document().addLanePoint(0, DOC_CC_VOICE, 48, 3);
     SongView &candidateView = candidate->view();
     candidateView.selectTrack(0);
@@ -499,6 +502,7 @@ bool VelocityTransactionFixture::create(QString &error)
         error = QStringLiteral("velocity transaction fixture did not become ready");
         return false;
     }
+    checks::support::bindEditActionsForTest(candidate->view());
     SongView &candidateView = candidate->view();
     candidateView.selectTrack(0);
     candidateView.setDrawerActivePage(EditorDrawerPage::Velocity);

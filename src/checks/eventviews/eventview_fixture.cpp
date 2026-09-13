@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "checks/quickpopupguard.h"
+#include "checks/support/support.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
 #include "project/voicegroupsource.h"
@@ -199,6 +200,7 @@ std::unique_ptr<EventViewTabFixture> EventViewTabFixture::create(FixtureShape sh
         error = QStringLiteral("SongTab did not become ready");
         return nullptr;
     }
+    checks::support::bindEditActionsForTest(fixture->m_tab->view());
     fixture->m_tab->show();
     QCoreApplication::processEvents();
     return fixture;
