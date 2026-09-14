@@ -329,7 +329,7 @@ void PianoRoll::splitNotes()
     };
     // Only selected-source fragments inherit selection after IDs are reassigned.
     std::vector<std::pair<Tick, uint8_t>> fragmentPositions;
-    // Grid and playhead splits share one undo step.
+    // Grid and edit-cursor splits share one undo step.
     for (const DocNote &note : selected) {
         if (note.unterminated())
             continue;
@@ -351,18 +351,18 @@ void PianoRoll::splitNotes()
         replacementNotes.push_back({partTick, note.key, uint32_t(end - partTick), note.velocity});
         fragmentPositions.push_back({partTick, note.key});
     }
-    // Playhead cuts also apply while stopped; their fragments remain unselected.
-    const Tick playheadTick = CoreTimeDefaults::tickFromDouble(std::round(m_sv->playheadTick()));
+    // Edit-cursor cuts also apply while stopped; their fragments remain unselected.
+    const Tick cursorTick = m_sv->editCursorTick();
     for (const DocNote &note : doc->notesForTrack(selectedTrack)) {
         const uint64_t end = uint64_t(note.tick) + note.duration;
-        if (note.unterminated() || isSelected(note.noteId) || playheadTick <= note.tick ||
-            uint64_t(playheadTick) >= end)
+        if (note.unterminated() || isSelected(note.noteId) || cursorTick <= note.tick ||
+            uint64_t(cursorTick) >= end)
             continue;
         notesToRemove.push_back(note);
         replacementNotes.push_back(
-            {note.tick, note.key, uint32_t(playheadTick - note.tick), note.velocity});
+            {note.tick, note.key, uint32_t(cursorTick - note.tick), note.velocity});
         replacementNotes.push_back(
-            {playheadTick, note.key, uint32_t(end - playheadTick), note.velocity});
+            {cursorTick, note.key, uint32_t(end - cursorTick), note.velocity});
     }
     if (notesToRemove.empty())
         return;

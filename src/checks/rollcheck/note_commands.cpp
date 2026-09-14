@@ -221,7 +221,7 @@ void PianoRollTest::keyboardSplitNotesGrid()
     unwindTo(doc, undo, before);
 }
 
-void PianoRollTest::keyboardSplitAtPlayhead()
+void PianoRollTest::keyboardSplitAtEditCursor()
 {
     PianoRollFixture &check = *m_fixture;
     const std::optional<ResizeFixture> seed = makeResizeSeed(check);
@@ -235,18 +235,18 @@ void PianoRollTest::keyboardSplitAtPlayhead()
     const int undo = doc.undoStack()->index();
     DocNote source;
     QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &source),
-             "split-playhead seed note was not found");
-    const Tick playheadTick = d.tick + source.duration / 2;
-    view.setPlayheadSample(check.timeline().sampleForTick(playheadTick), true);
+             "split-cursor seed note was not found");
+    const Tick cursorTick = d.tick + source.duration / 2;
+    view.setEditCursorTick(cursorTick);
     const int splitUndoIndex = doc.undoStack()->index();
     sendCommandKey(roll, Qt::Key_E);
     DocNote piece;
     QVERIFY2(doc.undoStack()->index() == splitUndoIndex + 1 &&
                  doc.findNote(track, d.tick, uint8_t(d.key), &piece) &&
-                 piece.duration == playheadTick - d.tick &&
-                 doc.findNote(track, playheadTick, uint8_t(d.key), &piece) &&
-                 piece.duration == uint32_t(source.duration - (playheadTick - d.tick)),
-             "Ctrl+E did not split the unselected note at the playhead in one undo step");
+                 piece.duration == cursorTick - d.tick &&
+                 doc.findNote(track, cursorTick, uint8_t(d.key), &piece) &&
+                 piece.duration == uint32_t(source.duration - (cursorTick - d.tick)),
+             "Ctrl+E did not split the unselected note at the edit cursor in one undo step");
     unwindTo(doc, undo, before);
 }
 
@@ -262,8 +262,8 @@ void PianoRollTest::keyboardSplitNoop()
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     view.selectionModel().clearNoteSelection();
-    // Park the playhead past the seeded note's end so no note straddles it.
-    view.setPlayheadSample(check.timeline().sampleForTick(d.tick + 2 * d.dur), true);
+    // Park the edit cursor past the seeded note's end so no note straddles it.
+    view.setEditCursorTick(d.tick + 2 * d.dur);
     sendCommandKey(roll, Qt::Key_E);
     QCOMPARE(doc.undoStack()->index(), undo);
     QCOMPARE(doc.smf().write(), before);
@@ -381,7 +381,7 @@ void PianoRollTest::keyboardJoinMixedSpread()
 }
 
 // Both split arms share one undo; only selected-source fragments inherit selection.
-void PianoRollTest::keyboardSplitSelectedPlusPlayheadStraddler()
+void PianoRollTest::keyboardSplitSelectedPlusCursorStraddler()
 {
     PianoRollFixture &check = *m_fixture;
     const std::optional<ResizeFixture> seed = makeResizeSeed(check);
@@ -405,7 +405,7 @@ void PianoRollTest::keyboardSplitSelectedPlusPlayheadStraddler()
     doc.addNote(track, straddlerTick, straddlerKey, uint32_t(2 * grid), 90);
     DocNote straddler;
     QVERIFY2(doc.findNote(track, straddlerTick, straddlerKey, &straddler),
-             "the playhead straddler did not land");
+             "the cursor straddler did not land");
 
     const Tick bystanderTick = straddlerTick + 5 * grid;
     const uint8_t bystanderKey = uint8_t(d.key == 30 ? 31 : 30);
@@ -414,8 +414,8 @@ void PianoRollTest::keyboardSplitSelectedPlusPlayheadStraddler()
     QVERIFY2(doc.findNote(track, bystanderTick, bystanderKey, &bystander),
              "the untouched bystander note did not land");
 
-    const Tick playheadTick = straddlerTick + grid;
-    view.setPlayheadSample(check.timeline().sampleForTick(playheadTick), true);
+    const Tick cursorTick = straddlerTick + grid;
+    view.setEditCursorTick(cursorTick);
     view.selectionModel().setNoteSelection({source.noteId, bystander.noteId});
 
     const int splitUndoIndex = doc.undoStack()->index();
@@ -431,8 +431,8 @@ void PianoRollTest::keyboardSplitSelectedPlusPlayheadStraddler()
     }
     QVERIFY2(doc.findNote(track, straddlerTick, straddlerKey, &piece) && piece.duration == grid,
              "Ctrl+E did not keep the straddler's left half in place");
-    QVERIFY2(doc.findNote(track, playheadTick, straddlerKey, &piece) && piece.duration == grid,
-             "Ctrl+E did not split the straddler at the playhead");
+    QVERIFY2(doc.findNote(track, cursorTick, straddlerKey, &piece) && piece.duration == grid,
+             "Ctrl+E did not split the straddler at the edit cursor");
     const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
     QVERIFY2(selection.size() == 4 &&
                  std::find(selection.begin(), selection.end(), bystander.noteId) != selection.end(),

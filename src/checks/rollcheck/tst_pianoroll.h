@@ -89,11 +89,11 @@ class PianoRollTest final : public QObject
     void keyboardDuplicateNotes();
     void keyboardDuplicatePrefersTimeSelection();
     void keyboardSplitNotesGrid();
-    void keyboardSplitAtPlayhead();
+    void keyboardSplitAtEditCursor();
     void keyboardSplitNoop();
     void keyboardJoinNotes();
     void keyboardJoinMixedSpread();
-    void keyboardSplitSelectedPlusPlayheadStraddler();
+    void keyboardSplitSelectedPlusCursorStraddler();
     void keyboardNoteCommandPopupActivation_data();
     void keyboardNoteCommandPopupActivation();
     void timelineInsertBlankTimeTracks();
