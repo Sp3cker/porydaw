@@ -696,7 +696,7 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QWidget *const meter = window.m_polyMeter;
         QVERIFY(meter);
 
-        const auto captionIsCentered = [&] {
+        const auto captionIsCentered = [&](const QString &text) {
             const QImage image = caption->grab().toImage();
             const QColor ink = themes::color(themes::Role::secondary_text);
             // The caption paints antialiased text over a transparent
@@ -707,6 +707,7 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
             // nonzero coverage instead; the caption paints nothing else.
             int left = image.width();
             int right = -1;
+            int inkCount = 0;
             for (int y = 0; y < image.height(); ++y)
                 for (int x = 0; x < image.width(); ++x) {
                     const QColor pixel = image.pixelColor(x, y);
@@ -715,8 +716,16 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
                         qAbs(pixel.blue() - ink.blue()) <= 8) {
                         left = qMin(left, x);
                         right = qMax(right, x);
+                        ++inkCount;
                     }
                 }
+            qDebug() << "DIAG caption geometry:" << caption->geometry() << "bar:" << bar->width()
+                     << "x" << bar->height() << "captionVisible:" << caption->isVisibleTo(bar)
+                     << "image:" << image.width() << "x" << image.height()
+                     << "dpr:" << caption->devicePixelRatioF() << "textLen:" << text.size()
+                     << "inkCount:" << inkCount << "left:" << left << "right:" << right
+                     << "font:" << caption->font().toString();
+
             const qreal center = caption->mapTo(bar, QPoint()).x() +
                                  (left + right + 1) / (2.0 * image.devicePixelRatio());
             // Ink bounds differ from centered advance widths by glyph bearings.
@@ -731,7 +740,7 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QCoreApplication::processEvents();
         QCOMPARE(caption->accessibleDescription(), profile);
         const int barHeight = bar->height();
-        QVERIFY2(captionIsCentered(), "Hint text must be centered on the status bar");
+        QVERIFY2(captionIsCentered(profile), "Hint text must be centered on the status bar");
 
         // An operational message never displaces the hint text or the bar's
         // height; the caption's stretch absorbs the transient message's space.
@@ -748,7 +757,7 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         const int meterX = meter->x();
         const int meteredHeight = bar->height();
         QCOMPARE(hints.currentText(), profile);
-        QVERIFY2(captionIsCentered(), "Showing the meter must not shift the hint center");
+        QVERIFY2(captionIsCentered(profile), "Showing the meter must not shift the hint center");
 
         // A longer profile changes only the painted text: the full string
         // stays accessible and the meter does not move.
@@ -758,7 +767,8 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QCOMPARE(caption->accessibleDescription(), hints.currentText());
         QCOMPARE(meter->x(), meterX);
         QCOMPARE(bar->height(), meteredHeight);
-        QVERIFY2(captionIsCentered(), "Elided hints must retain the status-bar center");
+        QVERIFY2(captionIsCentered(hints.currentText()),
+                 "Elided hints must retain the status-bar center");
 
         // An enlarged application font may grow the bar, but the hint text
         // still never drives its height or pushes the meter.
@@ -779,10 +789,12 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QCOMPARE(caption->accessibleDescription(), hints.currentText());
         QCOMPARE(bar->height(), enlargedHeight);
         QCOMPARE(meter->x(), enlargedMeterX);
-        QVERIFY2(captionIsCentered(), "Enlarging the font must not shift the hint center");
+        QVERIFY2(captionIsCentered(hints.currentText()),
+                 "Enlarging the font must not shift the hint center");
         meter->hide();
         QCoreApplication::processEvents();
-        QVERIFY2(captionIsCentered(), "Hiding the meter must not shift the hint center");
+        QVERIFY2(captionIsCentered(hints.currentText()),
+                 "Hiding the meter must not shift the hint center");
     }
 
   private:
