@@ -854,12 +854,6 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/themelayout/tst_themelayout_scale.cpp
         resources/fonts.qrc
     )
-    # MSVC /GL+PCH note: hoverfixture.cpp's TU has been dropped from the
-    # Windows link (LNK2001 for automation_hover::hasFilledNodeAt) while
-    # linking cleanly on GCC/Clang; keep it out of the PCH stream too.
-    set_source_files_properties(src/checks/automation/hover/hoverfixture.cpp PROPERTIES
-        SKIP_PRECOMPILE_HEADERS ON)
-
     if(APPLE)
         target_sources(porydaw_checks PRIVATE
             src/checks/nativegraphics/tst_playhead_native_mac.mm
@@ -883,14 +877,6 @@ if(PORYDAW_BUILD_CHECKS)
         )
     endif()
     target_link_libraries(porydaw_checks PRIVATE porydaw_app Qt6::Quick Qt6::Test)
-    # The checks binary needs fast links, not whole-program optimization:
-    # MSVC /GL has dropped an existing symbol from its link line (LNK2001).
-    # The shipped targets keep IPO.
-    set_target_properties(porydaw_checks PROPERTIES
-        INTERPROCEDURAL_OPTIMIZATION_RELEASE OFF
-        INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO OFF
-        INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL OFF)
-
     target_precompile_headers(porydaw_checks PRIVATE
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
     add_dependencies(porydaw_checks mid2agb)

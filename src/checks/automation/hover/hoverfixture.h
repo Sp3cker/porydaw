@@ -22,7 +22,7 @@ class QQuickWindow;
 
 namespace songview {
 class TimelineInputItem;
-class TimelineQuickLayerData;
+struct TimelineQuickLayerData;
 class TimelineQuickScene;
 } // namespace songview
 
