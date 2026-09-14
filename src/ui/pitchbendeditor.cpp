@@ -16,7 +16,6 @@
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QMouseEvent>
-#include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QUndoStack>
@@ -24,7 +23,6 @@
 #include <QVariant>
 #include <algorithm>
 #include <map>
-#include <mutex>
 #include <utility>
 
 namespace {
@@ -406,17 +404,6 @@ void PitchBendEditor::bindGraph(PitchBendGraph *graph, PitchBendGraph::Lane lane
     });
 }
 
-// The shared canvas engine loads PitchBendPopup.qml through the popup
-// session; registering the graph type before the first popup load keeps the
-// imperative QML type visible to that engine's later component creations.
-void registerPitchBendGraphOnce()
-{
-    static std::once_flag registered;
-    std::call_once(registered, [] {
-        qmlRegisterType<songview::PitchBendGraph>("Porydaw.Ui", 1, 0, "PitchBendGraph");
-    });
-}
-
 PitchBendEditor::~PitchBendEditor()
 {
     // Owner/tab teardown cancels unsettled work and never restores focus.
@@ -441,7 +428,6 @@ void PitchBendEditor::openAt(const QRectF &noteScene, double noteFraction)
         dispose(DismissAction::Cancel, CloseFocus::Discard, /*deferTeardown=*/false);
         return;
     }
-    registerPitchBendGraphOnce();
     // The pitch editor owns note anchoring and outside-click retargeting. The
     // shared session only owns the common overlay lifetime and shortcut
     // arbitration. Open before connecting to session dismissal: replacement

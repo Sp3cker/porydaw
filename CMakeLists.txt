@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.21)
-project(porydaw VERSION 1.0.0 LANGUAGES C CXX)
+cmake_minimum_required(VERSION 3.24)
+project(porydaw VERSION 1.0.2 LANGUAGES C CXX)
 
 find_package(Git QUIET)
 if(Git_FOUND)
@@ -92,7 +92,7 @@ if(PORYDAW_COVERAGE)
     add_link_options(-fprofile-instr-generate)
 endif()
 
-find_package(Qt6 6.9 REQUIRED COMPONENTS Qml Quick QuickControls2 Svg Widgets)
+find_package(Qt6 6.11 REQUIRED COMPONENTS Qml Quick QuickControls2 Svg Widgets)
 
 # ---- poryaaaa engine core (MIT, statically linked) ----
 set(PORYAAAA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/poryaaaa"
@@ -463,6 +463,11 @@ target_include_directories(porydaw_app PUBLIC
     external/dr_libs
     external/stb
 )
+target_include_directories(porydaw_app PRIVATE
+    src/ui
+    src/ui/mousehints
+    src/ui/songview/quick
+)
 # The project() version is the single source of truth (docs/RELEASING.md);
 # release CI refuses a tag that doesn't match it.
 target_compile_definitions(porydaw_app PUBLIC
@@ -491,6 +496,13 @@ qt_add_qml_module(porydaw_app
     VERSION 1.0
     RESOURCE_PREFIX /qt/qml
     NO_PLUGIN
+    SOURCES
+        src/ui/mousehints/hintprofiles.h
+        src/ui/pitchbendgraph.hpp
+        src/ui/songview/quick/playheadquick.h
+        src/ui/songview/quick/timelineinputitem.h
+        src/ui/songview/quick/timelinequickchrome.h
+        src/ui/songview/quick/timelinequickscene.h
     QML_FILES
         src/ui/songview/quick/AutomationTabs.qml
         src/ui/songview/quick/TimelineCanvas.qml
@@ -526,7 +538,7 @@ qt_add_executable(porydaw
     src/main.cpp
     resources/fonts.qrc
 )
-target_link_libraries(porydaw PRIVATE porydaw_app)
+target_link_libraries(porydaw PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>")
 
 if(PORYDAW_BUILD_CHECKS)
     # Qt Test is required only by the checks target; app-only builds must not need it.
@@ -876,7 +888,11 @@ if(PORYDAW_BUILD_CHECKS)
             VERBATIM
         )
     endif()
-    target_link_libraries(porydaw_checks PRIVATE porydaw_app Qt6::Quick Qt6::Test)
+    target_link_libraries(porydaw_checks PRIVATE
+        "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+        Qt6::Quick
+        Qt6::Test
+    )
     target_precompile_headers(porydaw_checks PRIVATE
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
     add_dependencies(porydaw_checks mid2agb)

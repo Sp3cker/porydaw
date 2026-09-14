@@ -7,6 +7,7 @@
 
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
+#include "ui/songview.h"
 #include "ui/songview/quick/automationnodelanequick.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -129,7 +130,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         if (hover)
             scene.setAutomationHoverTextRecords({});
         if (content || hover)
-            scene.setAutomationGhostTextRecords({});
+            scene.setAutomationLaneTextRecords({});
         return;
     }
     const auto &bandGeometry =
@@ -261,8 +262,34 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
             : -1;
     const QFontMetricsF captionMetrics(m_laneCaptionFont);
     const qreal labelInset = layout::space(layout::Space::One);
-    std::vector<TimelineQuickTextModel::Record> ghostTextRecords;
+    std::vector<TimelineQuickTextModel::Record> laneTextRecords;
     std::vector<QRectF> placedGhostLabels;
+    // Written-event counts stack upward from the plot's bottom-left corner,
+    // active lane bottom-most. Counts are document-written events only — the
+    // adapter's synthetic tick-0 engine node is not an event.
+    qreal countBottom = viewport.bottom() - labelInset;
+    const auto appendLaneCount = [this, &viewport, &captionMetrics, labelInset, &countBottom,
+                                  &laneTextRecords](int parameterIndex) {
+        const std::optional<EditorAutomationRowId> row = parameterRow(parameterIndex);
+        const std::size_t eventCount = row ? parameterEventCount(*row) : std::size_t{0};
+        if (eventCount == 0)
+            return;
+        const QString text = eventCount == 1
+                                 ? SongView::tr("1 Event")
+                                 : SongView::tr("%1 Events").arg(qulonglong(eventCount));
+        const qreal width = captionMetrics.horizontalAdvance(text);
+        const qreal height = captionMetrics.height();
+        const QRectF rect(viewport.left() + labelInset, countBottom - height, width, height);
+        if (rect.top() < viewport.top())
+            return;
+        countBottom = rect.top();
+        appendText(laneTextRecords, TimelineQuickTextKeyKind::AutomationLaneCount,
+                   quint64(parameterIndex), rect, text,
+                   themes::color(themes::Role::song_view_secondary_text), m_laneCaptionFont,
+                   Qt::AlignLeft, viewport);
+    };
+    if (active)
+        appendLaneCount(activeParameter());
     const auto basePaintContext = [this, &scene, &viewport, &projection, dpr, bandFirst,
                                    bandLast](NodeLane &lane, std::span<const NodePoint> points,
                                              const QRect &body, LaneHandle handle,
@@ -289,6 +316,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     };
     for (int ghostIndex = 0; ghostIndex < int(ghosts.size()); ++ghostIndex) {
         const GhostLane &ghostLane = ghosts[std::size_t(ghostIndex)];
+        appendLaneCount(ghostLane.parameterIndex);
         QColor ghost = themes::color(themes::Role::song_view_automation_node_ink);
         ghost.setAlphaF(0.5);
         const NodeLaneQuickPaint::Context ghostContext = basePaintContext(
@@ -314,7 +342,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                         [&rect](const QRectF &placed) { return placed.intersects(rect); }))
             continue;
         placedGhostLabels.push_back(rect);
-        appendText(ghostTextRecords, TimelineQuickTextKeyKind::AutomationGhostLabel,
+        appendText(laneTextRecords, TimelineQuickTextKeyKind::AutomationGhostLabel,
                    quint64(ghostLane.parameterIndex), rect, text,
                    themes::color(themes::Role::song_view_secondary_text), m_laneCaptionFont,
                    Qt::AlignRight, viewport);
@@ -396,5 +424,5 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     if (transient)
         scene.setAutomationTransientTextRecords(transientTextRecords);
     if (content || hover)
-        scene.setAutomationGhostTextRecords(ghostTextRecords);
+        scene.setAutomationLaneTextRecords(laneTextRecords);
 }

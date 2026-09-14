@@ -41,7 +41,7 @@ void installOffscreenSystemFont(QApplication &application)
 
 bool initializePorydawApplication(QApplication &application)
 {
-#if defined(Q_OS_WIN) && QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+#ifdef Q_OS_WIN
     application.styleHints()->setColorScheme(Qt::ColorScheme::Light);
 #endif
     QApplication::setStyle(QStringLiteral("fusion"));

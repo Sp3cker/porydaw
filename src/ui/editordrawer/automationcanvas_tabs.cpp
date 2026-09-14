@@ -78,12 +78,29 @@ LaneHandle AutomationCanvas::activeLane() const noexcept
     return {int(slot - m_nodeStack.cbegin())};
 }
 
-// Selection-scope inclusion over the nine catalog identities — not a count of
-// stored nodes; unpainted lanes and global Tempo are included when covered.
+// Selection-scope inclusion over the nine catalog identities: a row counts
+// only when the selection covers it AND its lane carries at least one written
+// event inside the selected tick range — scope coverage alone is not enough.
 QList<int> AutomationCanvas::selectedParameters() const
 {
-    return parameterIndexesWhere(
-        [this](const EditorAutomationRowId &row) { return m_laneSelection.coversNodes(row); });
+    const auto range = m_laneSelection.activeTickRange();
+    const SongDocument *document = m_page.document();
+    if (!range || !document)
+        return {};
+    return parameterIndexesWhere([this, &range, document](const EditorAutomationRowId &row) {
+        if (!m_laneSelection.coversNodes(row))
+            return false;
+        const auto inRange = [&range](const auto &point) {
+            return point.tick >= range->first && point.tick < range->second;
+        };
+        if (row.kind == EditorAutomationRowKind::Tempo) {
+            const auto &points = document->tempoPoints();
+            return std::any_of(points.cbegin(), points.cend(), inRange);
+        }
+        const std::vector<DocLanePoint> points =
+            document->lanePoints(int(row.track), row.controller);
+        return std::any_of(points.cbegin(), points.cend(), inRange);
+    });
 }
 
 QList<int> AutomationCanvas::ghostParameters() const
@@ -97,14 +114,21 @@ QList<int> AutomationCanvas::ghostParameters() const
     });
 }
 
-bool AutomationCanvas::parameterHasEvents(const EditorAutomationRowId &row) const
+// Written-event count for one catalog row: document points only — the lane
+// adapter's projected tick-0 engine default is not an event.
+std::size_t AutomationCanvas::parameterEventCount(const EditorAutomationRowId &row) const
 {
     const SongDocument *document = m_page.document();
     if (!document)
-        return false;
+        return 0;
     return row.kind == EditorAutomationRowKind::Tempo
-               ? !document->tempoPoints().empty()
-               : !document->lanePoints(row.track, row.controller).empty();
+               ? document->tempoPoints().size()
+               : document->lanePoints(row.track, row.controller).size();
+}
+
+bool AutomationCanvas::parameterHasEvents(const EditorAutomationRowId &row) const
+{
+    return parameterEventCount(row) != 0;
 }
 
 bool AutomationCanvas::canGhostParameter(int index) const

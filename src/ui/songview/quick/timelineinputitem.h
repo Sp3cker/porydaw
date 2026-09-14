@@ -4,6 +4,7 @@
 
 #include <QPointer>
 #include <QQuickItem>
+#include <QtQmlIntegration/qqmlintegration.h>
 
 #include <functional>
 
@@ -26,6 +27,7 @@ namespace songview {
 class TimelineGestureScrollbar : public QQuickItem
 {
     Q_OBJECT
+    QML_ELEMENT
     Q_DISABLE_COPY_MOVE(TimelineGestureScrollbar)
 
     Q_PROPERTY(bool gestureActive READ gestureActive WRITE setGestureActive NOTIFY
@@ -60,6 +62,7 @@ struct TimelineKeyPolicy {
 class TimelineInputItem : public QQuickItem, public TimelineInputHost
 {
     Q_OBJECT
+    QML_ELEMENT
     Q_DISABLE_COPY_MOVE(TimelineInputItem)
 
     Q_PROPERTY(QString accessibilityDescription READ accessibilityDescription WRITE

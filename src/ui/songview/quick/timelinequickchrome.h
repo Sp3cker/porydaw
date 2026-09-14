@@ -1,12 +1,14 @@
 #pragma once
 
 #include <QQuickItem>
+#include <QtQmlIntegration/qqmlintegration.h>
 
 namespace songview {
 
 class TimelineChromeItem : public QQuickItem
 {
     Q_OBJECT
+    QML_ELEMENT
     Q_DISABLE_COPY_MOVE(TimelineChromeItem)
 
   public:

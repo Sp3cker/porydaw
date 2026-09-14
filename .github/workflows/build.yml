@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  packages: read
 
 jobs:
   format:
@@ -27,15 +26,16 @@ jobs:
 
   build-linux:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/sp3cker/porydaw-linux-ci:qt6.9.3-deno2.9.5-v1
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.11.*'
+          cache: true
 
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -53,10 +53,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Qt 6.9.3 does not compile against the macOS 26 SDK because
-        # qyieldcpu.h calls __yield() without including arm_acle.h
-        # (QTBUG-145239). Keep the macOS build on Xcode 16.4 until the
-        # upstream Qt fix reaches a release we can install here.
         os: [windows-latest, macos-15]
     runs-on: ${{ matrix.os }}
     steps:
@@ -67,7 +63,7 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.9.*'
+          version: '6.11.*'
           cache: true
 
       - name: Set up MSVC environment
@@ -137,19 +133,31 @@ jobs:
   # backend so offscreen GUI checks do not require a graphics device. Native
   # window paint/timing checks and Qt Quick timeline harnesses stay in the
   # normal verification sweep because sanitizer overhead changes their timing
-  # and the container cannot render the timeline scene reliably. Samplecheck
+  # and the CI runner cannot render the timeline scene reliably. Samplecheck
   # runs without its optional corpus pass.
   asan-checks:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/sp3cker/porydaw-linux-ci:qt6.9.3-deno2.9.5-v1
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.11.*'
+          cache: true
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install PulseAudio
+        run: >-
+          sudo apt-get update
+          && sudo apt-get install -y --no-install-recommends
+          pulseaudio pulseaudio-utils
 
       - name: Start a dummy audio server
         run: |

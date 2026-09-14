@@ -65,11 +65,7 @@ PackedColor packColor(const QColor &color)
 TimelineQuickGeometryChunkNode *newGeometryChunk()
 {
     auto *node = new TimelineQuickGeometryChunkNode;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
     constexpr int initialVertexCount = cVerticesPerChunk;
-#else
-    constexpr int initialVertexCount = 0;
-#endif
     auto *geometry =
         new QSGGeometry(QSGGeometry::defaultAttributes_ColoredPoint2D(), initialVertexCount);
     geometry->setDrawingMode(QSGGeometry::DrawTriangles);
@@ -328,7 +324,7 @@ TimelineQuickScene::TimelineQuickScene(QObject *parent) : QObject(parent)
     m_voiceChangesHoverTextModel = new TimelineQuickTextModel(this);
     m_automationHoverTextModel = new TimelineQuickTextModel(this);
     m_automationTransientTextModel = new TimelineQuickTextModel(this);
-    m_automationGhostTextModel = new TimelineQuickTextModel(this);
+    m_automationLaneTextModel = new TimelineQuickTextModel(this);
 }
 
 QAbstractItemModel *TimelineQuickScene::pianoNoteTextModel() const noexcept
@@ -386,9 +382,9 @@ QAbstractItemModel *TimelineQuickScene::automationTransientTextModel() const noe
     return m_automationTransientTextModel;
 }
 
-QAbstractItemModel *TimelineQuickScene::automationGhostTextModel() const noexcept
+QAbstractItemModel *TimelineQuickScene::automationLaneTextModel() const noexcept
 {
-    return m_automationGhostTextModel;
+    return m_automationLaneTextModel;
 }
 
 void TimelineQuickScene::setRulerTextRecords(
@@ -439,10 +435,10 @@ void TimelineQuickScene::setAutomationTransientTextRecords(
     m_automationTransientTextModel->setRecords(records);
 }
 
-void TimelineQuickScene::setAutomationGhostTextRecords(
+void TimelineQuickScene::setAutomationLaneTextRecords(
     std::span<const TimelineQuickTextModel::Record> records)
 {
-    m_automationGhostTextModel->setRecords(records);
+    m_automationLaneTextModel->setRecords(records);
 }
 
 const TimelineQuickLayerData &TimelineQuickScene::layer(TimelineQuickLayer layer) const noexcept
@@ -562,12 +558,7 @@ QSGNode *syncLayerNode(QSGNode *oldNode, const TimelineQuickLayerData *data)
         chunk->setBlocked(false);
 
         QSGGeometry *geometry = chunk->geometry();
-#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
         geometry->setVertexCount(usedVertices);
-#else
-        if (geometry->vertexCount() != usedVertices)
-            geometry->allocate(usedVertices);
-#endif
         auto *nextVertex = geometry->vertexDataAsColoredPoint2D();
         const auto rectEnd = rect + rectCount;
         const auto triangleEnd = triangle + triangleCount;

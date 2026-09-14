@@ -64,7 +64,7 @@ If an ordinary change requires synchronizing multiple independent registries or 
 
 ### Ship the supported Qt surface, not only the local probe
 
-The planning probes used Qt 6.11.0. Existing native CI and release jobs request Qt `6.9.*`, while `find_package(Qt6 ...)` currently states no numeric minimum; the existing Linux toolchain is also part of the supported build matrix. Validate the chosen QML types, focus behavior and imports on the project's existing toolchains. Do not silently rely on a 6.11-only behavior, raise the supported Qt version or add compatibility branches to rescue this design; report a real version conflict for an explicit decision.
+The planning probes used Qt 6.11.0. Native CI, release jobs and `find_package(Qt6 ...)` require Qt 6.11, and Linux remains part of the supported build matrix. Validate the chosen QML types, focus behavior and imports on every supported platform. Do not add compatibility branches below the supported floor; report a real platform conflict for an explicit decision.
 
 Use the existing release/package path to check QML imports, controls/styles and resources in the shipped artifact, not only a development process with system Qt available. Keep the existing platform matrix; record platforms/toolchains not exercised rather than claiming cross-platform native verification. Do not suppress QML import/binding warnings or create a new packaging/check runner.
 

@@ -5,7 +5,6 @@
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
-#include "ui/mousehints/hintprofiles.h"
 #include "ui/mousehints/mousehints.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
@@ -14,8 +13,6 @@
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/quickpopupsession.h"
-
-#include "ui/songview/quick/playheadquick.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheadermodel.h"
@@ -29,11 +26,8 @@
 #include <QSurfaceFormat>
 #include <QUrl>
 #include <QVariant>
-#include <QtQml>
-#include <algorithm>
 #include <array>
 #include <chrono>
-#include <mutex>
 #include <utility>
 
 namespace songview {
@@ -127,23 +121,6 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     m_flushTimer.setSingleShot(true);
     m_flushTimer.setInterval(std::chrono::milliseconds::zero());
     connect(&m_flushTimer, &QTimer::timeout, this, &TimelineQuickView::flushUpdate);
-
-    static std::once_flag registered;
-    std::call_once(registered, [] {
-        qmlRegisterType<TimelineChromeItem>("Porydaw.Ui", 1, 0, "TimelineChromeItem");
-        qmlRegisterType<TimelineInputItem>("Porydaw.Ui", 1, 0, "TimelineInputItem");
-        // TimelineGestureScrollbar inherits activeFocusOnTab from QQuickItem,
-        // introduced at the QtQuick 2.1 base meta-object revision.
-        qmlRegisterRevision<QQuickItem, 1>("Porydaw.Ui", 1, 0);
-        qmlRegisterType<TimelineGestureScrollbar>("Porydaw.Ui", 1, 0, "TimelineGestureScrollbar");
-        qmlRegisterType<TimelinePlayheadItem>("Porydaw.Ui", 1, 0, "TimelinePlayheadItem");
-        qmlRegisterType<TimelineQuickItem>("Porydaw.Ui", 1, 0, "TimelineQuickItem");
-        // The hint-profile enum metaobject registers once per process, before
-        // any tab's engine loads its scene; each view still installs its own
-        // context-property borrow of the application-owned service below.
-        qmlRegisterUncreatableMetaObject(ui::hint_profiles::staticMetaObject, "Porydaw.Ui", 1, 0,
-                                         "HintProfiles", QStringLiteral("Enum values only"));
-    });
 
     setObjectName(QStringLiteral("timelineQuickCanvas"));
 

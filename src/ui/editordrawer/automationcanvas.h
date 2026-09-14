@@ -231,6 +231,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
         return indexes;
     }
     bool parameterHasEvents(const EditorAutomationRowId &row) const;
+    std::size_t parameterEventCount(const EditorAutomationRowId &row) const;
     bool canGhostParameter(int index) const;
     struct NodeLaneSlot {
         EditorAutomationRowId id;

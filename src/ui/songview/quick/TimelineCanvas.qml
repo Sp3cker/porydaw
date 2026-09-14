@@ -362,7 +362,7 @@ Item {
         }
         TimelineTextLayer {
             parent: automationBand.plotSide
-            textModel: timelineScene.automationGhostTextModel
+            textModel: timelineScene.automationLaneTextModel
             z: 6
         }
         TimelineTextLayer {

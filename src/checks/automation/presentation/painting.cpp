@@ -447,11 +447,20 @@ void AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators()
     const EditorAutomationRowId lfo{EditorAutomationRowKind::ControlChange, kTrack,
                                     CoreTimeDefaults::kCcLfoSpeed};
     const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
+    const EditorAutomationRowId modulation{EditorAutomationRowKind::ControlChange, kTrack,
+                                           CoreTimeDefaults::kCcModulation};
     QVERIFY(activateParameter(pan));
     const int panIndex = checks::support::automationParameterIndex(*canvas, pan);
     const int lfoIndex = checks::support::automationParameterIndex(*canvas, lfo);
     const int tempoIndex = checks::support::automationParameterIndex(*canvas, tempo);
-    QVERIFY(panIndex >= 0 && lfoIndex >= 0 && tempoIndex >= 0);
+    const int modulationIndex = checks::support::automationParameterIndex(*canvas, modulation);
+    QVERIFY(panIndex >= 0 && lfoIndex >= 0 && tempoIndex >= 0 && modulationIndex >= 0);
+
+    TempoEdit edit;
+    edit.remove = m_document->tempoPoints();
+    edit.add = {{kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(120)}};
+    m_document->applyTempoEdit(edit);
+    refreshDocumentPresentation();
 
     songview::EditorSelectionModel::TimeSelection selection;
     selection.startTick = kHeldTick;
@@ -459,10 +468,12 @@ void AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators()
     selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
     selection.tempo = true;
     selection.lanes.push_back({kTrack, CoreTimeDefaults::kCcLfoSpeed});
+    selection.lanes.push_back({kTrack, CoreTimeDefaults::kCcModulation});
     m_rig->view().selectionModel().setTimeSelection(selection);
     refreshDocumentPresentation();
     const QList<int> expectedSelected{lfoIndex, tempoIndex};
     QTRY_VERIFY(canvas->selectedParameters() == expectedSelected);
+    QVERIFY(!canvas->selectedParameters().contains(modulationIndex));
 
     QQuickItem *const panTab = parameterLabelItem(panIndex);
     QQuickItem *const lfoTab = parameterLabelItem(lfoIndex);
@@ -568,7 +579,7 @@ void AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover()
     m_document->applyTempoEdit(edit);
     refreshDocumentPresentation();
     const QRectF viewport(QPointF{}, QSizeF(automationPage->automationViewportSize()));
-    const QAbstractItemModel *const ghostModel = scene->automationGhostTextModel();
+    const QAbstractItemModel *const ghostModel = scene->automationLaneTextModel();
     QVERIFY(ghostModel);
 
     const int tempoIndex = checks::support::automationParameterIndex(*canvas, tempo);
@@ -603,4 +614,45 @@ void AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover()
     QTRY_VERIFY(
         !findTextRecord(scene->automationHoverTextModel(), QStringLiteral("Tempo"), viewport)
              .has_value());
+}
+
+void AutomationPresentationTest::laneEventCountsRenderAtLeftEdge()
+{
+    AutomationPage *const automationPage = page();
+    songview::TimelineQuickScene *const scene = quickScene();
+    AutomationCanvas *const canvas = automationPage ? automationPage->canvas() : nullptr;
+    QVERIFY(automationPage);
+    QVERIFY(scene);
+    QVERIFY(canvas);
+    const QRectF viewport(QPointF{}, QSizeF(automationPage->automationViewportSize()));
+
+    const EditorAutomationRowId pan{EditorAutomationRowKind::ControlChange, kTrack,
+                                    CoreTimeDefaults::kCcPan};
+    QVERIFY(activateParameter(pan));
+    refreshDocumentPresentation();
+    const QAbstractItemModel *const laneTextModel = scene->automationLaneTextModel();
+    QVERIFY(laneTextModel);
+    std::optional<QRectF> count;
+    QTRY_VERIFY(
+        (count = findTextRecord(laneTextModel, QStringLiteral("2 Events"), viewport)).has_value());
+    QVERIFY2(count->left() < viewport.left() + viewport.width() / 4.0,
+             "the lane event count no longer hugs the viewport's left edge");
+    QVERIFY2(count->bottom() > viewport.top() + viewport.height() * 3.0 / 4.0,
+             "the lane event count no longer hugs the viewport's bottom edge");
+    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, kTrack,
+                                       CoreTimeDefaults::kCcVolume};
+    const int volumeIndex = checks::support::automationParameterIndex(*canvas, volume);
+    QVERIFY(volumeIndex >= 0);
+    canvas->activateParameter(volumeIndex);
+    refreshDocumentPresentation();
+    QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("1 Event"), viewport).has_value());
+
+    const EditorAutomationRowId modulation{EditorAutomationRowKind::ControlChange, kTrack,
+                                           CoreTimeDefaults::kCcModulation};
+    const int modulationIndex = checks::support::automationParameterIndex(*canvas, modulation);
+    QVERIFY(modulationIndex >= 0);
+    canvas->activateParameter(modulationIndex);
+    refreshDocumentPresentation();
+    QTRY_VERIFY(!findTextRecord(laneTextModel, QStringLiteral("0 Events"), viewport).has_value());
+    QTRY_VERIFY(!findTextRecord(laneTextModel, QStringLiteral("2 Events"), viewport).has_value());
 }

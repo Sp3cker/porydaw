@@ -11,6 +11,7 @@
 #include <QRect>
 #include <QSize>
 #include <QString>
+#include <QtQmlIntegration/qqmlintegration.h>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -74,6 +75,7 @@ struct PitchBendGeometry {
 class PitchBendGraph : public QQuickItem
 {
     Q_OBJECT
+    QML_ELEMENT
     Q_DISABLE_COPY_MOVE(PitchBendGraph)
 
     Q_PROPERTY(QString laneTitle READ laneTitle NOTIFY presentationChanged FINAL)

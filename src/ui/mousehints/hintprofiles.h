@@ -3,9 +3,11 @@
 #include <QHash>
 #include <QObject>
 #include <QString>
+#include <QtQmlIntegration/qqmlintegration.h>
 
 namespace ui::hint_profiles {
 Q_NAMESPACE
+QML_NAMED_ELEMENT(HintProfiles)
 
 enum class Id {
     Empty = 0,

@@ -5,6 +5,7 @@
 #include <QQuickItem>
 #include <QRectF>
 #include <QVariantList>
+#include <QtQmlIntegration/qqmlintegration.h>
 
 class QSGGeometry;
 
@@ -25,6 +26,7 @@ namespace songview {
 class TimelinePlayheadItem : public QQuickItem
 {
     Q_OBJECT
+    QML_ELEMENT
     Q_DISABLE_COPY_MOVE(TimelinePlayheadItem)
 
     // Raw TimeCamera::contentX in timeline-column coordinates.
