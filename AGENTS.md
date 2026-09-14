@@ -128,6 +128,26 @@ deno task format [--check] [files...]
 There is no `deno task build`. Pick `build:app` or `build:checks`.
 `deno task checks` and `deno task verify` both build the checks before running them.
 
+### Windows toolchain and launch
+
+The Windows build is not self-contained until packaging. Before building, running checks, or
+launching a binary from `build/`, prepend the MinGW and Qt runtime directories in the same
+PowerShell process:
+
+```powershell
+$env:Path = 'C:\msys64\mingw64\bin;C:\msys64\mingw64\share\qt6\bin;' + $env:Path
+$env:QT_PLUGIN_PATH = 'C:\msys64\mingw64\share\qt6\plugins'
+$env:QML2_IMPORT_PATH = 'C:\msys64\mingw64\share\qt6\qml'
+npx --yes deno task build:app
+Start-Process -FilePath "$PWD\build\porydaw.exe" -WorkingDirectory "$PWD\build"
+```
+
+`Start-Process` inherits the environment of the PowerShell process that launches it. Do not
+launch `build\porydaw.exe` from a fresh process without setting all three variables. A missing
+`Path` produces a `libwinpthread-1.dll` loader popup. Missing Qt plugin or QML import paths can
+produce an immediate `0xc0000602` fail-fast in `Qt6Core.dll` when Porydaw rejects an incomplete
+QML scene. Treat either result as a loader/runtime setup failure, not an application crash.
+
 Any failing assertion or check MUST be brought to the user's attention and resolved before
 handoff. Never hand off work with failing assertions or checks.
 

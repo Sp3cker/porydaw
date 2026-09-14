@@ -128,7 +128,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     QSurfaceFormat surfaceFormat = m_quickView->format();
     surfaceFormat.setAlphaBufferSize(8);
     m_quickView->setFormat(surfaceFormat);
-    m_quickView->setColor(Qt::transparent);
+    m_quickView->setColor(themes::color(themes::Role::window_background));
     m_quickView->setResizeMode(QQuickView::SizeRootObjectToView);
     // The borrow tracks the window through takeWindowForEmbedding(): the
     // external container becomes the sole owner while this coordinator keeps
@@ -787,6 +787,8 @@ void TimelineQuickView::syncAppearance()
 {
     // Font, palette, and native DPR changes invalidate text, cursors, and retained
     // geometry even when the logical viewport is unchanged.
+    if (m_view)
+        m_view->setColor(themes::color(themes::Role::window_background));
     const QFont font = QGuiApplication::font();
     const QPalette palette = QGuiApplication::palette();
     for (TimelineInputItem *item : m_gutterInputItems) {

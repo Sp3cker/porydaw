@@ -18,6 +18,7 @@ class PianoRollStaticTest final : public QObject
   private slots:
     void fallbackCamera_data();
     void fallbackCamera();
+    void opaqueResizeBacking();
     void fallbackGrid();
     void tickCeilingDoesNotWrap();
     void preRollRulerShade();

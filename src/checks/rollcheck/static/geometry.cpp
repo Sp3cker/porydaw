@@ -17,6 +17,7 @@
 #include "core/miditimeline.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/theme/themeruntime.h"
 
 namespace checks::rollcheck::staticcheck {
 namespace {
@@ -105,6 +106,20 @@ void PianoRollStaticTest::fallbackCamera()
     QVERIFY2(std::abs(fixture.view.camera().contentX(0.0) - leadPad) <= 0.5,
              "fresh view camera is not at the pre-roll home");
     QCOMPARE(fixture.view.camera().pxPerBeat(), SongView::ViewState{}.pxPerBeat);
+}
+
+void PianoRollStaticTest::opaqueResizeBacking()
+{
+    BareView fixture;
+    QQuickWindow *const window = fixture.view.quickView()->quickWindow();
+    QVERIFY(window);
+    const QColor background = themes::color(themes::Role::window_background);
+    QCOMPARE(window->color(), background);
+    QCOMPARE(window->color().alpha(), 255);
+
+    window->resize(QSize(1000, 700));
+    QCoreApplication::processEvents();
+    QCOMPARE(window->color(), background);
 }
 
 void PianoRollStaticTest::fallbackGrid()
