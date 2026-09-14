@@ -303,8 +303,3 @@ void AutomationPage::commitEditCursor(Tick tick) const
 {
     m_owner.commitEditCursor(tick);
 }
-
-void AutomationPage::announce(const QString &message) const
-{
-    m_owner.announce(message);
-}

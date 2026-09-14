@@ -143,7 +143,6 @@ void PianoRoll::beginNotePress(const ViewNote &note, const TimelinePointerInput 
         return;
     }
     applyNotePressSelection(note, rightEdge || leftEdge, pressMods);
-    m_sv->announceNote(note);
     m_lastVelocity = note.velocity;
     armNoteDrag(note, input.position);
     auditionKey(note.key, note.velocity); // runs even when the velocity gesture failed
@@ -195,7 +194,6 @@ void PianoRoll::beginVelocityPress(const ViewNote &note)
 {
     m_velAnchor = note;
     m_velAudEff = mid2agbEffectiveVelocity(note.velocity);
-    m_sv->announceNote(note);
     m_lastVelocity = note.velocity;
     auditionKey(note.key, note.velocity);
     m_auditioned = true;
@@ -263,13 +261,7 @@ void PianoRoll::beginDraw()
     m_drawKey = m_pressKey;
     activateLeftDrag(LeftDrag::Draw);
     m_sv->selectionModel().clearNoteSelection();
-    ViewNote pending{};
-    pending.startTick = uint32_t(m_drawTick);
-    pending.duration = uint32_t(m_drawDur);
-    pending.key = uint8_t(m_drawKey);
-    pending.velocity = m_lastVelocity;
-    pending.track = uint8_t(m_sv->selectionModel().primaryTrack());
-    m_sv->announceNote(pending);
+
     // The empty-space press already sounds this row; don't re-attack it.
     if (m_soundingKey != m_drawKey)
         auditionKey(m_drawKey, m_lastVelocity);

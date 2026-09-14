@@ -252,7 +252,6 @@ void AutomationCanvas::setPencilMode(bool enabled)
     syncPreviewValueLabel();
     updatePencilCursor();
     requestHoverQuickUpdate();
-    m_page.announce(enabled ? tr("Pencil mode on") : tr("Pencil mode off"));
 }
 
 bool AutomationCanvas::isPanning() const noexcept
@@ -627,8 +626,4 @@ void AutomationCanvas::publishBandSelection(Tick first, Tick last, LaneHandle st
         return;
     const auto [tempo, lanes] = m_laneSelection.laneSet(startSlot->id, endSlot->id);
     m_page.publishTimeSelection(first, last, lanes, tempo);
-    if (tempo && lanes.empty())
-        m_page.announce(tr("Tempo range [%1, %2)").arg(first).arg(last));
-    else
-        m_page.announce(tr("Automation range [%1, %2)").arg(first).arg(last));
 }

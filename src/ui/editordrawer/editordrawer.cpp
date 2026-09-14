@@ -313,24 +313,7 @@ std::optional<QRect> EditorDrawer::bodyRect(EditorDrawerPage page) const noexcep
 
 void EditorDrawer::activatePage(EditorDrawerPage page)
 {
-    const bool hiding = m_owner.drawerSectionVisible(page);
     m_owner.toggleDrawerSection(page);
-    QString announcement;
-    switch (page) {
-    case EditorDrawerPage::VoiceChanges:
-        announcement = hiding ? QStringLiteral("Voice-change drawer hidden")
-                              : QStringLiteral("Voice-change drawer shown");
-        break;
-    case EditorDrawerPage::Velocity:
-        announcement = hiding ? QStringLiteral("Velocity drawer hidden")
-                              : QStringLiteral("Velocity drawer shown");
-        break;
-    case EditorDrawerPage::Automations:
-        announcement = hiding ? QStringLiteral("Automation drawer hidden")
-                              : QStringLiteral("Automation drawer shown");
-        break;
-    }
-    m_owner.announce(announcement);
 }
 
 void EditorDrawer::arrange()

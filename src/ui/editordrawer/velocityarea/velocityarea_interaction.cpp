@@ -5,7 +5,6 @@
 
 #include <QApplication>
 
-#include "core/mid2agbtables.h"
 #include "ui/editordrawer/linearramp.h"
 #include "ui/editordrawer/velocityarea/detail.h"
 #include "ui/mousehints/hintprofiles.h"
@@ -51,11 +50,6 @@ void VelocityArea::beginFrozenGesture(const std::vector<DocNote> &notes, Interac
         clearPreview();
         return;
     }
-    if (m_pressedNote && std::any_of(m_frozen.begin(), m_frozen.end(),
-                                     [noteId = *m_pressedNote](const FrozenNote &note) {
-                                         return note.noteId == noteId;
-                                     }))
-        m_announcedNote = *m_pressedNote;
     m_pressPosition = position;
     m_previousPosition = position;
     m_interaction = interaction;
@@ -127,8 +121,6 @@ void VelocityArea::paintSelectedNodesBetween(const QPointF &first, const QPointF
     }
     if (!updates.empty())
         m_owner.updateVelocityGesture(updates);
-    m_announcedNote = notes.front().noteId;
-    announcePreview();
 }
 
 void VelocityArea::updateRampPreview(const QPointF &position)
@@ -147,12 +139,10 @@ void VelocityArea::updateRampPreview(const QPointF &position)
             const double y = ui::linearRampValue(x, m_pressPosition.x(), m_pressPosition.y(),
                                                  position.x(), position.y());
             velocity = resolvedVelocity(m_axis, note.map, m_detentUnlock, y);
-            m_announcedNote = note.noteId;
         }
         updates.push_back({note.noteId, int(velocity)});
     }
     m_owner.updateVelocityGesture(updates);
-    announcePreview();
 }
 
 void VelocityArea::updateRelativePreview(const QPointF &position)
@@ -187,7 +177,6 @@ void VelocityArea::updateRelativePreview(const QPointF &position)
                 {note.noteId, int(note.map.moveLevels(note.exactOrigin, levelDelta))});
     }
     m_owner.updateVelocityGesture(updates);
-    announcePreview();
 }
 
 void VelocityArea::updateBandPreview(const QPointF &position)
@@ -214,42 +203,11 @@ void VelocityArea::finishGesture(bool commit)
         if (!commit) {
             m_owner.cancelVelocityGesture();
         } else {
-            switch (m_owner.commitVelocityGesture()) {
-            case SongView::VelocityCommitResult::Committed:
-                m_owner.announce(tr("Painted note velocities."));
-                break;
-            case SongView::VelocityCommitResult::Unchanged:
+            if (m_owner.commitVelocityGesture() == SongView::VelocityCommitResult::Unchanged)
                 rebuildVisualState();
-                break;
-            case SongView::VelocityCommitResult::Rejected:
-                m_owner.announce(tr("Velocity edit cancelled because notes changed."));
-                break;
-            case SongView::VelocityCommitResult::NoGesture:
-                break;
-            }
         }
     } else {
         rebuildVisualState();
-    }
-}
-
-void VelocityArea::announcePreview()
-{
-    const SongDocument *document = m_owner.document();
-    if (!document || m_frozen.empty())
-        return;
-    if (!m_announcedNote.isAssigned())
-        m_announcedNote = m_frozen.front().noteId;
-    for (const FrozenNote &note : m_frozen) {
-        if (note.noteId != m_announcedNote)
-            continue;
-        const uint8_t velocity = m_owner.previewVelocity(note.noteId).value_or(note.velocity);
-        const uint32_t clocks =
-            document->ticksPerClock() == 0 ? 0 : note.duration / document->ticksPerClock();
-        const DrawerPageNoteStatus status{
-            note.key, velocity, uint8_t(mid2agbEffectiveVelocity(velocity)), note.duration, clocks};
-        m_owner.showDrawerPageNoteStatus(std::optional<DrawerPageNoteStatus>{status});
-        return;
     }
 }
 

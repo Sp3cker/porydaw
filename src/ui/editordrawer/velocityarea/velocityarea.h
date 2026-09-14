@@ -159,7 +159,6 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
     void updateBandPreview(const QPointF &position);
     void updateRampPreview(const QPointF &position);
     void finishGesture(bool commit);
-    void announcePreview();
     void pauseFollowScroll(bool paused);
     void clearPreview();
     bool hasDocument() const;
@@ -190,10 +189,4 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
     bool m_relativeActivated = false;
     VelocityAreaDiagnostics m_diagnostics;
     std::optional<double> m_lastPresentedPlayheadTick;
-    // One-note announcement invariant: regardless of how many notes a gesture
-    // touches, only this note is spoken through the drawer status line, so a
-    // multi-note drag does not flood announcements. Defaults to the pressed
-    // note (or the first frozen note) and sticks for the gesture's lifetime;
-    // clearPreview() resets it.
-    NoteId m_announcedNote;
 };

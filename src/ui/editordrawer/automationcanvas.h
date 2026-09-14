@@ -261,15 +261,13 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     // row id, so a rebuild landing after the open cannot retarget a
     // different lane. No lane pointer and no point vector crosses the popup:
     // commands re-read live state at dispatch. `track` carries the captured
-    // add-menu track, `laneTitle` the presentation string for post-rebuild
-    // announcements.
+    // add-menu track.
     struct PendingMenu {
         QPointer<SongDocument> document;
         uint64_t documentRevision = 0;
         LaneHandle lane;
         EditorAutomationRowId rowId = {};
         int track = -1;
-        QString laneTitle;
     };
     // The guarded open-time target for the node point menu. Document identity
     // plus revision reject any document change since the open; the lane

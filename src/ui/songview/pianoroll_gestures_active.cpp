@@ -72,9 +72,6 @@ void PianoRoll::updateVelocityDrag(const TimelinePointerInput &input)
     if (dv != m_dVel) {
         m_dVel = dv;
         const int vel = std::clamp(int(m_velAnchor.velocity) + m_dVel, 1, 127);
-        ViewNote preview = m_velAnchor;
-        preview.velocity = uint8_t(vel);
-        m_sv->announceNote(preview);
         const int eff = mid2agbEffectiveVelocity(vel);
         if (eff != m_velAudEff) { // audition only on effective-velocity step
             m_velAudEff = eff;

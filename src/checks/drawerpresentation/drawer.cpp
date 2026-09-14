@@ -136,21 +136,17 @@ void DrawerPresentationTest::drawerToggleTransactions()
     SongView &view = *fixture.view;
     view.setDrawerSectionVisible(page, false);
     pump();
-    std::vector<QString> statuses;
-    QObject::connect(&view, &SongView::statusMessage,
-                     [&statuses](const QString &message) { statuses.push_back(message); });
+
     const int originalHeight = view.drawerSectionHeight(page);
 
     fixture.clickToggle(page);
     QVERIFY(view.drawerSectionVisible(page));
     QCOMPARE(view.drawerActivePage(), page);
     QVERIFY(view.editorDrawer()->bodyRect(page).has_value());
-    QVERIFY(!statuses.empty());
 
     fixture.clickToggle(page);
     QVERIFY(!view.drawerSectionVisible(page));
     QCOMPARE(view.drawerSectionHeight(page), originalHeight);
-    QVERIFY(!statuses.empty());
 
     fixture.clickToggle(page);
     QVERIFY(view.drawerSectionVisible(page));

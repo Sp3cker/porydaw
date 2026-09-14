@@ -132,8 +132,6 @@ void VelocityArea::refreshLiveState(const DrawerPageLiveState &liveState)
             presentPlayhead(liveState.playback.playheadTick);
         return;
     }
-    const bool staleVelocityGesture = m_interaction != Interaction::None && !m_frozen.empty() &&
-                                      m_live.documentRevision != liveState.documentRevision;
     const bool presentationOnly = m_live.documentRevision == liveState.documentRevision &&
                                   m_live.timeZoom == liveState.timeZoom &&
                                   m_live.horizontalScroll == liveState.horizontalScroll &&
@@ -150,8 +148,6 @@ void VelocityArea::refreshLiveState(const DrawerPageLiveState &liveState)
     }
     const bool hadInteraction = m_interaction != Interaction::None;
     cancelInteraction();
-    if (staleVelocityGesture)
-        m_owner.announce(tr("Velocity edit cancelled because notes changed."));
     if (!hadInteraction)
         rebuildVisualState();
     presentPlayhead(liveState.playback.playheadTick);
@@ -162,9 +158,6 @@ void VelocityArea::cancelInteraction()
     if (m_interaction == Interaction::None)
         return;
     const bool hadVelocityGesture = !m_frozen.empty();
-    const SongDocument *document = m_owner.document();
-    const bool staleVelocityGesture =
-        hadVelocityGesture && document && m_live.documentRevision != document->revision();
     const std::vector<NoteId> selectionBeforePress = m_selectionBeforePress;
     pauseFollowScroll(false);
     m_interaction = Interaction::None;
@@ -173,8 +166,6 @@ void VelocityArea::cancelInteraction()
     m_owner.selectionModel().setNoteSelection(selectionBeforePress);
     if (hadVelocityGesture) {
         m_owner.cancelVelocityGesture();
-        if (staleVelocityGesture)
-            m_owner.announce(tr("Velocity edit cancelled because notes changed."));
     } else {
         rebuildVisualState();
     }
@@ -525,7 +516,6 @@ void VelocityArea::clearPreview()
     m_selectionBeforePress.clear();
     m_controlPress = false;
     m_detentUnlock = false;
-    m_announcedNote = NoteId{};
 }
 
 bool VelocityArea::hasDocument() const

@@ -593,9 +593,6 @@ class SongView : public QObject
     // canvas is missing.
     void openTimeSelectionMenu(const QPointF &scenePos);
 
-    // "velocity 93 → plays 96 · length 25 → 24 clocks" for the status bar.
-    void announceNote(const ViewNote &note);
-
     // Child-widget entry point for the auditionNote signal.
     void audition(int track, int key, int velocity) { emit auditionNote(track, key, velocity); }
 
@@ -615,7 +612,6 @@ class SongView : public QObject
     void setEditorTimeZoom(double pxPerBeat);
     void setFollowScrollPaused(bool paused);
     void showDrawerPageTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequest &request);
-    void showDrawerPageNoteStatus(std::optional<DrawerPageNoteStatus> status);
     DrawerPageLiveState drawerPageLiveState() const;
     void cancelActiveInteractions();
     // Public observation of live pointer ownership. Follow-scroll state and

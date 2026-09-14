@@ -5,7 +5,6 @@
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/songview.h"
-#include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
@@ -13,7 +12,6 @@
 #include <optional>
 
 using namespace songview;
-using namespace songview::detail;
 namespace {
 
 // Page-keyed projection onto the drawer state. Every section exists in the
@@ -119,18 +117,6 @@ void SongView::showDrawerPageTimeSelectionMenu(const DrawerPageTimeSelectionMenu
     selection.tempo = request.tempo;
     m_selectionModel.setTimeSelection(selection);
     openTimeSelectionMenu(request.scenePosition);
-}
-
-void SongView::showDrawerPageNoteStatus(std::optional<DrawerPageNoteStatus> status)
-{
-    if (status) {
-        announce(tr("%1 · velocity %2 → plays %3 · length %4 ticks → %5 clocks")
-                     .arg(keyName(status->key))
-                     .arg(status->storedVelocity)
-                     .arg(status->effectiveVelocity)
-                     .arg(status->durationTicks)
-                     .arg(status->durationClocks));
-    }
 }
 
 DrawerPageLiveState SongView::drawerPageLiveState() const

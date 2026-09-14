@@ -95,7 +95,6 @@ class AutomationPage final : public QObject
     void requestRefresh() const;
     void requestQuickUpdate(songview::AutomationRefreshSet dirty) const;
     void commitEditCursor(Tick tick) const;
-    void announce(const QString &message) const;
 
     QMetaObject::Connection m_inputWindowDeactivationConnection;
 

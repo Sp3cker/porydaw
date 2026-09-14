@@ -93,17 +93,6 @@ void SongView::setTrackSolo(int track, bool on)
         emit soloMaskChanged(mask);
     }
 }
-// Names the scoped tracks for the status line: "track 3" or "tracks 1, 3".
-static QString scopedTracksText(uint32_t mask)
-{
-    QStringList nums;
-    for (int t = 0; t < 16; t++) {
-        if (mask & (1u << t))
-            nums << QString::number(t + 1);
-    }
-    return nums.size() == 1 ? SongView::tr("track %1").arg(nums.first())
-                            : SongView::tr("tracks %1").arg(nums.join(QStringLiteral(", ")));
-}
 // Audible-mask operations reject live pointer ownership at every entry point.
 // Popup focus permits graph Solo; document-command protection belongs to routing.
 void SongView::toggleMuteOnSelectedTracks()
@@ -117,8 +106,6 @@ void SongView::toggleMuteOnSelectedTracks()
         return;
     m_muteMask = mask;
     emit muteMaskChanged(mask);
-    announce(allOn ? tr("Unmuted %1").arg(scopedTracksText(scope))
-                   : tr("Muted %1").arg(scopedTracksText(scope)));
 }
 void SongView::toggleSoloOnSelectedTracks()
 {
@@ -132,8 +119,6 @@ void SongView::toggleSoloOnSelectedTracks()
         return;
     m_soloMask = mask;
     emit soloMaskChanged(mask);
-    announce(allOn ? tr("Unsoloed %1").arg(scopedTracksText(scope))
-                   : tr("Soloed %1").arg(scopedTracksText(scope)));
 }
 QColor SongView::trackColor(int track)
 {
@@ -255,11 +240,8 @@ void SongView::revealTrackVoice(int track)
     if (!m_timeline || track < 0 || track > 15)
         return;
     const int prog = currentProgram(track);
-    if (prog < 0) {
-        emit statusMessage(tr("Track %1 has no voice set.").arg(track + 1));
-        return;
-    }
-    revealVoice(prog);
+    if (prog >= 0)
+        revealVoice(prog);
 }
 QSet<int> SongView::usedVoices() const
 {
@@ -321,12 +303,8 @@ void SongView::commitTrackRename(int track, const QString &name)
     if (!m_document || track < 0 || track > 15 || m_document->smfTrackFor(track) < 0)
         return;
     const QString trimmed = name.trimmed();
-    if (nameIsLoopMarker(trimmed)) {
-        announce(tr("\"%1\" is read by the song build as a loop or label "
-                    "marker, so it can't be a track name.")
-                     .arg(trimmed));
+    if (nameIsLoopMarker(trimmed))
         return;
-    }
     // Queued: the commit originates in the Quick rename field, and the edit
     // rebuilds its model while the input handler is still active.
     queueHeaderMutation([this, track, trimmed] {
@@ -344,10 +322,8 @@ void SongView::addTrack()
             if (!m_document || !m_document->canAddTrack())
                 return;
             const int track = m_document->addTrack(voice); // rebuilds via documentChanged
-            if (track >= 0) {
+            if (track >= 0)
                 selectTrack(track);
-                announce(tr("Added track %1").arg(track + 1));
-            }
         },
         TimelineBand::TrackHeaders);
 }
@@ -356,24 +332,20 @@ void SongView::duplicateTrack(int track)
     if (!m_document || track < 0 || track > 15 || m_document->smfTrackFor(track) < 0)
         return;
     const int copy = m_document->duplicateTrack(track); // rebuilds via documentChanged
-    if (copy >= 0) {
+    if (copy >= 0)
         selectTrack(copy);
-        announce(tr("Duplicated track %1 as track %2").arg(track + 1).arg(copy + 1));
-    }
 }
 void SongView::deleteTrack(int track)
 {
     if (!m_document || track < 0 || track > 15 || m_document->smfTrackFor(track) < 0)
         return;
     m_document->deleteTrack(track); // remaps before documentChanged
-    announce(tr("Deleted track %1").arg(track + 1));
 }
 void SongView::moveTrack(int from, int to)
 {
     if (!m_document)
         return;
-    if (m_document->moveTrack(from, to)) // remaps before documentChanged
-        announce(tr("Moved track %1 to slot %2").arg(from + 1).arg(to + 1));
+    m_document->moveTrack(from, to); // remaps before documentChanged
 }
 void SongView::onTracksRemapped(const TrackRemap &remap)
 {

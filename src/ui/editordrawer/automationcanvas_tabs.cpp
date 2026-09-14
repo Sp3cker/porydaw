@@ -126,7 +126,6 @@ void AutomationCanvas::toggleGhostParameter(int index)
     const auto row = parameterRow(index);
     if (!row || !parametersEnabled())
         return;
-    const QString label = parameterLabels().value(index);
     if (index == activeParameter()) {
         if (m_ghostControllers.empty() && !m_ghostTempo)
             return;
@@ -134,15 +133,12 @@ void AutomationCanvas::toggleGhostParameter(int index)
         m_ghostTempo = false;
         emit ghostParametersChanged();
         requestFullQuickUpdate();
-        m_page.announce(tr("Showing only %1").arg(label));
         return;
     }
-    bool nowGhosted = false;
     if (row->kind == EditorAutomationRowKind::Tempo) {
         if (!m_ghostTempo && !parameterHasEvents(*row))
             return;
         m_ghostTempo = !m_ghostTempo;
-        nowGhosted = m_ghostTempo;
     } else if (const auto position =
                    std::find(m_ghostControllers.begin(), m_ghostControllers.end(), row->controller);
                position != m_ghostControllers.end()) {
@@ -151,12 +147,9 @@ void AutomationCanvas::toggleGhostParameter(int index)
         if (!parameterHasEvents(*row))
             return;
         m_ghostControllers.push_back(row->controller);
-        nowGhosted = true;
     }
     emit ghostParametersChanged();
     requestFullQuickUpdate();
-    m_page.announce(nowGhosted ? tr("%1 ghost shown").arg(label)
-                               : tr("%1 ghost hidden").arg(label));
 }
 
 bool AutomationCanvas::parametersEnabled() const noexcept

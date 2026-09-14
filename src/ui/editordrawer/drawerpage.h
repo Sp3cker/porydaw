@@ -52,11 +52,3 @@ struct DrawerPageTimeSelectionMenuRequest {
     // the shared popup layer is parented to the canvas window).
     QPointF scenePosition;
 };
-
-struct DrawerPageNoteStatus {
-    uint8_t key = 0;
-    uint8_t storedVelocity = 0;
-    uint8_t effectiveVelocity = 0;
-    uint32_t durationTicks = 0;
-    uint32_t durationClocks = 0;
-};

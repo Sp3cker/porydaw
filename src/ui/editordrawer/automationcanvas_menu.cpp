@@ -29,38 +29,24 @@ using Action = AutomationCanvas::CanvasMenuAction;
 
 // Per-kind presentation for the unified lane menu, keyed by the lane kind so
 // the menu body carries no tempo/CC branching. Labels feed the open-time
-// rows, messages feed the dispatch-time announcements; both rebuild from live
-// state, so nothing presentation-shaped crosses the popup.
+// rows; they rebuild from live state, so nothing presentation-shaped crosses
+// the popup.
 struct LaneMenuKind {
     QString copyLabel;
     QString pasteLabel;
     QString clearLabel;
-    QString copiedMessage;
-    QString pastedMessage;
-    std::optional<QString> clearedMessage;
     bool hasLaneActions = false;
 };
 
-LaneMenuKind laneMenuKind(bool tempo, const QString &laneTitle, std::size_t pointCount = 0)
+LaneMenuKind laneMenuKind(bool tempo)
 {
     if (tempo) {
-        return LaneMenuKind{AutomationCanvas::tr("Copy"),
-                            AutomationCanvas::tr("Paste"),
-                            AutomationCanvas::tr("Clear Tempo"),
-                            AutomationCanvas::tr("Copied Tempo"),
-                            AutomationCanvas::tr("Pasted Tempo"),
-                            AutomationCanvas::tr("Cleared Tempo"),
-                            false};
+        return LaneMenuKind{AutomationCanvas::tr("Copy"), AutomationCanvas::tr("Paste"),
+                            AutomationCanvas::tr("Clear Tempo"), false};
     }
-    return LaneMenuKind{
-        AutomationCanvas::tr("Copy CC lane"),
-        AutomationCanvas::tr("Paste CC lane (replace)"),
-        AutomationCanvas::tr("Clear events"),
-        AutomationCanvas::tr("Copied the %1 CC lane (%n point(s))", nullptr, int(pointCount))
-            .arg(laneTitle),
-        AutomationCanvas::tr("Replaced the %1 CC lane").arg(laneTitle),
-        std::nullopt,
-        true};
+    return LaneMenuKind{AutomationCanvas::tr("Copy CC lane"),
+                        AutomationCanvas::tr("Paste CC lane (replace)"),
+                        AutomationCanvas::tr("Clear events"), true};
 }
 
 } // namespace
@@ -183,11 +169,10 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPointF &scenePo
     const auto *slot = resolveSlot(handle);
     if (!slot || !slot->lane)
         return;
-    const QString laneTitle = slot->lane->title();
     // Enablement needs live data, not a snapshot: read emptiness now and let
     // every command re-read what it mutates at dispatch.
     const bool hasPoints = !slot->lane->points().empty();
-    const LaneMenuKind kind = laneMenuKind(slot->isTempo(), laneTitle);
+    const LaneMenuKind kind = laneMenuKind(slot->isTempo());
 
     std::vector<songview::QuickMenuItem> rows;
     rows.reserve(kind.hasLaneActions ? 6u : 4u);
@@ -255,7 +240,6 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPointF &scenePo
     target.documentRevision = document->revision();
     target.lane = handle;
     target.rowId = slot->id;
-    target.laneTitle = laneTitle;
 
     // End the press's implicit grab before the menu publishes: the panel must
     // receive the following clicks, and the synchronous PointerUngrabbed
@@ -303,8 +287,6 @@ void AutomationCanvas::handleMenuAction(int actionId)
     const Tick maxTick = CoreTimeDefaults::kNoTick;
     if (actionId == int(Action::Copy)) {
         m_clipboard = lane->points();
-        m_page.announce(
-            laneMenuKind(slot->isTempo(), pending.laneTitle, m_clipboard.size()).copiedMessage);
     } else if (actionId == int(Action::Paste)) {
         std::vector<NodePoint> replacement;
         replacement.reserve(m_clipboard.size());
@@ -314,18 +296,11 @@ void AutomationCanvas::handleMenuAction(int actionId)
             replacement.push_back({point.tick, std::clamp(point.value, minimum, maximum)});
         lane->replaceSpan(0, maxTick, replacement);
         m_page.requestRefresh();
-        m_page.announce(
-            laneMenuKind(pending.rowId.kind == EditorAutomationRowKind::Tempo, pending.laneTitle)
-                .pastedMessage);
     } else if (actionId == int(Action::Clear)) {
         lane->replaceSpan(0, maxTick, {});
         // Read the snapshot row from here on: replaceSpan's documentChanged
         // fan-out rebuilds m_nodeStack, invalidating slot pointers.
         m_page.requestRefresh();
-        if (const LaneMenuKind kind = laneMenuKind(
-                pending.rowId.kind == EditorAutomationRowKind::Tempo, pending.laneTitle);
-            kind.clearedMessage)
-            m_page.announce(*kind.clearedMessage);
     } else if (actionId == int(Action::RemoveLane)) {
         // Delete automation events is the only destructive lane-menu command:
         // the parameter label itself never goes away. Without document-written

@@ -1,4 +1,3 @@
-#include "core/mid2agbtables.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
@@ -862,19 +861,4 @@ void SongView::cancelTimeSelectionMenuWithoutFocus()
             session && session->owns(m_timeSelectionMenuHost))
             session->cancel(/*restoreFocus=*/false);
     }
-}
-void SongView::announceNote(const ViewNote &note)
-{
-    if (!m_timeline)
-        return;
-    const bool ext = m_document && m_document->cfg().extendedClocks;
-    const bool exact = m_document && m_document->cfg().exactGate;
-    const int64_t ticks = note.duration;
-    emit statusMessage(
-        tr("%1 · velocity %2 → plays %3 · length %4 ticks → %5 clocks")
-            .arg(keyName(note.key))
-            .arg(note.velocity)
-            .arg(mid2agbEffectiveVelocity(note.velocity))
-            .arg(ticks)
-            .arg(mid2agbEffectiveDuration(ticks, m_timeline->ticksPerBeat, ext, exact)));
 }
