@@ -47,6 +47,26 @@ Briefs contain requirements ONLY: no controller instructions, no report
 shape, no route banners, no line-count accounting. The harness owns
 envelopes; the brief owns requirements.
 
+## Verification handoff (planner-owned)
+
+- Before freezing a task, the planner selects the narrowest covering checks
+  from registration coverage comments and check source. Inspect the source
+  when coverage is ambiguous; similar names do not prove coverage. Do not
+  leave check selection to the implementer.
+- In the existing Acceptance predicate (or inline Acceptance for Direct
+  tasks), record copyable, exact verification commands and a short explanation
+  of which requested behaviors each covers. Name any coverage gaps and the
+  concrete verification needed for them; a related passing check is not
+  evidence for uncovered behavior. Include required runtime prerequisites,
+  such as native desktop access, where they affect execution.
+- In plan.md Global Constraints, state once that implementers reuse the
+  recorded commands without repeating discovery. Reassess only if the change
+  alters the scope or the command proves stale or unavailable; report the
+  concrete mismatch and revised verification rather than silently narrowing it.
+- Keep execution ownership under the existing plan-wide verification policy
+  and Controller verification section. Planner-owned discovery does not shift
+  shared builds or native checks onto parallel implementers.
+
 ## Specificity (no invention, no transcription)
 
 - Every behavior the implementer must produce is named: exact identifiers,

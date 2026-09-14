@@ -65,13 +65,12 @@ grep pattern="velocity"
 grep pattern="velocity" path="src/ui/songview; src/ui/editordrawer"
 grep pattern="SongDocument" path="src/core"
 grep pattern="voicegroup" path="src/project"
-ast_grep pat="SongDocument::$FUNC" path="src/core"
 lsp references file="src/core/songdocument.h" line=91 symbol="SongDocument"
 ```
 
 Workflow:
 1. `glob path="src/ui/editordrawer"` or `read` the directory listing to discover files.
-2. `grep`/`ast_grep` scoped to that folder.
+2. `grep` scoped to that folder.
 3. `lsp definition/references` for symbols — follows re-exports that text search misses.
 4. range reads, never whole 3000L+ files hoping.
 
@@ -80,7 +79,7 @@ Scopes by concern:
 - Voicegroup / samples: `src/project; src/ui/voicegroupbrowser.cpp; src/ui/samplepicker.cpp`
 - Playback / engine: `src/audio; src/core/timelineplayer.cpp; src/core/miditimeline.cpp`
 - Theme / layout: `src/ui/theme; src/ui/layout.cpp; src/ui/typography.cpp`
-- Harnesses: `src/checks` — only when touching a harness (e.g. `grep pattern="editcheck" path="src/checks"`).
+- Harnesses: `src/checks` — for verification discovery or harness work (e.g. `grep pattern="editcheck" path="src/checks"`).
 
 Also: prefer `lsp` over `grep` for renames/references. Don't do cross-file `ast_edit` renames when `lsp rename` exists.
 
@@ -113,6 +112,12 @@ Push every commit made on any Porydaw branch to its corresponding GitHub
 remote branch. Do not leave unpushed commits behind when handing off work.
 
 ## Build & verify
+
+Coverage comments beside registrations in `src/checks/checkcatalog.cpp` identify
+each check's purpose. Inspect check source when coverage is ambiguous.
+When writing an implementation plan, put the exact covering verification commands
+and what they cover in the task brief. Implementers reuse them unless scope changes
+or a command proves stale or unavailable.
 
 Agents SHALL use `deno task`. Do not invoke `cmake` / `cmake --build` directly;
 the tasks configure and compile.
