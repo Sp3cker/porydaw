@@ -262,8 +262,10 @@ Item {
     // EventList mode replaces the roll band in the same screen space: the
     // host carries the published event-list rectangle, EventListPage renders
     // the table surface, and the input item joins the shared key-policy
-    // chain. The input item ignores unhandled pointer events, so the page
-    // below keeps pointer ownership while it owns non-editor key focus.
+    // chain. The item declines pointer and wheel events, but an accepting
+    // leaf blocks lower siblings' hover delivery, so it rests below the
+    // page at the same z: the page sees hover and pointer action while the
+    // item still owns non-editor key focus through the navigation wiring.
     Item {
         id: eventListHost
         objectName: "timelineEventListHost"
@@ -275,18 +277,20 @@ Item {
         visible: root.eventListBandVisible
         clip: true
 
-        EventListPage {
-            id: eventListPage
-            objectName: "eventListPage"
-            navigationInputActive: timelineEventListInput.activeFocus
-            onNavigationFocusRequested: timelineEventListInput.forceActiveFocus()
-        }
-
         TimelineInputItem {
             id: timelineEventListInput
             objectName: "timelineEventListInput"
             anchors.fill: parent
+            z: 0
             Accessible.description: qsTr("Event list")
+        }
+
+        EventListPage {
+            id: eventListPage
+            objectName: "eventListPage"
+            z: 0
+            navigationInputActive: timelineEventListInput.activeFocus
+            onNavigationFocusRequested: timelineEventListInput.forceActiveFocus()
         }
     }
 

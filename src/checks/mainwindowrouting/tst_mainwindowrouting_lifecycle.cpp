@@ -2,7 +2,20 @@
 #include "mainwindowroutingfixture.h"
 #include "ui/songview.h"
 
+#include "checks/quickpopupguard.h"
+#include "checks/trackheaders/trackheaderoracles.h"
+#include "ui/mousehints/mousehints.h"
+#include "ui/songview/quick/quickpopupsession.h"
+#include "ui/songview/timelinebandlayout.h"
+#include "ui/songview/trackheadermodel.h"
+#include "ui/transportbar.h"
+
 #include <QCloseEvent>
+#include <QComboBox>
+#include <QCursor>
+#include <QDial>
+#include <QQuickItem>
+#include <QQuickWindow>
 
 #include <QtTest>
 
@@ -334,6 +347,237 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
                  checks::async_wait::Result::Ready);
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot);
         QCOMPARE(loadEditorViewState(QSettings{}), state);
+    }
+
+    void mouseHintWidgetDragSettlesOnRelease()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        ui::MouseHints &hints = mouseHints();
+        TransportBar *const transport = window.m_workspace->transportBar();
+        QVERIFY(transport);
+        QDial *const dial = transport->findChild<QDial *>();
+        QComboBox *const combo = transport->findChild<QComboBox *>();
+        QVERIFY(dial && combo);
+        // The packed transport toolbar overflows the fixture's 960px window
+        // and hides the dial in the extension; widening relayouts it into
+        // view. The session owns this window, so no restore is needed.
+        window.resize(1400, 640);
+        QTRY_VERIFY(dial->isVisibleTo(&window));
+
+        // QCursor::setPos injects a real spontaneous move through the
+        // windowing system and keeps QCursor::pos() honest for the observer's
+        // scope reconcile; QTest::mouseMove delivers the event but leaves the
+        // reported cursor position stale offscreen. Crossing the combo first
+        // is the same path a pointer sweeping the transport bar takes.
+        QWindow *const dialWindow = window.windowHandle();
+        QVERIFY(dialWindow);
+        const auto windowPoint = [dialWindow](QWidget *widget, const QPoint &local) {
+            return dialWindow->mapFromGlobal(widget->mapToGlobal(local));
+        };
+        const int originalValue = dial->value();
+        QCursor::setPos(combo->mapToGlobal(combo->rect().center()));
+        QCursor::setPos(dial->mapToGlobal(dial->rect().center()));
+        // underMouse proves Qt's Enter reached the dial; without it the
+        // claim assert below cannot distinguish a delivery miss (covered or
+        // overflowed widget) from an observer drop.
+        QTRY_VERIFY(dial->underMouse());
+        QTRY_VERIFY(hints.currentSource() == dial);
+        const QString dialProfile = hints.currentText();
+        QVERIFY(!dialProfile.isEmpty());
+
+        // A real C++ drag on the output dial keeps the dial's profile for the
+        // whole grab, and releasing over the combo settles on the actual leaf.
+        // The value change proves the press reached the dial. The cursor is
+        // parked on the combo before release so the post-release reconcile
+        // resolves the leaf under it.
+        dial->setValue(50);
+        QTest::mousePress(dialWindow, Qt::LeftButton, Qt::NoModifier,
+                          windowPoint(dial, dial->rect().center()));
+        QTest::mouseMove(dialWindow, windowPoint(dial, dial->rect().center() + QPoint(0, -11)));
+        QVERIFY(dial->value() < 50);
+        QVERIFY(hints.currentSource() == dial && hints.currentText() == dialProfile);
+        QCursor::setPos(combo->mapToGlobal(combo->rect().center()));
+        QTest::mouseRelease(dialWindow, Qt::LeftButton, Qt::NoModifier,
+                            windowPoint(combo, combo->rect().center()));
+        QTRY_VERIFY(hints.currentSource() == combo && hints.currentText().isEmpty());
+        dial->setValue(originalValue);
+    }
+
+    void mouseHintQuickDragSettlesOnRelease()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        SongView &view = session->b->view();
+        ui::MouseHints &hints = mouseHints();
+        QQuickWindow *const canvas = quickCanvas(view);
+        QVERIFY(canvas);
+        QQuickItem *const plot = quickItem(view, QLatin1String("timelineRollInput"));
+        QVERIFY(plot);
+
+        // A scrollable Quick scrollbar: the thumb drag is the ordinary QML
+        // gesture whose release position settles the no-hint group.
+        QQuickItem *scrollbar = nullptr;
+        for (const char *name : {"timelineRollScrollBar", "timelineHorizontalScrollBar",
+                                 "timelineTrackHeaderScrollBar"}) {
+            QQuickItem *const candidate = quickItem(view, QLatin1String(name));
+            if (candidate && candidate->isVisible() && candidate->property("scrollable").toBool() &&
+                candidate->property("thumbTravel").toReal() > 0) {
+                scrollbar = candidate;
+                break;
+            }
+        }
+        QVERIFY2(scrollbar, "no scrollable Quick scrollbar is visible in the fixture");
+
+        const bool vertical = scrollbar->property("orientation").toInt() == int(Qt::Vertical);
+        const qreal thumbPos = scrollbar->property("thumbPos").toReal();
+        const qreal thumbLength = scrollbar->property("thumbLength").toReal();
+        QVERIFY(thumbLength > 0);
+        const QPointF thumbLocal =
+            vertical ? QPointF(scrollbar->width() / 2.0, thumbPos + thumbLength / 2.0)
+                     : QPointF(thumbPos + thumbLength / 2.0, scrollbar->height() / 2.0);
+        const QPoint thumbScene = scrollbar->mapToScene(thumbLocal).toPoint();
+        const QPoint plotScene = plot->mapToScene(plot->boundingRect().center()).toPoint();
+
+        hoverAt(*canvas, thumbScene);
+        QTRY_VERIFY(hints.currentSource() == scrollbar && hints.currentText().isEmpty());
+
+        // The drag retains the originating empty claim; releasing outside the
+        // scrollbar footprint settles on the covered plot's real profile.
+        QTest::mousePress(canvas, Qt::LeftButton, Qt::NoModifier, thumbScene);
+        QTest::mouseMove(canvas, plotScene);
+        QVERIFY(hints.currentSource() == scrollbar && hints.currentText().isEmpty());
+        QTest::mouseRelease(canvas, Qt::LeftButton, Qt::NoModifier, plotScene);
+        QTRY_VERIFY(hints.currentSource() == plot && !hints.currentText().isEmpty());
+    }
+
+    void mouseHintHeaderDragSettlesOnRelease()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        SongView &view = session->b->view();
+        ui::MouseHints &hints = mouseHints();
+        QQuickWindow *const canvas = quickCanvas(view);
+        QVERIFY(canvas);
+        QQuickItem *const headers = quickItem(view, QLatin1String("timelineTrackHeadersInput"));
+        QVERIFY(headers);
+        songview::TrackHeaderModel *const model = trackHeaders(view);
+        QVERIFY(model);
+        QVERIFY(model->rowCount() >= 2);
+
+        const std::optional<QPointF> title = headerRowPoint(
+            *headers, *model, 0,
+            model->data(model->index(0, 0), songview::TrackHeaderModel::TitleRectRole).toRectF());
+        QVERIFY(title.has_value());
+        const uint64_t commitRevision = session->b->document().revision();
+
+        hoverAt(*canvas, headers->mapToScene(*title).toPoint());
+        QTRY_VERIFY(hints.currentSource() == headers);
+        const QString rowProfile = hints.currentText();
+        QVERIFY(!rowProfile.isEmpty());
+
+        // The header reorder drag keeps the row profile through the grab.
+        // Delivery targets the input item directly — the same mechanism the
+        // trackheader reorder checks use, which drive the interaction's
+        // pointer handlers. The composed-window QTest path ends the grab
+        // with mouseUngrabEvent, whose settle consults QCursor::pos(); that
+        // stays stale offscreen under QTest::mouseMove, so the claim's
+        // survival would hinge on Qt's post-release hover synthesis rather
+        // than the product path. Selecting track 1 first makes the row-0
+        // press's primary-track transition observable proof the press
+        // reached the real handler.
+        view.selectTrack(1);
+        checks::events::sendMouse(*headers, QEvent::MouseButtonPress, *title, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+        QCOMPARE(view.selectionModel().primaryTrack(), 0);
+        checks::events::sendMouse(*headers, QEvent::MouseMove,
+                                  *title + QPointF(0, model->rowHeight()), Qt::NoButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+        QVERIFY(model->reorderIndicatorVisible());
+        QVERIFY(hints.currentSource() == headers && hints.currentText() == rowProfile);
+
+        // Releasing below the last track row drops into the end slot — the
+        // proven commit coordinate the trackheader reorder checks use.
+        int trackRows = 0;
+        for (int row = 0; row < model->rowCount(); ++row) {
+            if (!model->data(model->index(row, 0), songview::TrackHeaderModel::IsAddTrackRole)
+                     .toBool())
+                ++trackRows;
+        }
+        const QPointF dropPoint{title->x(), qreal(trackRows) * model->rowHeight()};
+        checks::events::sendMouse(*headers, QEvent::MouseMove, dropPoint, Qt::NoButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*headers, QEvent::MouseButtonRelease, dropPoint, Qt::LeftButton,
+                                  Qt::NoButton, Qt::NoModifier);
+        QTRY_VERIFY(session->b->document().revision() > commitRevision);
+        QTRY_VERIFY(hints.currentSource() == headers && !hints.currentText().isEmpty());
+    }
+
+    void mouseHintSurvivesFocusChange()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        SongView &view = session->b->view();
+        ui::MouseHints &hints = mouseHints();
+        QQuickWindow *const canvas = quickCanvas(view);
+        QVERIFY(canvas);
+        QQuickItem *const plot = quickItem(view, QLatin1String("timelineRollInput"));
+        QVERIFY(plot);
+
+        hoverAt(*canvas, plot->mapToScene(plot->boundingRect().center()).toPoint());
+        QTRY_VERIFY(hints.currentSource() == plot);
+        const QString profile = hints.currentText();
+        QVERIFY(!profile.isEmpty());
+
+        // Keyboard focus changes under a stationary pointer leave the
+        // displayed profile alone.
+        QVERIFY(view.focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason));
+        QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::TrackHeaders);
+        QVERIFY(hints.currentSource() == plot);
+        QCOMPARE(hints.currentText(), profile);
+        QTest::keyClick(canvas, Qt::Key_Tab);
+        QCoreApplication::processEvents();
+        QVERIFY(hints.currentSource() == plot);
+        QCOMPARE(hints.currentText(), profile);
+    }
+
+    void mouseHintDiesWithItsTab()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        ui::MouseHints &hints = mouseHints();
+        SongView &viewB = session->b->view();
+        QQuickWindow *const canvasB = quickCanvas(viewB);
+        QVERIFY(canvasB);
+        QQuickItem *const plotB = quickItem(viewB, QLatin1String("timelineRollInput"));
+        QVERIFY(plotB);
+
+        hoverAt(*canvasB, plotB->mapToScene(plotB->boundingRect().center()).toPoint());
+        QTRY_VERIFY(hints.currentSource() == plotB);
+        QVERIFY(!hints.currentText().isEmpty());
+
+        // Switching to another real tab hides B's canvas; its hint dies with
+        // the hidden window's hover membership.
+        window.m_workspace->selectSongTab(session->a);
+        QTRY_VERIFY(hints.currentSource() != plotB);
+
+        // Hovering A's canvas claims its own source.
+        SongView &viewA = session->a->view();
+        QQuickWindow *const canvasA = quickCanvas(viewA);
+        QVERIFY(canvasA);
+        QQuickItem *const plotA = quickItem(viewA, QLatin1String("timelineRollInput"));
+        QVERIFY(plotA);
+        hoverAt(*canvasA, plotA->mapToScene(plotA->boundingRect().center()).toPoint());
+        QTRY_VERIFY(hints.currentSource() == plotA);
+        QVERIFY(!hints.currentText().isEmpty());
+
+        // Closing the hovered tab destroys the source; the service releases
+        // it rather than keeping a dangling owner. The reshown tab may
+        // legitimately reclaim the hint under the stationary cursor.
+        window.m_workspace->requestCloseSelectedTab();
+        QTRY_VERIFY(hints.currentSource() != plotA);
     }
 
   private:

@@ -267,6 +267,10 @@ bool AutomationCanvas::pointerMove(const songview::TimelinePointerInput &input)
         if (hoverPublicationChanged)
             requestHoverQuickUpdate();
         if (host) {
+            // The emitting physical host claims the resolved idle profile;
+            // during a grab this branch is unreachable, so the originating
+            // profile is retained for the gesture's duration.
+            host->setMouseHint(mouseHintProfile());
             if (m_hoverState.hover.originPhantom)
                 host->clearCursor();
             else if (m_pencilMode && isEditablePencilHit(position))

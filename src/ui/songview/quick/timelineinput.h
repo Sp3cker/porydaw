@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ui/mousehints/hintprofiles.h"
 #include "ui/songview/timelinebandlayout.h"
 
 #include <cstdint>
@@ -84,6 +85,8 @@ class TimelineInputHost
     virtual void clearCursor() = 0;
     virtual void releasePointerGrab() = 0;
     virtual void setAccessibilityDescription(const QString &description) = 0;
+    virtual void setMouseHint(ui::hint_profiles::Id profile) = 0;
+    virtual void refreshMouseHint(ui::hint_profiles::Id profile) = 0;
 };
 
 // Band-owned interaction rules. TimelineInputItem forwards normalized input

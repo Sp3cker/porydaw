@@ -198,6 +198,22 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     // 0 = selection start edge, 1 = end edge, -1 = neither near pos.
     int hitSelEdge(QPointF pos) const;
 
+    // One ordered left-press target shared by pointerPress and the idle
+    // hover pass: loop marker, then an explicit signature chip, then a
+    // selection edge. An implicit chip is not a drag handle — it falls
+    // through to the selection edge exactly as the press does — but is
+    // still reported so hover keeps its handle cursor.
+    struct PressTarget {
+        int marker = -1;   // 0/1 like hitMarker
+        bool chip = false; // any chip hit, implicit included
+        bool chipImplicit = false;
+        Tick chipTick = 0;
+        int chipNumerator = 0;
+        int chipDenomPow2 = 0;
+        int selEdge = -1; // 0/1 like hitSelEdge
+    };
+    PressTarget pressTargetAt(QPointF pos) const;
+
     // Loop/selection/signature context menu over the shared canvas popup
     // session. scenePos is a Quick-window scene position (the release
     // point); the target comes from the consumed right-press gesture

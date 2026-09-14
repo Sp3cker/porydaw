@@ -622,10 +622,19 @@ bool AutomationEditingTest::clickParameterTab(const EditorAutomationRowId &row,
     QQuickItem *root = quick ? quick->rootObject() : nullptr;
     if (!root)
         return false;
-    auto *item = checks::support::visualDescendant(
+    const QPointer<QQuickItem> item = checks::support::visualDescendant(
         root, QStringLiteral("automationParameterTab%1").arg(index));
     if (!item || !item->isVisible() || !item->isEnabled())
         return false;
+    // Plot exposure can precede the GridLayout assigning tab widths.
+    // Choose the single click position only after the target has geometry.
+    if (!QTest::qWaitFor([item] {
+            return !item || !item->isVisible() || !item->isEnabled() ||
+                   !item->boundingRect().isEmpty();
+        }) ||
+        !item || !item->isVisible() || !item->isEnabled() || !m_quickWindow) {
+        return false;
+    }
     const QPoint where =
         item->mapToScene(QPointF(item->width() / 2.0, item->height() / 2.0)).toPoint();
     QTest::mouseClick(m_quickWindow, Qt::LeftButton, modifiers, where);

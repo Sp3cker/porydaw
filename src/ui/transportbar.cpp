@@ -24,6 +24,8 @@
 #include "ui/fastlabel.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
+#include "ui/mousehints/hintprofiles.h"
+#include "ui/mousehints/mousehints.h"
 #include "ui/theme/themeruntime.h"
 
 namespace {
@@ -36,7 +38,12 @@ constexpr qreal kFineStepsPerPixel = 0.2;
 class OutputVolumeDial final : public QDial
 {
   public:
-    explicit OutputVolumeDial(QWidget *parent) : QDial(parent) {}
+    explicit OutputVolumeDial(QWidget *parent) : QDial(parent)
+    {
+        // Shift fine drag selects the complete fine-page-step profile, which
+        // already includes the inherited Control-or-Shift wheel page step.
+        ui::MouseHints::setWidgetProfile(*this, ui::hint_profiles::Id::NativeFinePageStep);
+    }
 
   protected:
     void mousePressEvent(QMouseEvent *event) override

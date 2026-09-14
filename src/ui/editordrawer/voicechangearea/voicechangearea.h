@@ -131,8 +131,11 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     void rebuildQuickScene(songview::TimelineQuickScene &scene, bool horizontalPan);
     void rebuildQuickHover(songview::TimelineQuickScene &scene);
     void rebuildVisualState();
+    // Visual hover only: hint lifetime belongs to the physical input host, so
+    // clearHover never touches the published profile and a marker drag keeps
+    // the description it was entered with.
     void clearHover();
-    void updateHover(qreal x);
+    void updateHover(songview::TimelineInputHost *host, qreal x);
     QRectF bounds() const;
     QRectF gutterRect() const;
     qreal devicePixelRatio() const;

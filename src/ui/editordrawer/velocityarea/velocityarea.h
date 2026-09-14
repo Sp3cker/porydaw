@@ -9,6 +9,7 @@
 #include <QObject>
 #include <QPointF>
 #include <QRectF>
+#include <QString>
 
 #include "core/songdocument.h"
 #include "core/velocitymodel.h"
@@ -137,6 +138,7 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
     std::optional<DocNote> notesAt(const QPointF &position, bool includeStems) const;
     void setHoveredNote(std::optional<NoteId> noteId);
     void updateHoveredNote(const QPointF &position);
+    void updateMouseHint(const songview::TimelinePointerInput &input);
     QRectF nodeRect(const DocNote &note) const;
     QRectF stemRect(const DocNote &note) const;
     double xForTick(uint64_t tick) const;

@@ -29,6 +29,10 @@ class SongView;
 class VelocityArea;
 class VoiceChangeArea;
 
+namespace ui {
+class MouseHints;
+}
+
 namespace songview {
 
 class OtherStrip;
@@ -322,6 +326,10 @@ class TimelineQuickView final : public QObject
     bool dispatchSongKey(const TimelineKeyInput &input);
     bool dispatchSongKeyRelease(const TimelineKeyInput &input);
     void flushUpdate();
+    // One coalesced queued idle MouseMove lets Qt restore lost hover
+    // membership to the actual leaf after popup close or native scope
+    // recovery; every guard is re-read inside the callback before delivery.
+    void requestMouseHintRecovery(ui::MouseHints *hints);
     // One sync entry point per band; flushUpdate dispatches one call per
     // dirty band, and each sync owns that band's rebuild + layer updates.
     void syncPianoRoll(PianoRollQuickDirtySet dirty);
@@ -384,6 +392,9 @@ class TimelineQuickView final : public QObject
     // windowAboutToDetach listener may re-enter while the borrow is still
     // live; the nested call returns without re-emitting or re-running.
     bool m_detachStarted = false;
+    // Coalesces the one queued membership-recovery callback; cleared inside
+    // the callback before its guards re-read live state.
+    bool m_mouseHintRecoveryQueued = false;
     // Cached QML scene root; cleared with the other borrows in detachWindow().
     QPointer<QQuickItem> m_root;
     QuickPopupSession *m_popupSession = nullptr;

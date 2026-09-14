@@ -22,6 +22,7 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/editordrawer.h"
+#include "ui/mousehints/hintprofiles.h"
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
@@ -61,10 +62,28 @@ class CursorDprHost final : public songview::TimelineInputHost
     void releasePointerGrab() override {}
     void setAccessibilityDescription(const QString &) override {}
 
+    void setMouseHint(ui::hint_profiles::Id profile) override
+    {
+        m_mouseHint = profile;
+        m_ownsMouseHint = true;
+    }
+
+    // Non-claiming stationary update: only an owned record may change.
+    void refreshMouseHint(ui::hint_profiles::Id profile) override
+    {
+        if (m_ownsMouseHint)
+            m_mouseHint = profile;
+    }
+
+    ui::hint_profiles::Id mouseHint() const noexcept { return m_mouseHint; }
+    bool ownsMouseHint() const noexcept { return m_ownsMouseHint; }
+
   private:
     QRectF m_bounds;
     qreal m_devicePixelRatio = 1.0;
     QCursor m_cursor{Qt::ArrowCursor};
+    ui::hint_profiles::Id m_mouseHint = ui::hint_profiles::Id::Empty;
+    bool m_ownsMouseHint = false;
 };
 
 class ScopedAutomationInputHost final

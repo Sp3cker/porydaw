@@ -4,6 +4,7 @@
 
 #include "ui/keymap.h"
 #include "ui/layout.h"
+#include "ui/mousehints/hintprofiles.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/quick/pianorollquick.h"
@@ -61,6 +62,7 @@ MidiCursors loadMidiCursors(qreal devicePixelRatio, int cursorExtent)
 
 namespace songview {
 using namespace songview::detail;
+
 using namespace songview::pianoroll_detail;
 
 int noteBorderPixels(qreal dpr)
@@ -279,16 +281,24 @@ void PianoRoll::refreshHoverCursor(QPointF pos, Qt::KeyboardModifiers modifiers)
     if (m_cursors.dpr != devicePixelRatio())
         m_cursors = loadMidiCursors(devicePixelRatio(), m_geometry.midiCursorExtent);
     const ViewNote *hit = m_sv->document() ? hitNote(pos) : nullptr;
+    const bool rightEdge = hit && nearRightEdge(*hit, pos);
+    const bool leftEdge = hit && !rightEdge && nearLeftEdge(*hit, pos);
     // Resize edges win over the modifier velocity hover.
     const auto &keys = keymap::Registry::instance();
-    if (hit && nearRightEdge(*hit, pos))
+    if (rightEdge)
         m_inputHost->setCursor(m_cursors.rightEdge);
-    else if (hit && nearLeftEdge(*hit, pos))
+    else if (leftEdge)
         m_inputHost->setCursor(m_cursors.leftEdge);
     else if (hit && keys.matchesModifier(modifiers, QStringLiteral("roll.velocity_drag")))
         m_inputHost->setCursor(Qt::SizeVerCursor);
     else
         m_inputHost->clearCursor();
+    // The same resolved hit selects the advertised profile: an edge never
+    // offers the velocity chord, and empty plot space offers only the
+    // right-button and wheel alternatives.
+    m_inputHost->setMouseHint(rightEdge || leftEdge ? ui::hint_profiles::Id::RollNoteEdge
+                              : hit                 ? ui::hint_profiles::Id::RollNoteBody
+                                                    : ui::hint_profiles::Id::RollPlot);
 }
 
 QRectF PianoRoll::displayedNoteRect(const ViewNote &note) const

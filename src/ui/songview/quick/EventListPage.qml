@@ -1,4 +1,5 @@
 import QtQuick
+import Porydaw.Ui
 
 Item {
     id: page
@@ -230,6 +231,11 @@ Item {
             return
         controller.selectRow(row, modifiers)
     }
+
+    // Row hover alternatives, shared by every cell and row-header
+    // publisher, come from the shared EventRows profile: the combined
+    // chord is an additive range, unlike the track header's Control
+    // precedence; the controller owns the actual selection result.
 
     function moveCurrentRow(delta, modifiers) {
         if (!controller || eventTable.rows <= 0)
@@ -490,6 +496,15 @@ Item {
             inputMethodHints: cell.tickEditor || cell.numericEditor ? Qt.ImhDigitsOnly
                                                                      : Qt.ImhNone
 
+            // Shift-click text selection lives on the editor itself; this
+            // child hover only supplies the identity that routes the cell
+            // group's profile. It never publishes independently.
+            HoverHandler {
+                id: cellEditorHint
+
+                cursorShape: Qt.IBeamCursor
+            }
+
             onVisibleChanged: {
                 if (visible)
                     text = cell.editorText
@@ -533,6 +548,9 @@ Item {
             cursorShape: cell.editable ? Qt.IBeamCursor : Qt.ArrowCursor
 
             onPressed: (mouse) => {
+                // Re-arm the group before this drag owns it, so the last
+                // gesture's outside release cannot block publication.
+                cellHint.releaseInside = true
                 cell.pressX = mouse.x
                 cell.pressY = mouse.y
                 cell.pressWasCurrent = page.controller && page.controller.currentRow === cell.row
@@ -583,20 +601,55 @@ Item {
                         page.beginCellEdit(cell)
                     page.navigationFocusRequested()
                 }
+                // Settle the cell group from the actual release
+                // coordinates in the scene: an outside release clears even
+                // when Qt froze hover membership during the implicit grab.
+                cellHint.settleRelease(cellMouse.mapToItem(null, mouse.x, mouse.y))
                 page.resetPointerState()
             }
 
-            onCanceled: page.resetPointerState()
+            // Cancellation delivers no release position: reset
+            // unconditionally and settle the group's hover membership from
+            // the actual cursor position carried by the group's own hover
+            // point.
+            onCanceled: {
+                cellHint.settleReleaseFromGlobal(cellHint.point.globalPosition)
+                page.resetPointerState()
+            }
             onDoubleClicked: (mouse) => {
                 if (mouse.button === Qt.LeftButton)
                     page.beginCellEdit(cell)
             }
         }
 
+        // One publisher per cell. Outside editing the row-selection
+        // alternatives show; while the inline editor is visible its child
+        // hover selects the text-selection profile and the cell's own
+        // margins stay empty (never row-action help). During the cell drag
+        // the originating profile is retained; the release settle above
+        // clears outside. The page and table never publish for their
+        // descendants.
+        HoverHint {
+            id: cellHint
+
+            source: cell
+            gestureOwning: cellMouse.pressed
+            profile: cell.editing
+                     ? (cellEditorHint.hovered
+                        ? HintProfiles.TextSelection : HintProfiles.Empty)
+                     : HintProfiles.EventRows
+        }
     }
 
     Item {
         id: toolbar
+
+        // The toolbar, its buttons and the count label have no
+        // modifier-dependent mouse alternative: one empty claim covers the
+        // whole strip so covered band hints cannot leak through.
+        HoverHint {
+            source: toolbar
+        }
 
         anchors.top: parent.top
         anchors.left: parent.left
@@ -689,6 +742,12 @@ Item {
     Item {
         id: tableHeader
         objectName: "eventListHeader"
+
+        // Column labels and resizers have no modifier-dependent action;
+        // one empty claim covers them all.
+        HoverHint {
+            source: tableHeader
+        }
 
         anchors.top: toolbar.bottom
         anchors.left: parent.left
@@ -838,6 +897,14 @@ Item {
                     y: headerRow * page.rowHeight - eventTable.contentY
                     width: rowHeader.width
                     height: page.rowHeight
+
+                    // Row headers label the same row-selection
+                    // alternatives as the cells: one group per visible
+                    // header row.
+                    HoverHint {
+                        source: parent
+                        profile: HintProfiles.EventRows
+                    }
 
                     Rectangle {
                         anchors.fill: parent
@@ -993,7 +1060,13 @@ Item {
             }
         }
 
+        // The corner target has no modifier-dependent action; its own
+        // empty claim keeps cell hints from leaking through while its
+        // physical hover footprint stays exactly the corner rectangle.
         Rectangle {
+            id: tableCorner
+
+            objectName: "eventListCorner"
             x: eventTable.x + eventTable.width
             y: eventTable.y + eventTable.height
             width: page.scrollbarBreadth
@@ -1001,6 +1074,10 @@ Item {
             color: page.headerBackground
             border.width: 1
             border.color: page.headerOutline
+
+            HoverHint {
+                source: tableCorner
+            }
         }
     }
 

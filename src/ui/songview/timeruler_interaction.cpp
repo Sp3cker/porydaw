@@ -3,6 +3,7 @@
 #include "ui/songview/timeruler.h"
 
 #include "core/songdocument.h"
+#include "ui/mousehints/hintprofiles.h"
 #include "ui/songview.h"
 #include "ui/songview/editactions.h"
 #include "ui/songview/grid.h"
@@ -34,6 +35,24 @@ QuickPopupSession *quickSessionFor(SongView &owner)
 
 } // namespace
 
+TimeRuler::PressTarget TimeRuler::pressTargetAt(QPointF pos) const
+{
+    PressTarget target;
+    if (!m_owner.document())
+        return target;
+    target.marker = hitMarker(pos);
+    if (target.marker >= 0)
+        return target;
+    target.chip = hitTimeSigChip(pos, &target.chipTick, &target.chipNumerator,
+                                 &target.chipDenomPow2, &target.chipImplicit);
+    if (target.chip && !target.chipImplicit)
+        return target;
+    // An implicit chip does not consume the press: the selection edge
+    // still wins wherever the two overlap.
+    target.selEdge = hitSelEdge(pos);
+    return target;
+}
+
 bool TimeRuler::pointerPress(const TimelinePointerInput &input)
 {
     SongDocument *doc = m_owner.document();
@@ -59,26 +78,23 @@ bool TimeRuler::pointerPress(const TimelinePointerInput &input)
     if (input.button != Qt::LeftButton)
         return false;
     const Tick clickTick = m_grid.snapTick(m_camera.tickAtContentX(input.position.x()));
-    m_dragMarker = doc ? hitMarker(input.position) : -1;
+    const PressTarget target = pressTargetAt(input.position);
+    m_dragMarker = target.marker;
     if (m_dragMarker >= 0) {
         m_dragTick = clickTick;
         requestQuickUpdate();
         return true;
     }
-    Tick sigTick;
-    int sigNum, sigDen;
-    bool sigImplicit;
-    if (doc && hitTimeSigChip(input.position, &sigTick, &sigNum, &sigDen, &sigImplicit) &&
-        !sigImplicit) {
+    if (target.chip && !target.chipImplicit) {
         // Drag moves the signature; starting at its own tick keeps a
         // plain click (and the first half of a double-click) a no-op.
         m_dragTimeSig = true;
-        m_dragTimeSigFrom = sigTick;
-        m_dragTick = sigTick;
+        m_dragTimeSigFrom = target.chipTick;
+        m_dragTick = target.chipTick;
         requestQuickUpdate();
         return true;
     }
-    m_dragSelEdge = doc ? hitSelEdge(input.position) : -1;
+    m_dragSelEdge = target.selEdge;
     if (m_dragSelEdge >= 0)
         return true;
     // Elsewhere on the ruler: defer until movement distinguishes a click
@@ -146,15 +162,19 @@ bool TimeRuler::pointerMove(const TimelinePointerInput &input)
         m_owner.selectionModel().setTimeSelection(selection);
         return true;
     }
-    Tick sigTick;
-    int sigNum, sigDen;
-    bool sigImplicit;
-    m_inputHost->setCursor(
-        m_owner.document() &&
-                (hitMarker(input.position) >= 0 || hitSelEdge(input.position) >= 0 ||
-                 hitTimeSigChip(input.position, &sigTick, &sigNum, &sigDen, &sigImplicit))
-            ? Qt::SplitHCursor
-            : Qt::ArrowCursor);
+    // Idle hover resolves the same ordered press target the press would
+    // consume: an implicit chip keeps the handle cursor but does not
+    // consume the press, so where it overlaps a selection edge the edge
+    // drag — not the sweep — is what a press starts.
+    const PressTarget target = pressTargetAt(input.position);
+    const bool onHandle =
+        target.marker >= 0 || target.selEdge >= 0 || (target.chip && !target.chipImplicit);
+    m_inputHost->setCursor(target.marker >= 0 || target.chip || target.selEdge >= 0
+                               ? Qt::SplitHCursor
+                               : Qt::ArrowCursor);
+    if (TimelineInputHost *const host = input.host ? input.host : m_inputHost)
+        host->setMouseHint(onHandle ? ui::hint_profiles::Id::HorizontalScroll
+                                    : ui::hint_profiles::Id::RulerSweep);
     return true;
 }
 

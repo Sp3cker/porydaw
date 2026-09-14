@@ -29,6 +29,8 @@ Porydaw has several main panels. They are all resizable and can even be repositi
 
 ![Porydaw Panels](../img/quick-start-littleroot-panels.png)
 
+Hover over a control or editing target to see its modifier-key mouse alternatives in the middle of the status bar. These hints include alternate click, drag, and wheel actions; you do not need to hold a modifier to see them.
+
 ## 4. Edit a note
 
 Now, let's actually edit some notes!  I'm going to edit the first three notes that the Flute plays at the very start of the song.  To do that:

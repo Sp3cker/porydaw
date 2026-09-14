@@ -1,6 +1,7 @@
 #include "ui/songview/trackheadermodel.h"
 
 #include "core/songdocument.h"
+#include "ui/mousehints/hintprofiles.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/theme/themeruntime.h"
@@ -991,6 +992,16 @@ bool TrackHeaderModel::pointerMove(const TimelinePointerInput &input)
     const int row = rowAt(input.position.y());
     const HitTarget target = row >= 0 ? hitTarget(row, input.position) : HitTarget::None;
     updatePointerVisuals(row, target, false);
+    // Idle hover publishes the current target's profile through the emitting
+    // physical host. A pressed move keeps the press-time profile: Qt freezes
+    // hover membership under the exclusive grab, and the ungrab settle
+    // republishes from the actual release position.
+    if (input.buttons == Qt::NoButton) {
+        TimelineInputHost *host = input.host ? input.host : m_inputHost;
+        host->setMouseHint(target == HitTarget::Body || target == HitTarget::Voice
+                               ? ui::hint_profiles::Id::TrackScope
+                               : ui::hint_profiles::Id::Empty);
+    }
     if (m_pointer.dragging) {
         updateReorder(input.position);
         return true;

@@ -1,4 +1,5 @@
 import QtQuick
+import Porydaw.Ui
 
 PromptCard {
     id: prompt
@@ -89,8 +90,12 @@ PromptCard {
             id: search
 
             objectName: "voicePickerSearch"
-            HoverHandler {
+            HoverHint {
+                source: search
                 cursorShape: Qt.IBeamCursor
+                // Modern TextInput's own Shift-click marking; no availability
+                // check. Session scope is enforced inside HoverHint.
+                profile: HintProfiles.TextSelection
             }
             anchors.fill: parent
             clip: true

@@ -26,6 +26,12 @@ Item {
         onPressed: (mouse) => layer.session.outsidePressed(mouse.button,
                                                             Qt.point(mouse.x, mouse.y))
         onWheel: (wheel) => wheel.accepted = true
+
+        // The underlay is a no-hint group: while it is the hover leaf it
+        // claims empty so covered background hints cannot leak through.
+        HoverHint {
+            source: underlay
+        }
     }
 
     Item {
@@ -38,10 +44,18 @@ Item {
         // Form roots are appended above this shield. Its geometry follows the
         // form panel, leaving every point outside the panel to the underlay.
         MouseArea {
+            id: formShield
+
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
             hoverEnabled: true
             onWheel: (wheel) => wheel.accepted = true
+
+            // The shield is its own no-hint group; form children publish
+            // their real profiles and never compete with it.
+            HoverHint {
+                source: formShield
+            }
         }
     }
 }

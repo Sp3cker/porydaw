@@ -20,6 +20,19 @@ TimelineGestureScrollbar {
     property string thumbObjectName: ""
     property string accessibleName: qsTr("Timeline")
 
+    // One no-hint group over the whole scrollbar footprint (track, thumb
+    // and wheel surface): no modifier-dependent action exists here, and the
+    // publisher keeps covered band hints from leaking through. Every
+    // instance inherits it. The thumb drag settles the group's
+    // releaseInside from real release coordinates; while the drag holds the
+    // grab the originating empty profile is retained.
+    HoverHint {
+        id: thumbHint
+
+        source: scrollbar
+        gestureOwning: scrollbar.gestureActive
+    }
+
     readonly property real span: Math.max(0, Math.max(minimum, maximum) - minimum)
     readonly property bool scrollable: span > 0
     onSpanChanged: scrollbar.rebaseDrag()
@@ -42,6 +55,7 @@ TimelineGestureScrollbar {
     property real dragStartValue: 0
     property real dragStartPosition: 0
     property real dragLastPosition: 0
+    property point dragLastPoint: Qt.point(0, 0)
     property bool dragThresholdReached: false
     gestureActive: thumbMouse.pressed
 
@@ -56,6 +70,14 @@ TimelineGestureScrollbar {
         if (!scrollable)
             return
         valueRequested(clampedValue(requested))
+    }
+
+    // Settles the hint group from a drag owner's delivered local
+    // coordinates. The policy stays with HoverHint: containment against the
+    // scrollbar footprint decides releaseInside, so an outside release
+    // clears even when Qt froze hover membership during the implicit grab.
+    function settleHintRelease(localX, localY) {
+        thumbHint.settleRelease(scrollbar.mapToItem(null, localX, localY))
     }
 
     function rebaseDrag() {
@@ -187,12 +209,14 @@ TimelineGestureScrollbar {
             scrollbar.dragStartValue = scrollbar.clampedValue(scrollbar.value)
             scrollbar.dragStartPosition = position
             scrollbar.dragLastPosition = position
+            scrollbar.dragLastPoint = Qt.point(mouse.x, mouse.y)
             scrollbar.dragThresholdReached = false
         }
         onPositionChanged: (mouse) => {
             if (!pressed)
                 return
             const position = scrollbar.orientation === Qt.Vertical ? mouse.y : mouse.x
+            scrollbar.dragLastPoint = Qt.point(mouse.x, mouse.y)
             scrollbar.dragLastPosition = position
             if (!scrollbar.dragThresholdReached) {
                 if (Math.abs(position - scrollbar.dragStartPosition)
@@ -206,5 +230,17 @@ TimelineGestureScrollbar {
                                     + (position - scrollbar.dragStartPosition)
                                       / scrollbar.thumbTravel * scrollbar.span)
         }
+        onReleased: (mouse) => {
+            // Settle the hint group from the thumb drag's actual mapped
+            // release coordinates: an outside release clears even when Qt
+            // froze hover membership during the implicit grab.
+            scrollbar.settleHintRelease(mouse.x, mouse.y)
+        }
+        // canceled() delivers no event: the grab was lost before a release
+        // event existed. The cleanup is still unconditional, settling from
+        // the drag owner's last delivered position so a stale retained
+        // membership cannot survive the cancellation.
+        onCanceled: scrollbar.settleHintRelease(scrollbar.dragLastPoint.x,
+                                                scrollbar.dragLastPoint.y)
     }
 }

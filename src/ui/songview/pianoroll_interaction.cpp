@@ -2,6 +2,7 @@
 
 #include "ui/songview/pianoroll.h"
 
+#include "ui/mousehints/hintprofiles.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -88,6 +89,14 @@ bool PianoRoll::pointerMove(const TimelinePointerInput &input)
         if (m_kbdKey >= 0) {
             kbdGlissandoMove(input);
             return true;
+        }
+        // Idle gutter hover advertises only its wheel alternatives through
+        // the emitting physical host; an active gesture retains the
+        // originating profile instead.
+        if (!gestureActive()) {
+            TimelineInputHost *const host = input.host ? input.host : m_inputHost;
+            if (host)
+                host->setMouseHint(ui::hint_profiles::Id::RollGutter);
         }
         return true;
     }

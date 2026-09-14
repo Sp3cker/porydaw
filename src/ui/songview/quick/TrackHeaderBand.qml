@@ -453,6 +453,17 @@ Item {
                         adoptRenameDraft()
                 }
 
+                // The rename editor is its own hover group: while visible its
+                // passive claim is the leaf above the C++ header input, so the
+                // row's scope hint cannot leak through. The TextInput keeps
+                // its own press/selection behavior; this handler only
+                // publishes the Shift-click text-selection profile.
+                HoverHint {
+                    source: renameEditor
+                    cursorShape: Qt.IBeamCursor
+                    profile: HintProfiles.TextSelection
+                }
+
                 Rectangle {
                     anchors.fill: parent
                     color: root.inputBackground

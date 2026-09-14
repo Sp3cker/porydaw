@@ -109,6 +109,12 @@ bool VoicegroupSaveTest::openSong(QString &error)
         error = QStringLiteral("song did not bind the audio engine");
         return false;
     }
+    // Song binding can finish before the deferred catalog scan. The bank view
+    // and open-project gate do not imply that selector choices are published.
+    if (!settle([&workspace] { return !workspace.projectState().catalog.groupArgs.isEmpty(); })) {
+        error = QStringLiteral("initial voicegroup catalog did not publish any group arguments");
+        return false;
+    }
 
     m_document = m_tab->view().document();
     if (!m_document) {

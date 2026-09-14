@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 
 #include "ui/fastlabel.h"
+#include "ui/mousehints/mousehints.h"
 #include <QApplication>
 #include <QCloseEvent>
 #include <QComboBox>
@@ -667,8 +668,15 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     // persisted preference like the rest of this group.
     m_workspace->addFollowPlayheadActionTo(*viewMenu);
 
+    // Status bar: middle hint region, installed before the permanent meter so
+    // the proven reservation/hint/meter stretch order holds.
+    ui::MouseHints::instance().install(*statusBar());
+
     // Status bar: polyphony meter
     m_polyMeter = new QWidget(this);
+    // The status bar carries the caption-sized font shared by the hint
+    // region; pin the meter to the application font so it keeps its size.
+    m_polyMeter->setFont(QApplication::font());
     auto *polyLayout = new QHBoxLayout(m_polyMeter);
     polyLayout->setContentsMargins(0, 0, 0, 0);
     polyLayout->setSpacing(::layout::space(::layout::Space::Half));

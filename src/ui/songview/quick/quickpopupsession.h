@@ -9,6 +9,10 @@ class QEvent;
 class QQuickItem;
 class QQuickWindow;
 
+namespace ui {
+class MouseHints;
+}
+
 namespace songview {
 
 // Owns the one custom Quick popup surface for a timeline canvas. Menu adapters
@@ -28,7 +32,7 @@ class QuickPopupSession final : public QObject
     QQuickWindow *window() const;
     QQuickItem *overlayRoot() const;
     QQuickItem *contentItem() const;
-    bool owns(const QObject *object) const;
+    Q_INVOKABLE bool owns(const QObject *object) const;
     bool beginMenu(QObject *owner);
     // Loads a centered modal form. The QML root receives the bridge as its
     // required `bridge` property.
@@ -65,6 +69,12 @@ class QuickPopupSession final : public QObject
     void scheduleFocusCheck();
     void checkFocus();
     bool itemBelongsToPopup(const QQuickItem *item) const;
+    // Guarded borrow of the application hint service: cached through a
+    // QPointer and never recreated while the application is closing down.
+    ui::MouseHints *mouseHints();
+    // Claims the empty no-hint profile with the physical overlay root as
+    // source; the nonvisual session object is never a hint source.
+    void publishOverlayHint();
 
     QPointer<QQuickWindow> m_window;
     QPointer<QQuickItem> m_layer;
@@ -72,6 +82,7 @@ class QuickPopupSession final : public QObject
     QPointer<QQuickItem> m_content;
     QPointer<QObject> m_owner;
     QPointer<QQuickItem> m_restoreFocus;
+    QPointer<ui::MouseHints> m_mouseHints;
     QMetaObject::Connection m_ownerDestroyed;
     QMetaObject::Connection m_contentWidthChanged;
     QMetaObject::Connection m_contentHeightChanged;

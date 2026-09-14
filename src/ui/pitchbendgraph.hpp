@@ -1,10 +1,12 @@
 #pragma once
 
 #include "core/songdocument.h"
+#include "ui/mousehints/hintprofiles.h"
 #include "ui/songview/quick/timelinequicklayer.h"
 
 #include <QCursor>
 #include <QPointF>
+#include <QPointer>
 #include <QQuickItem>
 #include <QRect>
 #include <QSize>
@@ -17,11 +19,16 @@
 #include <vector>
 
 class QFocusEvent;
+class QHoverEvent;
 class QKeyEvent;
 class QMouseEvent;
 class QSGNode;
 class QWheelEvent;
 class SongView;
+
+namespace ui {
+class MouseHints;
+}
 
 namespace songview {
 
@@ -151,7 +158,11 @@ class PitchBendGraph : public QQuickItem
     void keyPressEvent(QKeyEvent *event) override;
     void focusInEvent(QFocusEvent *event) override;
     void focusOutEvent(QFocusEvent *event) override;
+    void hoverEnterEvent(QHoverEvent *event) override;
+    void hoverMoveEvent(QHoverEvent *event) override;
+    void hoverLeaveEvent(QHoverEvent *event) override;
     void mouseUngrabEvent() override;
+    void itemChange(ItemChange change, const ItemChangeData &data) override;
 
   private:
     enum class StrokeMode { Freehand, AngledLine };
@@ -209,6 +220,31 @@ class PitchBendGraph : public QQuickItem
     int defaultValue() const;
     QString formatLiveValue() const;
     QString formatRangeLimit(bool positive) const;
+    // Mouse-hint presentation: this item is its own physical Quick source.
+    // The service borrow is lazy and QPointer-guarded so teardown never
+    // recreates it.
+    ui::MouseHints *mouseHints() const;
+    // Source-check clear; only the current owner clears.
+    void clearMouseHint();
+    // True while this item is a live hover or exclusive-grab hint source.
+    bool hintSourceActive() const;
+    // The profile ID for an item-local position. Background and interior
+    // vertices have distinct profiles; pinned endpoints and margins select Empty.
+    ui::hint_profiles::Id hintProfileAt(const QPointF &position) const;
+    // Claims the profile at `position` while this item is a live source;
+    // also records it as the gesture's originating profile.
+    void publishMouseHintAt(const QPointF &position);
+    // Idle recompute at the actual cursor position: only a still-hovered,
+    // gesture-free graph republishes; a cursor that left the item clears.
+    void refreshIdleMouseHint();
+    // One hover-pass entry point: an active gesture republishes its
+    // originating profile, an idle pass classifies and claims at position.
+    void updateMouseHint(const QPointF &position);
+    // Gesture-end settle by actual position: inside keeps/refreshes the
+    // current target, outside clears. Release passes its event position;
+    // ungrab and programmatic cancel use the live cursor.
+    void settleMouseHintAt(const QPointF &position);
+    void settleMouseHintAtCursor();
 
     static constexpr int kBendStep = 128;
 
@@ -232,5 +268,9 @@ class PitchBendGraph : public QQuickItem
     Callbacks m_callbacks;
     PitchBendGeometry m_geometry;
     TimelineQuickLayerData m_layer;
+    mutable QPointer<ui::MouseHints> m_mouseHints;
+    // Originating profile retained for the whole gesture.
+    ui::hint_profiles::Id m_gestureProfile = ui::hint_profiles::Id::Empty;
+    bool m_hovered = false;
 };
 } // namespace songview

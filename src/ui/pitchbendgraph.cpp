@@ -3,10 +3,16 @@
 #include "songview.h"
 
 #include "ui/keymap.h"
+#include "ui/mousehints/mousehints.h"
 
+#include <QCoreApplication>
+#include <QCursor>
 #include <QFocusEvent>
+#include <QGuiApplication>
+#include <QHoverEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QQuickWindow>
 #include <QWheelEvent>
 
 #include <algorithm>
@@ -21,6 +27,9 @@ PitchBendGraph::PitchBendGraph(QQuickItem *parent) : QQuickItem(parent)
     setAcceptedMouseButtons(Qt::NoButton);
     setActiveFocusOnTab(false);
     setCursor(Qt::CrossCursor);
+    // Passive hover only: the graph is its own physical hint source and
+    // never grabs or focuses for hinting.
+    setAcceptHoverEvents(true);
 }
 
 void PitchBendGraph::initialize(Initialization initial)
@@ -52,6 +61,10 @@ void PitchBendGraph::initialize(Initialization initial)
     setFlag(ItemHasContents, true);
     setAcceptedMouseButtons(Qt::LeftButton);
     setActiveFocusOnTab(true);
+    // Native scope recovery recomputes only a currently hovered idle graph;
+    // the connection dies with this item and never restores stale targets.
+    if (ui::MouseHints *const hints = mouseHints())
+        connect(hints, &ui::MouseHints::scopeRefresh, this, [this] { refreshIdleMouseHint(); });
     redraw();
     notifyPresentationChanged();
     notifyLiveValueChanged();
@@ -62,6 +75,7 @@ void PitchBendGraph::setMetrics(const PitchBendGeometry &geometry)
     if (!m_initialized)
         return;
     m_geometry = geometry;
+    refreshIdleMouseHint();
     redraw();
     notifyPresentationChanged();
 }
@@ -74,6 +88,7 @@ void PitchBendGraph::setBendRange(int range)
     if (m_bendRange == clampedRange)
         return;
     m_bendRange = clampedRange;
+    refreshIdleMouseHint();
     redraw();
     notifyPresentationChanged();
     notifyLiveValueChanged();
@@ -191,6 +206,9 @@ void PitchBendGraph::cancelGesture()
 {
     m_strokeState.reset();
     m_vertexDragState.reset();
+    // Every cancel path — Escape, curve replacement, editor undo/dispose —
+    // settles the retained profile by the actual cursor position.
+    settleMouseHintAtCursor();
 }
 
 bool PitchBendGraph::handleKeyPress(QKeyEvent *event)
@@ -337,6 +355,9 @@ void PitchBendGraph::mousePressEvent(QMouseEvent *event)
         state.originalTick = hit->first;
         m_keyboardTick = hit->first;
         m_liveValue = hit->second;
+        // The press position's profile becomes the gesture's originating
+        // hint, retained until the release/ungrab settle.
+        publishMouseHintAt(event->position());
         notifyPreviewChanged();
         redraw();
         notifyLiveValueChanged();
@@ -360,6 +381,7 @@ void PitchBendGraph::mousePressEvent(QMouseEvent *event)
                    gestureSampling());
     m_keyboardTick = state.previousTick;
     m_liveValue = state.previousValue;
+    publishMouseHintAt(event->position());
     notifyPreviewChanged();
     redraw();
     notifyLiveValueChanged();
@@ -391,6 +413,9 @@ void PitchBendGraph::mouseReleaseEvent(QMouseEvent *event)
     else
         updateStroke(event->position());
     finishGesture();
+    // The actual release position settles the retained profile: inside the
+    // item keeps/refreshes the current target, outside clears it.
+    settleMouseHintAt(event->position());
     event->accept();
 }
 
@@ -446,6 +471,133 @@ void PitchBendGraph::mouseUngrabEvent()
     cancelGesture();
     redraw();
     notifyGrabLost();
+}
+
+void PitchBendGraph::hoverEnterEvent(QHoverEvent *event)
+{
+    m_hovered = true;
+    updateMouseHint(event->position());
+    event->accept();
+}
+
+void PitchBendGraph::hoverMoveEvent(QHoverEvent *event)
+{
+    // Delivery implies membership; keep the flag honest even if an enter
+    // was missed.
+    m_hovered = true;
+    updateMouseHint(event->position());
+    event->accept();
+}
+
+void PitchBendGraph::hoverLeaveEvent(QHoverEvent *event)
+{
+    m_hovered = false;
+    // An active gesture retains its source: Qt freezes ordinary hover
+    // during the grab and the release/ungrab settle decides by actual
+    // position. Focus loss alone never reaches this path.
+    if (!hasGesture())
+        clearMouseHint();
+    event->accept();
+}
+
+void PitchBendGraph::itemChange(ItemChange change, const ItemChangeData &data)
+{
+    // Hide and window detachment always terminate this physical source,
+    // including during a grab; the service's own observations clear too,
+    // this keeps the item authoritative without depending on signal order.
+    if ((change == ItemVisibleHasChanged && !data.boolValue) ||
+        (change == ItemSceneChange && !data.window)) {
+        m_hovered = false;
+        clearMouseHint();
+    }
+    QQuickItem::itemChange(change, data);
+}
+
+ui::MouseHints *PitchBendGraph::mouseHints() const
+{
+    // Borrow once and cache through QPointer. instance() asserts on a dead
+    // or closing application, so a late borrow during teardown stays null
+    // instead of recreating the singleton.
+    if (!m_mouseHints && qApp && !QCoreApplication::closingDown())
+        m_mouseHints = &ui::MouseHints::instance();
+    return m_mouseHints;
+}
+
+void PitchBendGraph::clearMouseHint()
+{
+    if (ui::MouseHints *const hints = mouseHints())
+        hints->clear(this);
+}
+
+bool PitchBendGraph::hintSourceActive() const
+{
+    if (m_hovered)
+        return true;
+    const QQuickWindow *const itemWindow = window();
+    return itemWindow && itemWindow->mouseGrabberItem() == this;
+}
+
+ui::hint_profiles::Id PitchBendGraph::hintProfileAt(const QPointF &position) const
+{
+    if (!canvasRect().contains(position.toPoint()))
+        return ui::hint_profiles::Id::Empty;
+    if (const auto hit = hitTest(position)) {
+        // Pinned endpoints cannot move in time; they claim an empty profile
+        // rather than advertising the interior vertex's Alt fine-time drag.
+        if (hit->first == m_startTick || hit->first == m_endTick)
+            return ui::hint_profiles::Id::Empty;
+        return ui::hint_profiles::Id::PitchBendVertex;
+    }
+    // Shift and Alt are two equivalent chords for the same line-drawing
+    // alternative, never a combined Shift+Alt.
+    return ui::hint_profiles::Id::PitchBendBackground;
+}
+
+void PitchBendGraph::publishMouseHintAt(const QPointF &position)
+{
+    m_gestureProfile = hintProfileAt(position);
+    ui::MouseHints *const hints = mouseHints();
+    if (!hints || !hintSourceActive())
+        return;
+    hints->claim(this, m_gestureProfile);
+}
+
+void PitchBendGraph::updateMouseHint(const QPointF &position)
+{
+    if (hasGesture()) {
+        // Retain the originating profile for the whole gesture; hinting
+        // never enters a mutating gesture path.
+        if (ui::MouseHints *const hints = mouseHints())
+            hints->claim(this, m_gestureProfile);
+        return;
+    }
+    publishMouseHintAt(position);
+}
+
+void PitchBendGraph::refreshIdleMouseHint()
+{
+    // Only a currently hovered, gesture-free graph recomputes; a cursor
+    // that left the item clears instead of restoring a stale target.
+    if (m_hovered && !hasGesture())
+        settleMouseHintAtCursor();
+}
+
+void PitchBendGraph::settleMouseHintAt(const QPointF &position)
+{
+    if (boundingRect().contains(position))
+        publishMouseHintAt(position);
+    else
+        clearMouseHint();
+}
+
+void PitchBendGraph::settleMouseHintAtCursor()
+{
+    QQuickWindow *const itemWindow = window();
+    if (!itemWindow) {
+        clearMouseHint();
+        return;
+    }
+    settleMouseHintAt(mapFromScene(itemWindow->mapFromGlobal(QCursor::pos())));
 }
 
 void PitchBendGraph::notifyPreviewChanged()
