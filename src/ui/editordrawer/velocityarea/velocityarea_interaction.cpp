@@ -446,6 +446,5 @@ void VelocityArea::updateMouseHint(const songview::TimelinePointerInput &input)
                                                    : ui::hint_profiles::Id::Empty);
         return;
     }
-    host->setMouseHint(m_hoveredNote ? ui::hint_profiles::Id::VelocityNote
-                                     : ui::hint_profiles::Id::VelocityBackground);
+    host->setMouseHint(ui::hint_profiles::Id::VelocityBackground);
 }

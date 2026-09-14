@@ -293,12 +293,9 @@ void PianoRoll::refreshHoverCursor(QPointF pos, Qt::KeyboardModifiers modifiers)
         m_inputHost->setCursor(Qt::SizeVerCursor);
     else
         m_inputHost->clearCursor();
-    // The same resolved hit selects the advertised profile: an edge never
-    // offers the velocity chord, and empty plot space offers only the
-    // right-button and wheel alternatives.
-    m_inputHost->setMouseHint(rightEdge || leftEdge ? ui::hint_profiles::Id::RollNoteEdge
-                              : hit                 ? ui::hint_profiles::Id::RollNoteBody
-                                                    : ui::hint_profiles::Id::RollPlot);
+    // Hover — note bodies, edges, and empty plot alike — publishes only the
+    // shared right-button and wheel alternatives.
+    m_inputHost->setMouseHint(ui::hint_profiles::Id::RollPlot);
 }
 
 QRectF PianoRoll::displayedNoteRect(const ViewNote &note) const

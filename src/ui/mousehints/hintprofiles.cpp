@@ -116,12 +116,8 @@ QString render(Id profile, Qt::KeyboardModifiers stepModifier)
         return fragment(Qt::ShiftModifier,
                         QCoreApplication::translate("MouseHints", "drag: adjust finely")) +
                separator + pageStep();
-    case Id::RollNoteBody:
-    case Id::RollNoteEdge:
     case Id::RollPlot:
     case Id::RollGutter: {
-        const Qt::KeyboardModifiers velocityChord =
-            keymap::Registry::instance().modifierBinding(QStringLiteral("roll.velocity_drag"));
         // Right-button alternatives apply over notes and background alike;
         // the marquee decision reads Control at release, not at press.
         const QString plotAlternatives =
@@ -139,23 +135,11 @@ QString render(Id profile, Qt::KeyboardModifiers stepModifier)
                      QCoreApplication::translate("MouseHints", "wheel: scroll horizontally"));
         if (profile == Id::RollPlot)
             return plotAlternatives;
-        if (profile == Id::RollGutter)
-            return fragment(Qt::ControlModifier,
-                            QCoreApplication::translate("MouseHints", "wheel: zoom key height")) +
-                   separator +
-                   fragment(Qt::ShiftModifier, QCoreApplication::translate(
-                                                   "MouseHints", "wheel: scroll horizontally"));
-        if (profile == Id::RollNoteEdge)
-            return fragment(Qt::ControlModifier,
-                            QCoreApplication::translate("MouseHints",
-                                                        "drag: add to selection and resize")) +
-                   separator + plotAlternatives;
-        return fragment(velocityChord,
-                        QCoreApplication::translate("MouseHints", "drag: adjust velocity")) +
+        return fragment(Qt::ControlModifier,
+                        QCoreApplication::translate("MouseHints", "wheel: zoom key height")) +
                separator +
-               fragment(Qt::ControlModifier,
-                        QCoreApplication::translate("MouseHints", "click: toggle selection")) +
-               separator + plotAlternatives;
+               fragment(Qt::ShiftModifier,
+                        QCoreApplication::translate("MouseHints", "wheel: scroll horizontally"));
     }
     case Id::HorizontalScroll:
         return fragment(Qt::ShiftModifier,
@@ -234,40 +218,6 @@ QString render(Id profile, Qt::KeyboardModifiers stepModifier)
                separator +
                fragment(Qt::ShiftModifier,
                         QCoreApplication::translate("MouseHints", "wheel: scroll horizontally"));
-    case Id::VelocityNote: {
-        const Qt::KeyboardModifiers detentChord =
-            keymap::Registry::instance().modifierBinding(QStringLiteral("velocity.detent_unlock"));
-        QStringList noteParts = {
-            fragment(detentChord,
-                     QCoreApplication::translate("MouseHints", "click: toggle selection")),
-            fragment(Qt::ShiftModifier,
-                     QCoreApplication::translate("MouseHints", "drag: draw ramp")),
-            fragment(Qt::ControlModifier,
-                     QCoreApplication::translate("MouseHints", "right-click: toggle selection")),
-            fragment(Qt::ControlModifier,
-                     QCoreApplication::translate("MouseHints", "right-drag: marquee adds notes")),
-            fragment(Qt::ShiftModifier,
-                     QCoreApplication::translate("MouseHints", "wheel: scroll horizontally")),
-        };
-        // The shipped detent-unlock chord is also the additive-selection
-        // modifier, so one fragment describes the drag's combined result; a
-        // distinct chord would get its own plain drag entry instead.
-        if (detentChord == Qt::ControlModifier) {
-            noteParts.prepend(fragment(
-                detentChord, QCoreApplication::translate(
-                                 "MouseHints", "drag: adjust velocity without detents, preserving "
-                                               "selection")));
-        } else {
-            noteParts.prepend(
-                fragment(Qt::ControlModifier,
-                         QCoreApplication::translate(
-                             "MouseHints", "drag: adjust velocity preserving selection")));
-            noteParts.prepend(
-                fragment(detentChord, QCoreApplication::translate(
-                                          "MouseHints", "drag: adjust velocity without detents")));
-        }
-        return noteParts.join(separator);
-    }
     case Id::VelocityBackground: {
         const Qt::KeyboardModifiers detentChord =
             keymap::Registry::instance().modifierBinding(QStringLiteral("velocity.detent_unlock"));
@@ -326,7 +276,10 @@ QString render(Id profile, Qt::KeyboardModifiers stepModifier)
                fragment(Qt::ControlModifier,
                         QCoreApplication::translate("MouseHints", "wheel: step by ten"));
     }
-    Q_UNREACHABLE();
+    // claim() is Q_INVOKABLE, so a stale QML disk cache or a buggy binding
+    // can hand in an Id that no longer exists after enum churn; unknown
+    // profiles render empty rather than reaching UB.
+    return {};
 }
 
 } // namespace
