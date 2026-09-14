@@ -439,24 +439,7 @@ void WorkspaceUi::toggleDrawerPage(EditorDrawerPage page)
     SongView &view = tab->view();
     if (view.eventListVisible())
         return;
-    const bool hiding = view.drawerSectionVisible(page);
     view.toggleDrawerSection(page);
-    QString status;
-    switch (page) {
-    case EditorDrawerPage::VoiceChanges:
-        status = hiding ? QStringLiteral("Voice-change drawer hidden")
-                        : QStringLiteral("Voice-change drawer shown");
-        break;
-    case EditorDrawerPage::Velocity:
-        status = hiding ? QStringLiteral("Velocity drawer hidden")
-                        : QStringLiteral("Velocity drawer shown");
-        break;
-    case EditorDrawerPage::Automations:
-        status = hiding ? QStringLiteral("Automation drawer hidden")
-                        : QStringLiteral("Automation drawer shown");
-        break;
-    }
-    showStatus(status, 6000);
 }
 
 void WorkspaceUi::setSelectedTabEventListVisible(bool visible)
