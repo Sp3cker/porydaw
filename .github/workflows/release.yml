@@ -1,39 +1,35 @@
+# Cutting a release: Actions → Release → Run workflow, enter any tag
+# (e.g. "version 1"). The tag is created if it does not exist, and the
+# per-platform builds attach to that release. Nothing runs on tag push.
 name: Release
-
-# Cutting a release: bump the CMake project version on fork-main, then
-# `git tag X.Y.Z && git push origin fork-main X.Y.Z`.
-# This workflow creates a GitHub release with automatically generated notes
-# and attaches self-contained Linux, macOS, and Windows builds.
 
 permissions:
   contents: write
 
 on:
-  push:
-    tags:
-      # Bare semantic versions, no "v" prefix (matching porymap): 1.0.0
-      - '[0-9]*.[0-9]*.[0-9]*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (created if it does not exist)'
+        required: true
+      name:
+        description: 'Release title (defaults to the tag)'
+        required: false
+        default: ''
 
 jobs:
   # Creates the release up front so the per-platform jobs only ever attach
-  # files to it (avoids concurrent-creation races), and gates them on the
-  # tag matching the source of truth.
+  # files to it (avoids concurrent-creation races).
   create-release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check the tag matches the CMake project version
-        run: |
-          cmake_version="$(sed -n 's/^project(porydaw VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
-          if [ "$cmake_version" != "$GITHUB_REF_NAME" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match CMakeLists.txt project version $cmake_version" >&2
-            exit 1
-          fi
-
       - name: Create the release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag }}
+          name: ${{ inputs.name != '' && inputs.name || inputs.tag }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -71,7 +67,7 @@ jobs:
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
           QML_SOURCES_PATHS: src/ui/songview/quick
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ inputs.tag }}
         run: |
           curl -fLO https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           curl -fLO https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
