@@ -699,14 +699,24 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         const auto captionIsCentered = [&] {
             const QImage image = caption->grab().toImage();
             const QColor ink = themes::color(themes::Role::secondary_text);
+            // The caption paints antialiased text over a transparent
+            // background: coverage lives in alpha while RGB keeps the pen
+            // color, so exact QColor equality misses every partially
+            // covered glyph pixel (platform font rendering decides whether
+            // any fully covered pixel survives). Match ink RGB with any
+            // nonzero coverage instead; the caption paints nothing else.
             int left = image.width();
             int right = -1;
             for (int y = 0; y < image.height(); ++y)
-                for (int x = 0; x < image.width(); ++x)
-                    if (image.pixelColor(x, y) == ink) {
+                for (int x = 0; x < image.width(); ++x) {
+                    const QColor pixel = image.pixelColor(x, y);
+                    if (pixel.alpha() > 0 && qAbs(pixel.red() - ink.red()) <= 8 &&
+                        qAbs(pixel.green() - ink.green()) <= 8 &&
+                        qAbs(pixel.blue() - ink.blue()) <= 8) {
                         left = qMin(left, x);
                         right = qMax(right, x);
                     }
+                }
             const qreal center = caption->mapTo(bar, QPoint()).x() +
                                  (left + right + 1) / (2.0 * image.devicePixelRatio());
             // Ink bounds differ from centered advance widths by glyph bearings.
