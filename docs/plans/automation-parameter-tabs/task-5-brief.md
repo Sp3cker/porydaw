@@ -91,10 +91,10 @@ In the automation gutter replace the obsolete stacked TimelineTextLayer and two 
 
 Register AutomationTabs.qml in the existing QML resource/module declarations. Extend, rather than duplicate, the existing dependencies:
 ```cmake
-find_package(Qt6 6.11 REQUIRED COMPONENTS Qml Quick QuickControls2 Svg Widgets)
+find_package(Qt6 6.10 REQUIRED COMPONENTS Qml Quick QuickControls2 Svg Widgets)
 target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick Qt6::QuickControls2)
 ```
-ContextMenu requires Qt 6.9; uniform grid cells require 6.6. The supported build and release CI install Qt 6.11.x, so 6.11 is the explicit project floor. Keep Qt Test checks-only. Verify the deployed QML imports include Controls Basic/Templates and QtQuick.Layouts; a successful C++ link alone is insufficient. Do not add another test framework.
+ContextMenu requires Qt 6.9; uniform grid cells require 6.6. Linux and macOS CI install Qt 6.11.x, but the Qt online repository currently publishes Windows packages only through Qt 6.10.x, so 6.10 is the explicit cross-platform project floor. Keep Qt Test checks-only. Verify the deployed QML imports include Controls Basic/Templates and QtQuick.Layouts; a successful C++ link alone is insufficient. Do not add another test framework.
 
 Primary references: [TabButton](https://doc.qt.io/qt-6/qml-qtquick-controls-tabbutton.html), [AbstractButton](https://doc.qt.io/qt-6/qml-qtquick-controls-abstractbutton.html), [Text fitting](https://doc.qt.io/qt-6/qml-qtquick-text.html#fontSizeMode-prop), [FontMetrics](https://doc.qt.io/qt-6/qml-qtquick-fontmetrics.html), [GridLayout](https://doc.qt.io/qt-6/qml-qtquick-layouts-gridlayout.html), [ContextMenu](https://doc.qt.io/qt-6/qml-qtquick-controls-contextmenu.html), [Binding](https://doc.qt.io/qt-6/qml-qtqml-binding.html), [Basic customization](https://doc.qt.io/qt-6/qtquickcontrols-customize.html), [Keys.AfterItem](https://doc.qt.io/qt-6/qml-qtquick-keys.html).
 

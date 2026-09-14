@@ -92,7 +92,7 @@ if(PORYDAW_COVERAGE)
     add_link_options(-fprofile-instr-generate)
 endif()
 
-find_package(Qt6 6.11 REQUIRED COMPONENTS Qml Quick QuickControls2 Svg Widgets)
+find_package(Qt6 6.10 REQUIRED COMPONENTS Qml Quick QuickControls2 Svg Widgets)
 
 # ---- poryaaaa engine core (MIT, statically linked) ----
 set(PORYAAAA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/poryaaaa"

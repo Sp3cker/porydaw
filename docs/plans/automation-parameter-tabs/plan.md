@@ -76,7 +76,7 @@ Only two new production files: automationcanvas_tabs.cpp and AutomationTabs.qml.
 | Nodes, phantom, musical undo/transactions | Keep the existing NodeLane/adapters/paint/gesture code and regression expectations |
 | Settings | Leave EditorViewState/codec/remap and their tests unchanged; no schema cleanup bundled with the UI feature |
 
-Task 5 adds QuickControls2 and declares Qt 6.11, matching build/release CI. Import Basic locally and QtQuick.Layouts through the existing QML module; verify packaged imports. Do not migrate existing menus/value forms to another Qt subsystem as collateral work. Task 27 owns the small application key-routing integration scenario, not a unit suite for Qt controls.
+Task 5 adds QuickControls2 and declares Qt 6.10, matching the cross-platform build floor; Linux and macOS CI use Qt 6.11, while Windows CI uses the newest published Qt 6.10 package. Import Basic locally and QtQuick.Layouts through the existing QML module; verify packaged imports. Do not migrate existing menus/value forms to another Qt subsystem as collateral work. Task 27 owns the small application key-routing integration scenario, not a unit suite for Qt controls.
 
 ### Audit decisions and evidence
 
