@@ -9,42 +9,73 @@
 import { join } from "node:path";
 import { poryaaaaConfiguration } from "./poryaaaa_source.ts";
 import { unsupportedSources, unsupportedSourcesError } from "./format.ts";
+import { parseCheckOptions, VERIFY_HELP } from "./checks_options.ts";
 
 const decoder = new TextDecoder();
 const BUILD_DIR = "build";
 
 type Subcommand = "build:app" | "build:checks" | "verify" | "format";
 
-function usage(): never {
-  console.error(`usage:
- deno task build:app [--release]    build porydaw app only
- deno task build:checks [--release] build porydaw + checks + mid2agb
- deno task verify [--verbose] [--filter <name>] [--qt <qt args...>] [-- <run_checks args>]
- deno task format [--check] [files...]`);
-  console.error("");
-  console.error(
-    "verify forwards --all/--no-windowing-checks/--filter to run_checks.ts",
-  );
-  console.error(" --verbose  show per-harness ok: lines");
-  console.error(
-    " --qt <args...>  run exactly one qt-test check; <args...> goes verbatim to Qt",
-  );
-  console.error(" --release  configure and build the Release configuration");
+function help(command?: Subcommand): string {
+  switch (command) {
+    case "verify":
+      return VERIFY_HELP;
+    case "build:app":
+    case "build:checks":
+      return `usage: deno task ${command} [--release] [--help]
+  ${
+        command === "build:app"
+          ? "build the application"
+          : "build the application, checks, and mid2agb"
+      }
+  --release       configure and build Release
+  --verbose, -v   accepted; successful builds remain concise
+  --help          show this help without building
+
+Examples:
+  deno task ${command}
+  deno task ${command} --release`;
+    case "format":
+      return `usage: deno task format [--check] [files...] [--help]
+  default: format supported TypeScript and C/C++ sources
+  --check  report formatting differences without editing
+  --help   show this help without running formatters
+
+Examples:
+  deno task format --check
+  deno task format tools/cli.ts`;
+    default:
+      return `usage: deno task <command> [options]
+  build:app     build the application
+  build:checks  build the application, checks, and mid2agb
+  verify        build and run checks
+  format        format sources (or --check)
+help: deno task <command> --help`;
+  }
+}
+
+function usage(command?: Subcommand, message?: string): never {
+  if (message) console.error(`error: ${message}`);
+  console.error(help(command));
   Deno.exit(2);
+}
+
+function showHelp(command?: Subcommand): never {
+  console.log(help(command));
+  Deno.exit(0);
 }
 
 function isVerbose(args: string[]): boolean {
   return args.includes("--verbose") || args.includes("-v");
 }
 
-function buildRelease(args: string[]): boolean {
-  // Old agent prompts may still pass build verbosity. Keep them working, but
-  // never let those flags expand successful build output.
-  if (
-    args.some((arg) =>
-      arg !== "--release" && arg !== "--verbose" && arg !== "-v"
-    )
-  ) usage();
+function buildRelease(args: string[], command: Subcommand): boolean {
+  const unknown = args.find((arg) =>
+    arg !== "--release" && arg !== "--verbose" && arg !== "-v" &&
+    arg !== "--help"
+  );
+  if (unknown) usage(command, `unknown argument ${unknown}`);
+  if (args.includes("--help")) showHelp(command);
   return args.includes("--release");
 }
 
@@ -132,7 +163,6 @@ async function runVerify(rawArgs: string[]): Promise<void> {
   const qtIndex = rawArgs.indexOf("--qt");
   const runnerArgs = qtIndex === -1 ? rawArgs : rawArgs.slice(0, qtIndex);
   const qtPayload = qtIndex === -1 ? undefined : rawArgs.slice(qtIndex + 1);
-  if (runnerArgs.includes("--no-build")) usage();
   const verbose = isVerbose(runnerArgs);
   const filters: string[] = [];
   const passthrough: string[] = [];
@@ -144,7 +174,9 @@ async function runVerify(rawArgs: string[]): Promise<void> {
       filters.push(arg);
     } else if (arg === "--filter") {
       const next = runnerArgs[++i];
-      if (!next) usage();
+      if (!next || next.startsWith("-")) {
+        usage("verify", "--filter requires a value");
+      }
       filters.push(`--filter=${next}`);
     } else if (arg === "--all" || arg === "--no-windowing-checks") {
       passthrough.push(arg);
@@ -158,12 +190,18 @@ async function runVerify(rawArgs: string[]): Promise<void> {
     }
   }
 
-  await runBuild(["porydaw", "porydaw_checks", "mid2agb"]);
-
   const binary = join(BUILD_DIR, "porydaw_checks");
   const reporterArgs = verbose ? ["--reporter=verbose"] : [];
   const args = [...reporterArgs, ...filters, ...passthrough];
   if (qtPayload !== undefined) args.push("--qt", ...qtPayload);
+  let options;
+  try {
+    options = parseCheckOptions(args);
+  } catch (error) {
+    usage("verify", error instanceof Error ? error.message : String(error));
+  }
+  if (options.help) showHelp("verify");
+  await runBuild(["porydaw", "porydaw_checks", "mid2agb"]);
   const cmd = new Deno.Command("deno", {
     args: [
       "run",
@@ -184,6 +222,11 @@ async function runVerify(rawArgs: string[]): Promise<void> {
 }
 
 async function runFormat(rawArgs: string[]): Promise<void> {
+  const unknown = rawArgs.find((arg) =>
+    arg.startsWith("-") && arg !== "--check" && arg !== "--help"
+  );
+  if (unknown) usage("format", `unknown argument ${unknown}`);
+  if (rawArgs.includes("--help")) showHelp("format");
   const check = rawArgs.includes("--check");
 
   const files = rawArgs.filter((a) => a !== "--check");
@@ -252,6 +295,7 @@ async function runFormat(rawArgs: string[]): Promise<void> {
 
 const raw = Deno.args.slice(0);
 if (raw.length === 0) usage();
+if (raw[0] === "--help") showHelp();
 let sub = raw[0];
 const rest = raw.slice(1);
 // Normalize hyphen vs colon: build-app -> build:app
@@ -260,12 +304,12 @@ if (sub === "build-checks" || sub === "build:check") sub = "build:checks";
 const normalized = sub as Subcommand;
 switch (normalized) {
   case "build:app":
-    await runBuild(["porydaw"], buildRelease(rest));
+    await runBuild(["porydaw"], buildRelease(rest, "build:app"));
     break;
   case "build:checks":
     await runBuild(
       ["porydaw", "porydaw_checks", "mid2agb"],
-      buildRelease(rest),
+      buildRelease(rest, "build:checks"),
     );
     break;
   case "verify":
@@ -275,5 +319,5 @@ switch (normalized) {
     await runFormat(rest);
     break;
   default:
-    usage();
+    usage(undefined, `unknown command ${sub}`);
 }

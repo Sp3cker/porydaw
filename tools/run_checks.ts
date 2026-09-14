@@ -11,6 +11,7 @@ import { dirname, join } from "node:path";
 import { createReporter } from "./checks_reporter.ts";
 import type { Reporter } from "./checks_reporter.ts";
 import { wallEstimate } from "./checks_walls.ts";
+import { parseCheckOptions, VERIFY_HELP } from "./checks_options.ts";
 
 type ScratchKind = "existing-directory" | "must-not-exist-path" | "unused";
 type FixtureRootKind = "decomp-project" | "songs-mk-project" | "none";
@@ -31,43 +32,12 @@ interface CheckManifestEntry {
 }
 const CHECK_TIMEOUT_MS = 90_000;
 const TERMINATE_GRACE_MS = 5_000;
-// Benchmark 2026-08-21 (M4, 10 cores): unified LPT pool of 6 beat 5/7/8 —
-// 7+ slows CPU-saturating checks via contention, 5 underuses the machine.
-const MAX_PARALLEL_CHECKS = Math.max(
-  1,
-  Math.min(6, navigator.hardwareConcurrency),
-);
-function parsePool(value: string): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 64) usage();
-  return parsed;
-}
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
 
-function usage(): never {
-  console.error(
-    "usage: tools/run_checks.ts <porydaw-checks-binary> [--all|--no-windowing-checks] [--reporter=quiet|verbose] [--filter=<name>] [--exclude=<name>] [--qt <args...>] [--pool=<n>]",
-  );
-  console.error("  default: all checks except opt-in diagnostics");
-  console.error("  --all: include opt-in diagnostics");
-  console.error(
-    "  --no-windowing-checks: skip checks that require a window system",
-  );
-  console.error("  --reporter=quiet|verbose (default: quiet)");
-  console.error(
-    "  --filter=<name>: run matching harnesses, including opt-in diagnostics (repeatable, substring)",
-  );
-  console.error(
-    "  --exclude=<name>: skip the harness with this exact name (repeatable)",
-  );
-  console.error(
-    "  --qt <args...>: run exactly one qt-test harness; the runner passes the payload to the child after a --qt separator so it can never be read as check arguments",
-  );
-  console.error("  --verbose: alias for --reporter=verbose");
-  console.error(
-    "  --pool=<n>: worker count for the unified LPT pool (default: MAX_PARALLEL_CHECKS)",
-  );
+function usage(message?: string): never {
+  if (message) console.error(`error: ${message}`);
+  console.error(VERIFY_HELP);
   Deno.exit(2);
 }
 
@@ -363,64 +333,25 @@ function lastNonemptyLine(output: string): string | undefined {
   return output.trimEnd().split(/\r?\n/).findLast((line) => line.length > 0);
 }
 
-if (Deno.args.length < 1) {
-  usage();
+if (Deno.args.length < 1) usage("missing checks binary");
+let options;
+try {
+  options = parseCheckOptions(Deno.args.slice(1));
+} catch (error) {
+  usage(error instanceof Error ? error.message : String(error));
 }
-let selection: string = "--default";
-let reporterMode: "quiet" | "verbose" = "quiet";
-const filters: string[] = [];
-const exclusions: string[] = [];
-let unifiedPoolSize = MAX_PARALLEL_CHECKS;
-let qtPayload: readonly string[] | undefined;
-for (let i = 1; i < Deno.args.length; i++) {
-  const arg = Deno.args[i];
-  if (arg === "--all" || arg === "--no-windowing-checks") {
-    selection = arg;
-  } else if (arg === "--verbose") {
-    reporterMode = "verbose";
-  } else if (arg.startsWith("--pool=")) {
-    unifiedPoolSize = parsePool(arg.slice("--pool=".length));
-  } else if (arg.startsWith("--reporter=")) {
-    const value = arg.slice("--reporter=".length);
-    if (value === "quiet" || value === "verbose") {
-      reporterMode = value;
-    } else {
-      usage();
-    }
-  } else if (arg === "--reporter") {
-    const value = Deno.args[++i];
-    if (value === "quiet" || value === "verbose") {
-      reporterMode = value;
-    } else {
-      usage();
-    }
-  } else if (arg.startsWith("--filter=")) {
-    const value = arg.slice("--filter=".length);
-    if (value.length === 0) usage();
-    filters.push(value);
-  } else if (arg === "--filter") {
-    const value = Deno.args[++i];
-    if (!value) usage();
-    filters.push(value);
-  } else if (arg.startsWith("--exclude=")) {
-    const value = arg.slice("--exclude=".length);
-    if (value.length === 0) usage();
-    exclusions.push(value);
-  } else if (arg === "--exclude") {
-    const value = Deno.args[++i];
-    if (!value) usage();
-    exclusions.push(value);
-  } else if (arg === "--qt") {
-    // Terminal: the rest of the command line is the Qt test payload,
-    // forwarded verbatim and never parsed as runner options. The equals
-    // form --qt=... falls through to the usage error below.
-    qtPayload = Deno.args.slice(i + 1);
-    if (qtPayload.length === 0) usage();
-    break;
-  } else {
-    usage();
-  }
+if (Deno.args[0] === "--help" || options.help) {
+  console.log(VERIFY_HELP);
+  Deno.exit(0);
 }
+const {
+  selection,
+  reporterMode,
+  filters,
+  exclusions,
+  poolSize: unifiedPoolSize,
+  qtPayload,
+} = options;
 
 const repoRoot = await Deno.realPath(new URL("..", import.meta.url));
 const checksInputPath = Deno.args[0];
