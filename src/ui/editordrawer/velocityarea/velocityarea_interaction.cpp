@@ -8,6 +8,7 @@
 #include "core/mid2agbtables.h"
 #include "ui/editordrawer/linearramp.h"
 #include "ui/editordrawer/velocityarea/detail.h"
+#include "ui/mousehints/hintprofiles.h"
 #include "ui/songview.h"
 
 using velocityarea::detail::contains;
@@ -333,13 +334,17 @@ bool VelocityArea::pointerPress(const songview::TimelinePointerInput &input)
 bool VelocityArea::pointerMove(const songview::TimelinePointerInput &input)
 {
     if (input.surface != songview::TimelineInputSurface::Plot) {
-        if (m_interaction == Interaction::None)
+        if (m_interaction == Interaction::None) {
             setHoveredNote(std::nullopt);
+            updateMouseHint(input);
+        }
         return false;
     }
     const QPointF position = input.position;
-    if (m_interaction == Interaction::None)
+    if (m_interaction == Interaction::None) {
         updateHoveredNote(position);
+        updateMouseHint(input);
+    }
     if (m_interaction == Interaction::Relative)
         updateRelativePreview(position);
     else if (m_interaction == Interaction::Paint)
@@ -467,4 +472,22 @@ bool VelocityArea::keyPress(const songview::TimelineKeyInput &)
 void VelocityArea::inputCancelled(songview::TimelineInputCancelReason)
 {
     cancelInteraction();
+}
+
+// Idle hover only: an active gesture keeps the profile claimed at press, so
+// moves under a live interaction never republish. The emitting physical host
+// (input.host, with the attached host as the established fallback) is the
+// hint source, which keeps the separate gutter item's ownership distinct.
+void VelocityArea::updateMouseHint(const songview::TimelinePointerInput &input)
+{
+    songview::TimelineInputHost *const host = input.host ? input.host : m_inputHost;
+    if (!host || !qApp || QCoreApplication::closingDown())
+        return;
+    if (input.surface == songview::TimelineInputSurface::Gutter) {
+        host->setMouseHint(inRuler(input.position) ? ui::hint_profiles::Id::VelocityGutter
+                                                   : ui::hint_profiles::Id::Empty);
+        return;
+    }
+    host->setMouseHint(m_hoveredNote ? ui::hint_profiles::Id::VelocityNote
+                                     : ui::hint_profiles::Id::VelocityBackground);
 }

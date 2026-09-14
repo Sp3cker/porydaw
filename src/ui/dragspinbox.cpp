@@ -3,6 +3,9 @@
 #include <QLineEdit>
 #include <QMouseEvent>
 
+#include "ui/mousehints/hintprofiles.h"
+#include "ui/mousehints/mousehints.h"
+
 namespace {
 constexpr int kDragThreshold = 3;
 constexpr qreal kNormalStepsPerPixel = 0.5;
@@ -13,6 +16,10 @@ DragSpinBox::DragSpinBox(QWidget *parent) : QSpinBox(parent)
 {
     lineEdit()->installEventFilter(this);
     lineEdit()->setCursor(Qt::SizeVerCursor);
+    // The editor's click selects all, so Shift modifies the drag rate rather
+    // than text selection; the complete profile also covers the inherited
+    // style-modifier wheel step.
+    ui::MouseHints::setWidgetProfile(*lineEdit(), ui::hint_profiles::Id::NativeFineSpinEditor);
 }
 
 bool DragSpinBox::eventFilter(QObject *watched, QEvent *event)

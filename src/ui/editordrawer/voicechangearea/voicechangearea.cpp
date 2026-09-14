@@ -13,6 +13,7 @@
 #include "core/m4asemantics.h"
 #include "core/miditimeline.h"
 #include "ui/layout.h"
+#include "ui/mousehints/hintprofiles.h"
 #include "ui/songview.h"
 #include "ui/songview/editorselectionmodel.h"
 #include "ui/songview/quick/quickmenumodel.h"
@@ -284,18 +285,24 @@ void VoiceChangeArea::clearHover()
     m_owner.requestTimelineQuickUpdate(songview::TimelineQuickDirty::VoiceChangesHover);
 }
 
-void VoiceChangeArea::updateHover(qreal x)
+void VoiceChangeArea::updateHover(songview::TimelineInputHost *host, qreal x)
 {
     const QRect plot = plotRect();
-    if (!ready() || plot.isEmpty()) {
+    const bool plotReady = ready() && !plot.isEmpty();
+    DocLanePoint markerPoint;
+    const bool atMarker = plotReady && voiceMarkerAt(x, &markerPoint);
+    // The emitting physical item is the hint source; marker and background
+    // profiles differ, and publication runs even when the visual hover is
+    // unchanged so a stationary resync can reacquire the display.
+    host->setMouseHint(atMarker ? ui::hint_profiles::Id::VoiceMarker
+                                : ui::hint_profiles::Id::HorizontalScroll);
+    if (!plotReady) {
         clearHover();
         return;
     }
     const qreal dpr = devicePixelRatio();
     const double tick = std::max(0.0, m_camera.tickAtContentX(std::max<qreal>(0.0, x)));
     const Tick snapped = m_grid.snapTick(tick, true);
-    DocLanePoint markerPoint;
-    const bool atMarker = voiceMarkerAt(x, &markerPoint);
     const Tick hoverTick = atMarker ? markerPoint.tick : snapped;
     const qreal lineX = m_camera.displayX(double(hoverTick), 0.0, dpr);
     QString hoverLabel;
@@ -475,8 +482,14 @@ bool VoiceChangeArea::pointerDoubleClick(const songview::TimelinePointerInput &i
 bool VoiceChangeArea::pointerMove(const songview::TimelinePointerInput &input)
 {
     if (input.surface == songview::TimelineInputSurface::Gutter) {
-        if (!m_voiceDrag && m_interaction == Interaction::None)
+        if (!m_voiceDrag && m_interaction == Interaction::None) {
+            // The gutter has no modifier alternative: it claims the empty
+            // profile through its own emitting item so a late plot leave
+            // cannot erase it.
+            if (songview::TimelineInputHost *const host = input.host ? input.host : m_inputHost)
+                host->setMouseHint(ui::hint_profiles::Id::Empty);
             clearHover();
+        }
         return false;
     }
     const QPointF position = input.position;
@@ -509,7 +522,10 @@ bool VoiceChangeArea::pointerMove(const songview::TimelinePointerInput &input)
         m_live.horizontalScroll = m_camera.scrollX();
         requestQuickUpdate();
     } else if (m_interaction == Interaction::None) {
-        updateHover(position.x());
+        if (songview::TimelineInputHost *const host = input.host ? input.host : m_inputHost)
+            updateHover(host, position.x());
+        else
+            clearHover();
     }
     m_previousPosition = position;
     return true;

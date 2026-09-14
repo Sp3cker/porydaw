@@ -27,6 +27,7 @@
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
+#include "ui/mousehints/hintprofiles.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
@@ -72,10 +73,28 @@ class RasterAutomationInputHost final : public songview::TimelineInputHost
     void releasePointerGrab() override {}
     void setAccessibilityDescription(const QString &) override {}
 
+    void setMouseHint(ui::hint_profiles::Id profile) override
+    {
+        m_mouseHint = profile;
+        m_ownsMouseHint = true;
+    }
+
+    // Non-claiming stationary update: only an owned record may change.
+    void refreshMouseHint(ui::hint_profiles::Id profile) override
+    {
+        if (m_ownsMouseHint)
+            m_mouseHint = profile;
+    }
+
+    ui::hint_profiles::Id mouseHint() const noexcept { return m_mouseHint; }
+    bool ownsMouseHint() const noexcept { return m_ownsMouseHint; }
+
   private:
     const AutomationPage &m_page;
     qreal m_dpr = 1.0;
     QPointF m_globalOffset;
+    ui::hint_profiles::Id m_mouseHint = ui::hint_profiles::Id::Empty;
+    bool m_ownsMouseHint = false;
 };
 
 std::unique_ptr<AutomationRasterFixture>

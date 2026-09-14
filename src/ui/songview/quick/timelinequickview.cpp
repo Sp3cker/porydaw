@@ -5,6 +5,8 @@
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
+#include "ui/mousehints/hintprofiles.h"
+#include "ui/mousehints/mousehints.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
 #include "ui/songview/otherstrip.h"
@@ -136,6 +138,11 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         qmlRegisterType<TimelineGestureScrollbar>("Porydaw.Ui", 1, 0, "TimelineGestureScrollbar");
         qmlRegisterType<TimelinePlayheadItem>("Porydaw.Ui", 1, 0, "TimelinePlayheadItem");
         qmlRegisterType<TimelineQuickItem>("Porydaw.Ui", 1, 0, "TimelineQuickItem");
+        // The hint-profile enum metaobject registers once per process, before
+        // any tab's engine loads its scene; each view still installs its own
+        // context-property borrow of the application-owned service below.
+        qmlRegisterUncreatableMetaObject(ui::hint_profiles::staticMetaObject, "Porydaw.Ui", 1, 0,
+                                         "HintProfiles", QStringLiteral("Enum values only"));
     });
 
     setObjectName(QStringLiteral("timelineQuickCanvas"));
@@ -155,6 +162,9 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     connect(m_view.data(), &QWindow::screenChanged, this, &TimelineQuickView::syncAppearance);
 
     m_scene = new TimelineQuickScene(this);
+    // The popup session exists before the root QML loads so the scene can
+    // resolve it and the application hint service as context properties.
+    m_popupSession = new QuickPopupSession(*m_quickView, this);
     m_quickView->rootContext()->setContextProperty(QStringLiteral("timelineQuickView"), this);
     m_quickView->rootContext()->setContextProperty(QStringLiteral("timelineScene"), m_scene);
     m_quickView->rootContext()->setContextProperty(QStringLiteral("drawerChrome"), &drawerChrome);
@@ -169,6 +179,10 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
                                                    m_eventList.data());
     m_quickView->rootContext()->setContextProperty(QStringLiteral("automationCanvas"),
                                                    automation.canvas());
+    m_quickView->rootContext()->setContextProperty(QStringLiteral("mouseHints"),
+                                                   &ui::MouseHints::instance());
+    m_quickView->rootContext()->setContextProperty(QStringLiteral("quickPopupSession"),
+                                                   m_popupSession);
     m_quickView->setSource(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml")));
     if (m_quickView->status() != QQuickView::Ready) {
         for (const QQmlError &error : m_quickView->errors())
@@ -176,7 +190,6 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         qFatal("Qt Quick timeline QML failed to load");
     }
     m_root = m_quickView->rootObject();
-    m_popupSession = new QuickPopupSession(*m_quickView, this);
 
     QObject *root = rootObject();
     if (!root)
@@ -350,6 +363,42 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     // interaction's restricted local handling declines; see
     // timelinequickview_keyrouting.cpp.
     installKeyPolicyHandlers();
+
+    // Popup scope and native scope recovery share the same borrowed physical
+    // hosts: an open Quick popup mutes every claim, unmute and the service's
+    // coalesced scopeRefresh resync retained hover membership and request the
+    // guarded idle-move recovery for membership Qt never restored.
+    ui::MouseHints &hints = ui::MouseHints::instance();
+    const auto eachHintHost = [this](const auto &apply) {
+        for (const QPointer<TimelineInputItem> &item : m_inputItems)
+            apply(item.data());
+        for (const QPointer<TimelineInputItem> &item : m_gutterInputItems)
+            apply(item.data());
+        apply(m_eventListInput.data());
+        for (const QPointer<TimelineInputItem> &item : m_drawerChromeInputs)
+            apply(item.data());
+    };
+    connect(m_popupSession, &QuickPopupSession::isOpenChanged, this, [this, &hints, eachHintHost] {
+        const bool muted = m_popupSession->isOpen();
+        eachHintHost([muted](TimelineInputItem *item) {
+            if (item)
+                item->setHintMuted(muted);
+        });
+        if (muted)
+            return;
+        eachHintHost([](TimelineInputItem *item) {
+            if (item)
+                item->resyncMouseHint();
+        });
+        requestMouseHintRecovery(&hints);
+    });
+    connect(&hints, &ui::MouseHints::scopeRefresh, this, [this, &hints, eachHintHost] {
+        eachHintHost([](TimelineInputItem *item) {
+            if (item)
+                item->resyncMouseHint();
+        });
+        requestMouseHintRecovery(&hints);
+    });
 
     syncAppearance();
 }

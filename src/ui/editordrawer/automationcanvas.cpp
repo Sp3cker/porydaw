@@ -14,7 +14,6 @@
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationpage.h"
-#include "ui/layout.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/typography.h"
 
@@ -239,9 +238,16 @@ bool AutomationCanvas::bandPreviewContainsLane(LaneHandle handle) const noexcept
 }
 void AutomationCanvas::setPencilMode(bool enabled)
 {
-    if (!m_activeGesture)
-        m_hoverState.clearHover();
     m_pencilMode = enabled;
+    if (!m_activeGesture) {
+        // A stationary tool change reclassifies the current target at once:
+        // clearHover forces updateHover past its same-position early return,
+        // then refreshHoverAt republishes through the primary plot host's
+        // non-claiming refreshMouseHint, so nothing is claimed while a popup
+        // or another source owns input.
+        m_hoverState.clearHover();
+        refreshHoverAt(contentPositionFromGlobal(QCursor::pos()));
+    }
     syncHoverValueLabel();
     syncPreviewValueLabel();
     updatePencilCursor();
@@ -337,20 +343,34 @@ LaneHandle AutomationCanvas::laneAt(int y) const noexcept
 }
 void AutomationCanvas::refreshHoverAt(const QPointF &position)
 {
-    if (!contentBounds().contains(position.toPoint())) {
-        m_hoverState.clearHover();
-        return;
-    }
     // Resolve the active slot directly — Tempo is ordinary plot content, not
     // gutter or header.
-    const LaneHandle handle = activeLane();
+    const LaneHandle handle =
+        contentBounds().contains(position.toPoint()) ? activeLane() : LaneHandle{};
     const auto *slot = resolveSlot(handle);
     if (!slot) {
         m_hoverState.clearHover();
-        return;
+    } else {
+        m_hoverState.updateHover(hoverTarget(), m_geometry, *slot->lane, slot->body, handle,
+                                 projection(), position.x(), position.toPoint().y(), m_pencilMode);
     }
-    m_hoverState.updateHover(hoverTarget(), m_geometry, *slot->lane, slot->body, handle,
-                             projection(), position.x(), position.toPoint().y(), m_pencilMode);
+    // Stationary update only: refreshMouseHint republishes solely while the
+    // primary plot item still owns the display, so post-release, cancellation
+    // and tool-change callers can never claim or resurrect ownership.
+    if (m_inputHost)
+        m_inputHost->refreshMouseHint(mouseHintProfile());
+}
+
+ui::hint_profiles::Id AutomationCanvas::mouseHintProfile() const
+{
+    const auto &hover = m_hoverState.hover;
+    if (!hover.lane.valid())
+        return ui::hint_profiles::Id::Empty;
+    if (hover.hasPoint)
+        return hover.originPhantom ? ui::hint_profiles::Id::AutomationOriginPhantom
+                                   : ui::hint_profiles::Id::AutomationNode;
+    return m_pencilMode ? ui::hint_profiles::Id::AutomationPencil
+                        : ui::hint_profiles::Id::AutomationSweep;
 }
 
 const AutomationCanvas::NodeLaneSlot *

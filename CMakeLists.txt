@@ -286,6 +286,11 @@ qt_add_library(porydaw_app STATIC
     src/ui/transportbar.h
     src/ui/fastlabel.cpp
     src/ui/fastlabel.h
+    src/ui/mousehints/hintprofiles.cpp
+    src/ui/mousehints/hintprofiles.h
+    src/ui/mousehints/mousehints.cpp
+    src/ui/mousehints/mousehints.h
+    src/ui/mousehints/widgethints.cpp
     src/ui/workspaceui.cpp
     src/ui/workspaceui_tabs.cpp
     src/ui/workspaceui_project.cpp
@@ -473,9 +478,10 @@ set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 foreach(qml IN
     ITEMS AutomationTabs TimelineCanvas PianoRollCanvas TimelineScrollbar
           RulerControls RulerToolTip TrackHeaderBand OtherStripToolTip
-          DrawerChromeLayer DragInput PromptCard PromptButton PitchBendPopup
-          VelocityPrompt CcDeleteConfirm TimeSignaturePrompt InsertTimePrompt
-          VoicePickerPrompt EventListPage QuickMenuPanel QuickPopupLayer)
+          DrawerChromeLayer DragInput HoverHint PromptCard PromptButton
+          PitchBendPopup VelocityPrompt CcDeleteConfirm TimeSignaturePrompt
+          InsertTimePrompt VoicePickerPrompt EventListPage QuickMenuPanel
+          QuickPopupLayer)
     set_source_files_properties(
         src/ui/songview/quick/${qml}.qml
         PROPERTIES QT_RESOURCE_ALIAS ${qml}.qml)
@@ -499,6 +505,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/QuickPopupLayer.qml
         src/ui/songview/quick/EventListPage.qml
         src/ui/songview/quick/DragInput.qml
+        src/ui/songview/quick/HoverHint.qml
         src/ui/songview/quick/PromptCard.qml
         src/ui/songview/quick/PromptButton.qml
         src/ui/songview/quick/PitchBendPopup.qml

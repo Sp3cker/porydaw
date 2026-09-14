@@ -1,8 +1,11 @@
 #include "ui/songview/quick/quickpopupsession.h"
 
 #include "ui/layout.h"
+#include "ui/mousehints/hintprofiles.h"
+#include "ui/mousehints/mousehints.h"
 #include "ui/songview/quick/quickengine.h"
 
+#include <QCoreApplication>
 #include <QDebug>
 #include <QEvent>
 #include <QKeyEvent>
@@ -107,6 +110,7 @@ bool QuickPopupSession::beginMenu(QObject *owner)
     m_restoreFocus = m_window->activeFocusItem();
     m_ownerDestroyed = connect(owner, &QObject::destroyed, this, [this] { cancel(false); });
     emit isOpenChanged();
+    publishOverlayHint();
     return true;
 }
 
@@ -167,6 +171,7 @@ bool QuickPopupSession::openContent(const QUrl &url, QObject *bridge, Kind kind)
         layoutContent();
     }
     emit isOpenChanged();
+    publishOverlayHint();
     if (form)
         scheduleFocusCheck();
     return true;
@@ -328,6 +333,11 @@ void QuickPopupSession::end(bool wasCancelled, bool restoreFocus)
     m_seenPopupFocus = false;
     ++m_focusEpoch;
     m_focusCheckPending = false;
+    // The overlay's empty claim ends before detach and before the closing
+    // notification; popup children clear through their own real hide/detach
+    // observations, and no previously saved source is ever restored.
+    if (ui::MouseHints *const hints = mouseHints())
+        hints->clear(layer.data());
     if (content) {
         content->setParentItem(nullptr);
         content->setParent(nullptr);
@@ -415,6 +425,25 @@ bool QuickPopupSession::itemBelongsToPopup(const QQuickItem *item) const
             return true;
     }
     return false;
+}
+
+ui::MouseHints *QuickPopupSession::mouseHints()
+{
+    // Borrow once and cache through QPointer. instance() asserts on a dead
+    // or closing application, so a late borrow during teardown stays null
+    // instead of recreating the singleton.
+    if (!m_mouseHints && qApp && !QCoreApplication::closingDown())
+        m_mouseHints = &ui::MouseHints::instance();
+    return m_mouseHints;
+}
+
+void QuickPopupSession::publishOverlayHint()
+{
+    // The session is the authority for its whole overlay: opening claims the
+    // empty no-hint profile with the physical layer as source, so covered
+    // background targets cannot keep or take ownership while it is open.
+    if (ui::MouseHints *const hints = mouseHints(); hints && overlayRoot())
+        hints->claim(overlayRoot(), ui::hint_profiles::Id::Empty);
 }
 
 } // namespace songview

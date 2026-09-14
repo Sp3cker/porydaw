@@ -33,10 +33,12 @@
 #include <QTimer>
 #include <QVariant>
 #include <QWidget>
+#include <QtTest>
 
 #include "checks/support/asyncwait.h"
 #include "checks/support/eventsynth.h"
 #include "checks/support/songfixture.h"
+#include "checks/support/timelinequickcheck.h"
 #include "core/miditimeline.h"
 #include "core/smf.h"
 #include "mainwindow.h"
@@ -44,10 +46,12 @@
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
+#include "ui/mousehints/mousehints.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/trackheadermodel.h"
 #include "ui/workspaceui.h"
 
 namespace checks::mainwindowrouting {
@@ -266,6 +270,49 @@ class MainWindowRoutingFixture
             return notes.front();
         }
         return std::nullopt;
+    }
+
+    static ui::MouseHints &mouseHints() { return ui::MouseHints::instance(); }
+
+    // The tab's embedded Quick canvas window; QTest delivery into it reaches
+    // the real scene hover/grab path.
+    static QQuickWindow *quickCanvas(SongView &view)
+    {
+        songview::TimelineQuickView *const quick = view.quickView();
+        return quick ? quick->quickWindow() : nullptr;
+    }
+
+    static QQuickItem *quickItem(SongView &view, QLatin1String name)
+    {
+        songview::TimelineQuickView *const quick = view.quickView();
+        return checks::support::visualDescendant(quick ? quick->rootObject() : nullptr, name);
+    }
+
+    static songview::TrackHeaderModel *trackHeaders(SongView &view)
+    {
+        return view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
+    }
+
+    // A point inside `row`'s header band at `localRect`, or null when the row
+    // is scrolled out of the input item.
+    static std::optional<QPointF> headerRowPoint(QQuickItem &input,
+                                                 songview::TrackHeaderModel &model, int row,
+                                                 const QRectF &localRect)
+    {
+        const QRectF target = localRect.translated(0.0, row * model.rowHeight() - model.scrollY());
+        if (localRect.isEmpty() || !input.boundingRect().contains(target))
+            return std::nullopt;
+        return target.center();
+    }
+
+    // QTest drops a MouseMove whose global position is unchanged, so the
+    // first move into a freshly shown window can vanish when the cursor
+    // already rests there. Moving one pixel off first guarantees the final
+    // move is delivered.
+    static void hoverAt(QWindow &window, const QPoint &position)
+    {
+        QTest::mouseMove(&window, position + QPoint(2, 2));
+        QTest::mouseMove(&window, position);
     }
 };
 

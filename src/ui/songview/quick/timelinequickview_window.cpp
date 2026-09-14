@@ -6,6 +6,7 @@
 // bridge in timelinequickview_keyrouting.cpp; the roll scene builders in
 // timelinequickview_pianoroll.cpp.
 
+#include "ui/mousehints/mousehints.h"
 #include "ui/songview/quick/timelinequickview.h"
 
 #include "ui/editordrawer/automationcanvas.h"
@@ -18,7 +19,11 @@
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/trackheadermodel.h"
 
+#include <QCoreApplication>
+#include <QCursor>
+#include <QGuiApplication>
 #include <QKeyEvent>
+#include <QMouseEvent>
 #include <QQuickView>
 #include <QUrl>
 #include <algorithm>
@@ -204,6 +209,64 @@ bool TimelineQuickView::eventFilter(QObject *watched, QEvent *event)
         break;
     }
     return QObject::eventFilter(watched, event);
+}
+
+void TimelineQuickView::requestMouseHintRecovery(ui::MouseHints *hints)
+{
+    // Native modality and Quick popup teardown can leave a stationary cursor
+    // without restored hover membership: Qt sent Leave and never re-enters.
+    // One coalesced queued callback — bound to this coordinator and holding
+    // only a guarded service borrow — re-reads every guard at dispatch time
+    // and then lets Qt's own delivery restore the actual leaf through a
+    // single idle, non-spontaneous MouseMove. A failed guard simply drops
+    // the request; ordinary pointer/scope delivery supplies the next safe
+    // opportunity, so nothing polls or retries.
+    if (m_mouseHintRecoveryQueued)
+        return;
+    m_mouseHintRecoveryQueued = true;
+    const QPointer<ui::MouseHints> service = hints;
+    QMetaObject::invokeMethod(
+        this,
+        [this, service] {
+            m_mouseHintRecoveryQueued = false;
+            QQuickWindow *const window = m_view.data();
+            if (!service || !window || m_detachStarted)
+                return;
+            if (!window->isVisible() || !window->isExposed())
+                return;
+            const QPoint globalPosition = QCursor::pos();
+            // The embedded window's geometry is parent-relative, so cursor
+            // containment is tested in window-local coordinates.
+            const QPointF localPosition = window->mapFromGlobal(QPointF(globalPosition));
+            if (!QRectF(0.0, 0.0, window->width(), window->height()).contains(localPosition))
+                return;
+            QQuickItem *const contentItem = window->contentItem();
+            if (!contentItem || !service->allowsNativeInput(contentItem))
+                return;
+            // The cursor's real top-level must be this window or its native
+            // ancestor; a foreign top-level means the cursor is not ours.
+            QWindow *const topLevel = QGuiApplication::topLevelAt(globalPosition);
+            if (topLevel != window && topLevel != window->parent(QWindow::ExcludeTransients))
+                return;
+            if (QGuiApplication::mouseButtons() != Qt::NoButton || window->mouseGrabberItem())
+                return;
+            const auto interactionActive = [](const QPointer<TimelineInputItem> &item) {
+                const TimelineBandInteraction *const interaction =
+                    item ? item->interaction() : nullptr;
+                return interaction && interaction->gestureActive();
+            };
+            if (std::any_of(m_inputItems.cbegin(), m_inputItems.cend(), interactionActive) ||
+                std::any_of(m_gutterInputItems.cbegin(), m_gutterInputItems.cend(),
+                            interactionActive) ||
+                interactionActive(m_eventListInput) ||
+                std::any_of(m_drawerChromeInputs.cbegin(), m_drawerChromeInputs.cend(),
+                            interactionActive))
+                return;
+            QMouseEvent event(QEvent::MouseMove, localPosition, QPointF(globalPosition),
+                              Qt::NoButton, Qt::NoButton, QGuiApplication::keyboardModifiers());
+            QCoreApplication::sendEvent(window, &event);
+        },
+        Qt::QueuedConnection);
 }
 
 } // namespace songview

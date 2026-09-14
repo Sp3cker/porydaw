@@ -1,6 +1,7 @@
 // Controlled integer input: the owner applies valueCommitted to its model.
 // Appearance is injected; no popup session or document is required.
 import QtQuick
+import Porydaw.Ui
 
 Item {
     id: control
@@ -197,10 +198,24 @@ Item {
             }
         }
 
-        // The text input is the accepting item for presses over the field, so
-        // its handlers keep the full field rectangle as the hit area.
-        HoverHandler {
+        // One hint group over the field: Shift + vertical drag adjusts more
+        // finely, Control + wheel steps by ten. The deferred tap-select-all
+        // below supersedes ordinary Shift-click text selection, so the
+        // generic selection profile is never advertised alongside the
+        // drag/wheel alternatives. The macOS Shift-wheel axis compensation
+        // inside the WheelHandler is part of the same stepping action, not
+        // a distinct alternative. While the existing scrub drag holds the
+        // grab, HoverHint retains the originating profile; when the drag
+        // ends, the group settles from the drag's actual final centroid
+        // position mapped into the field, so an outside release clears
+        // even with frozen hover membership.
+        HoverHint {
+            id: scrubHint
+
+            source: input
             cursorShape: Qt.SizeVerCursor
+            gestureOwning: scrubDrag.active
+            profile: HintProfiles.DragScrub
         }
 
         TapHandler {
@@ -227,9 +242,17 @@ Item {
                 if (active) {
                     state.dragging = false
                     state.stepAccumulator = 0
+                    // Re-arm containment so the previous gesture's outside
+                    // release cannot block the next gesture's publication.
+                    scrubHint.releaseInside = true
                     // Evaluate immediately so the threshold-crossing movement
                     // is not dropped.
                     state.scrubTo(state.pressDragDistance())
+                } else {
+                    // Settle the hint group from the drag's actual final
+                    // centroid position: an outside release clears even
+                    // when Qt froze hover membership during the grab.
+                    scrubHint.settleRelease(scrubDrag.centroid.scenePosition)
                 }
             }
             onCentroidChanged: state.scrubTo(state.pressDragDistance())

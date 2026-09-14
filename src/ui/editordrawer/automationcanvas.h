@@ -28,6 +28,7 @@
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/tempolane.h"
 #include "ui/editorviewstate.h"
+#include "ui/mousehints/hintprofiles.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songviewmodel.h"
@@ -378,6 +379,10 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     LaneHandle laneAt(int y) const noexcept;
     const NodeLaneSlot *resolveSlot(LaneHandle handle) const noexcept;
     void refreshHoverAt(const QPointF &position);
+    // The current idle target/tool profile for the status hint: node, origin
+    // phantom, sweep background or pencil background from the resolved hover
+    // hit. An invalid hover lane selects an empty profile.
+    ui::hint_profiles::Id mouseHintProfile() const;
     bool resolveLane(LaneHandle handle, const NodeLane **lane, QRect *body) const noexcept;
     NodeLane *mutableLane(LaneHandle handle) noexcept;
     void syncHoverValueLabel();

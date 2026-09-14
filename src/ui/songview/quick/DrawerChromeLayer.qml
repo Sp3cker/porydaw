@@ -312,11 +312,6 @@ Item {
         id: valuePrompt
 
         objectName: "drawerValuePrompt"
-        z: 10
-        visible: layer.chrome.valuePromptVisible
-        color: layer.chrome.barBackground
-        border.width: layer.chrome.barBorderWidth
-        border.color: layer.chrome.barOutline
 
         // Published band rectangles are canonical viewport coordinates:
         // the Quick window is the full viewport, so centering is direct.
@@ -324,6 +319,23 @@ Item {
            + Math.max(0, (layer.automationBandRect.width - width) / 2)
         y: layer.automationBandRect.y
            + Math.max(0, (layer.automationBandRect.height - height) / 2)
+        z: 10
+        visible: layer.chrome.valuePromptVisible
+        color: layer.chrome.barBackground
+        border.width: layer.chrome.barBorderWidth
+        border.color: layer.chrome.barOutline
+
+        HoverHint {
+            id: promptHint
+
+            source: valuePrompt
+            // The actual text editor selects the Shift-click selection
+            // profile through its child hover (valuePromptTextHint below);
+            // the card/shield stays an empty-profile member of the same
+            // group. One publisher, never competing child publications.
+            profile: valuePromptTextHint.hovered
+                     ? HintProfiles.TextSelection : HintProfiles.Empty
+        }
 
         // Card-local pointer shield: presses, drags and the wheel on the
         // card chrome stop here so the automation lane underneath never
@@ -487,6 +499,13 @@ Item {
                 // Undo and SelectAll processing; keys it does not handle end
                 // in the card terminal sink.
                 Keys.onShortcutOverride: (event) => event.accepted = true
+
+                // The field's hover registers with the card group: the
+                // publisher relays this as the Shift-click selection
+                // profile, and the card/shield keeps the empty profile.
+                HoverHandler {
+                    id: valuePromptTextHint
+                }
 
                 Accessible.role: Accessible.EditableText
                 Accessible.name: layer.chrome.valuePromptLabel

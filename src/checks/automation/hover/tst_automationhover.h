@@ -32,6 +32,9 @@ class AutomationHoverTest final : public QObject
     void leaveClearsRetainedHover();
     void tempoAndCcTopologyMatch();
     void rowRebuildStaleReleaseDoesNotMutate();
+    void targetAndToolProfilesUpdate();
+    void popupDismissalRecoversHover();
+    void liveModifierGesturesCommitAndUndo();
 
   private:
     std::unique_ptr<automation_hover::Fixture> m_fixture;

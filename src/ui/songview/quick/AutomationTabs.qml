@@ -100,6 +100,23 @@ Item {
                         }
                     }
 
+                    // One hint group per tab: Control + click toggles the
+                    // ghost parameter instead of normal activation. The
+                    // description shows unconditionally, without mirroring
+                    // canGhostParameter and without touching the tab's
+                    // activation, hover or ghost-color behavior.
+                    // Qt broadens a handler's parent's accepted mouse buttons.
+                    // Keep the handler off the TabButton so a right press does
+                    // not take ClickFocus before its context menu opens.
+                    Item {
+                        anchors.fill: parent
+
+                        HoverHint {
+                            source: tab
+                            profile: HintProfiles.GhostParameter
+                        }
+                    }
+
                     // Keyboard focus or a checked change must never leave the
                     // tab outside the Flickable viewport: scroll by the
                     // minimum contentY delta that fits the tab fully into

@@ -2,9 +2,14 @@
 
 #include "ui/songview/quick/timelineinput.h"
 
+#include <QPointer>
 #include <QQuickItem>
 
 #include <functional>
+
+namespace ui {
+class MouseHints;
+}
 
 class QEvent;
 class QFocusEvent;
@@ -94,6 +99,18 @@ class TimelineInputItem : public QQuickItem, public TimelineInputHost
     void clearCursor() override;
     void releasePointerGrab() override;
     void setAccessibilityDescription(const QString &description) override;
+    // Mouse-hint presentation seam. setMouseHint is the only claim path: it
+    // claims while this item is a live hover/grab source and not muted.
+    // refreshMouseHint is a stationary non-claiming update that applies only
+    // while this item still owns the display.
+    void setMouseHint(ui::hint_profiles::Id profile) override;
+    void refreshMouseHint(ui::hint_profiles::Id profile) override;
+
+    // View-facing hint scope. Muting suppresses every claim including empty
+    // ones and source-check clears this item; unmuting never restores cached
+    // text — the view calls resyncMouseHint() for explicit reacquisition.
+    void setHintMuted(bool muted);
+    void resyncMouseHint();
 
   signals:
     void accessibilityDescriptionChanged();
@@ -103,6 +120,7 @@ class TimelineInputItem : public QQuickItem, public TimelineInputHost
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
+    void hoverEnterEvent(QHoverEvent *event) override;
     void hoverMoveEvent(QHoverEvent *event) override;
     void hoverLeaveEvent(QHoverEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
@@ -114,6 +132,24 @@ class TimelineInputItem : public QQuickItem, public TimelineInputHost
     void itemChange(ItemChange change, const ItemChangeData &data) override;
 
   private:
+    // Guarded borrow of the application hint service: cached through a
+    // QPointer and never recreated while the application is closing down.
+    ui::MouseHints *mouseHints();
+    // Source-check clear through the service; only the current owner clears.
+    void clearMouseHint();
+    // True while this item is a live hover or exclusive-grab hint source.
+    bool hintSourceActive() const noexcept;
+    // Actual cursor containment in item coordinates; false when detached.
+    bool cursorInside() const;
+    // One idle hover pass at `input`: forwards the existing hover
+    // computation to the interaction and, when no band claimed this item
+    // during the pass, claims the adapter's empty profile. Returns the
+    // interaction's handled result.
+    bool dispatchIdleMouseHint(const TimelinePointerInput &input);
+    // Post-ungrab settle by actual cursor containment: inside recomputes
+    // the idle hover pass, outside clears.
+    void settleMouseHintAfterUngrab();
+
     TimelineBandInteraction *m_interaction = nullptr;
     TimelineInputSurface m_surface = TimelineInputSurface::Plot;
     bool m_attachHost = true;
@@ -122,6 +158,10 @@ class TimelineInputItem : public QQuickItem, public TimelineInputHost
     QString m_accessibilityDescription;
     QFont m_hostFont;
     QPalette m_hostPalette;
+    QPointer<ui::MouseHints> m_mouseHints;
+    bool m_hovered = false;
+    bool m_hintMuted = false;
+    bool m_hintDispatchClaimed = false;
 };
 
 } // namespace songview
