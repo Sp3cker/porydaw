@@ -63,8 +63,11 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: ${{ runner.os == 'Windows' && '6.10.*' || '6.11.*' }}
+          version: '6.11.*'
           cache: true
+          # aqtinstall 3.3 cannot read Qt 6.11's flattened Windows repository layout.
+          aqtsource: ${{ runner.os == 'Windows' && 'git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7' || '' }}
+          arch: ${{ runner.os == 'Windows' && 'win64_msvc2022_64' || '' }}
 
       - name: Set up MSVC environment
         if: runner.os == 'Windows'

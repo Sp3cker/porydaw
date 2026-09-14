@@ -19,6 +19,7 @@ macOS note:
     before copying this one if you want both versions installed.
 
 Windows note:
+    Requires Windows 11.
     Unzip this build into a new folder if you want to keep an older install.
     Preferences are stored under organization sp3cker and do not share with
     older huderlem releases.

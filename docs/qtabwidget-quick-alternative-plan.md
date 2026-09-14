@@ -64,7 +64,7 @@ If an ordinary change requires synchronizing multiple independent registries or 
 
 ### Ship the supported Qt surface, not only the local probe
 
-The planning probes used Qt 6.11.0. Linux and macOS CI use Qt 6.11, while Windows CI uses Qt 6.10 because the Qt online repository does not publish Qt 6.11 Windows packages. `find_package(Qt6 ...)` therefore requires Qt 6.10, and Linux remains part of the supported build matrix. Validate the chosen QML types, focus behavior and imports on every supported platform. Do not add compatibility branches below the supported floor; report a real platform conflict for an explicit decision.
+The planning probes and all CI builds use Qt 6.11. `find_package(Qt6 ...)` therefore requires Qt 6.11. Windows jobs pin an unreleased `aqtinstall` fix because Qt 6.11 changed the Windows package repository layout and released `aqtinstall` cannot parse it. Porydaw supports Windows 11; Windows 10 is not a target. Validate the chosen QML types, focus behavior and imports on every supported platform. Do not add compatibility branches below the supported floor; report a real platform conflict for an explicit decision.
 
 Use the existing release/package path to check QML imports, controls/styles and resources in the shipped artifact, not only a development process with system Qt available. Keep the existing platform matrix; record platforms/toolchains not exercised rather than claiming cross-platform native verification. Do not suppress QML import/binding warnings or create a new packaging/check runner.
 
