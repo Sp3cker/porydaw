@@ -348,6 +348,21 @@ void EventViewsChromeTest::filterMenuSession()
     QVERIFY(panel);
     QTRY_COMPARE(panel->property("highlightedRow").toInt(), metaRow);
     ticksMirrorCheckedRole(); // rebuilt: only Meta renders unchecked
+    // Park the cursor clear of the menu rows before keyboard navigation:
+    // rebuilt delegates re-fire hover under a stationary cursor, which can
+    // otherwise reclaim Meta after Down moves on. Rows run top-down, so a
+    // full row above the first (else below the last) is inert: leaving a
+    // row fires no host call, and nothing hoverable lives outside the rows.
+    const qreal rowHeight = panel->property("rowHeight").toReal();
+    const QPointF firstRow = quick_popup::menuRowSceneCenter(*panel, 0);
+    const QPointF lastRow = quick_popup::menuRowSceneCenter(*panel, rows - 1);
+    QPointF park = QPointF(firstRow.x(), firstRow.y() - rowHeight);
+    if (rowHeight <= 0 || park.y() < 0)
+        park = QPointF(lastRow.x(), lastRow.y() + rowHeight);
+    if (rowHeight > 0 && park.y() >= 0 && park.y() < window.height()) {
+        QTest::mouseMove(&window, park.toPoint());
+        QCoreApplication::processEvents();
+    }
 
     // The host still owns keys while open: Down wraps onto the first row and
     // Enter toggles it through the same live session.
