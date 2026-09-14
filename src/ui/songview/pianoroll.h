@@ -43,6 +43,9 @@ enum class NoteMenuAction : int {
     Copy = 2,
     Cut = 3,
     Delete = 4,
+    Duplicate = 5,
+    Split = 6,
+    Join = 7,
 };
 
 struct PianoRollGeometry {
@@ -106,6 +109,9 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     void copySelectedNotes();
     void cutSelectedNotes();
     void deleteSelectedNotes();
+    void duplicateSelectedNotes();
+    void splitNotes();
+    void joinSelectedNotes();
     void selectAllNotes();
     void transposeSelectedNotes(int semitones);
     void nudgeSelectedNotes(bool right);

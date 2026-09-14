@@ -62,6 +62,9 @@ enum class EditNotesOperation {
     SelectAll,
     PitchBend,
     SetVelocity,
+    Duplicate,
+    Split,
+    Join,
 };
 
 // An operation that runs when neither selection family owns the command.
@@ -169,7 +172,7 @@ class EditActions final : public QObject
     // One slot per EditCommand value; editactions.cpp pins the canonical
     // table to this count and to per-position enum identity.
     static constexpr std::size_t cActionCount =
-        static_cast<std::size_t>(SongView::EditCommand::MoveEventDown) + 1;
+        static_cast<std::size_t>(SongView::EditCommand::Join) + 1;
 
     void observeTarget(SongView &target);
     void disconnectTargetObservations();

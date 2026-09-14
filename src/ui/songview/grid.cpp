@@ -164,6 +164,16 @@ Tick Grid::snapTickUp(double tick) const
     return Tick(std::min<uint64_t>(uint64_t(lo) + g, seg.next));
 }
 
+Tick Grid::nextSubdivisionTickAfter(Tick tick) const
+{
+    const Segment segment = segmentAt(tick);
+    const uint64_t grid = gridTicksIn(segment, m_camera.pxPerTick());
+    const uint64_t next =
+        uint64_t(segment.start) + ((uint64_t(tick) - segment.start) / grid + 1) * grid;
+    return Tick(
+        std::min<uint64_t>(std::min<uint64_t>(next, segment.next), CoreTimeDefaults::kMaxTick));
+}
+
 // --- SongView: host setters and axis iteration ---
 
 void SongView::setGridFeel(songview::GridFeel feel)

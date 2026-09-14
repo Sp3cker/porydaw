@@ -81,6 +81,11 @@ class Grid final
     Tick snapTickDown(double tick) const;
     Tick snapTickUp(double tick) const;
 
+    // Strictly next adaptive subdivision, clamped at the next signature seam
+    // and kMaxTick. Each segment re-anchors the grid; at kMaxTick it cannot
+    // advance. Uses gridTicksAt spacing, not painted cells or the finer snap grid.
+    Tick nextSubdivisionTickAfter(Tick tick) const;
+
   private:
     // Both exits floor at the clock base: the result is >= 1 for any
     // segment, so snap math may divide by it unchecked.

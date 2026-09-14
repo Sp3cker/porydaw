@@ -86,6 +86,16 @@ class PianoRollTest final : public QObject
     void timelinePartialSelectionRepaint();
     void keyboardTimeSelectionShortcuts();
     void timelineDuplicateTime();
+    void keyboardDuplicateNotes();
+    void keyboardDuplicatePrefersTimeSelection();
+    void keyboardSplitNotesGrid();
+    void keyboardSplitAtPlayhead();
+    void keyboardSplitNoop();
+    void keyboardJoinNotes();
+    void keyboardJoinMixedSpread();
+    void keyboardSplitSelectedPlusPlayheadStraddler();
+    void keyboardNoteCommandPopupActivation_data();
+    void keyboardNoteCommandPopupActivation();
     void timelineInsertBlankTimeTracks();
     void timelineInsertBlankTimeLanes();
     void timeSelectionMenuOpensWithPasteEnablement();

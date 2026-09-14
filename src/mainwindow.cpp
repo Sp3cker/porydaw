@@ -84,7 +84,7 @@ void buildEditMenu(QMenu *editMenu, songview::EditActions &actions, WorkspaceUi 
     QMenu *timeMenu = editMenu->addMenu(MainWindow::tr("&Time"));
     timeMenu->addAction(actions.action(SongView::EditCommand::InsertTime));
     timeMenu->addAction(actions.action(SongView::EditCommand::DeleteTime));
-    timeMenu->addAction(actions.action(SongView::EditCommand::DuplicateTime));
+    timeMenu->addAction(actions.action(SongView::EditCommand::Duplicate));
     timeMenu->addAction(actions.action(SongView::EditCommand::ClearTimeSelection));
     timeMenu->addAction(actions.action(SongView::EditCommand::EditTimeSignature));
     timeMenu->addAction(actions.action(SongView::EditCommand::RemoveTimeSignature));
@@ -96,6 +96,9 @@ void buildEditMenu(QMenu *editMenu, songview::EditActions &actions, WorkspaceUi 
     notesMenu->addAction(actions.action(SongView::EditCommand::TransposeDownOctave));
     notesMenu->addAction(actions.action(SongView::EditCommand::PitchBend));
     notesMenu->addAction(actions.action(SongView::EditCommand::SetVelocity));
+    notesMenu->addAction(actions.action(SongView::EditCommand::Duplicate));
+    notesMenu->addAction(actions.action(SongView::EditCommand::Split));
+    notesMenu->addAction(actions.action(SongView::EditCommand::Join));
 
     QMenu *moveMenu = editMenu->addMenu(MainWindow::tr("&Move"));
     moveMenu->addAction(actions.action(SongView::EditCommand::NudgeLeft));

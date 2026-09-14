@@ -367,7 +367,7 @@ void PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement()
     QVERIFY2(actions, "the swept view has no bound canonical actions");
     QVERIFY2(actions->action(SongView::EditCommand::Copy)->isEnabled(),
              "the live sweep gesture left Copy cached as disabled");
-    QVERIFY2(actions->action(SongView::EditCommand::DuplicateTime)->isEnabled(),
+    QVERIFY2(actions->action(SongView::EditCommand::Duplicate)->isEnabled(),
              "the live sweep gesture left Duplicate Time cached as disabled");
     QVERIFY2(actions->action(SongView::EditCommand::ClearTimeSelection)->isEnabled(),
              "the live sweep gesture left Clear cached as disabled");
@@ -385,4 +385,13 @@ void PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement()
     const int duplicateRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::Duplicate);
     QVERIFY2(duplicateRow >= 0 && opened.model->itemAt(duplicateRow)->enabled,
              "Duplicate Time was greyed in the menu after a real sweep");
+    // Note-only selection: the same canonical Duplicate command enables for
+    // the notes arm when no time selection is active.
+    view.selectionModel().clearTimeSelection();
+    DocNote seedNote;
+    QVERIFY2(check.document().findNote(check.track(), d.tick, uint8_t(d.key), &seedNote),
+             "the sweep seed note was not found for the note-only Duplicate check");
+    view.selectionModel().setNoteSelection({seedNote.noteId});
+    QVERIFY2(actions->action(SongView::EditCommand::Duplicate)->isEnabled(),
+             "a note-only selection left Duplicate cached as disabled");
 }

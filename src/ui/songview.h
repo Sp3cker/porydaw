@@ -525,7 +525,7 @@ class SongView : public QObject
     enum class EditCommand {
         Copy,
         Cut,
-        DuplicateTime,
+        Duplicate,
         Paste,
         SelectAll,
         Delete,
@@ -554,6 +554,8 @@ class SongView : public QObject
         PencilMode,
         MoveEventUp,
         MoveEventDown,
+        Split,
+        Join,
     };
     // Domain availability for the canonical action set. It does not encode
     // keyboard origin or focus routing. The transient pointer-gesture gate
@@ -901,6 +903,9 @@ class SongView : public QObject
     QMetaObject::Connection m_voicePickerCancellation;
     songview::VoicePicker *m_voicePicker = nullptr;
     std::optional<songview::Clip> readClipboardClip();
+    // Effective duration a note copy carries: the stored duration, or the
+    // current note-grid cell when an unterminated note has none.
+    uint32_t copiedNoteDuration(const DocNote &note) const;
 
     // Pure builder: rows, order, shortcut text, and build-time paste
     // enablement exactly as the former native menu.

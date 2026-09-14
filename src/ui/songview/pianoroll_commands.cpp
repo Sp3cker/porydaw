@@ -23,6 +23,8 @@
 #include <QVariantMap>
 
 #include <algorithm>
+#include <cmath>
+#include <map>
 #include <utility>
 #include <vector>
 
@@ -261,6 +263,180 @@ void PianoRoll::deleteSelectedNotes()
     m_sv->selectionModel().clearNoteSelection();
 }
 
+void PianoRoll::duplicateSelectedNotes()
+{
+    SongDocument *doc = m_sv->document();
+    const std::vector<DocNote> notes = resolveSelection();
+    if (!doc || notes.empty())
+        return;
+    const int selectedTrack = m_sv->selectionModel().primaryTrack();
+    Tick start = CoreTimeDefaults::kNoTick;
+    uint64_t end = 0;
+    std::vector<SongDocument::NewNote> duplicate;
+    duplicate.reserve(notes.size());
+    for (const DocNote &note : notes) {
+        const uint32_t duration = m_sv->copiedNoteDuration(note);
+        start = std::min(start, note.tick);
+        end = std::max(end, uint64_t(note.tick) + duration);
+        duplicate.push_back({note.tick, note.key, duration, note.velocity});
+    }
+    const uint64_t span = std::max<uint64_t>(1, end - start);
+    for (SongDocument::NewNote &note : duplicate)
+        note.tick = CoreTimeDefaults::shiftTickClamped(note.tick, int64_t(span));
+    duplicate.erase(std::remove_if(duplicate.begin(), duplicate.end(),
+                                   [](const SongDocument::NewNote &note) {
+                                       return note.tick >= CoreTimeDefaults::kMaxTick;
+                                   }),
+                    duplicate.end());
+    if (duplicate.empty())
+        return;
+    const std::vector<DocNote> before = doc->notesForTrack(selectedTrack);
+    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    doc->addNotes(selectedTrack, duplicate);
+    m_sv->selectionModel().setNoteSelection(doc->insertedNoteIds(selectedTrack, before));
+    m_sv->ensureRangeVisible(CoreTimeDefaults::shiftTickClamped(start, int64_t(span)),
+                             Tick(std::min<uint64_t>(end + span, CoreTimeDefaults::kMaxTick)),
+                             true);
+    m_sv->announce(SongView::tr("Duplicated %n note(s)", nullptr, int(duplicate.size())));
+    requestQuickUpdate(cNoteMutationDirty);
+}
+
+void PianoRoll::splitNotes()
+{
+    SongDocument *doc = m_sv->document();
+    if (!doc)
+        return;
+    const int selectedTrack = m_sv->selectionModel().primaryTrack();
+    std::vector<DocNote> selected = resolveSelection();
+    std::vector<DocNote> notesToRemove;
+    std::vector<SongDocument::NewNote> replacementNotes;
+    std::vector<NoteId> selection = m_sv->selectionModel().noteSelection();
+    std::sort(selected.begin(), selected.end(),
+              [](const DocNote &a, const DocNote &b) { return a.noteId < b.noteId; });
+    const auto isSelected = [&selected](NoteId id) {
+        if (selected.empty() || id < selected.front().noteId || selected.back().noteId < id)
+            return false;
+        return std::binary_search(
+            selected.begin(), selected.end(), id, [](const auto &a, const auto &b) {
+                const auto idOf = [](const auto &v) -> NoteId {
+                    if constexpr (std::is_same_v<std::decay_t<decltype(v)>, DocNote>)
+                        return v.noteId;
+                    else
+                        return v;
+                };
+                return idOf(a) < idOf(b);
+            });
+    };
+    // Only selected-source fragments inherit selection after IDs are reassigned.
+    std::vector<std::pair<Tick, uint8_t>> fragmentPositions;
+    // Grid and playhead splits share one undo step.
+    for (const DocNote &note : selected) {
+        if (note.unterminated())
+            continue;
+        const uint64_t end = uint64_t(note.tick) + note.duration;
+        Tick boundary = m_grid.nextSubdivisionTickAfter(note.tick);
+        if (boundary <= note.tick || uint64_t(boundary) >= end)
+            continue;
+        notesToRemove.push_back(note);
+        selection.erase(std::remove(selection.begin(), selection.end(), note.noteId),
+                        selection.end());
+        Tick partTick = note.tick;
+        while (boundary > partTick && uint64_t(boundary) < end) {
+            replacementNotes.push_back(
+                {partTick, note.key, uint32_t(boundary - partTick), note.velocity});
+            fragmentPositions.push_back({partTick, note.key});
+            partTick = boundary;
+            boundary = m_grid.nextSubdivisionTickAfter(partTick);
+        }
+        replacementNotes.push_back({partTick, note.key, uint32_t(end - partTick), note.velocity});
+        fragmentPositions.push_back({partTick, note.key});
+    }
+    // Playhead cuts also apply while stopped; their fragments remain unselected.
+    const Tick playheadTick = CoreTimeDefaults::tickFromDouble(std::round(m_sv->playheadTick()));
+    for (const DocNote &note : doc->notesForTrack(selectedTrack)) {
+        const uint64_t end = uint64_t(note.tick) + note.duration;
+        if (note.unterminated() || isSelected(note.noteId) || playheadTick <= note.tick ||
+            uint64_t(playheadTick) >= end)
+            continue;
+        notesToRemove.push_back(note);
+        replacementNotes.push_back(
+            {note.tick, note.key, uint32_t(playheadTick - note.tick), note.velocity});
+        replacementNotes.push_back(
+            {playheadTick, note.key, uint32_t(end - playheadTick), note.velocity});
+    }
+    if (notesToRemove.empty())
+        return;
+    const int sourceCount = int(notesToRemove.size());
+    const std::vector<DocNote> before = doc->notesForTrack(selectedTrack);
+    SongDocument::RangeEdit rangeEdit;
+    rangeEdit.removeNotes = std::move(notesToRemove);
+    rangeEdit.addNotes.push_back({selectedTrack, std::move(replacementNotes)});
+    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    doc->applyRangeEdit(SongDocument::tr("edit %n note(s)", nullptr, sourceCount), rangeEdit);
+    for (NoteId id : doc->insertedNoteIds(selectedTrack, before)) {
+        DocNote piece;
+        if (!doc->findNote(id, &piece))
+            continue;
+        const auto fragment = std::make_pair(piece.tick, piece.key);
+        if (std::find(fragmentPositions.begin(), fragmentPositions.end(), fragment) !=
+            fragmentPositions.end())
+            selection.push_back(id);
+    }
+    m_sv->selectionModel().setNoteSelection(std::move(selection));
+    m_sv->announce(SongView::tr("Split %n note(s)", nullptr, sourceCount));
+    requestQuickUpdate(cNoteMutationDirty);
+}
+
+void PianoRoll::joinSelectedNotes()
+{
+    SongDocument *doc = m_sv->document();
+    const std::vector<DocNote> selected = resolveSelection();
+    if (!doc || selected.size() < 2)
+        return;
+    const int selectedTrack = m_sv->selectionModel().primaryTrack();
+    std::map<uint8_t, std::vector<DocNote>> byKey;
+    for (const DocNote &note : selected)
+        byKey[note.key].push_back(note);
+    // Recreating nonjoinable groups would change IDs and terminate open notes.
+    std::vector<DocNote> notesToRemove;
+    std::vector<SongDocument::NewNote> joinedNotes;
+    int joinSourceCount = 0;
+    for (auto &[key, group] : byKey) {
+        std::sort(group.begin(), group.end(),
+                  [](const DocNote &a, const DocNote &b) { return a.tick < b.tick; });
+        if (group.size() <= 1 || std::any_of(group.begin(), group.end(), [](const DocNote &note) {
+                return note.unterminated();
+            }))
+            continue;
+        const Tick start = group.front().tick;
+        uint64_t end = start;
+        for (const DocNote &note : group) {
+            end = std::max(end, uint64_t(note.tick) + note.duration);
+            notesToRemove.push_back(note);
+        }
+        joinedNotes.push_back({start, key, uint32_t(std::min<uint64_t>(UINT32_MAX, end - start)),
+                               group.front().velocity});
+        joinSourceCount += int(group.size());
+    }
+    if (joinedNotes.empty())
+        return;
+    const std::vector<DocNote> before = doc->notesForTrack(selectedTrack);
+    std::vector<NoteId> selection = m_sv->selectionModel().noteSelection();
+    for (const DocNote &note : notesToRemove)
+        selection.erase(std::remove(selection.begin(), selection.end(), note.noteId),
+                        selection.end());
+    SongDocument::RangeEdit rangeEdit;
+    rangeEdit.removeNotes = std::move(notesToRemove);
+    rangeEdit.addNotes.push_back({selectedTrack, std::move(joinedNotes)});
+    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    doc->applyRangeEdit(SongDocument::tr("edit %n note(s)", nullptr, joinSourceCount), rangeEdit);
+    for (const NoteId id : doc->insertedNoteIds(selectedTrack, before))
+        selection.push_back(id);
+    m_sv->selectionModel().setNoteSelection(std::move(selection));
+    m_sv->announce(SongView::tr("Joined %n note(s)", nullptr, joinSourceCount));
+    requestQuickUpdate(cNoteMutationDirty);
+}
+
 void PianoRoll::copyNotes(const std::vector<DocNote> &notes)
 {
     Tick base = CoreTimeDefaults::kNoTick;
@@ -269,9 +445,8 @@ void PianoRoll::copyNotes(const std::vector<DocNote> &notes)
     Clip clip;
     ClipTrack ct{m_sv->selectionModel().primaryTrack(), {}};
     for (const DocNote &note : notes)
-        ct.notes.push_back({uint32_t(note.tick - base), note.key,
-                            note.duration ? note.duration : uint32_t(m_grid.gridTicksAt(note.tick)),
-                            note.velocity});
+        ct.notes.push_back(
+            {uint32_t(note.tick - base), note.key, m_sv->copiedNoteDuration(note), note.velocity});
     clip.tracks.push_back(std::move(ct));
     writeClipboard(clip, m_sv->timeline()->ticksPerBeat);
     m_sv->announce(SongView::tr("Copied %n note(s)", nullptr, int(notes.size())));
@@ -309,37 +484,40 @@ void PianoRoll::showNoteMenu(QPointF localPos)
     SongDocument *doc = m_sv->document();
     if (!doc)
         return;
-    // The menu only opens over a live note selection; every row then
-    // re-resolves that selection at activation through its canonical action.
+    // Canonical actions re-resolve the selection at activation.
     if (resolveSelection().empty())
         return;
     songview::TimelineQuickView *const quick = m_sv->quickView();
     QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
     if (!window || !m_inputHost)
         return;
-    // The canonical rows need the view's bound action set; without it there
-    // is nothing to project and no menu opens.
     const songview::EditActions *const actions = m_sv->editActions();
-    QAction *const velocityAction =
-        actions ? actions->action(SongView::EditCommand::SetVelocity) : nullptr;
-    QAction *const copyAction = actions ? actions->action(SongView::EditCommand::Copy) : nullptr;
-    QAction *const cutAction = actions ? actions->action(SongView::EditCommand::Cut) : nullptr;
-    QAction *const deleteAction =
-        actions ? actions->action(SongView::EditCommand::Delete) : nullptr;
-    if (!velocityAction || !copyAction || !cutAction || !deleteAction)
+    if (!actions)
         return;
-
-    // Same four rows as the former native menu, now projected from the
-    // canonical command actions: labels, shortcuts and enablement come from
-    // the bound QActions, and the host's guarded trigger replaces the old
-    // dispatch-time switch. Set Velocity carries its static action label.
+    // Labels, shortcuts, enablement and dispatch come from the canonical QActions.
+    struct Row {
+        SongView::EditCommand command;
+        NoteMenuAction id;
+    };
+    static constexpr Row kRows[] = {
+        {SongView::EditCommand::SetVelocity, NoteMenuAction::Velocity},
+        {SongView::EditCommand::Copy, NoteMenuAction::Copy},
+        {SongView::EditCommand::Cut, NoteMenuAction::Cut},
+        {SongView::EditCommand::Duplicate, NoteMenuAction::Duplicate},
+        {SongView::EditCommand::Split, NoteMenuAction::Split},
+        {SongView::EditCommand::Join, NoteMenuAction::Join},
+        {SongView::EditCommand::Delete, NoteMenuAction::Delete},
+    };
     std::vector<QuickMenuItem> rows;
-    rows.reserve(5);
-    rows.push_back(QuickMenuItem::fromAction(*velocityAction, int(NoteMenuAction::Velocity)));
-    rows.push_back(QuickMenuItem::makeSeparator());
-    rows.push_back(QuickMenuItem::fromAction(*copyAction, int(NoteMenuAction::Copy)));
-    rows.push_back(QuickMenuItem::fromAction(*cutAction, int(NoteMenuAction::Cut)));
-    rows.push_back(QuickMenuItem::fromAction(*deleteAction, int(NoteMenuAction::Delete)));
+    rows.reserve(std::size(kRows) + 1);
+    for (std::size_t i = 0; i < std::size(kRows); ++i) {
+        if (i == 1)
+            rows.push_back(QuickMenuItem::makeSeparator());
+        QAction *action = actions->action(kRows[i].command);
+        if (!action)
+            return;
+        rows.push_back(QuickMenuItem::fromAction(*action, int(kRows[i].id)));
+    }
     m_noteMenuModel->setItems(std::move(rows));
 
     const QPointF scenePos = window->mapFromGlobal(m_inputHost->mapToGlobal(localPos));

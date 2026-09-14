@@ -154,13 +154,14 @@ constexpr std::array kCommandTable = {
         },
     },
     CommandRow{
-        EditCommand::DuplicateTime,
+        EditCommand::Duplicate,
         "roll.duplicate_time",
         false,
         nullptr,
         EditDeliveryClass::EditorRouted,
         {
             .rangeOperation = EditRangeOperation::Duplicate,
+            .notesOperation = EditNotesOperation::Duplicate,
             .keyRoute = EditKeyRoute::SelectionTargeted,
             .terminalWhenUnmatched = true,
         },
@@ -307,6 +308,28 @@ constexpr std::array kCommandTable = {
     },
     eventRow(EditCommand::MoveEventUp, "eventlist.move_up", -1),
     eventRow(EditCommand::MoveEventDown, "eventlist.move_down", 1),
+    CommandRow{
+        EditCommand::Split,
+        "roll.split",
+        false,
+        nullptr,
+        EditDeliveryClass::EditorRouted,
+        {
+            .notesOperation = EditNotesOperation::Split,
+            .keyRoute = EditKeyRoute::SelectionTargeted,
+        },
+    },
+    CommandRow{
+        EditCommand::Join,
+        "roll.join",
+        false,
+        nullptr,
+        EditDeliveryClass::EditorRouted,
+        {
+            .notesOperation = EditNotesOperation::Join,
+            .keyRoute = EditKeyRoute::SelectionTargeted,
+        },
+    },
 };
 
 constexpr bool commandTableFollowsEnumOrder()
@@ -318,7 +341,7 @@ constexpr bool commandTableFollowsEnumOrder()
     return true;
 }
 
-static_assert(kCommandTable.size() == actionIndex(EditCommand::MoveEventDown) + 1);
+static_assert(kCommandTable.size() == actionIndex(EditCommand::Join) + 1);
 static_assert(commandTableFollowsEnumOrder());
 
 // Copy alone becomes enabled for focused text; Solo still requires its

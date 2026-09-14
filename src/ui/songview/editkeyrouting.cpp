@@ -170,7 +170,14 @@ bool SongView::editCommandAvailable(EditCommand command, bool ignorePointerGestu
         case EditNotesOperation::PitchBend:
             return m_roll && m_selectionModel.noteSelection().size() == 1;
         case EditNotesOperation::SetVelocity:
+        case EditNotesOperation::Duplicate:
             return m_roll && !m_selectionModel.noteSelection().empty();
+        case EditNotesOperation::Split:
+            return m_roll != nullptr;
+        // Two or more selected notes are required; the executor re-checks
+        // the count so a stale enablement cannot join a lone note.
+        case EditNotesOperation::Join:
+            return m_roll && m_selectionModel.noteSelection().size() >= 2;
         case EditNotesOperation::None:
             break;
         }
@@ -296,6 +303,18 @@ void SongView::executeEditCommand(EditCommand command)
         case EditNotesOperation::SetVelocity:
             if (m_roll)
                 m_roll->openSelectedVelocityPrompt();
+            break;
+        case EditNotesOperation::Duplicate:
+            if (m_roll)
+                m_roll->duplicateSelectedNotes();
+            break;
+        case EditNotesOperation::Split:
+            if (m_roll)
+                m_roll->splitNotes();
+            break;
+        case EditNotesOperation::Join:
+            if (m_roll)
+                m_roll->joinSelectedNotes();
             break;
         case EditNotesOperation::None:
             break;

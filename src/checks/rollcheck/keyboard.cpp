@@ -24,9 +24,9 @@
 #include <QRectF>
 #include <QtTest>
 #include <algorithm>
-#include <cmath>
 #include <iterator>
 #include <optional>
+#include <vector>
 
 using namespace checks::rollcheck;
 

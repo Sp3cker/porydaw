@@ -348,7 +348,7 @@ void TimeRuler::showRulerMenu(const QPointF &scenePos)
         rows.push_back(actionRow(SongView::EditCommand::LoopFromSelection,
                                  RulerMenuAction::LoopFromSelection));
         rows.push_back(actionRow(SongView::EditCommand::InsertTime, RulerMenuAction::InsertBlank));
-        rows.push_back(actionRow(SongView::EditCommand::DuplicateTime, RulerMenuAction::Duplicate));
+        rows.push_back(actionRow(SongView::EditCommand::Duplicate, RulerMenuAction::Duplicate));
         rows.push_back(
             actionRow(SongView::EditCommand::DeleteTime, RulerMenuAction::RemoveContents));
         rows.push_back(

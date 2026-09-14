@@ -446,10 +446,8 @@ void SongView::copyTimeSelection()
     for (const TimeRangeContents::TrackNotes &track : contents.tracks) {
         ClipTrack ct{track.track, {}};
         for (const DocNote &note : track.notes) {
-            ct.notes.push_back(
-                {uint32_t(note.tick - range.startTick), note.key,
-                 note.duration ? note.duration : uint32_t(m_grid.gridTicksAt(note.tick)),
-                 note.velocity});
+            ct.notes.push_back({uint32_t(note.tick - range.startTick), note.key,
+                                copiedNoteDuration(note), note.velocity});
         }
         noteCount += int(ct.notes.size());
         clip.tracks.push_back(std::move(ct));
@@ -784,6 +782,11 @@ void SongView::pasteFromClipboard()
     ensureTickVisible(base);
     announce(tr("Pasted %n note(s)", nullptr, int(notes.size())));
 }
+uint32_t SongView::copiedNoteDuration(const DocNote &note) const
+{
+    return note.duration ? note.duration : uint32_t(m_grid.gridTicksAt(note.tick));
+}
+
 std::optional<Clip> SongView::readClipboardClip()
 {
     if (!m_timeline)
@@ -818,7 +821,7 @@ std::vector<QuickMenuItem> SongView::buildTimeSelectionItems() const
     rows.push_back(actionRow(EditCommand::Cut, TimeSelectionAction::Cut));
     rows.push_back(actionRow(EditCommand::Delete, TimeSelectionAction::Delete));
     rows.push_back(actionRow(EditCommand::InsertTime, TimeSelectionAction::InsertBlank));
-    rows.push_back(actionRow(EditCommand::DuplicateTime, TimeSelectionAction::Duplicate));
+    rows.push_back(actionRow(EditCommand::Duplicate, TimeSelectionAction::Duplicate));
     rows.push_back(actionRow(EditCommand::DeleteTime, TimeSelectionAction::RemoveContents));
     // Paste's enabled state is the canonical note-or-range clip eligibility,
     // re-read fresh from the clipboard by EditActions on every change.

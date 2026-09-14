@@ -142,6 +142,11 @@ void PianoRollStaticTest::tickRangeWalksFractionalLattice()
     QVERIFY(96 % latticeG == 0);
     QVERIFY(snapG >= 3);
     QVERIFY(segment.beatTicks % snapG == 0);
+    // Aligned and interior ticks advance to the same next subdivision.
+    QVERIFY2(2 * uint64_t(latticeG) < uint64_t(segment.next - 96),
+             "lattice must step at least twice below the segment end");
+    QCOMPARE(view.grid().nextSubdivisionTickAfter(Tick(96)), Tick(96 + latticeG));
+    QCOMPARE(view.grid().nextSubdivisionTickAfter(Tick(97)), Tick(96 + latticeG));
     // The first ceiling-aligned candidate (96 + latticeG) already lies at
     // or beyond the range end: the segment contributes nothing.
     const std::vector<Tick> firstOutside = walk(97, 98);
@@ -167,6 +172,10 @@ void PianoRollStaticTest::tickRangeWalksFractionalLattice()
     QCOMPARE(walk(100, 110), expectedLines(100, 110));
     QCOMPARE(view.grid().snapTickDown(103.5), Tick(102));
     QCOMPARE(view.grid().snapTickUp(101.5), Tick(102));
+    // Stop at the signature seam, then restart on its new lattice.
+    const Tick latticeSeam = view.grid().gridTicksAt(102);
+    QCOMPARE(view.grid().nextSubdivisionTickAfter(Tick(101)), Tick(102));
+    QCOMPARE(view.grid().nextSubdivisionTickAfter(Tick(102)), Tick(102 + latticeSeam));
     QCOMPARE(view.grid().snapTick(103.5), Tick(102));
     QCOMPARE(view.grid().snapTick(103.5 + double(snapG)), Tick(102 + snapG));
     fixture.tab()->document().deleteTimeSig(102);
