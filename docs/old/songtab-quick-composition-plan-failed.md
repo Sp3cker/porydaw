@@ -1,4 +1,6 @@
-# SongView composition and QWidget-free SongTab plan
+# Failed SongView composition and QWidget-free SongTab plan
+
+> Failed refactor attempt; archived for historical reference only. Superseded by the [Quick song workspace SDD plan](../plans/quick-song-workspace/plan.md), based on current fork-main and the Qt-native composition prototype. Do not execute this document's historical instructions or combine them with the new plan.
 
 ## Status and scope
 

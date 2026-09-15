@@ -1,6 +1,6 @@
-# QTabWidget replacement using Qt Quick composition
+# Failed QTabWidget replacement using Qt Quick composition
 
-Status: current specification for the ongoing composition worktree and its bounded deletion pass. Reviewed implementation snapshots are evidence, not a claim that this pass or its acceptance criteria are complete.
+Status: failed refactor attempt, archived for historical reference only. Superseded by the [Quick song workspace SDD plan](../plans/quick-song-workspace/plan.md). The worktree directions and implementation-authority claims below describe the abandoned attempt, not current instructions.
 
 ## Decision and scope
 
@@ -14,7 +14,7 @@ Implement by adapting `feature/songtab-quick-composition`, not by starting a new
 
 ## Plan precedence and supersession
 
-**This document is the current implementation authority for the tab replacement and deletion pass.** Its [bounded A–F deletion pass](#bounded-deletion-pass-implementation-plan) replaces this document's earlier A–E cutover sequence and the execution instructions in `docs/songtab-quick-composition-plan.md`. Do not concatenate the old and new work packets or verification commands.
+**Historical authority for the failed tab replacement and deletion pass.** Its [bounded A–F deletion pass](#bounded-deletion-pass-implementation-plan) replaced this document's earlier A–E cutover sequence and the execution instructions in `docs/old/songtab-quick-composition-plan-failed.md`. Neither archived plan is current implementation authority.
 
 The composition plan remains a historical migration record. Its recently updated “Page stacking and tab order” section agrees with the intended Qt ownership, but does not override this document's exact interfaces, deletion targets, test constraints or size gate. Earlier SongView blueprint instructions do not authorize repeating completed conversion work.
 
@@ -91,7 +91,7 @@ Inspected baseline `fork-main` at `dd3203f2` and composition worktree HEAD `0605
 
 ### Important corrections to the diagnosis
 
-- The branch's later `docs/songtab-quick-composition-plan.md`, section “Page stacking and tab order,” **already proposes StackLayout**, but still specifies host-created pages, `setPageSelected`, and `QuickWindowInput`. The inspected implementation still has the manual stack. The alternative must change ownership, not just replace the empty page-container Item.
+- The branch's later `docs/old/songtab-quick-composition-plan-failed.md`, section “Page stacking and tab order,” **already proposes StackLayout**, but still specifies host-created pages, `setPageSelected`, and `QuickWindowInput`. The inspected implementation still has the manual stack. The alternative must change ownership, not just replace the empty page-container Item.
 - The same section explicitly drops pointer reorder, but later acceptance text still asks to reorder tabs and implementation still contains `moveTab` / `requestMove`. This is a stale contract. Use the documented append-order/no-pointer-reorder decision here; do not carry contradictory requirements forward.
 - `SongTabsModel` explicitly projects WorkspaceUi's authoritative collection and selection. It does **not** own a second independent selected session. The unnecessary duplication is the host's page/routing mirror, not evidence that the model needs replacing with another controller.
 - `FocusScope` is not a native window and does not handle MIDI note-off, mouse release swallowing, OS activation, or CALayer clipping.
