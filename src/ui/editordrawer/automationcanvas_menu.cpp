@@ -127,6 +127,7 @@ void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
     if (selection.active()) {
         DrawerPageTimeSelectionMenuRequest request{.startTick = selection.startTick,
                                                    .endTick = selection.endTick,
+                                                   .lanes = {},
                                                    .tempo = slot->isTempo(),
                                                    .scenePosition = scenePosition};
         if (!request.tempo)

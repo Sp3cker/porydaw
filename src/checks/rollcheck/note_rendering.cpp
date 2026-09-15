@@ -45,16 +45,13 @@ void PianoRollTest::tinyNoteBorderRaster()
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
-    const SnappedRows rows{view, roll};
     const auto plotToBandX = [pianoKeyboardWidth](qreal x) {
         return qreal(pianoKeyboardWidth) + x;
     };
     const DocNote &noteA = seed->noteA;
     const qreal displayDpr = roll.devicePixelRatio();
-    const qreal noteLeftX = view.camera().displayX(double(noteA.tick), 0, displayDpr);
     const qreal noteRightX =
         view.camera().displayX(double(noteA.tick + noteA.duration), 0, displayDpr);
-    const QRectF paintedNoteBox = rows.noteBox(rows.noteRect(noteLeftX, noteRightX, noteA.key));
     const QColor expectedNoteColor = SongView::noteColor(track, 100);
     const qreal abuttingRightX =
         view.camera().displayX(double(noteA.tick + 2 * noteA.duration), 0, displayDpr);
@@ -121,7 +118,6 @@ void PianoRollTest::selectedNoteFrameRaster()
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
-    const SnappedRows rows{view, roll};
     const auto plotToBandX = [pianoKeyboardWidth](qreal x) {
         return qreal(pianoKeyboardWidth) + x;
     };
@@ -130,7 +126,6 @@ void PianoRollTest::selectedNoteFrameRaster()
     const qreal noteLeftX = view.camera().displayX(double(noteA.tick), 0, displayDpr);
     const qreal noteRightX =
         view.camera().displayX(double(noteA.tick + noteA.duration), 0, displayDpr);
-    const QRectF paintedNoteBox = rows.noteBox(rows.noteRect(noteLeftX, noteRightX, noteA.key));
     const QColor expectedNoteColor = SongView::noteColor(track, 100);
     const auto isBlackBorder = [](QRgb pixel) {
         return qRed(pixel) <= 16 && qGreen(pixel) <= 16 && qBlue(pixel) <= 16;
@@ -220,7 +215,6 @@ void PianoRollTest::ghostNoteRaster()
     SongDocument &doc = check.document();
     SongView &view = check.view();
     auto &roll = check.rollInput();
-    const int track = check.track();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
@@ -234,7 +228,6 @@ void PianoRollTest::ghostNoteRaster()
     const qreal noteRightX =
         view.camera().displayX(double(noteA.tick + noteA.duration), 0, displayDpr);
     const QRectF paintedNoteBox = rows.noteBox(rows.noteRect(noteLeftX, noteRightX, noteA.key));
-    const QColor expectedNoteColor = SongView::noteColor(track, 100);
     const int selectedTrackBeforeGhostProbe = view.selectionModel().primaryTrack();
     const int ghostTrack = (selectedTrackBeforeGhostProbe + 1) % doc.engineTrackCount();
     view.selectTrack(ghostTrack);
@@ -366,7 +359,6 @@ void PianoRollTest::noteNameRaster()
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
-    const SnappedRows rows{view, roll};
     const auto plotToBandX = [pianoKeyboardWidth](qreal x) {
         return qreal(pianoKeyboardWidth) + x;
     };
@@ -375,7 +367,6 @@ void PianoRollTest::noteNameRaster()
     const qreal noteLeftX = view.camera().displayX(double(noteA.tick), 0, displayDpr);
     const qreal noteRightX =
         view.camera().displayX(double(noteA.tick + noteA.duration), 0, displayDpr);
-    const QRectF paintedNoteBox = rows.noteBox(rows.noteRect(noteLeftX, noteRightX, noteA.key));
     const QColor expectedNoteColor = SongView::noteColor(track, 100);
     const auto &a = seed->a;
     const int selectedTrackBeforeGhostProbe = view.selectionModel().primaryTrack();

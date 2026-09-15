@@ -165,7 +165,7 @@ bool AutomationCanvas::commitNodePointMoves(uint64_t expectedRevision,
             return false;
         const auto [entry, inserted] = changeIndex.try_emplace(slot, changes.size());
         if (inserted)
-            changes.push_back(NodeLaneChange{slot});
+            changes.push_back(NodeLaneChange{.slot = slot, .moves = {}, .deleteTicks = {}});
         changes[entry->second].moves.push_back(
             {point.original.tick, {point.current.tick, point.current.value}});
     }
@@ -184,7 +184,7 @@ bool AutomationCanvas::commitNodePointDeletes(std::optional<uint64_t> expectedRe
             return false;
         const auto [entry, inserted] = changeIndex.try_emplace(slot, changes.size());
         if (inserted)
-            changes.push_back(NodeLaneChange{slot});
+            changes.push_back(NodeLaneChange{.slot = slot, .moves = {}, .deleteTicks = {}});
         changes[entry->second].deleteTicks.push_back(point.original.tick);
     }
     return commitResolvedNodeLaneChanges(expectedRevision, changes,
@@ -310,28 +310,27 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
                 }
             }
         }
-    } else if (const auto *gesture = std::get_if<PhantomGesture>(&*m_activeGesture)) {
-        if (document->revision() != gesture->expectedRevision)
+    } else if (const auto *phantom = std::get_if<PhantomGesture>(&*m_activeGesture)) {
+        if (document->revision() != phantom->expectedRevision)
             return;
-        if (const auto point = gesture->finish())
-            changed = commitNodePointMoves(gesture->expectedRevision, {*point});
-    } else if (const auto *gesture = std::get_if<SweepGesture>(&*m_activeGesture)) {
-        if (gesture->mode == SweepGesture::Mode::Drag && !gesture->slop.exceeded) {
+        if (const auto point = phantom->finish())
+            changed = commitNodePointMoves(phantom->expectedRevision, {*point});
+    } else if (const auto *sweep = std::get_if<SweepGesture>(&*m_activeGesture)) {
+        if (sweep->mode == SweepGesture::Mode::Drag && !sweep->slop.exceeded) {
             m_page.commitEditCursor(
-                m_page.snapTick(proj.rawTickAt(gesture->pressPosition.x()), false));
+                m_page.snapTick(proj.rawTickAt(sweep->pressPosition.x()), false));
         } else if (lane) {
             const Tick songEndTick = m_page.timeline() ? m_page.timeline()->lengthTicks : Tick{0};
-            auto completion =
-                gesture->finish(handle, document->revision(), lane->points(), fineMode, songEndTick,
-                                lane->minimumValue(), lane->maximumValue(),
-                                [this](Tick tick, bool fineGrid, Tick last) {
-                                    return m_page.nextGridTick(tick, fineGrid, last);
-                                });
+            auto completion = sweep->finish(handle, document->revision(), lane->points(), fineMode,
+                                            songEndTick, lane->minimumValue(), lane->maximumValue(),
+                                            [this](Tick tick, bool fineGrid, Tick last) {
+                                                return m_page.nextGridTick(tick, fineGrid, last);
+                                            });
             if (!completion.unchanged)
                 changed = commitLaneEdit(completion);
         }
-    } else if (auto *gesture = std::get_if<PencilGesture>(&*m_activeGesture)) {
-        auto completion = std::move(*gesture).finish();
+    } else if (auto *pencil = std::get_if<PencilGesture>(&*m_activeGesture)) {
+        auto completion = std::move(*pencil).finish();
         if (!completion.unchanged)
             changed = commitLaneEdit(completion);
     }

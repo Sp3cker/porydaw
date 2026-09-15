@@ -32,7 +32,12 @@ namespace {
 
 SmfEvent noteEvent(uint8_t status, Tick tick, uint8_t key, uint8_t velocity)
 {
-    return {.tick = Tick(tick), .status = status, .data0 = key, .data1 = velocity};
+    return {.tick = Tick(tick),
+            .status = status,
+            .data0 = key,
+            .data1 = velocity,
+            .blob = {},
+            .noteId = {}};
 }
 
 SmfFile voiceSmf()
@@ -41,8 +46,11 @@ SmfFile voiceSmf()
     smf.format = 1;
     smf.division = 24;
     smf.tracks.resize(3);
-    smf.tracks[0].events.push_back(
-        {.tick = 0, .status = 0xFF, .metaType = 0x51, .blob = QByteArray("\x07\xA1\x20", 3)});
+    smf.tracks[0].events.push_back({.tick = 0,
+                                    .status = 0xFF,
+                                    .metaType = 0x51,
+                                    .blob = QByteArray("\x07\xA1\x20", 3),
+                                    .noteId = {}});
     smf.tracks[0].endTick = 384;
     smf.tracks[1].events = {noteEvent(0xC0, 0, 0, 0), noteEvent(0x90, 0, 60, 100),
                             noteEvent(0x80, 48, 60, 0)};
@@ -74,8 +82,11 @@ SmfFile drawerSmf()
     smf.format = 1;
     smf.division = 24;
     smf.tracks.resize(17);
-    smf.tracks[0].events.push_back(
-        {.tick = 0, .status = 0xFF, .metaType = 0x51, .blob = QByteArray("\x07\xA1\x20", 3)});
+    smf.tracks[0].events.push_back({.tick = 0,
+                                    .status = 0xFF,
+                                    .metaType = 0x51,
+                                    .blob = QByteArray("\x07\xA1\x20", 3),
+                                    .noteId = {}});
     smf.tracks[0].endTick = 48;
     for (int track = 1; track <= 16; ++track) {
         smf.tracks[track].events = {noteEvent(uint8_t(0xC0 + track - 1), 0, 0, 0),
@@ -193,8 +204,10 @@ bool DrawerFixture::create(QString &error)
     info.label = QStringLiteral("drawer-transaction");
     info.hasMid = true;
     candidate->applyMidiStage(std::move(info), drawerSmf(), track_limits::kHardwareCapacity);
-    candidate->applyBankView(
-        LoadedBankView{*identity, borrowVoicegroupLease(&voicegroup), QString()});
+    candidate->applyBankView(LoadedBankView{.id = *identity,
+                                            .bank = borrowVoicegroupLease(&voicegroup),
+                                            .loadName = QString(),
+                                            .slotViews = {}});
     candidate->applyVoicegroupBound(*identity);
     if (!candidate->isReady() || !candidate->presentationError().isEmpty()) {
         error = QStringLiteral("drawer fixture did not become ready");
@@ -379,8 +392,10 @@ bool VoiceTransactionFixture::create(QString &error)
     info.label = QStringLiteral("drawer-voice-transaction");
     info.hasMid = true;
     candidate->applyMidiStage(std::move(info), voiceSmf(), track_limits::kHardwareCapacity);
-    candidate->applyBankView(
-        LoadedBankView{*identity, borrowVoicegroupLease(&voicegroup), QString()});
+    candidate->applyBankView(LoadedBankView{.id = *identity,
+                                            .bank = borrowVoicegroupLease(&voicegroup),
+                                            .loadName = QString(),
+                                            .slotViews = {}});
     candidate->applyVoicegroupBound(*identity);
     if (!candidate->isReady() || !candidate->presentationError().isEmpty()) {
         error = QStringLiteral("voice transaction fixture did not become ready");
@@ -495,8 +510,10 @@ bool VelocityTransactionFixture::create(QString &error)
     info.label = QStringLiteral("drawer-velocity-transaction");
     info.hasMid = true;
     candidate->applyMidiStage(std::move(info), velocitySmf(), track_limits::kHardwareCapacity);
-    candidate->applyBankView(
-        LoadedBankView{*identity, borrowVoicegroupLease(&voicegroup), QString()});
+    candidate->applyBankView(LoadedBankView{.id = *identity,
+                                            .bank = borrowVoicegroupLease(&voicegroup),
+                                            .loadName = QString(),
+                                            .slotViews = {}});
     candidate->applyVoicegroupBound(*identity);
     if (!candidate->isReady() || !candidate->presentationError().isEmpty()) {
         error = QStringLiteral("velocity transaction fixture did not become ready");

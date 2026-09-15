@@ -91,7 +91,7 @@ std::unique_ptr<ClipTabRig> ClipTabRig::create(uint16_t ticksPerBeat, QString &e
         return nullptr;
     }
     rig->m_tab->applyBankView(
-        LoadedBankView{*identity, borrowVoicegroupLease(rig->m_bank.get()), QString()});
+        LoadedBankView{*identity, borrowVoicegroupLease(rig->m_bank.get()), QString(), false, {}});
     rig->m_tab->applyVoicegroupBound(*identity);
     if (!rig->m_tab->isReady()) {
         error = QStringLiteral("synthetic song tab did not become ready");

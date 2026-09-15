@@ -140,17 +140,16 @@ class ProjectIo::Worker final : public QObject
     // command fails generically.
     ProjectResult closedCommand(ProjectCommand &command)
     {
-        return std::visit(
-            CommandVisitor{
-                [this](OpenProjectInput &input) { return acceptProject(input.root); },
-                [this](OpenSongInput &input) { return closedSong(input.song); },
-                [this](ReloadSongInput &input) { return closedSong(input.song); },
-                [this](LoadSongCommand &input) { return closedSong(input.song); },
-                [this](LoadVoicegroupCommand &input) { return closedSong(input.song); },
-                [this](SaveSongInput &input) { return closedSong(input.song); },
-                [this](auto &) { return closedProject(); },
-            },
-            command);
+        return std::visit(CommandVisitor{
+                              [this](OpenProjectInput &input) { return acceptProject(input.root); },
+                              [](OpenSongInput &input) { return closedSong(input.song); },
+                              [](ReloadSongInput &input) { return closedSong(input.song); },
+                              [](LoadSongCommand &input) { return closedSong(input.song); },
+                              [](LoadVoicegroupCommand &input) { return closedSong(input.song); },
+                              [](SaveSongInput &input) { return closedSong(input.song); },
+                              [](auto &) { return closedProject(); },
+                          },
+                          command);
     }
 
     // ---- project open / refresh --------------------------------------------

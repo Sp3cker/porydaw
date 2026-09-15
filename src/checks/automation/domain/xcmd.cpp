@@ -264,7 +264,9 @@ void AutomationDomainTest::xcmdSweepPreservesNotes()
     SmfEvent noteOn{.tick = kNoteBegin,
                     .status = uint8_t(0x90 | (doc.channelFor(kTrack) & 0x0F)),
                     .data0 = 60,
-                    .data1 = 100};
+                    .data1 = 100,
+                    .blob = {},
+                    .noteId = {}};
     SmfEvent noteOff = noteOn;
     noteOff.tick = kNoteEnd;
     noteOff.status = uint8_t(0x80 | (doc.channelFor(kTrack) & 0x0F));

@@ -41,7 +41,7 @@ AudioEngine &TransportTest::engine() noexcept
     return *m_engine;
 }
 
-std::shared_ptr<const MidiTimeline> TransportTest::loadedSong(SmfFile smf, const char *what)
+std::shared_ptr<const MidiTimeline> TransportTest::loadedSong(SmfFile smf, const char * /*what*/)
 {
     // Pure builder: null when synthesis broke. Callers QVERIFY2 the result
     // (with `what`) before any dereference or engine load.

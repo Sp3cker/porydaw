@@ -61,12 +61,6 @@ void setVoice(VelocityFixture &fixture, const ToneData &voice)
     fixture.refresh();
 }
 
-QPointF nodePoint(const VelocityFixture &fixture, const DocNote &note, int velocity = -1)
-{
-    const int value = velocity < 0 ? note.velocity : velocity;
-    return {fixture.xForTick(double(note.tick)), fixture.area->axis().velocityToY(value)};
-}
-
 bool samePixels(const QImage &left, const QImage &right)
 {
     if (left.size() != right.size())

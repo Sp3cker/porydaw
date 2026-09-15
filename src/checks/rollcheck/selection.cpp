@@ -236,7 +236,6 @@ void PianoRollTest::selectionPendingDrawReadout()
     PianoRollFixture &check = *m_fixture;
     const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
     QVERIFY(seed.has_value());
-    const PencilVelocityFixture &fixture = *seed;
     SongDocument &doc = check.document();
     SongView &view = check.view();
     songview::TimelineInputItem *roll = &check.rollInput();
@@ -296,7 +295,6 @@ void PianoRollTest::selectionMinimumDrawDistance()
     PianoRollFixture &check = *m_fixture;
     const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
     QVERIFY(seed.has_value());
-    const PencilVelocityFixture &fixture = *seed;
     SongDocument &doc = check.document();
     SongView &view = check.view();
     songview::TimelineInputItem *roll = &check.rollInput();

@@ -95,8 +95,12 @@ bool TrackHeadersFixture::create(QString &error)
         error = candidate->presentationError();
         return false;
     }
-    candidate->applyBankView(
-        LoadedBankView{*identity, borrowVoicegroupLease(m_bank.get()), QString()});
+    candidate->applyBankView(LoadedBankView{
+        .id = *identity,
+        .bank = borrowVoicegroupLease(m_bank.get()),
+        .loadName = QString(),
+        .slotViews = {},
+    });
     candidate->applyVoicegroupBound(*identity);
     if (!candidate->isReady()) {
         error = QStringLiteral("TrackHeaders SongTab did not reach ready state");

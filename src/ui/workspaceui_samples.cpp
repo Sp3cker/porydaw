@@ -292,8 +292,6 @@ void WorkspaceUi::continueEditSampleFlow(const SampleRead &read)
     // Re-decode from the provenance sidecar when its source file still
     // hashes identically; otherwise decode the committed 8-bit .wav.
     bool fromSource = false;
-    bool leftOnly = false;
-    int sf2Zone = -1;
     SampleSidecar sidecar = read.sidecar;
     ImportedSample sample;
     QString error;
@@ -310,12 +308,10 @@ void WorkspaceUi::continueEditSampleFlow(const SampleRead &read)
                     if (readSf2Bytes(sourceBytes, sidecar.sourcePath, &font, &error) &&
                         extractSf2Zone(font, sidecar.sf2Zone, &sample, &error)) {
                         decoded = true;
-                        sf2Zone = sidecar.sf2Zone;
                     }
                 } else if (importAudioBytes(sourceBytes, sidecar.sourcePath, &sample, &error,
                                             sidecar.leftOnly)) {
                     decoded = true;
-                    leftOnly = sidecar.leftOnly;
                 }
                 fromSource = decoded;
             }

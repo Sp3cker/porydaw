@@ -9,11 +9,6 @@ QString songPath(const QString &root, const QString &label)
     return root + QStringLiteral("/sound/songs/midi/%1.mid").arg(label);
 }
 
-QString cfgPath(const QString &root)
-{
-    return root + QStringLiteral("/sound/songs/midi/midi.cfg");
-}
-
 QString tablePath(const QString &root)
 {
     return root + QStringLiteral("/sound/song_table.inc");

@@ -124,6 +124,7 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
     const songview::TimelineKeyInput unavailablePitchBend{
         .key = opener->key(),
         .modifiers = opener->keyboardModifiers(),
+        .text = {},
     };
     QVERIFY2(!view.handleEditKey(unavailablePitchBend, SongView::EditKeyOrigin::Timeline),
              "unavailable pitch-bend key was consumed by shared routing");
@@ -219,6 +220,7 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
     const songview::TimelineKeyInput repeatedPitchBend{
         .key = opener->key(),
         .modifiers = opener->keyboardModifiers(),
+        .text = {},
         .autoRepeat = true,
     };
     QVERIFY2(view.handleEditKey(repeatedPitchBend, SongView::EditKeyOrigin::Timeline),

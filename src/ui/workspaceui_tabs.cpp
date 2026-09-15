@@ -391,7 +391,7 @@ void WorkspaceUi::openSongFromList(int songId, bool newTab)
             tab->beginMidiReload();
             if (tab == m_selectedTab)
                 emit selectedSongStateChanged();
-            emit projectOperationRequested(ProjectOperation{ReloadSongInput{name}});
+            emit projectOperationRequested(ProjectOperation{ReloadSongInput{name, std::nullopt}});
         });
         return;
     }

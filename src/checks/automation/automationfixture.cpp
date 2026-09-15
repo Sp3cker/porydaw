@@ -196,7 +196,12 @@ bool AutomationEditingTest::stageSong(SmfFile smf)
     candidate->applyMidiStage(std::move(song), std::move(smf), track_limits::kHardwareCapacity);
     if (!candidate->presentationError().isEmpty())
         return false;
-    candidate->applyBankView(LoadedBankView{*identity, borrowVoicegroupLease(&m_bank), QString()});
+    candidate->applyBankView(LoadedBankView{
+        .id = *identity,
+        .bank = borrowVoicegroupLease(&m_bank),
+        .loadName = QString(),
+        .slotViews = {},
+    });
     candidate->applyVoicegroupBound(*identity);
     if (!candidate->isReady() || candidate->voicegroupLease().get() != &m_bank)
         return false;

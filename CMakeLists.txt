@@ -433,6 +433,8 @@ endif()
 
 target_include_directories(porydaw_app PUBLIC
     src
+)
+target_include_directories(porydaw_app SYSTEM PUBLIC
     ${PORYAAAA_DIR}/third_party
     external/dr_libs
     external/stb
@@ -442,15 +444,19 @@ target_include_directories(porydaw_app PRIVATE
     src/ui/mousehints
     src/ui/songview/quick
 )
+
+# Stricter diagnostics for project code. Third-party headers above stay
+# SYSTEM so they are exempt; -Wold-style-cast stays off because the codebase
+# idiomatically uses C-style casts.
+target_compile_options(porydaw_app PRIVATE
+    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall;-Wextra;-Wpedantic;-Wshadow>
+)
 # The project() version is the single source of truth (docs/RELEASING.md);
 # release CI refuses a tag that doesn't match it.
 target_compile_definitions(porydaw_app PUBLIC
     PORYDAW_VERSION="${PROJECT_VERSION}")
 target_link_libraries(porydaw_app PUBLIC Qt6::Svg Qt6::Widgets poryaaaa_engine)
 target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick Qt6::QuickControls2)
-if(APPLE)
-    set_target_properties(porydaw_app PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
-endif()
 set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 # Each Quick file is bundled at its basename; one loop instead of one
 # set_source_files_properties block per file.
@@ -603,6 +609,10 @@ add_executable(porydaw_render_cli
 )
 target_include_directories(porydaw_render_cli PRIVATE src)
 target_link_libraries(porydaw_render_cli PRIVATE Qt6::Core poryaaaa_engine)
+
+target_compile_options(porydaw_render_cli PRIVATE
+    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall;-Wextra;-Wpedantic;-Wshadow>
+)
 if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_options(porydaw_render_cli PRIVATE -static)
 endif()

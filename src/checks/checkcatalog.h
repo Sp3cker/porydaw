@@ -25,9 +25,9 @@ struct CheckDefinition {
     Handler handler = nullptr;
     ScratchKind scratchKind = ScratchKind::Unused;
     FixtureRootKind fixtureRootKind = FixtureRootKind::None;
-    QStringList fixtureFiles;
-    QMap<QString, QString> environment;
-    QMap<QString, QString> optionalArgumentEnvironment;
+    QStringList fixtureFiles = {};
+    QMap<QString, QString> environment = {};
+    QMap<QString, QString> optionalArgumentEnvironment = {};
     BinaryKind binary = BinaryKind::Checks;
     StartupKind startup = StartupKind::Porydaw;
     Windowing windowing = Windowing::Offscreen;

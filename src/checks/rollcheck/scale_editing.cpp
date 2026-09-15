@@ -271,10 +271,10 @@ void PianoRollTest::scaleFoldExceptionDraw()
             double(std::max(0, r61 * pianoRollDefaultKeyHeight - 4 * pianoRollDefaultKeyHeight));
         view.applyViewState(d7);
         checks::support::pumpQuick();
-        const size_t before = doc.notesForTrack(scaleTrack).size();
+        const size_t notesBefore = doc.notesForTrack(scaleTrack).size();
         drawNote(*roll, QPoint(40, foldCenterY(61)));
         QCoreApplication::processEvents();
-        if (doc.notesForTrack(scaleTrack).size() != before)
+        if (doc.notesForTrack(scaleTrack).size() != notesBefore)
             QFAIL("Fold accepted a draw into an off-scale exception row");
         while (doc.undoStack()->index() > cmd0)
             doc.undoStack()->undo();

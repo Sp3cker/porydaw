@@ -23,7 +23,6 @@ constexpr uint8_t kController = 10;
 constexpr Tick kDraggedTick = 48;
 constexpr Tick kIndependentTick = 96;
 constexpr Tick kBlankTick = 144;
-constexpr Tick kEndTick = 192;
 constexpr int kDraggedValue = 40;
 constexpr int kCommittedValue = 84;
 constexpr int kIndependentValue = 100;

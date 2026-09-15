@@ -13,7 +13,7 @@
 extern "C" {
 #include "voicegroup_loader.h"
 }
-struct MidiTimeline;
+class MidiTimeline;
 
 namespace songview::detail {
 

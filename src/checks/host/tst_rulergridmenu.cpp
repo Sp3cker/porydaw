@@ -155,6 +155,7 @@ class RulerGridMenuTest final : public QObject
             QVERIFY(item->checkable);
             divisionChecked += item->checked ? 1 : 0;
         }
+        QCOMPARE(divisionChecked, 1);
         const int currentDivisionRow =
             divisionMenu.model->rowForId(initial.gridSelection.toMenuId());
         QVERIFY2(currentDivisionRow >= 0, "the division menu omitted the current grid denominator");

@@ -168,8 +168,12 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         QCOMPARE(probe.view().editorViewState(), global);
         QVERIFY(hasCanonicalFreshViewState(probe.view(), *probe.timeline()));
         QCOMPARE(ready.count(), 0);
-        probe.applyBankView(
-            LoadedBankView{*session->b->voicegroupId(), borrowVoicegroupLease(&bank), QString()});
+        probe.applyBankView(LoadedBankView{
+            .id = *session->b->voicegroupId(),
+            .bank = borrowVoicegroupLease(&bank),
+            .loadName = QString(),
+            .slotViews = {},
+        });
         QCOMPARE(ready.count(), 0);
         probe.applyVoicegroupBound(*session->b->voicegroupId());
         QVERIFY(probe.isReady());
@@ -199,7 +203,12 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         SongTab probe(name);
         const int budget = workspace.projectState().snapshot.trackBudgetFor(*song);
         probe.applyMidiStage(*song, std::move(initial), budget);
-        probe.applyBankView(LoadedBankView{identity, borrowVoicegroupLease(&bank), QString()});
+        probe.applyBankView(LoadedBankView{
+            .id = identity,
+            .bank = borrowVoicegroupLease(&bank),
+            .loadName = QString(),
+            .slotViews = {},
+        });
         probe.applyVoicegroupBound(identity);
         checks::support::bindEditActionsForTest(probe.view());
         QVERIFY(probe.isReady());
@@ -251,15 +260,24 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         SongTab probe(name);
         probe.applyMidiStage(*song, std::move(stage),
                              workspace.projectState().snapshot.trackBudgetFor(*song));
-        probe.applyBankView(LoadedBankView{identity, borrowVoicegroupLease(&initial), QString()});
+        probe.applyBankView(LoadedBankView{
+            .id = identity,
+            .bank = borrowVoicegroupLease(&initial),
+            .loadName = QString(),
+            .slotViews = {},
+        });
         probe.applyVoicegroupBound(identity);
         checks::support::bindEditActionsForTest(probe.view());
         QVERIFY(probe.isReady());
         const MidiTimeline *timeline = probe.timeline().get();
         const SongView::ViewState state = probe.view().viewState();
         QSignalSpy ready(&probe, &SongTab::readinessChanged);
-        probe.applyBankView(
-            LoadedBankView{identity, borrowVoicegroupLease(&replacement), QString()});
+        probe.applyBankView(LoadedBankView{
+            .id = identity,
+            .bank = borrowVoicegroupLease(&replacement),
+            .loadName = QString(),
+            .slotViews = {},
+        });
         probe.applyVoicegroupBound(identity);
         QVERIFY(probe.isReady());
         QCOMPARE(probe.timeline().get(), timeline);

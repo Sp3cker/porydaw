@@ -442,13 +442,13 @@ void AutomationCanvas::syncPreviewValueLabel()
                 } else {
                     lane = nullptr;
                 }
-            } else if (const auto *gesture = std::get_if<PhantomGesture>(&*m_activeGesture)) {
-                value = gesture->point.current.value;
-            } else if (const auto *gesture = std::get_if<SweepGesture>(&*m_activeGesture)) {
-                x = projection().displayX(gesture->current.tick, dpr);
-                value = gesture->current.value;
-            } else if (const auto *gesture = std::get_if<PencilGesture>(&*m_activeGesture)) {
-                const auto &sample = gesture->stroke.lastSample();
+            } else if (const auto *phantom = std::get_if<PhantomGesture>(&*m_activeGesture)) {
+                value = phantom->point.current.value;
+            } else if (const auto *sweep = std::get_if<SweepGesture>(&*m_activeGesture)) {
+                x = projection().displayX(sweep->current.tick, dpr);
+                value = sweep->current.value;
+            } else if (const auto *pencil = std::get_if<PencilGesture>(&*m_activeGesture)) {
+                const auto &sample = pencil->stroke.lastSample();
                 x = sample.logicalX;
                 value = int(std::lround(sample.continuousValue));
             }

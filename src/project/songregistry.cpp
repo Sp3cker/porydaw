@@ -746,8 +746,8 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label, cons
     if (plan.charmapApplicable) {
         // Vanilla emerald puts one space between name and "="; ruby and
         // firered pad "=" into a shared column. Follow the section's style.
-        const int pad = columnAligned ? std::max(1, equalsColumn - int(constant.size())) : 1;
-        plan.charmapLine = constant + QString(pad, QLatin1Char(' ')) + QStringLiteral("= ") +
+        const int charmapPad = columnAligned ? std::max(1, equalsColumn - int(constant.size())) : 1;
+        plan.charmapLine = constant + QString(charmapPad, QLatin1Char(' ')) + QStringLiteral("= ") +
                            charmapIdBytes(plan.songId);
     }
 

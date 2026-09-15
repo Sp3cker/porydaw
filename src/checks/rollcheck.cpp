@@ -47,7 +47,8 @@ void PianoRollTest::init()
     const std::optional<VoicegroupId> bankId =
         VoicegroupId::create(QStringLiteral("sound/voicegroups/rollcheck.inc"), QString());
     QVERIFY(bankId.has_value());
-    m_tab->applyBankView(LoadedBankView{*bankId, borrowVoicegroupLease(m_bank.get()), QString()});
+    m_tab->applyBankView(
+        LoadedBankView{*bankId, borrowVoicegroupLease(m_bank.get()), QString(), false, {}});
     m_tab->applyVoicegroupBound(*bankId);
     QTRY_VERIFY(m_tab->isReady());
 

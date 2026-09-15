@@ -201,7 +201,7 @@ void PianoRollTest::rulerLoopMenuSetAndTwoStepUndo()
     // a no-op.
     const Tick selectionStart = startTick - snapCell;
     view.selectionModel().setTimeSelection(
-        {selectionStart, startTick, songview::EditorSelectionModel::TimeSelection::Tracks});
+        {selectionStart, startTick, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
     // The press must land strictly inside the half-open interval: an
     // outside click — including the boundary, where device-pixel rounding
     // can drop the raw coordinate below the start — takes the cursor path
@@ -340,8 +340,10 @@ void PianoRollTest::rulerLoopMenuEnablementSelectionContext()
 
     // With a selection active the scoped rows appear; Clear selection runs
     // its command and the rebuilt menu drops the scoped rows again.
-    view.selectionModel().setTimeSelection(
-        {chipTick, chipTick + 2 * snapCell, songview::EditorSelectionModel::TimeSelection::Tracks});
+    view.selectionModel().setTimeSelection({chipTick,
+                                            chipTick + 2 * snapCell,
+                                            songview::EditorSelectionModel::TimeSelection::Tracks,
+                                            {}});
     const SharedRulerMenu scoped = openRulerMenu(view, *input, chipTick);
     QVERIFY2(scoped.session, qUtf8Printable(scoped.diagnostic));
     const int clearRow = rulerRow(*scoped.model, songview::RulerMenuAction::ClearSelection);
@@ -436,7 +438,7 @@ void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
     // A selection change after the open retires the menu the same way, so
     // the captured scope can never dispatch a stale range command.
     view.selectionModel().setTimeSelection(
-        {tick, tick + 2 * snapCell, songview::EditorSelectionModel::TimeSelection::Tracks});
+        {tick, tick + 2 * snapCell, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
     const SharedRulerMenu scoped = openRulerMenu(view, *input, tick + snapCell, 0.75);
     QVERIFY2(scoped.session, qUtf8Printable(scoped.diagnostic));
     view.selectionModel().clearTimeSelection();
@@ -512,7 +514,7 @@ void PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp()
     // untouched and the rendered Insert Time row inserts over the
     // selection, not the click position.
     view.selectionModel().setTimeSelection(
-        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks});
+        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
     const Tick cursorBefore = view.editCursorTick();
     const QByteArray before = doc.smf().write();
     const int undoIndex = doc.undoStack()->index();
@@ -552,7 +554,7 @@ void PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp()
     // selection: it clears the selection, commits the snapped end tick as
     // the edit cursor, and opens the cursor menu.
     view.selectionModel().setTimeSelection(
-        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks});
+        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
     const SharedRulerMenu atEnd = openRulerMenu(view, *input, insertEnd);
     QVERIFY2(atEnd.session, qUtf8Printable(atEnd.diagnostic));
     QVERIFY2(!view.selectionModel().timeSelection().active(),

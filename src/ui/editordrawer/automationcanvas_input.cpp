@@ -108,7 +108,11 @@ bool AutomationCanvas::beginPencilPress(QPointF position, Qt::KeyboardModifiers 
         m_page.document()->ticksPerClock(), lane.points(), lane.leadIn(), sample, mapped.cell);
     if (!stroke)
         return false;
-    PencilGesture pencil{handle, std::move(*stroke)};
+    PencilGesture pencil{.lane = handle,
+                         .stroke = std::move(*stroke),
+                         .crossedGridCells = {},
+                         .verticalSlop = {},
+                         .previousY = 0.0};
     pencil.verticalSlop.origin = position;
     pencil.previousY = position.y();
     m_activeGesture.emplace(std::move(pencil));
@@ -336,10 +340,10 @@ bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &inpu
                     m_laneSelection.hitTest(contextSlot->id, position.x(), projection(),
                                             m_inputHost->devicePixelRatio());
                 if (selected) {
-                    if (const songview::TimelineInputHost *const host =
+                    if (const songview::TimelineInputHost *const menuHost =
                             input.host ? input.host : m_inputHost)
                         showTimeSelectionMenuFor(
-                            contextLane, menuScenePosition(host->mapToGlobal(input.position)));
+                            contextLane, menuScenePosition(menuHost->mapToGlobal(input.position)));
                 }
             }
         }

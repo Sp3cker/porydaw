@@ -88,7 +88,12 @@ bool TimelinePanFixture::load(QString &error)
         error = m_tab->presentationError();
         return false;
     }
-    m_tab->applyBankView(LoadedBankView{*identity, borrowVoicegroupLease(&m_bank), QString()});
+    m_tab->applyBankView(LoadedBankView{
+        .id = *identity,
+        .bank = borrowVoicegroupLease(&m_bank),
+        .loadName = QString(),
+        .slotViews = {},
+    });
     m_tab->applyVoicegroupBound(*identity);
     checks::support::bindEditActionsForTest(m_tab->view());
 

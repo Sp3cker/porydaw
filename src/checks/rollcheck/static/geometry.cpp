@@ -35,12 +35,27 @@ struct BareView {
         checks::support::bindEditActionsForTest(view);
         if (!checks::support::showQuickViewport(view, QSize(1280, 800)))
             qFatal("static geometry fixture could not expose the Quick window");
-        default44 = {.ticksPerBeat = kTicksPerBeat,
-                     .lengthTicks = 16 * kBeatsPerBar * kTicksPerBeat};
-        t48 = {.ticksPerBeat = 48, .lengthTicks = 16 * kBeatsPerBar * 48};
-        t34 = {.ticksPerBeat = kTicksPerBeat,
+        default44 = {.events = {},
+                     .tracks = {},
+                     .ticksPerBeat = kTicksPerBeat,
+                     .lengthTicks = 16 * kBeatsPerBar * kTicksPerBeat,
+                     .tempoMap = {},
+                     .timeSigs = {},
+                     .otherEvents = {}};
+        t48 = {.events = {},
+               .tracks = {},
+               .ticksPerBeat = 48,
+               .lengthTicks = 16 * kBeatsPerBar * 48,
+               .tempoMap = {},
+               .timeSigs = {},
+               .otherEvents = {}};
+        t34 = {.events = {},
+               .tracks = {},
+               .ticksPerBeat = kTicksPerBeat,
                .lengthTicks = 16 * kBeatsPerBar * kTicksPerBeat,
-               .timeSigs = {{0, 3, 2}}};
+               .tempoMap = {},
+               .timeSigs = {{0, 3, 2}},
+               .otherEvents = {}};
     }
 
     ~BareView()

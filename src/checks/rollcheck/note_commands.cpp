@@ -170,7 +170,7 @@ void PianoRollTest::keyboardDuplicatePrefersTimeSelection()
              "duplicate-precedence seed note was not found");
     view.selectionModel().setNoteSelection({source.noteId});
     view.selectionModel().setTimeSelection(
-        {d.tick, d.tick + snapCell, songview::EditorSelectionModel::TimeSelection::Tracks});
+        {d.tick, d.tick + snapCell, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
     const int duplicateUndoIndex = doc.undoStack()->index();
     sendCommandKey(roll, Qt::Key_D);
     const songview::EditorSelectionModel::TimeSelection advanced =

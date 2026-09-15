@@ -65,7 +65,8 @@ void OtherStrip::rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan
                           themes::color(themes::Role::song_view_primary_text),
                           m_inputHost->font(),
                           Qt::AlignLeft,
-                          Qt::AlignVCenter});
+                          Qt::AlignVCenter,
+                          QRectF()});
         scene.setOtherEventsTextRecords(labels);
     }
     if (!m_owner.timeline())

@@ -14,7 +14,6 @@ namespace {
 using EditorSelectionModel = songview::EditorSelectionModel;
 using SelectionChange = EditorSelectionModel::SelectionChange;
 
-constexpr uint32_t kPrimaryTrack = static_cast<uint32_t>(SelectionChange::PrimaryTrack);
 constexpr uint32_t kTrackScope = static_cast<uint32_t>(SelectionChange::TrackScope);
 constexpr uint32_t kNoteSelection = static_cast<uint32_t>(SelectionChange::NoteSelection);
 constexpr uint32_t kTimeSelection = static_cast<uint32_t>(SelectionChange::TimeSelection);

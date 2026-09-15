@@ -194,7 +194,7 @@ std::unique_ptr<EventViewTabFixture> EventViewTabFixture::create(FixtureShape sh
         return nullptr;
     }
     fixture->m_tab->applyBankView(
-        LoadedBankView{*identity, borrowVoicegroupLease(&fixture->m_bank), QString()});
+        LoadedBankView{*identity, borrowVoicegroupLease(&fixture->m_bank), QString(), false, {}});
     fixture->m_tab->applyVoicegroupBound(*identity);
     if (!fixture->m_tab->isReady()) {
         error = QStringLiteral("SongTab did not become ready");

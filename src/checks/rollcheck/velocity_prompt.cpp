@@ -525,7 +525,6 @@ void PianoRollTest::velocityPromptBounds()
     QVERIFY(seed.has_value());
     SongDocument &doc = check.document();
     SongView &view = check.view();
-    auto &roll = check.rollInput();
     const quick_popup::PromptGuard guard(view);
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();

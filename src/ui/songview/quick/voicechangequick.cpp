@@ -48,7 +48,8 @@ void appendText(std::vector<songview::TimelineQuickTextModel::Record> &records, 
                        color,
                        font,
                        horizontalAlignment,
-                       verticalAlignment});
+                       verticalAlignment,
+                       QRectF()});
 }
 
 } // namespace
@@ -283,7 +284,8 @@ void VoiceChangeArea::rebuildQuickHover(songview::TimelineQuickScene &scene)
         themes::color(themes::Role::song_view_primary_text),
         m_hoverLabelFont,
         Qt::AlignLeft,
-        Qt::AlignVCenter};
+        Qt::AlignVCenter,
+        QRectF()};
     scene.setVoiceChangesHoverTextRecords(
         std::span<const TimelineQuickTextModel::Record>(&label, 1));
 }

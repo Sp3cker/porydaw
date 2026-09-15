@@ -42,7 +42,8 @@ void appendAxisText(std::vector<TimelineQuickTextModel::Record> &records, quint6
                        color,
                        font,
                        Qt::AlignRight,
-                       Qt::AlignVCenter});
+                       Qt::AlignVCenter,
+                       QRectF()});
 }
 
 } // namespace

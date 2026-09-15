@@ -659,7 +659,6 @@ void EventViewsEditsTest::drawerClickAfterEditOwnsDelete()
     const int row =
         checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn);
     QVERIFY(row >= 0);
-    const int chunk = widgets.model->chunk();
 
     QQuickItem *editor = nullptr;
     QVERIFY(checks::eventviews::openCellEditor(widgets, row, EventTableModel::ColTick,

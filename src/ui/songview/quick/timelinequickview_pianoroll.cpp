@@ -127,8 +127,9 @@ TimelineQuickTextKey noteTextKey(TimelineQuickTextKeyKind kind, const ViewNote &
     return {kind, note.noteId, note.noteId.isAssigned() ? 0 : static_cast<quint64>(index)};
 }
 
-constexpr TimelineQuickTextKey drawPreviewTextKey{TimelineQuickTextKeyKind::PianoDrawPreview};
-constexpr TimelineQuickTextKey loadingTextKey{TimelineQuickTextKeyKind::PianoLoading};
+constexpr TimelineQuickTextKey drawPreviewTextKey{
+    TimelineQuickTextKeyKind::PianoDrawPreview, {}, 0};
+constexpr TimelineQuickTextKey loadingTextKey{TimelineQuickTextKeyKind::PianoLoading, {}, 0};
 
 void appendTextRecord(std::vector<TimelineQuickTextModel::Record> &records,
                       const TimelineQuickTextKey &key, const QRectF &rect, const QString &text,
@@ -137,7 +138,7 @@ void appendTextRecord(std::vector<TimelineQuickTextModel::Record> &records,
 {
     if (rect.width() <= 0.0 || rect.height() <= 0.0)
         return;
-    records.push_back({key, rect, text, color, font, horizontal, vertical});
+    records.push_back({key, rect, text, color, font, horizontal, vertical, QRectF()});
 }
 
 } // namespace
@@ -261,7 +262,6 @@ void TimelineQuickView::rebuildNoteBordersAndSelection()
         return;
 
     const qreal dpr = roll.devicePixelRatio();
-    const qreal pixel = logicalPhysicalPixel(dpr);
     const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
     const PitchProjection &projection = roll.m_sv->pitchProjection();
     const auto &selection = roll.m_sv->selectionModel();
@@ -486,7 +486,6 @@ void TimelineQuickView::synchronizeNoteText()
 
     const qreal dpr = roll.devicePixelRatio();
     const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
-    const PitchProjection &projection = roll.m_sv->pitchProjection();
     const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
     const auto &notes = roll.m_sv->model().notes;
     const bool velocityShortcut = keymap::Registry::instance().matchesModifier(

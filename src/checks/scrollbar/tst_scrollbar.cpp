@@ -187,7 +187,12 @@ void ScrollbarTest::init()
     m_tab->applyMidiStage(loaded->songInfo(), loaded->document().smf(),
                           track_limits::kHardwareCapacity);
     QVERIFY(m_tab->presentationError().isEmpty());
-    m_tab->applyBankView(LoadedBankView{*identity, borrowVoicegroupLease(&m_bank), QString()});
+    m_tab->applyBankView(LoadedBankView{
+        .id = *identity,
+        .bank = borrowVoicegroupLease(&m_bank),
+        .loadName = QString(),
+        .slotViews = {},
+    });
     m_tab->applyVoicegroupBound(*identity);
 
     QTRY_VERIFY(m_tab->isReady());

@@ -169,7 +169,8 @@ class TimelineQuickItem : public QQuickItem
 
 using TimelineQuickLayer = TimelineQuickItem::Layer;
 
-struct TimelineQuickScene final : public QObject {
+class TimelineQuickScene final : public QObject
+{
     Q_OBJECT
     Q_DISABLE_COPY_MOVE(TimelineQuickScene)
 

@@ -77,7 +77,6 @@ void PitchBendEditingTest::controllerInputsAdvertiseScrubCursor()
 {
     songview::PitchBendEditor *editorResult = popup();
     QVERIFY(editorResult);
-    songview::PitchBendEditor &editor = *editorResult;
     QQuickItem *bend = m_fixture.item(QStringLiteral("bendRangeSpin"));
     QQuickItem *lfo = m_fixture.item(QStringLiteral("lfoSpeedSpin"));
     QQuickWindow &view = m_fixture.timelineWindow();
@@ -217,7 +216,6 @@ void PitchBendEditingTest::soloAndMuteKeyArbitration()
 {
     songview::PitchBendEditor *editorResult = popup();
     QVERIFY(editorResult);
-    songview::PitchBendEditor &editor = *editorResult;
     const QByteArray before = m_fixture.smf();
     const int index = m_fixture.document().undoStack()->index();
     const uint32_t mute = m_fixture.view().muteMask();

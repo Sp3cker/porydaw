@@ -266,7 +266,7 @@ void TrackHeadersTest::muteAndSoloHonorCancellationAndButtons()
                                              }),
              "the mute toggle churned records beyond the muted row");
     QVERIFY2(std::any_of(changes.cbegin(), changes.cend(),
-                         [mutedRow](const RowChange &change) {
+                         [](const RowChange &change) {
                              return change.roles.contains(
                                  songview::TrackHeaderModel::MuteCheckedRole);
                          }),

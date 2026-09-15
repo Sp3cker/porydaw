@@ -467,7 +467,7 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     connect(m_workspace.get(), &WorkspaceUi::stopRequested, this, [this] { stopPlayback(); });
     connect(m_workspace.get(), &WorkspaceUi::loopEnabledChanged, this,
             [this](bool enabled) { m_audio.setLoopEnabled(enabled); });
-    connect(m_workspace.get(), &WorkspaceUi::followPlayheadChanged, this, [this](bool enabled) {
+    connect(m_workspace.get(), &WorkspaceUi::followPlayheadChanged, this, [](bool enabled) {
         QSettings settings;
         settings.setValue(kFollowPlayheadKey, enabled);
     });

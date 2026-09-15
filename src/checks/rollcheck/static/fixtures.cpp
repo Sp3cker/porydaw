@@ -105,7 +105,8 @@ bool CameraFixture::create(QString &error)
         error = QStringLiteral("static camera probe voicegroup identity was rejected");
         return false;
     }
-    m_tab->applyBankView(LoadedBankView{*bankId, borrowVoicegroupLease(m_bank.get()), QString()});
+    m_tab->applyBankView(
+        LoadedBankView{*bankId, borrowVoicegroupLease(m_bank.get()), QString(), false, {}});
     m_tab->applyVoicegroupBound(*bankId);
     m_tab->resize(1280, 800);
     m_tab->show();

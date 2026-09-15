@@ -86,7 +86,12 @@ bool PitchBendFixture::setUp(bool unterminated, bool duplicateNote)
                           track_limits::kHardwareCapacity);
     if (!m_tab->presentationError().isEmpty())
         return false;
-    m_tab->applyBankView(LoadedBankView{*identity, borrowVoicegroupLease(&m_bank), QString()});
+    m_tab->applyBankView(LoadedBankView{
+        .id = *identity,
+        .bank = borrowVoicegroupLease(&m_bank),
+        .loadName = QString(),
+        .slotViews = {},
+    });
     m_tab->applyVoicegroupBound(*identity);
     if (!QTest::qWaitFor([this] { return m_tab->isReady(); }) ||
         m_tab->voicegroupLease().get() != &m_bank) {

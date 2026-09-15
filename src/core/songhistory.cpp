@@ -233,8 +233,7 @@ void SongHistory::pushConfirmedBank(
     m_stack.push(new Entry(identity, this, std::move(draft), std::move(materialization)));
 }
 
-void SongHistory::crossConfirmedBankUndo(
-    std::optional<VoicegroupSource::BlankSlotMaterialization> materialization)
+void SongHistory::crossConfirmedBankUndo(std::optional<VoicegroupSource::BlankSlotMaterialization>)
 {
     auto *entry = entryAt(m_stack.index() - 1);
     assert(entry && entry->kind() == HistoryKind::SharedBank);

@@ -403,7 +403,8 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                 .selectedTickRange = std::nullopt,
                 .bandFirstTick = bandFirst,
                 .bandLastTick = bandLast,
-                .pencilMode = m_pencilMode};
+                .pencilMode = m_pencilMode,
+                .phantom = std::nullopt};
     };
     for (int ghostIndex = 0; ghostIndex < int(ghosts.size()); ++ghostIndex) {
         const GhostLane &ghostLane = ghosts[std::size_t(ghostIndex)];

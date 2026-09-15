@@ -257,7 +257,7 @@ void PianoRollTest::timelineRulerScope()
              "time-scoped ghost note did not render its selection ring");
     view.applyViewState(priorViewState);
     view.selectionModel().setTimeSelection(
-        {startTick, endTick, songview::EditorSelectionModel::TimeSelection::Tracks});
+        {startTick, endTick, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
     QCoreApplication::processEvents();
     QVERIFY2(secondaryRecord, "time-scoped secondary track has no TrackHeaderModel record");
     const QColor selectedOverlay = headers
@@ -332,8 +332,10 @@ void PianoRollTest::timelineOtherEventsStrip()
         }
     }
     QVERIFY2(trackEvent, "timeline fixture has no track-colored other-events marker");
-    view.selectionModel().setTimeSelection({d.tick + snapCell, d.tick + 2 * snapCell,
-                                            songview::EditorSelectionModel::TimeSelection::Tracks});
+    view.selectionModel().setTimeSelection({d.tick + snapCell,
+                                            d.tick + 2 * snapCell,
+                                            songview::EditorSelectionModel::TimeSelection::Tracks,
+                                            {}});
     QCoreApplication::processEvents();
     const double originalScroll = view.camera().scrollX();
     const qreal visibleContentX = std::max<qreal>(1.0, otherEvents->plotRect.width() / 3.0);
@@ -387,8 +389,10 @@ void PianoRollTest::timelinePartialSelectionRepaint()
     const Tick snapCell = seed->snapCell;
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
-    view.selectionModel().setTimeSelection({d.tick + snapCell, d.tick + 2 * snapCell,
-                                            songview::EditorSelectionModel::TimeSelection::Tracks});
+    view.selectionModel().setTimeSelection({d.tick + snapCell,
+                                            d.tick + 2 * snapCell,
+                                            songview::EditorSelectionModel::TimeSelection::Tracks,
+                                            {}});
     QCoreApplication::processEvents();
     auto movedSelection = view.selectionModel().timeSelection();
     ++movedSelection.endTick;
@@ -497,8 +501,10 @@ void PianoRollTest::timelineDuplicateTime()
     doc.moveNotes({transposed}, int64_t(snapCell), -11);
     QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),
              "duplicate-time seed did not reach the expected post-transpose state");
-    view.selectionModel().setTimeSelection({d.tick + snapCell, d.tick + 2 * snapCell,
-                                            songview::EditorSelectionModel::TimeSelection::Tracks});
+    view.selectionModel().setTimeSelection({d.tick + snapCell,
+                                            d.tick + 2 * snapCell,
+                                            songview::EditorSelectionModel::TimeSelection::Tracks,
+                                            {}});
     const songview::EditorSelectionModel::TimeSelection duplicateSource =
         view.selectionModel().timeSelection();
     const Tick duplicateSpan = duplicateSource.endTick - duplicateSource.startTick;
@@ -819,7 +825,7 @@ void PianoRollTest::keyboardResizeNotes()
              "the floor undo did not restore the seeded notes");
     view.selectionModel().setNoteSelection({noteA.noteId, noteB.noteId});
     view.selectionModel().setTimeSelection(
-        {d.tick, d.tick + snapCell, songview::EditorSelectionModel::TimeSelection::Tracks});
+        {d.tick, d.tick + snapCell, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
     const QByteArray blockedBytes = doc.smf().write();
     const int blockedIndex = doc.undoStack()->index();
     const int blockedCount = doc.undoStack()->count();

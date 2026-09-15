@@ -37,7 +37,8 @@ void appendTextRecord(std::vector<TimelineQuickTextModel::Record> &records, quin
                        color,
                        font,
                        Qt::AlignLeft,
-                       Qt::AlignVCenter});
+                       Qt::AlignVCenter,
+                       QRectF()});
 }
 
 } // namespace

@@ -111,8 +111,10 @@ void PianoRollTest::timeSelectionMenuOpensWithPasteEnablement()
     QVERIFY2(doc.findNote(check.track(), d.tick, uint8_t(d.key), &moved),
              "time menu seed note was not found");
     doc.moveNotes({moved}, int64_t(snapCell), 0);
-    view.selectionModel().setTimeSelection({d.tick + snapCell, d.tick + 2 * snapCell,
-                                            songview::EditorSelectionModel::TimeSelection::Tracks});
+    view.selectionModel().setTimeSelection({d.tick + snapCell,
+                                            d.tick + 2 * snapCell,
+                                            songview::EditorSelectionModel::TimeSelection::Tracks,
+                                            {}});
     // roll.copy writes the process-global clipboard; snapshot it and restore at
     // scope exit so this row cannot seed another row's clipboard state.
     const clipcheck_support::ClipboardStateGuard clipboardGuard;
@@ -233,8 +235,10 @@ void PianoRollTest::timeSelectionMenuStaleAndCancelNoOp()
     QVERIFY2(doc.findNote(check.track(), d.tick, uint8_t(d.key), &moved),
              "time menu seed note was not found");
     doc.moveNotes({moved}, int64_t(snapCell), 0);
-    view.selectionModel().setTimeSelection({d.tick + snapCell, d.tick + 2 * snapCell,
-                                            songview::EditorSelectionModel::TimeSelection::Tracks});
+    view.selectionModel().setTimeSelection({d.tick + snapCell,
+                                            d.tick + 2 * snapCell,
+                                            songview::EditorSelectionModel::TimeSelection::Tracks,
+                                            {}});
 
     const quick_popup::PromptGuard guard(view);
     const QByteArray before = doc.smf().write();
@@ -296,7 +300,7 @@ void PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp()
     // click the rendered Insert Time row: the selected span supplies the
     // insertion, and the edit cursor commits to the start seam.
     view.selectionModel().setTimeSelection(
-        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks});
+        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
     const QByteArray before = doc.smf().write();
     const int undoIndex = doc.undoStack()->index();
     const SharedTimeMenu opened = openSharedTimeMenu(check, rows, insertStart, insertEnd);

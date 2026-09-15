@@ -103,7 +103,12 @@ void VelocityEditingTest::init()
     song.hasMid = true;
     m_tab->applyMidiStage(std::move(song), velocityEditingSmf(), track_limits::kHardwareCapacity);
     QVERIFY(m_tab->presentationError().isEmpty());
-    m_tab->applyBankView(LoadedBankView{*identity, borrowVoicegroupLease(&m_bank), QString()});
+    m_tab->applyBankView(LoadedBankView{
+        .id = *identity,
+        .bank = borrowVoicegroupLease(&m_bank),
+        .loadName = QString(),
+        .slotViews = {},
+    });
     m_tab->applyVoicegroupBound(*identity);
 
     QTRY_VERIFY(m_tab->isReady());

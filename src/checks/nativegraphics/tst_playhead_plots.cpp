@@ -61,7 +61,7 @@ void RenderingPlayheadTest::plotGeometryAndLifecycle()
     const std::optional<songview::TimelineBandGeometry> &roll =
         canonical.geometry(songview::TimelineBand::Roll);
     QVERIFY(roll);
-    const auto quickRect = [quick, root](const QQuickItem &item) {
+    const auto quickRect = [root](const QQuickItem &item) {
         return QRectF(item.mapToItem(root, QPointF{}), item.size());
     };
     // Canonical band rects are already Quick-window-local; no host offset

@@ -39,7 +39,7 @@ void AutomationDomainTest::init()
     smf.format = 1;
     smf.division = 24;
     SmfTrack track;
-    track.events.push_back({.tick = 0, .status = 0xC0, .data0 = 0});
+    track.events.push_back({.tick = 0, .status = 0xC0, .data0 = 0, .blob = {}, .noteId = {}});
     track.endTick = 9216;
     smf.tracks.push_back(std::move(track));
 

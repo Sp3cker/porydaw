@@ -164,7 +164,7 @@ std::optional<SongLoad> loadSong(ProjectIoFixture &fixture, const SongName &song
         fixture.io().submit(ProjectCommand{OpenSongInput{song}});
         break;
     case SongLoadEntry::Reload:
-        fixture.io().submit(ProjectCommand{ReloadSongInput{song}});
+        fixture.io().submit(ProjectCommand{ReloadSongInput{song, std::nullopt}});
         break;
     case SongLoadEntry::PrivateLoad:
         fixture.io().submit(ProjectCommand{LoadSongCommand{song}});

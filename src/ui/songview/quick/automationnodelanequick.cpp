@@ -216,7 +216,8 @@ void appendValueLabel(std::vector<TimelineQuickTextModel::Record> *records,
                         themes::color(themes::Role::song_view_primary_text),
                         label.font,
                         Qt::AlignHCenter,
-                        Qt::AlignVCenter});
+                        Qt::AlignVCenter,
+                        QRectF()});
 }
 
 void addValueLabelBackdrop(const NodeLaneQuickPaint::Context &context, TimelineQuickLayer layer,
