@@ -22,7 +22,7 @@
 
 class QAction;
 class AutomationPage;
-class QQuickItem;
+class AutomationCanvas;
 
 namespace songview {
 class TimelineQuickScene;
@@ -219,6 +219,24 @@ class AutomationEditingTest final : public QObject
     void parameterSwitchInvalidatesValuePrompt();
     void parameterSwitchCancelsNodeDrag();
 
+    // Tap-tempo staging coverage: every scenario drives the staged canvas
+    // gesture (canvas->tapTempo(), the rendered Tap button, or real QML
+    // input) and reads the document, the undo stack, and the draft
+    // signals as oracles. The session accumulator is never touched
+    // directly.
+    void tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument();
+    void tapTempoSingleStrayTapAfterIdleGapCommitsNothing();
+    void tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores();
+    void tapTempoTappingCurrentTickZeroTempoIsSilent();
+    void tapTempoCommitReplacesTickZeroPointPreservingLaterPoints();
+    void tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument();
+    void tapTempoConcurrentTempoEditAbortsDraftSynchronously();
+    void tapTempoDocumentChangedSeamClearsSession();
+    void tapTempoDisabledCanvasAndEmptyDocumentAreNoOps();
+    void tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges();
+    void tapTempoMeanWindowAndClampBounds();
+    void tapTempoHintCatalogTextIsPresentAndDistinct();
+
   private:
     struct ArmedCcDrag final {
         QPoint dragEndWindow;
@@ -273,6 +291,7 @@ class AutomationEditingTest final : public QObject
                      Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void mousePress(const songview::TimelineInputItem &input, Qt::MouseButton button,
                     QPointF itemPoint, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+
     void mouseMove(const songview::TimelineInputItem &input, QPointF itemPoint,
                    Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void mouseRelease(const songview::TimelineInputItem &input, Qt::MouseButton button,
@@ -328,7 +347,15 @@ class AutomationEditingTest final : public QObject
 
     // Opens the node point menu through the real node right-press, then
     // waits for the shared Quick panel and locates both typed rows.
+
     NodePointMenu openNodePointMenu(LaneHandle lane, uint64_t tick, int value, QString diagnostic);
+
+    void activateTempoRow();
+    void setTempoStream(std::vector<TempoPoint> points);
+    int tempoBpmAt(Tick tick) const;
+    void tapCadence(AutomationCanvas &canvas, const std::vector<int> &gapMs);
+    static void waitTapIdle();
+    void expectDraftBpmWithin(const AutomationCanvas &canvas, int nominalBpm) const;
 
     // The tab borrows this bank, so it must outlive m_tab.
     LoadedVoiceGroup m_bank = {};

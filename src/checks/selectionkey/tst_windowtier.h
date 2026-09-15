@@ -62,6 +62,7 @@ class SelectionWindowTierTest final : public QObject
     void chromeGripKeysStayLocal();
     void parameterLabelActivationAndSharedCommands();
     void chromeToggleRoutesNoteArrows();
+    void tapButtonKeysAndTransportCession();
     // Plan 6: live pointer gestures protect the selected notes.
     void resizeDragProtectsSelectedNotes();
     // Plan 10: routing stays bound to the live view across tab lifecycles.

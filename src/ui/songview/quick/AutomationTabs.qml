@@ -72,6 +72,14 @@ Item {
                     text: modelData
                     font: root.appearance.font
                     padding: root.appearance.inset
+                    // The tempo row's Tap button sits outside the content
+                    // layout (below): reserve its width plus the row gap so
+                    // the draft readout never slides under it.
+                    rightPadding: tab.tempoParameter
+                                  ? root.appearance.inset
+                                    + tapTempoButton.implicitWidth
+                                    + root.appearance.inset
+                                  : root.appearance.inset
                     focusPolicy: Qt.StrongFocus
                     // The QTabBar-style hover fill must not depend on the
                     // platform's useHoverEffects default.
@@ -113,8 +121,108 @@ Item {
 
                         HoverHint {
                             source: tab
-                            profile: HintProfiles.GhostParameter
+                            profile: (tab.tempoParameter && tapTempoButton.hovered
+                                      && root.canvas.parametersEnabled)
+                                         ? HintProfiles.TapTempo
+                                         : HintProfiles.GhostParameter
                         }
+                    }
+
+                    // Tempo row tap-tempo button: a plain Item (never a
+                    // Controls.Button) so a bare Space stays unclaimed for
+                    // the transport play/pause shortcut. Presses register
+                    // the tap (press, not release, so the draft updates
+                    // immediately) and are consumed here so the surrounding
+                    // TabButton never activates. It lives outside the
+                    // contentItem RowLayout, declared after pressArea, so it
+                    // stacks above the tab-wide press area instead of being
+                    // occluded by it; rightPadding above reserves its slot.
+                    Item {
+                        id: tapTempoButton
+
+                        objectName: tab.tempoParameter
+                                    ? "automationTempoTapButton" : ""
+                        visible: tab.tempoParameter
+                        enabled: root.canvas.parametersEnabled
+                        opacity: enabled ? 1.0 : 0.5
+                        readonly property bool hovered: tapHoverHandler.hovered
+                        implicitWidth: tapLabelItem.implicitWidth
+                                       + 2 * root.appearance.inset
+                        implicitHeight: root.appearance.minimumCellHeight
+                        width: implicitWidth
+                        height: implicitHeight
+                        anchors.right: parent.right
+                        anchors.rightMargin: root.appearance.inset
+                        anchors.verticalCenter: parent.verticalCenter
+                        activeFocusOnTab: true
+
+                        Rectangle {
+                            anchors.fill: parent
+                            color: tapPressArea.pressed
+                                       ? root.appearance.tabSelectedBackground
+                                   : tapTempoButton.hovered
+                                       ? root.appearance.tabHoverBackground
+                                   : root.appearance.tabBackground
+                            border.width: root.appearance.stroke
+                            border.color: root.appearance.tabOutline
+                        }
+
+                        Text {
+                            id: tapLabelItem
+
+                            anchors.centerIn: parent
+                            font: tab.font
+                            text: qsTr("Tap")
+                            textFormat: Text.PlainText
+                            color: root.appearance.tabText
+                            Accessible.ignored: true
+                        }
+
+                        MouseArea {
+                            id: tapPressArea
+
+                            acceptedButtons: Qt.LeftButton
+                            enabled: tapTempoButton.enabled
+                            anchors.fill: parent
+                            onPressed: (mouse) => {
+                                tapTempoButton.forceActiveFocus()
+                                root.canvas.tapTempo()
+                            }
+                        }
+
+                        HoverHandler {
+                            id: tapHoverHandler
+                        }
+
+                        // Same activation-key contract as the tab
+                        // above: only plain Return/Enter (no auto
+                        // repeat) activates, and only those keys are
+                        // claimed from window shortcuts — bare Space
+                        // stays with the transport.
+                        Keys.priority: Keys.AfterItem
+                        Keys.onPressed: (event) => {
+                            if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+                                    && !event.isAutoRepeat
+                                    && event.modifiers === Qt.NoModifier) {
+                                root.canvas.tapTempo()
+                                event.accepted = true
+                            }
+                        }
+                        Keys.onShortcutOverride: (event) => event.accepted =
+                            (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+                            && event.modifiers === Qt.NoModifier && !event.isAutoRepeat
+
+                        Accessible.role: Accessible.Button
+                        Accessible.name: qsTr("Tap tempo")
+                        Accessible.description:
+                            root.canvas.tapTempoTapCount >= 2
+                                ? qsTr("Draft tempo: %1 BPM").arg(
+                                      root.canvas.tapTempoDraftBpm)
+                                : root.canvas.tapTempoTapCount > 0
+                                    ? qsTr("Listening for tempo taps")
+                                    : qsTr("Tap repeatedly to set the song tempo")
+                        Accessible.focusable: true
+                        Accessible.onPressAction: root.canvas.tapTempo()
                     }
 
                     // Keyboard focus or a checked change must never leave the
@@ -183,6 +291,7 @@ Item {
                         }
 
                         Text {
+                            id: tabLabel
                             objectName: "automationParameterTabText"
                             text: tab.text
                             font: tab.font
@@ -198,6 +307,25 @@ Item {
                                                              : root.appearance.tabText
                             Accessible.ignored: true
                         }
+
+                        // Live tap-tempo draft readout: appears only once
+                        // the canvas accumulator is listening, and stays
+                        // out of the accessible tree — the Tap button
+                        // below carries the accessible description.
+                        Text {
+                            objectName: tab.tempoParameter
+                                        ? "automationTempoTapDraft" : ""
+                            visible: tab.tempoParameter
+                                     && root.canvas.tapTempoTapCount > 0
+                            text: root.canvas.tapTempoTapCount >= 2
+                                      ? "%1 BPM".arg(root.canvas.tapTempoDraftBpm)
+                                      : "…"
+                            font: root.appearance.minimumFont
+                            color: root.appearance.tabText
+                            verticalAlignment: Text.AlignVCenter
+                            Accessible.ignored: true
+                        }
+
                     }
 
                     // Distinct indicators: the active tab takes the selected

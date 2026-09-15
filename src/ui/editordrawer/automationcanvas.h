@@ -8,6 +8,7 @@
 #include <variant>
 
 #include <QCursor>
+#include <QElapsedTimer>
 #include <QFont>
 #include <QList>
 #include <QObject>
@@ -17,6 +18,7 @@
 #include <QSize>
 #include <QString>
 #include <QStringList>
+#include <QTimer>
 #include <QVariant>
 
 #include "core/timedefaults.h"
@@ -26,6 +28,7 @@
 #include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
+#include "ui/editordrawer/taptempo.h"
 #include "ui/editordrawer/tempolane.h"
 #include "ui/editorviewstate.h"
 #include "ui/mousehints/hintprofiles.h"
@@ -154,6 +157,8 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     // (parameterRow), never a LaneHandle; a null m_activeController selects
     // Tempo. The active parameter is view-local (default Volume), retained by
     // the owning SongTab, never persisted; switching it is a view-only change.
+    int tapTempoDraftBpm() const noexcept { return m_tapTempo.draftBpm(); }
+    int tapTempoTapCount() const noexcept { return int(m_tapTempo.tapCount()); }
     Q_PROPERTY(
         QStringList parameterLabels READ parameterLabels NOTIFY parameterPresentationChanged FINAL)
     Q_PROPERTY(int activeParameter READ activeParameter NOTIFY activeParameterChanged FINAL)
@@ -177,6 +182,20 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     Q_INVOKABLE void activateParameter(int index);
     Q_INVOKABLE void openParameterMenu(int index, qreal sceneX, qreal sceneY);
     Q_INVOKABLE void toggleGhostParameter(int index);
+    // The Tempo row's tap-tempo gesture: each invocation (Enter/Return in
+    // Tap hint mode, or the QML click control) registers one beat from the
+    // user. The draft recomputes from the newest intervals; an idle window —
+    // the same distance that starts a fresh session — commits it once to the
+    // document's tick-0 tempo and resets. tapTempoDraftBpm and
+    // tapTempoTapCount share tapTempoDraftChanged; tapTempoCommitted fires
+    // only on a real write.
+    Q_PROPERTY(int tapTempoDraftBpm READ tapTempoDraftBpm NOTIFY tapTempoDraftChanged FINAL)
+    Q_PROPERTY(int tapTempoTapCount READ tapTempoTapCount NOTIFY tapTempoDraftChanged FINAL)
+    Q_INVOKABLE void tapTempo();
+    // View-state API: drops the draft and cancels the pending idle commit.
+    // Idempotent — no-op when no draft is held.
+    void resetTapTempo();
+
     Q_INVOKABLE void parameterPressed(int index, Qt::KeyboardModifiers modifiers);
     Q_INVOKABLE void parameterClicked(int index);
     // Binds the shared canvas popup session once TimelineQuickView exists;
@@ -198,6 +217,9 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
 
   signals:
     void valuePromptChanged();
+    void tapTempoDraftChanged();
+    // Emitted once per real commit, carrying the BPM that was written.
+    void tapTempoCommitted(int bpm);
     void ccDeletePromptChanged();
     void activeParameterChanged();
     void parameterSelectionChanged();
@@ -373,6 +395,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void ensureMenuAdapters();
     void ensureNodeMenuAdapters();
     void layoutLaneStack();
+    void commitTapTempo();
     void cancelNodeGestures();
     void rebuildNodeStack();
     LaneHandle laneAt(int y) const noexcept;
@@ -435,4 +458,12 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     std::optional<uint8_t> m_activeController = CoreTimeDefaults::kCcVolume;
     std::vector<uint8_t> m_ghostControllers;
     bool m_ghostTempo = false;
+    // Tap-tempo draft state: pure session state plus the idle commit plumbing.
+    // m_tapDocument and m_tapRevision pin the document the first tap saw; a
+    // mismatch (switched song, rebuild, or another edit) aborts the commit.
+    TapTempoSession m_tapTempo;
+    QTimer m_tapIdleCommit;
+    QElapsedTimer m_tapClock;
+    QPointer<SongDocument> m_tapDocument;
+    uint64_t m_tapRevision = 0;
 };

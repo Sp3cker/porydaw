@@ -276,6 +276,8 @@ QString render(Id profile, Qt::KeyboardModifiers stepModifier)
                separator +
                fragment(Qt::ControlModifier,
                         QCoreApplication::translate("MouseHints", "wheel: step by ten"));
+    case Id::TapTempo:
+        return QCoreApplication::translate("MouseHints", "tap: set song tempo");
     }
     // claim() is Q_INVOKABLE, so a stale QML disk cache or a buggy binding
     // can hand in an Id that no longer exists after enum churn; unknown

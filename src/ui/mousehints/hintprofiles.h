@@ -37,6 +37,7 @@ enum class Id {
     EventRows,
     GhostParameter,
     DragScrub,
+    TapTempo,
 };
 Q_ENUM_NS(Id)
 
