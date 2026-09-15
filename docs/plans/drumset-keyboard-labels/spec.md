@@ -110,10 +110,10 @@ KeyboardRowSource keyboardRowSource(const LoadedVoiceGroup *bank,
     `keyName(key)`, right-aligned into
     `keyboardWidth - pianoKeyboardLabelRightInset`.
   - Drumset track — one record for **every** viewport-intersecting visible
-    row (black-key rows included: each row is a pad), text
-    `source.rowLabel(key)`, elided right with `m_keyboardLabelFont` metrics
-    to the same record-rect width. Pitch-name fallback keeps today's text
-    for rows without names, so the visible difference is additive.
+    row (black-key rows included: each row is a pad), full text
+    `source.rowLabel(key)`, and a record width equal to the larger of the
+    existing gutter budget or the measured text width plus the existing
+    label inset. Pitch-name fallback keeps today's text for unnamed rows.
 - `PianoRoll::keyboardHoverGeometry`: `name` becomes `source.rowLabel(key)`
   (full, un-elided). Chip width uses the cached pitch width
   (`m_keyboardHoverNameWidths[key]`) when `source.drumPadName(key)` is
@@ -122,26 +122,24 @@ KeyboardRowSource keyboardRowSource(const LoadedVoiceGroup *bank,
   existing chip padding. The chip rect's left edge is clamped at
   `lyt::space(Space::Zero)`; wide chips therefore span past the gutter into
   the plot. Geometry fields, fonts, and `PianoRollGeometry::resolve` are
-  unchanged. Task 3's acceptance stops at the published scene state —
-  `hoverChipText` carries the full label and `hoverChipRect` is measured
-  and clamped — because both chip items still render inside the clipped
-  `gutterSide` until Task 4 moves them; visible rendering of the wide chip
-  is Task 4's acceptance.
+  unchanged. `TimelineQuickScene` publishes this full label and measured,
+  clamped rectangle to the band-level QML chip.
 
-### Chip overlay contract (Task 4 — QML)
+### Label and chip overlay contract (Task 4 plus user follow-up — QML)
 
-- Only the two chip items — the `timelineQuickPianoHoverChip` background
-  and `timelineQuickPianoHoverChipText` — move from `root.gutterSide` to a
-  new `root.bandSide` (the roll band root, exposed by a `bandSide` alias on
-  `TimelineSceneBand` beside `gutterSide`/`plotSide`). The band root does
-  not clip, and `gutterBox` sits at band-local x = 0, so the existing
-  gutter-local chip coordinates are reused verbatim — no mapping.
-- Z-order: chip background `z: 8`, chip text `z: 9` within the band — above
-  the `gutterSide`/`plotSide` layers, below canvas-root chrome and popups.
-  The overlay items accept no pointer events.
-- Gutter labels (`pianoKeyboardTextModel` Repeater), the keyboard key/
-  highlight layers, and `timelineRollGutterInput` stay inside the clipped
-  `gutterBox` — the gutter keeps its fixed geometry and clipping.
+- The fixed-label container, `timelineQuickPianoHoverChip` background, and
+  `timelineQuickPianoHoverChipText` are parented to `root.bandSide` (the
+  roll band root exposed beside `gutterSide`/`plotSide`). The band root does
+  not clip, and `gutterBox` starts at band-local x = 0, so their existing
+  gutter-local coordinates need no mapping.
+- Fixed drum labels use their measured record widths at `z: 3`; their full
+  text can cross the keyboard boundary into the plot. Melodic record widths
+  remain within the keyboard budget.
+- Hover background `z: 8` and text `z: 9` remain above the fixed labels and
+  plot content, below canvas-root chrome and popups.
+- Keyboard key/highlight layers and `timelineRollGutterInput` remain inside
+  the clipped `gutterBox`; the gutter keeps its fixed geometry and input
+  ownership. None of the band-level text items accepts pointer input.
 
 ## Non-goals
 
@@ -154,9 +152,9 @@ KeyboardRowSource keyboardRowSource(const LoadedVoiceGroup *bank,
 - The dual width mechanism (cached pitch widths vs measured pad widths) is
   intentional: it keeps `pianoroll.{h,cpp}` out of the write set and leaves
   the pitch path byte-identical.
-- Task 3 makes no QML edits; Task 4's QML write set moves exactly the two
-  chip items and adds the `bandSide` alias — nothing else in either canvas
-  changes.
+- The QML change uses the existing `bandSide` seam and reparents only the
+  fixed-label container and two hover-chip items; keyboard drawing and
+  input ownership stay in the gutter.
 
 ## Coverage map
 
@@ -165,8 +163,8 @@ KeyboardRowSource keyboardRowSource(const LoadedVoiceGroup *bank,
 | Parsed subgroup names, lookup, warm reuse, and free (Task 1) | `vgloadcheck` | `verifyRichSubgroupNames` checks exact keysplit/drum names through one-shot, contextual, and warm `fixture_rich` loads |
 | Slot-name resolution, fallback, and classification (Tasks 1-2) | `timelinepancheck` | isolated `DrumBankFixture` scenarios drive literal pad names and pitch fallbacks through `KeyboardRowSource` |
 | Static lifetime classification across later program changes (Task 2) | `timelinepancheck` | `drumClassificationIgnoresProgramChanges` moves edit cursor and playhead across a later melodic program change |
-| Gutter records, accidental-row contrast, elision, hover geometry, and track-switch invalidation (Tasks 2-3) | `timelinepancheck` | direct text-model and scene assertions |
-| Full hover text across gutter and plot; fixed labels/input stay clipped (Task 4) | `timelinepancheck` | `hoverChipOverlayUnclipped` checks realized Quick ownership and text-content bounds |
+| Full gutter labels, accidental-row contrast, measured overflow, hover geometry, and track-switch invalidation | `timelinepancheck` | direct text-model and scene assertions |
+| Fixed labels and hover text cross the gutter into the plot; keyboard inputs stay clipped | `timelinepancheck` | `hoverChipOverlayUnclipped` checks realized Quick ownership and both text-content bounds |
 | Cross-surface regression | `rollcheck`, `timelinepan-native` | controller sweep |
 
 One minor limitation remains: `HoverChip` refresh while a real pointer remains

@@ -29,15 +29,14 @@ engine changes, no timeline-dependent program tracking.
   `SongView::setVoicegroup` (songview.cpp:930-940, refreshes
   `PianoRollQuickDirty::All`). Banks are published immutable
   (`const LoadedVoiceGroup *`).
-- Gutter rendering: `TimelineQuickView::synchronizeKeyboardText`
-  (timelinequickview_pianoroll.cpp:572-598) emits `PianoMidiLabel` records
-  for visible white C rows only, text `detail::keyName(key)`. Hover:
-  `PianoRoll::keyboardHoverGeometry` (pianoroll_geometry.cpp:167-185) sizes
-  the chip from `m_keyboardHoverNameWidths` (precomputed pitch-name widths,
-  pianoroll.cpp:48-50); `synchronizeHoverChip` (:600-611) forwards to
-  `TimelineQuickScene::setHoverChip`. Both QML delegates clip
-  (`PianoRollCanvas.qml:149-151, 171-173`), so long text must be pre-elided
-  (gutter) and chip-measured (hover) in C++.
+- Keyboard rendering: `TimelineQuickView::synchronizeKeyboardText`
+  emits white-C pitch labels for melodic tracks and one full pad-name or
+  pitch-fallback record for every visible drum row. Drum record widths grow
+  to the measured text width instead of eliding at the fixed keyboard edge.
+  `PianoRoll::keyboardHoverGeometry` separately sizes the hover chip from
+  the full row label. The fixed-label container and both hover-chip items
+  live on the unclipped roll band, so long names can cross from the gutter
+  into the plot without changing gutter or input geometry.
 - Track voice state: `MidiTimeline::tracks[t].firstProgram`
   (miditimeline.h:34, `-1` = no program change; engine default program 0).
   `SongView::currentProgram` (trackvoiceops.cpp:177-190) is
@@ -80,8 +79,8 @@ engine changes, no timeline-dependent program tracking.
 | --- | --- | --- | --- | --- |
 | 1 | [poryaaaa subgroup slot-name ownership](task-1-brief.md) | SDD-track / sdd-implementer | C heap-ownership surgery in a foreign repo; allocation-failure and parallel-array invariants need review | None |
 | 2 | [Porydaw seam: resolve + publish](task-2-brief.md) | SDD-track / sdd-implementer | Free-function helpers over public SongView accessors plus one dirty-union line; no Qt ownership/model/threading surface | 1 (committed sha) |
-| 3 | [Gutter/hover scene contract + coverage](task-3-brief.md) | SDD-track / qt-cpp-reviewer | Quick-scene text records, hover chip geometry, elide policy, input-driven Qt check — paint/model-record judgment | 2 |
-| 4 | [Unclipped hover-chip overlay](task-4-brief.md) | SDD-track / qt-cpp-reviewer | QML reparenting, band z-order, and clip semantics across two canvases — Quick stacking judgment | 3 |
+| 3 | [Gutter/hover scene contract + coverage](task-3-brief.md) | SDD-track / qt-cpp-reviewer | Quick-scene text records, hover chip geometry, measured-width policy, input-driven Qt check — paint/model-record judgment | 2 |
+| 4 | [Unclipped keyboard-label and hover overlay](task-4-brief.md) | SDD-track / qt-cpp-reviewer | QML reparenting, band z-order, and clip semantics across two canvases — Quick stacking judgment | 3 |
 
 Tasks 2 and 3 have disjoint write sets; they may run SHARED_TREE. CP1's
 controller-owned gitlink update blocks Task 2 (sequential 1 → CP1 → 2);

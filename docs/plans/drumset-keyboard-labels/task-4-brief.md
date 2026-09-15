@@ -1,4 +1,8 @@
-# Task 4: Unclipped hover-chip overlay across gutter and plot
+# Task 4: Unclipped keyboard-label and hover overlays across gutter and plot
+
+> Historical pre-extension dispatch record. The later user-directed fixed
+> label overflow change supersedes the “hover only” constraints below;
+> `spec.md` and the landed implementation are canonical.
 
 ## Context
 

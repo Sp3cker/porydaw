@@ -549,19 +549,20 @@ void TimelinePanTest::drumGutterLabelsAndHover()
              themes::color(themes::Role::song_view_piano_keyboard_natural_key));
     const QString longText = model->data(longIndex, TimelineQuickTextModel::TextRole).toString();
     const QRectF longRect = model->data(longIndex, TimelineQuickTextModel::RectRole).toRectF();
-    QVERIFY(longText.contains(QChar(0x2026)));
-    QVERIFY(longText != QString::fromUtf8(kDrumPadLongName));
+    const QString fullLongText = QString::fromUtf8(kDrumPadLongName);
+    QCOMPARE(longText, fullLongText);
     const auto geometry = pianoroll_detail::PianoRollGeometry::resolve(view.pianoKeyboardWidth());
-    QCOMPARE(longRect.width(),
-             qreal(view.pianoKeyboardWidth() - geometry.pianoKeyboardLabelRightInset));
+    const QFontMetrics labelMetrics(
+        model->data(longIndex, TimelineQuickTextModel::FontRole).value<QFont>());
+    const qreal expectedWidth =
+        (std::max)(qreal(view.pianoKeyboardWidth() - geometry.pianoKeyboardLabelRightInset),
+                   qreal(labelMetrics.horizontalAdvance(fullLongText) +
+                         geometry.pianoKeyboardLabelRightInset));
+    QCOMPARE(longRect.width(), expectedWidth);
+    QVERIFY(longRect.width() > qreal(view.pianoKeyboardWidth()));
     QCOMPARE(longRect.left(), 0.0);
     QCOMPARE(longRect.top(), padRowRect(view, longKey).top());
     QCOMPARE(longRect.height(), padRowRect(view, longKey).height());
-    const QFontMetrics labelMetrics(
-        model->data(longIndex, TimelineQuickTextModel::FontRole).value<QFont>());
-    QVERIFY(labelMetrics.horizontalAdvance(longText) <= longRect.width());
-    QVERIFY(longText.startsWith(QStringLiteral("Fixture")));
-    QVERIFY(longText.endsWith(QChar(0x2026)));
     QCOMPARE(model->data(unnamedIndex, TimelineQuickTextModel::TextRole).toString(),
              detail::keyName(unnamedKey));
 
@@ -829,14 +830,15 @@ void TimelinePanTest::hoverChipOverlayUnclipped()
     QVERIFY(chip->z() > gutterBox->z());
     QVERIFY(chipText->z() > chip->z());
 
-    // Locate a realized fixed label by its displayed text, independently of
-    // delegate class names or sibling order, then check its visual ancestry.
+    // Locate the realized long fixed label independently of delegate class
+    // names or sibling order, then verify that it shares the unclipped roll
+    // band rather than the clipped gutter.
     QVERIFY(gutterBox->clip());
     QQuickItem *fixedLabel = nullptr;
     QList<QQuickItem *> pendingItems{root};
     while (!pendingItems.isEmpty()) {
         QQuickItem *const item = pendingItems.takeLast();
-        if (item->property("text").toString() == QString::fromUtf8(kDrumPadName)) {
+        if (item->property("text").toString() == QString::fromUtf8(kDrumPadLongName)) {
             fixedLabel = item;
             break;
         }
@@ -845,13 +847,13 @@ void TimelinePanTest::hoverChipOverlayUnclipped()
     QVERIFY(fixedLabel);
     QVERIFY(fixedLabel->isVisible());
     QQuickItem *labelAncestor = fixedLabel->parentItem();
-    while (labelAncestor && labelAncestor != gutterBox)
+    while (labelAncestor && labelAncestor != bandRoot && labelAncestor != gutterBox)
         labelAncestor = labelAncestor->parentItem();
-    QCOMPARE(labelAncestor, gutterBox);
+    QCOMPARE(labelAncestor, bandRoot);
     QCOMPARE(gutterInput->parentItem(), gutterBox);
 
-    // The full pad-name chip is wider than the fixed gutter and its
-    // scene-mapped right edge crosses the gutter boundary into the plot.
+    // Both the fixed label and the hover chip cross the gutter boundary.
+    QVERIFY(fixedLabel->width() > qreal(view.pianoKeyboardWidth()));
     QVERIFY(chip->width() > qreal(view.pianoKeyboardWidth()));
     QCOMPARE(chip->width(), scene->hoverChipRect().width());
     QCOMPARE(chip->x(), scene->hoverChipRect().x());
@@ -877,6 +879,17 @@ void TimelinePanTest::hoverChipOverlayUnclipped()
     const QPointF chipSceneRight = chip->mapToScene(QPointF(chip->width(), 0));
     const QPointF gutterSceneRight = gutterBox->mapToScene(QPointF(gutterBox->width(), 0));
     QVERIFY(chipSceneRight.x() > gutterSceneRight.x());
+    const qreal fixedContentWidth = fixedLabel->property("contentWidth").toReal();
+    const qreal fixedContentHeight = fixedLabel->property("contentHeight").toReal();
+    QVERIFY(fixedContentWidth > 0);
+    QVERIFY(fixedContentHeight > 0);
+    QVERIFY(fixedContentWidth <= fixedLabel->width());
+    QVERIFY(!fixedLabel->clip());
+    QCOMPARE(fixedLabel->property("horizontalAlignment").toInt(), int(Qt::AlignRight));
+    const QRectF fixedContentRect(fixedLabel->width() - fixedContentWidth,
+                                  (fixedLabel->height() - fixedContentHeight) / 2,
+                                  fixedContentWidth, fixedContentHeight);
+    QVERIFY(fixedLabel->mapRectToScene(fixedContentRect).right() > gutterSceneRight.x());
     QVERIFY(contentSceneRect.right() > gutterSceneRight.x());
 }
 

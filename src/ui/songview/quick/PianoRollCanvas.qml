@@ -107,9 +107,9 @@ Item {
         z: 1
     }
 
-    // Wide pad-name chips legitimately span gutter and plot: the band root
-    // does not clip (the gutter box does), and gutterBox sits at band-local
-    // x = 0, so the gutter-local chip coordinates are already band-local.
+    // Drum labels and hover chips may span the gutter and plot so full pad
+    // names stay readable. Their coordinates are already band-local because
+    // the gutter starts at band-local x = 0.
     Rectangle {
         parent: root.bandSide
         objectName: "timelineQuickPianoHoverChip"
@@ -124,7 +124,7 @@ Item {
     }
 
     Item {
-        parent: root.gutterSide
+        parent: root.bandSide
         anchors.fill: parent
         z: 3
 

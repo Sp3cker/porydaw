@@ -598,18 +598,20 @@ void TimelineQuickView::synchronizeKeyboardText()
             const QRectF rowRect = roll.pitchRowRect(row, 0, keyboardWidth);
             if (!rowRect.intersects(viewport) || (!drumPads && (isBlackKey(key) || key % 12 != 0)))
                 continue;
-            const QRectF recordRect(0, rowRect.top(),
-                                    keyboardWidth - roll.m_geometry.pianoKeyboardLabelRightInset,
-                                    rowRect.height());
+            const QString label = drumPads ? source.rowLabel(key) : keyName(key);
+            const qreal baseWidth = keyboardWidth - roll.m_geometry.pianoKeyboardLabelRightInset;
+            const qreal labelWidth =
+                drumPads
+                    ? (std::max)(baseWidth, qreal(labelMetrics->horizontalAdvance(label) +
+                                                  roll.m_geometry.pianoKeyboardLabelRightInset))
+                    : baseWidth;
+            const QRectF recordRect(0, rowRect.top(), labelWidth, rowRect.height());
             const QColor &rowColor = drumPads && isBlackKey(key) ? accidentalLabel : color;
             appendTextRecord(
                 records,
                 TimelineQuickTextKey{TimelineQuickTextKeyKind::PianoMidiLabel, {}, quint64(key)},
-                recordRect,
-                drumPads ? labelMetrics->elidedText(source.rowLabel(key), Qt::ElideRight,
-                                                    int(recordRect.width()))
-                         : keyName(key),
-                *roll.m_keyboardLabelFont, rowColor, Qt::AlignRight, Qt::AlignVCenter);
+                recordRect, label, *roll.m_keyboardLabelFont, rowColor, Qt::AlignRight,
+                Qt::AlignVCenter);
         }
     }
     m_scene->m_pianoKeyboardTextModel->setRecords(records);
