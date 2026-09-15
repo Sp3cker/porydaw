@@ -113,8 +113,8 @@ class Grid final
     // Re-canonicalizes the selection: a musical selection the new axis
     // cannot represent becomes Clock.
     bool setTicksPerClock(uint32_t ticksPerClock) noexcept;
-    void setThresholds(int timelineDetailMinimumPixelsPerBeat,
-                       int automationGridMinimumCellWidth) noexcept;
+    void setThresholds(int timelineDetailMinimumPixelsPerBeat, int automationGridMinimumCellWidth,
+                       int clockMinimumCellWidth) noexcept;
 
     // Time-signature segment governing a tick (the axis's GridSegment).
     // The grid — beats, snap positions, sub-beat lines — restarts at every
@@ -207,6 +207,7 @@ class Grid final
     uint32_t m_clock = 0; // clock floor in ticks; 0 = no document
     int m_timelineDetailMinimumPixelsPerBeat = 0;
     int m_automationGridMinimumCellWidth = 0;
+    int m_clockMinimumCellWidth = 0;
 };
 
 } // namespace songview

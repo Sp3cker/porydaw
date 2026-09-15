@@ -295,7 +295,7 @@ void decodeEmptyLanes(const QJsonValue &value, EditorViewState *state)
     if (!value.isArray())
         return;
     const QJsonArray lanes = value.toArray();
-    for (const QJsonValue &laneValue : lanes) {
+    for (const QJsonValue laneValue : lanes) {
         if (const auto lane = decodeLane(laneValue))
             state->emptyLanes.emplace(*lane);
     }
@@ -306,7 +306,7 @@ void decodeHiddenLanes(const QJsonValue &value, EditorViewState *state)
     if (!value.isArray())
         return;
     const QJsonArray lanes = value.toArray();
-    for (const QJsonValue &laneValue : lanes) {
+    for (const QJsonValue laneValue : lanes) {
         if (const auto lane = decodeLane(laneValue))
             state->hideLane(*lane);
     }

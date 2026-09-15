@@ -357,9 +357,7 @@ qt_add_executable(porydaw_checks
 set_target_properties(porydaw_checks PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
 
-target_compile_options(porydaw_checks PRIVATE
-    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall;-Wextra;-Wpedantic;-Wshadow>
-)
+porydaw_enable_project_warnings(porydaw_checks)
 if(APPLE)
     target_sources(porydaw_checks PRIVATE
         nativegraphics/tst_playhead_native_mac.mm

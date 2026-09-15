@@ -141,11 +141,12 @@ bool Grid::setTicksPerClock(uint32_t ticksPerClock) noexcept
     return setState(m_selection, m_feel) || clockChanged;
 }
 
-void Grid::setThresholds(int timelineDetailMinimumPixelsPerBeat,
-                         int automationGridMinimumCellWidth) noexcept
+void Grid::setThresholds(int timelineDetailMinimumPixelsPerBeat, int automationGridMinimumCellWidth,
+                         int clockMinimumCellWidth) noexcept
 {
     m_timelineDetailMinimumPixelsPerBeat = timelineDetailMinimumPixelsPerBeat;
     m_automationGridMinimumCellWidth = automationGridMinimumCellWidth;
+    m_clockMinimumCellWidth = clockMinimumCellWidth;
 }
 
 Grid::Segment Grid::segmentAt(Tick tick) const
@@ -200,9 +201,14 @@ Tick Grid::subGridAnchorIn(const Segment &seg) const noexcept
 
 bool Grid::drawsSubGridIn(const Segment &seg) const
 {
-    // A fixed selection draws its own lines while its cell stays at least
-    // the minimum cell width: the user pinned the denomination, so zoom
-    // cannot retune the spacing — only suppress it. Snapping is unaffected.
+    // A fixed selection draws its own lines while its cell clears the
+    // selection's floor: the user pinned the denomination, so zoom cannot
+    // retune the spacing — only suppress it. Snapping is unaffected.
+    // Musical keeps the automation drawer's minimum cell width; Clock is
+    // the document's real resolution, so it draws as many lines as
+    // helpful — while its cells stay at least one grid-line stroke wide.
+    if (m_selection.kind == GridSelection::Kind::Clock)
+        return m_camera.pxPerTick() * double(fixedTicks()) >= m_clockMinimumCellWidth;
     if (m_selection.kind != GridSelection::Kind::Auto)
         return m_camera.pxPerTick() * double(fixedTicks()) >= m_automationGridMinimumCellWidth;
     return m_camera.pxPerTick() * double(seg.beatTicks) >= m_timelineDetailMinimumPixelsPerBeat;

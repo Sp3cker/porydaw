@@ -100,7 +100,7 @@ void SongView::pushCameraGeometryLimits()
 void SongView::pushGridGeometryThresholds()
 {
     m_grid.setThresholds(m_geometry.timelineDetailMinimumPixelsPerBeat,
-                         m_geometry.automationGridMinimumCellWidth);
+                         m_geometry.automationGridMinimumCellWidth, m_geometry.gridLineStrokeWidth);
 }
 
 // Canonical band geometry, resolved only from the analytic viewport layout

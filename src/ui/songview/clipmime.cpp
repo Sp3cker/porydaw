@@ -122,7 +122,7 @@ std::optional<ClipTrack> decodeTrack(const QJsonValue &value)
     auto track = ClipTrack{};
     if (!readSigned(object.value(QStringLiteral("track")), track.track))
         return std::nullopt;
-    for (const auto &noteValue : object.value(QStringLiteral("notes")).toArray()) {
+    for (const QJsonValue noteValue : object.value(QStringLiteral("notes")).toArray()) {
         auto note = decodeNote(noteValue);
         if (!note)
             return std::nullopt;
@@ -146,7 +146,7 @@ std::optional<ClipLane> decodeLane(const QJsonValue &value)
         !requireUint(object, "cc", UINT8_MAX, cc))
         return std::nullopt;
     lane.cc = uint8_t(cc);
-    for (const auto &pointValue : object.value(QStringLiteral("points")).toArray()) {
+    for (const QJsonValue pointValue : object.value(QStringLiteral("points")).toArray()) {
         if (!pointValue.isArray())
             return std::nullopt;
         const auto point = pointValue.toArray();
@@ -300,19 +300,19 @@ std::optional<DecodedClip> decodeClip(const QByteArray &payload)
     auto decoded = DecodedClip{};
     decoded.ticksPerBeat = uint32_t(ticksPerBeat);
     decoded.clip.span = span;
-    for (const auto &trackValue : object.value(QStringLiteral("tracks")).toArray()) {
+    for (const QJsonValue trackValue : object.value(QStringLiteral("tracks")).toArray()) {
         auto track = decodeTrack(trackValue);
         if (!track)
             return std::nullopt;
         decoded.clip.tracks.push_back(std::move(*track));
     }
-    for (const auto &laneValue : object.value(QStringLiteral("lanes")).toArray()) {
+    for (const QJsonValue laneValue : object.value(QStringLiteral("lanes")).toArray()) {
         auto lane = decodeLane(laneValue);
         if (!lane)
             return std::nullopt;
         decoded.clip.lanes.push_back(std::move(*lane));
     }
-    for (const auto &tempoValue : object.value(QStringLiteral("tempo")).toArray()) {
+    for (const QJsonValue tempoValue : object.value(QStringLiteral("tempo")).toArray()) {
         auto point = decodeTempo(tempoValue);
         if (!point)
             return std::nullopt;

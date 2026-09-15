@@ -237,8 +237,8 @@ void ViewBucketsGridTest::clockLatticeCrossesSignatureSeam()
     view.setGridSelection(songview::GridSelection::clock());
     const Tick clock = view.grid().snapTicksAt(0);
     QVERIFY2(clock > 1 && 37 % clock != 0, "the seam must sit off the clock lattice");
-    // The painted sub-grid needs the fixed cell at least the minimum cell
-    // width; zoom so the clock stride clears it.
+    // The painted clock sub-grid needs its cells at least one grid-line
+    // stroke wide; zoom so the clock stride clears it.
     SongView::ViewState zoomed = view.viewState();
     zoomed.valid = true;
     zoomed.pxPerBeat = 24.0 * layout::fontPx(4.0 / 3.0);
@@ -292,12 +292,13 @@ void ViewBucketsGridTest::fixedGridPaintDensityGuard()
     QCOMPARE(view.grid().snapTicksAt(0), Tick(12));
     QCOMPARE(view.grid().snapTickDown(37.0), Tick(36));
     QCOMPARE(view.grid().nextSnapTickAfter(Tick(24)), Tick(36));
-    // The Clock selection follows the same guard on its own stride.
+    // The Clock selection draws as many lines as helpful: its cells paint
+    // while at least one grid-line stroke wide, and suppress below that.
     view.setGridSelection(songview::GridSelection::clock());
     const Tick clock = view.grid().snapTicksAt(0);
-    applyZoom(24.0 * cell);
+    applyZoom(6.0 * cell);
     QVERIFY(!subGridLines(0.0, 120.0).empty());
-    applyZoom(12.0 * cell);
+    applyZoom(2.0 * cell);
     QVERIFY(subGridLines(0.0, 120.0).empty());
     QCOMPARE(view.grid().snapTicksAt(0), clock);
 }

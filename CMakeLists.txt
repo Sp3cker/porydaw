@@ -41,6 +41,24 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
+# Strict diagnostics apply only to project C++ translation units. Vendored C
+# implementation units are excluded, and third-party headers are SYSTEM
+# includes. -Wold-style-cast stays off because the codebase idiomatically uses
+# C-style casts.
+function(porydaw_enable_project_warnings target)
+    target_compile_options(${target} PRIVATE
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wall;-Wextra;-Wpedantic;-Wshadow>
+        $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wall;-Wextra;-Wpedantic;-Wshadow>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wformat=2>
+        $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wformat=2>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wnull-dereference>
+        $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wnull-dereference>
+        $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang>:-Wextra-semi;-Wrange-loop-analysis>
+        $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wextra-semi;-Wrange-loop-analysis>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wduplicated-cond;-Wduplicated-branches;-Wlogical-op>
+    )
+endfunction()
+
 # Optimize the audio path even in debug builds: the miniaudio converter and
 # engine callbacks dominate audio-thread cost, and profile/listening sessions
 # with a debug app must not measure inflated audio DSP. -g stays on.
@@ -449,12 +467,7 @@ target_include_directories(porydaw_app PRIVATE
     src/ui/songview/quick
 )
 
-# Stricter diagnostics for project code. Third-party headers above stay
-# SYSTEM so they are exempt; -Wold-style-cast stays off because the codebase
-# idiomatically uses C-style casts.
-target_compile_options(porydaw_app PRIVATE
-    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall;-Wextra;-Wpedantic;-Wshadow>
-)
+porydaw_enable_project_warnings(porydaw_app)
 # The project() version is the single source of truth (docs/RELEASING.md);
 # release CI refuses a tag that doesn't match it.
 target_compile_definitions(porydaw_app PUBLIC
@@ -620,9 +633,7 @@ add_executable(porydaw_render_cli
 target_include_directories(porydaw_render_cli PRIVATE src)
 target_link_libraries(porydaw_render_cli PRIVATE Qt6::Core poryaaaa_engine)
 
-target_compile_options(porydaw_render_cli PRIVATE
-    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall;-Wextra;-Wpedantic;-Wshadow>
-)
+porydaw_enable_project_warnings(porydaw_render_cli)
 if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_options(porydaw_render_cli PRIVATE -static)
 endif()
