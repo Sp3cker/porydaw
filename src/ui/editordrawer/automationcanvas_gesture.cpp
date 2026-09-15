@@ -339,14 +339,15 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
 NodeDragGesture AutomationCanvas::collectSelectedNodeDrags() const
 {
     NodeDragGesture result;
-    const auto activeTickRange = m_laneSelection.activeTickRange();
+    const auto activeTickRange = m_viewModel.activeTickRange;
     for (std::size_t index = 0; index < m_nodeStack.size(); ++index) {
         const NodeLaneSlot &slot = m_nodeStack[index];
         const NodeLane *lane = slot.lane;
         if (!lane)
             continue;
         const LaneHandle handle{int(index)};
-        if (!m_laneSelection.coversNodes(slot.id) || !activeTickRange)
+        const AutomationViewModel::Row *const row = m_viewModel.find(slot.id);
+        if (!row || !row->coversNodes || !activeTickRange)
             continue;
         for (const NodePoint &point : lane->points()) {
             if (point.tick < activeTickRange->first || point.tick >= activeTickRange->second)
@@ -370,12 +371,13 @@ AutomationCanvas::nodeDragGestureAt(LaneHandle handle, const QPointF &position, 
     if (!hitNodePoint(*lane, slot->body, projection, m_geometry, position,
                       m_inputHost ? m_inputHost->devicePixelRatio() : 1.0, pencilMode, &hit))
         return std::nullopt;
+    const NodeDrag grabbed{handle, hit, hit, lane->minimumValue(), lane->maximumValue()};
     NodeDragGesture state;
     state.lane = handle;
     state.expectedRevision = m_page.document().revision();
-    const NodeDrag grabbed{handle, hit, hit, lane->minimumValue(), lane->maximumValue()};
-    const auto activeTickRange = m_laneSelection.activeTickRange();
-    const bool hitSelected = m_laneSelection.coversNodes(slot->id) && activeTickRange &&
+    const auto activeTickRange = m_viewModel.activeTickRange;
+    const AutomationViewModel::Row *const row = m_viewModel.find(slot->id);
+    const bool hitSelected = row && row->coversNodes && activeTickRange &&
                              hit.tick >= activeTickRange->first &&
                              hit.tick < activeTickRange->second;
     if (hitSelected) {

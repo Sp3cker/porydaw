@@ -1,5 +1,4 @@
 #include "ui/editordrawer/automationcanvas.h"
-#include "ui/editordrawer/cclanes.h"
 
 #include <algorithm>
 #include <cmath>
@@ -28,9 +27,9 @@ AutomationCanvas::AutomationCanvas(AutomationPage &page)
     , m_laneTitleFont(typography::bold(typography::caption(QGuiApplication::font())))
     , m_laneCaptionFont(typography::regular(typography::caption(QGuiApplication::font())))
     , m_page(page)
-    , m_rowData(&page)
+    , m_viewModel(buildAutomationViewModel(page.document(), page.timeline(),
+                                           page.m_owner.selectionModel(), page.ready()))
     , m_tempoLane(page.document())
-    , m_laneSelection(page.m_owner.selectionModel(), m_rowData.rows(), page.usedTrackMask())
     , m_hoverState(QGuiApplication::font())
 {
     refreshGeometry();
@@ -166,10 +165,9 @@ bool AutomationCanvas::hasMultipleSelectedNodes(
     for (std::size_t index = 0; index < m_nodeStack.size(); ++index) {
         const NodeLaneSlot &slot = m_nodeStack[index];
         const LaneHandle handle{int(index)};
-        if (!slot.lane ||
-            (!m_laneSelection.coversNodes(slot.id) && !bandPreviewContainsLane(handle))) {
+        const AutomationViewModel::Row *const row = m_viewModel.find(slot.id);
+        if (!slot.lane || ((!row || !row->coversNodes) && !bandPreviewContainsLane(handle)))
             continue;
-        }
         for (const NodePoint &point : slot.lane->points()) {
             if (point.tick < firstTick || point.tick >= lastTick)
                 continue;
@@ -296,14 +294,19 @@ void AutomationCanvas::rebuildRows()
     m_hoverState.invalidateCaches();
     m_hoverState.hoverValueLabel = {};
     m_hoverState.previewValueLabel = {};
-    m_rowData.rebuildRows();
-    m_laneSelection.setUsedTrackMask(m_page.usedTrackMask());
+    rebuildViewModel();
     contentGeometryChanged();
     // Document and track rebuilds rebind every adapter and remap the
     // selector's row identities: labels, appearance and selection markers
     // are republished together.
     emit parameterPresentationChanged();
     emit parameterSelectionChanged();
+}
+
+void AutomationCanvas::rebuildViewModel()
+{
+    m_viewModel = buildAutomationViewModel(m_page.document(), m_page.timeline(),
+                                           m_page.m_owner.selectionModel(), m_page.ready());
 }
 
 void AutomationCanvas::layoutLaneStack()
@@ -324,15 +327,13 @@ void AutomationCanvas::rebuildNodeStack()
     // Every logical slot shares this body so selected multi-lane edits keep
     // valid value geometry; only activeLane() decides what renders and hit-tests.
     const QRect body(QPoint{}, m_page.automationViewportSize());
-    m_nodeStack.push_back({{EditorAutomationRowKind::Tempo, 0, 0}, &m_tempoLane, body, nullptr});
-    const auto &rows = m_rowData.rows();
-    auto &rowText = m_rowData.rowText();
-    m_ccAdapters.reserve(rows.size());
-    for (const auto &row : rows)
-        m_ccAdapters.emplace_back(m_page.document(), int(row.id.track), row.id.controller);
-    for (int i = 0; i < int(rows.size()); ++i)
-        m_nodeStack.push_back({rows[std::size_t(i)].id, &m_ccAdapters[std::size_t(i)], body,
-                               &rowText[std::size_t(i)]});
+    const auto rows = m_viewModel.visibleRows();
+    m_nodeStack.push_back({rows.front().id, &m_tempoLane, body});
+    m_ccAdapters.reserve(rows.size() - 1);
+    for (auto row = rows.begin() + 1; row != rows.end(); ++row)
+        m_ccAdapters.emplace_back(m_page.document(), int(row->id.track), row->id.controller);
+    for (std::size_t index = 1; index < rows.size(); ++index)
+        m_nodeStack.push_back({rows[index].id, &m_ccAdapters[index - 1], body});
 }
 
 // Only the active parameter occupies the shared plot: a y inside the common
@@ -632,6 +633,6 @@ void AutomationCanvas::publishBandSelection(Tick first, Tick last, LaneHandle st
     const auto *endSlot = resolveSlot(end);
     if (!startSlot || !endSlot)
         return;
-    const auto [tempo, lanes] = m_laneSelection.laneSet(startSlot->id, endSlot->id);
+    const auto [tempo, lanes] = m_viewModel.laneSet(startSlot->id, endSlot->id);
     m_page.publishTimeSelection(first, last, lanes, tempo);
 }

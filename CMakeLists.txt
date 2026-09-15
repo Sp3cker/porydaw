@@ -427,8 +427,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/automationcanvas_pointmenu.cpp
     src/ui/editordrawer/automationcanvas_deleteprompt.cpp
     src/ui/editordrawer/automationcanvas_taptempo.cpp
-    src/ui/editordrawer/laneselection.cpp
-    src/ui/editordrawer/laneselection.h
+    src/ui/editordrawer/automationviewmodel.cpp
+    src/ui/editordrawer/automationviewmodel.h
     src/ui/editordrawer/nodelane/gesture.cpp
     src/ui/editordrawer/nodelane/gesture.h
     src/ui/editordrawer/nodelane/hover.cpp

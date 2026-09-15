@@ -41,7 +41,7 @@ LaneHandle ccLaneHandle(const AutomationCanvas &canvas, int track, uint8_t contr
         if (rows[std::size_t(index)].id ==
             EditorAutomationRowId{EditorAutomationRowKind::ControlChange,
                                   static_cast<uint8_t>(track), controller}) {
-            return {index + 1};
+            return {index};
         }
     }
     return {};

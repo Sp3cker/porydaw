@@ -1,11 +1,9 @@
 #pragma once
 
-#include <array>
 #include <cstdint>
 #include <optional>
 #include <span>
 #include <utility>
-#include <variant>
 
 #include <QCursor>
 #include <QElapsedTimer>
@@ -23,8 +21,8 @@
 
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationprojection.h"
+#include "ui/editordrawer/automationviewmodel.h"
 #include "ui/editordrawer/cclanes.h"
-#include "ui/editordrawer/laneselection.h"
 #include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
@@ -34,7 +32,6 @@
 #include "ui/mousehints/hintprofiles.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinput.h"
-#include "ui/songviewmodel.h"
 
 class AutomationPage;
 class SongDocument;
@@ -88,9 +85,13 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
 
     explicit AutomationCanvas(AutomationPage &page);
     ~AutomationCanvas() override = default;
-
     void requestFullQuickUpdate() const;
-    const std::vector<AutomationRow> &rows() const noexcept { return m_rowData.rows(); }
+
+    std::span<const AutomationViewModel::Row> rows() const noexcept
+    {
+        return m_viewModel.visibleRows();
+    }
+    const AutomationViewModel &viewModel() const noexcept { return m_viewModel; }
     void rebuildRows();
     void cancelInteraction() override;
     // Shared inline value prompt behind the Set Value menu action. Opening
@@ -237,6 +238,8 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void requestHoverQuickUpdate() const;
     void requestGestureBeginQuickUpdate(bool band) const;
     void requestGestureMoveQuickUpdate() const;
+    void commitTapTempo();
+    void cancelNodeGestures();
     void invalidateSelectedNodeMultiplicity() const noexcept;
     bool
     hasMultipleSelectedNodes(const std::optional<std::pair<Tick, Tick>> &selectedTickRange) const;
@@ -259,8 +262,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
         EditorAutomationRowId id;
         NodeLane *lane = nullptr;
         QRect body;
-        CCLanes::RowTextCache *text = nullptr;
-
         [[nodiscard]] bool isTempo() const noexcept
         {
             return id.kind == EditorAutomationRowKind::Tempo;
@@ -367,6 +368,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     // Handle for the currently resolved active-parameter row, searched in
     // m_nodeStack per call: rebuilds remap handles, so no index is cached.
     LaneHandle activeLane() const noexcept;
+    LaneHandle laneAt(int y) const noexcept;
     void showAddLaneMenu(const QPointF &scenePosition);
     QPointF menuScenePosition(const QPointF &globalPosition) const;
     // Consumes the guarded open-time target; clears it before any command.
@@ -395,10 +397,8 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void ensureMenuAdapters();
     void ensureNodeMenuAdapters();
     void layoutLaneStack();
-    void commitTapTempo();
-    void cancelNodeGestures();
+    void rebuildViewModel();
     void rebuildNodeStack();
-    LaneHandle laneAt(int y) const noexcept;
     const NodeLaneSlot *resolveSlot(LaneHandle handle) const noexcept;
     void refreshHoverAt(const QPointF &position);
     // The current idle target/tool profile for the status hint: node, origin
@@ -418,7 +418,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     QFont m_laneCaptionFont;
     AutomationPage &m_page;
     songview::TimelineInputHost *m_inputHost = nullptr;
-    CCLanes m_rowData;
+    AutomationViewModel m_viewModel;
     TempoLane m_tempoLane;
     std::vector<CCLaneAdapter> m_ccAdapters;
     std::vector<NodeLaneSlot> m_nodeStack;
@@ -428,7 +428,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
         double startHScroll = 0;
     } m_pan;
     BandGesture m_band;
-    LaneSelection m_laneSelection;
     struct SelectedNodeMultiplicityCache {
         uint64_t documentRevision = 0;
         bool valid = false;

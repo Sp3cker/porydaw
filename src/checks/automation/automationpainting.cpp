@@ -87,7 +87,7 @@ LanePaint lanePaint(AutomationPage &page, LaneKind kind)
     const auto &rows = page.canvas()->rows();
     for (int row = 0; row < int(rows.size()); ++row) {
         if (rows[std::size_t(row)].id.controller == kController) {
-            const LaneHandle handle{row + 1};
+            const LaneHandle handle{row};
             return {handle, page.canvas()->laneBody(handle), ink, 0, 127};
         }
     }

@@ -107,7 +107,7 @@ void RenderingPlayheadTest::automationHoverDecor()
     const auto &rows = canvas->rows();
     for (int index = 0; index < int(rows.size()); ++index) {
         if (rows[std::size_t(index)].id == lane)
-            handle = LaneHandle{index + 1};
+            handle = LaneHandle{index};
     }
     QVERIFY(handle.valid());
     QVERIFY(input->interaction());

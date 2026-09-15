@@ -11,10 +11,8 @@
 #include "core/m4asemantics.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/cclanes.h"
-#include "ui/editordrawer/laneselection.h"
 #include "ui/editordrawer/nodelane/batchcommit.h"
 #include "ui/editordrawer/tempolane.h"
-#include "ui/songview/editorselectionmodel.h"
 
 namespace {
 
@@ -274,36 +272,6 @@ void AutomationDomainTest::rangesAndSelection()
         QCOMPARE(bend.valueText(0), m4aFormatBend(0));
         QCOMPARE(bend.valueText(100), m4aFormatBend(100));
     }
-
-    songview::EditorSelectionModel selection;
-    const std::vector<AutomationRow> rows{{EditorAutomationRowId{
-        EditorAutomationRowKind::ControlChange, uint8_t(kTrack), kController}}};
-    LaneSelection laneSelection(selection, rows, 1u);
-    const EditorAutomationRowId selectedId =
-        adapterKind == kTempo ? EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}
-                              : rows.front().id;
-    songview::EditorSelectionModel::TimeSelection timeSelection;
-    timeSelection.startTick = 50;
-    timeSelection.endTick = 150;
-    timeSelection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
-    if (adapterKind == kTempo)
-        timeSelection.tempo = true;
-    else
-        timeSelection.lanes.push_back({kTrack, kController});
-    selection.setTimeSelection(std::move(timeSelection));
-    QVERIFY(laneSelection.activeTickRange() == (std::optional<std::pair<Tick, Tick>>{{50, 150}}));
-    QVERIFY(laneSelection.coversLane(selectedId));
-
-    auto unselected = selection.timeSelection();
-    unselected.tempo = adapterKind != kTempo;
-    unselected.lanes.clear();
-    if (adapterKind == kTempo)
-        unselected.lanes.push_back({kTrack, kController});
-    selection.setTimeSelection(std::move(unselected));
-    QVERIFY(!laneSelection.coversLane(selectedId));
-    selection.clearTimeSelection();
-    QVERIFY(!laneSelection.active());
-    QVERIFY(!laneSelection.coversLane(selectedId));
 }
 
 void AutomationDomainTest::deletes_data()

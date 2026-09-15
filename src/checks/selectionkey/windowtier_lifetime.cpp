@@ -53,7 +53,7 @@ std::optional<LaneHandle> panLane(const AutomationCanvas &canvas, int track)
         const auto &row = rows[index].id;
         if (row.kind == EditorAutomationRowKind::ControlChange && row.track == track &&
             row.controller == kPan)
-            return LaneHandle{int(index) + 1};
+            return LaneHandle{int(index)};
     }
     return std::nullopt;
 }

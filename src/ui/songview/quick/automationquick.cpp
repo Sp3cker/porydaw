@@ -204,7 +204,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                 return std::pair{first, last};
             return std::nullopt;
         }
-        const auto range = m_laneSelection.activeTickRange();
+        const auto range = m_viewModel.activeTickRange;
         return range ? std::optional{std::pair{Tick(range->first), Tick(range->second)}}
                      : std::nullopt;
     }();
@@ -258,8 +258,16 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                              .overflow =
                                  nodelane::nodeOverflowClip(body, m_geometry).intersected(viewport),
                              .tempo = slot->isTempo(),
-                             .selectedLane = m_laneSelection.coversLane(slot->id) || bandLane,
-                             .selectedNodesLane = m_laneSelection.coversNodes(slot->id) || bandLane,
+                             .selectedLane =
+                                 [&] {
+                                     const auto *row = m_viewModel.find(slot->id);
+                                     return (row && row->coversLane) || bandLane;
+                                 }(),
+                             .selectedNodesLane =
+                                 [&] {
+                                     const auto *row = m_viewModel.find(slot->id);
+                                     return (row && row->coversNodes) || bandLane;
+                                 }(),
                              .bandLane = bandLane,
                              .points = content || needsTransientPoints || needsHoverPoints
                                            ? slot->lane->points()

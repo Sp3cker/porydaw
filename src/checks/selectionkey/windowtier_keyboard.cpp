@@ -270,7 +270,7 @@ void SelectionWindowTierTest::parameterLabelActivationAndSharedCommands()
     const auto &rows = canvas->rows();
     for (size_t index = 0; index < rows.size(); ++index) {
         if (rows[index].id == volume)
-            volumeLane = LaneHandle{int(index) + 1};
+            volumeLane = LaneHandle{int(index)};
     }
     QVERIFY(volumeLane.has_value());
     QVERIFY(canvas->openValuePromptForInsertion(*volumeLane, tick + 48, 48));

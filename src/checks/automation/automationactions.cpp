@@ -153,12 +153,12 @@ void AutomationEditingTest::projectionValueBounds()
 void AutomationEditingTest::projectionCanvasOrigin()
 {
     const auto &rows = page().canvas()->rows();
-    QVERIFY(!rows.empty());
+    QVERIFY(rows.size() > 1);
     const LaneHandle firstRow{1};
     const QRect body = laneBody(firstRow);
     QVERIFY(!body.isEmpty());
     QCOMPARE(body.top(), 0);
-    QVERIFY(rows.front().id.kind == EditorAutomationRowKind::ControlChange);
+    QVERIFY(rows[1].id.kind == EditorAutomationRowKind::ControlChange);
 
     const QPointF input = inputPoint(firstRow, 48, 64);
     QVERIFY(input.y() >= qreal(body.top()));

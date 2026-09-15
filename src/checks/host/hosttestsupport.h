@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <vector>
 
 #include <QCoreApplication>
@@ -13,8 +14,8 @@
 #include "core/miditimeline.h"
 #include "core/smf.h"
 #include "core/songdocument.h"
+#include "ui/editordrawer/automationviewmodel.h"
 #include "ui/editordrawer/editordrawer.h"
-#include "ui/editorviewstate.h"
 #include "ui/songview.h"
 
 namespace checks::host {
@@ -29,14 +30,14 @@ inline SmfEvent noteEvent(uint8_t status, uint64_t tick, uint8_t key, uint8_t ve
     return event;
 }
 
-inline bool automationRowsEqual(const std::vector<AutomationRow> &left,
-                                const std::vector<AutomationRow> &right)
+inline bool automationRowsEqual(std::span<const AutomationViewModel::Row> left,
+                                std::span<const AutomationViewModel::Row> right)
 {
-    return left.size() == right.size() &&
-           std::equal(left.cbegin(), left.cend(), right.cbegin(),
-                      [](const AutomationRow &leftRow, const AutomationRow &rightRow) {
-                          return leftRow.id == rightRow.id;
-                      });
+    return left.size() == right.size() && std::equal(left.begin(), left.end(), right.begin(),
+                                                     [](const AutomationViewModel::Row &leftRow,
+                                                        const AutomationViewModel::Row &rightRow) {
+                                                         return leftRow.id == rightRow.id;
+                                                     });
 }
 
 class SyntheticHost final

@@ -234,8 +234,8 @@ void AutomationEditingTest::defaultBodyClickSetsCursorOnly()
 void AutomationEditingTest::firstCcRowOriginRebuildAndUndo()
 {
     const auto &rows = page().canvas()->rows();
-    QVERIFY(!rows.empty());
-    const EditorAutomationRowId firstRowId = rows.front().id;
+    QVERIFY(rows.size() > 1);
+    const EditorAutomationRowId firstRowId = rows[1].id;
     QVERIFY(activateParameter(firstRowId));
     const LaneHandle firstRow = findRow(firstRowId);
     QVERIFY(firstRow.valid());

@@ -8,7 +8,7 @@
 #include "core/smf.h"
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationprojection.h"
-#include "ui/editordrawer/laneselection.h"
+#include "ui/editordrawer/automationviewmodel.h"
 #include "ui/editorviewstate.h"
 #include "ui/songview.h"
 #include "ui/songview/editorselectionmodel.h"
@@ -20,11 +20,6 @@ using EditorSelectionModel = songview::EditorSelectionModel;
 EditorAutomationRowId ccId(int track, uint8_t controller)
 {
     return {EditorAutomationRowKind::ControlChange, uint8_t(track), controller};
-}
-
-AutomationRow ccRow(int track, uint8_t controller)
-{
-    return AutomationRow{ccId(track, controller)};
 }
 
 EditorAutomationRowId tempoId()
@@ -57,16 +52,27 @@ class ProjectionRig final
 {
   public:
     static std::unique_ptr<ProjectionRig> create(double zoom, double horizontalScroll,
-                                                 QString &error)
+                                                 QString &error, bool includeSecondary = false)
     {
         error.clear();
         auto rig = std::unique_ptr<ProjectionRig>(new ProjectionRig);
         SmfFile smf;
         smf.format = 1;
         smf.division = 24;
-        smf.tracks.push_back({{}, 0});
+
+        SmfTrack primary;
+        primary.events.push_back(noteEvent(0x90, 0, 60, 64));
+        primary.endTick = 1;
+        smf.tracks.push_back(std::move(primary));
+        if (includeSecondary) {
+            SmfTrack secondary;
+            secondary.events.push_back(noteEvent(0x91, 0, 67, 64));
+            secondary.endTick = 1;
+            smf.tracks.push_back(std::move(secondary));
+        }
+
         SongInfo info;
-        info.label = QStringLiteral("lane-selection-check");
+        info.label = QStringLiteral("automation-coverage-check");
         if (!rig->m_document.adoptSmf(std::move(smf), info, &error))
             return nullptr;
 
@@ -81,139 +87,179 @@ class ProjectionRig final
         return rig;
     }
 
+    SongDocument &document() noexcept { return m_document; }
+    const SongDocument &document() const noexcept { return m_document; }
+    const MidiTimeline *timeline() const noexcept { return &m_editor->timeline(); }
+
     AutomationProjection projection() const
     {
         return AutomationProjection(AutomationGeometry::resolve(), &m_editor->view());
     }
 
   private:
+    static SmfEvent noteEvent(uint8_t status, uint64_t tick, uint8_t key, uint8_t velocity)
+    {
+        SmfEvent event;
+        event.status = status;
+        event.tick = tick;
+        event.data0 = key;
+        event.data1 = velocity;
+        return event;
+    }
+
     SongDocument m_document;
     std::unique_ptr<checks::EditorRig> m_editor;
 };
 
-class LaneSelectionTest final : public QObject
+AutomationViewModel modelFor(const ProjectionRig &rig, const EditorSelectionModel &selection)
+{
+    return buildAutomationViewModel(rig.document(), rig.timeline(), selection, true);
+}
+
+const AutomationViewModel::Row *rowFor(const AutomationViewModel &model,
+                                       const EditorAutomationRowId &id)
+{
+    return model.find(id);
+}
+
+bool coversLane(const AutomationViewModel &model, const EditorAutomationRowId &id)
+{
+    const auto *const row = rowFor(model, id);
+    return row && row->coversLane;
+}
+
+bool coversNodes(const AutomationViewModel &model, const EditorAutomationRowId &id)
+{
+    const auto *const row = rowFor(model, id);
+    return row && row->coversNodes;
+}
+
+class AutomationCoverageTest final : public QObject
 {
     Q_OBJECT
 
   public:
-    LaneSelectionTest() = default;
-    Q_DISABLE_COPY_MOVE(LaneSelectionTest)
+    AutomationCoverageTest() = default;
+    Q_DISABLE_COPY_MOVE(AutomationCoverageTest)
 
   private slots:
     void emptySelectionAndEndpointPayload()
     {
-        const uint32_t usedTracks = uint32_t{1} << 0;
-        const std::vector<AutomationRow> rows = {ccRow(0, 7), ccRow(0, 10), ccRow(0, 21)};
-        EditorSelectionModel model;
-        LaneSelection view(model, rows, usedTracks);
+        QString error;
+        const auto rig = ProjectionRig::create(96.0, 0.0, error);
+        QVERIFY2(rig, qPrintable(error));
+        const EditorSelectionModel selection;
+        const AutomationViewModel model = modelFor(*rig, selection);
 
-        QVERIFY(!view.active());
-        QVERIFY(!view.coversLane(tempoId()));
-        QVERIFY(!view.coversNodes(tempoId()));
-        QVERIFY(!view.coversLane(ccId(0, 7)));
-        QVERIFY(!view.coversNodes(ccId(0, 7)));
-        QVERIFY(!view.coversLane(invalidId()));
-        QVERIFY(!view.coversNodes(invalidId()));
-        QVERIFY(view.visibleLanes().empty());
+        QVERIFY(!model.activeTickRange);
+        QVERIFY(!coversLane(model, tempoId()));
+        QVERIFY(!coversNodes(model, tempoId()));
+        QVERIFY(!coversLane(model, ccId(0, 7)));
+        QVERIFY(!coversNodes(model, ccId(0, 7)));
+        QVERIFY(!coversLane(model, invalidId()));
+        QVERIFY(!coversNodes(model, invalidId()));
+        QVERIFY(model.visibleLanes(selection).empty());
 
-        // laneSet is endpoint-driven; it intentionally does not consult active().
-        const auto set = view.laneSet(tempoId(), ccId(0, 10));
+        // laneSet is endpoint-driven; it intentionally does not consult activeTickRange.
+        const auto set = model.laneSet(tempoId(), ccId(0, 10));
         QVERIFY(set.first);
         QVERIFY((set.second == std::vector<std::pair<int, uint8_t>>{{0, 7}, {0, 10}}));
     }
 
     void laneScopeCoverage()
     {
-        const uint32_t usedTracks = uint32_t{1} << 0;
-        const std::vector<AutomationRow> rows = {ccRow(0, 7), ccRow(0, 10), ccRow(0, 21)};
-        EditorSelectionModel model = selectedModel(
+        QString error;
+        const auto rig = ProjectionRig::create(96.0, 0.0, error);
+        QVERIFY2(rig, qPrintable(error));
+        const EditorSelectionModel selection = selectedModel(
             24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}, {0, 21}}, true);
-        LaneSelection view(model, rows, usedTracks);
+        const AutomationViewModel model = modelFor(*rig, selection);
 
-        QVERIFY(view.active());
-        QVERIFY(view.coversLane(tempoId()));
-        QVERIFY(view.coversNodes(tempoId()));
-        QVERIFY(view.coversLane(ccId(0, 7)));
-        QVERIFY(view.coversNodes(ccId(0, 7)));
-        QVERIFY(view.coversLane(ccId(0, 21)));
-        QVERIFY(view.coversNodes(ccId(0, 21)));
-        QVERIFY(!view.coversLane(ccId(0, 10)));
-        QVERIFY(!view.coversNodes(ccId(0, 10)));
-        QVERIFY(!view.coversLane(ccId(0, 99)));
-        QVERIFY(!view.coversNodes(ccId(0, 99)));
-        QVERIFY((view.visibleLanes() == std::vector<std::pair<int, uint8_t>>{{0, 7}, {0, 21}}));
+        QVERIFY(model.activeTickRange == (std::optional<std::pair<Tick, Tick>>{{24, 48}}));
+        QVERIFY(coversLane(model, tempoId()));
+        QVERIFY(coversNodes(model, tempoId()));
+        QVERIFY(coversLane(model, ccId(0, 7)));
+        QVERIFY(coversNodes(model, ccId(0, 7)));
+        QVERIFY(coversLane(model, ccId(0, 21)));
+        QVERIFY(coversNodes(model, ccId(0, 21)));
+        QVERIFY(!coversLane(model, ccId(0, 10)));
+        QVERIFY(!coversNodes(model, ccId(0, 10)));
+        QVERIFY(!coversLane(model, ccId(0, 99)));
+        QVERIFY(!coversNodes(model, ccId(0, 99)));
+        QVERIFY((model.visibleLanes(selection) ==
+                 std::vector<std::pair<int, uint8_t>>{{0, 7}, {0, 21}}));
 
-        EditorSelectionModel noTempoModel =
+        const EditorSelectionModel noTempoSelection =
             selectedModel(24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}}, false);
-        LaneSelection noTempo(noTempoModel, rows, usedTracks);
-        QVERIFY(!noTempo.coversLane(tempoId()));
-        QVERIFY(!noTempo.coversNodes(tempoId()));
+        const AutomationViewModel noTempo = modelFor(*rig, noTempoSelection);
+        QVERIFY(!coversLane(noTempo, tempoId()));
+        QVERIFY(!coversNodes(noTempo, tempoId()));
     }
 
     void trackScopeSeparatesLaneAndNodeCoverage()
     {
-        const uint32_t usedTracks = uint32_t{1} << 0;
-        const std::vector<AutomationRow> rows = {ccRow(0, 7), ccRow(0, 10), ccRow(0, 21)};
-        EditorSelectionModel model =
+        QString error;
+        const auto rig = ProjectionRig::create(96.0, 0.0, error);
+        QVERIFY2(rig, qPrintable(error));
+        const EditorSelectionModel selection =
             selectedModel(24, 48, EditorSelectionModel::TimeSelection::Tracks);
-        LaneSelection full(model, rows, usedTracks);
+        const AutomationViewModel full = modelFor(*rig, selection);
 
-        QVERIFY(full.coversLane(tempoId()));
-        QVERIFY(full.coversNodes(tempoId()));
-        QVERIFY(!full.coversLane(ccId(0, 7)));
-        QVERIFY(full.coversNodes(ccId(0, 7)));
+        QVERIFY(coversLane(full, tempoId()));
+        QVERIFY(coversNodes(full, tempoId()));
+        QVERIFY(!coversLane(full, ccId(0, 7)));
+        QVERIFY(coversNodes(full, ccId(0, 7)));
 
-        LaneSelection partial(model, rows, usedTracks | (uint32_t{1} << 1));
-        QVERIFY(!partial.coversLane(tempoId()));
-        QVERIFY(!partial.coversNodes(tempoId()));
+        QString secondaryError;
+        const auto secondaryRig = ProjectionRig::create(96.0, 0.0, secondaryError, true);
+        QVERIFY2(secondaryRig, qPrintable(secondaryError));
+        const AutomationViewModel partial = modelFor(*secondaryRig, selection);
+        QVERIFY(!coversLane(partial, tempoId()));
+        QVERIFY(!coversNodes(partial, tempoId()));
     }
 
     void hiddenLanesAreNotCovered()
     {
-        const uint32_t usedTracks = uint32_t{1} << 0;
-        EditorSelectionModel model = selectedModel(
-            24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}, {0, 21}}, false);
-        const std::vector<AutomationRow> rows = {ccRow(0, 7), ccRow(0, 10)};
-        LaneSelection view(model, rows, usedTracks);
+        QString error;
+        const auto rig = ProjectionRig::create(96.0, 0.0, error);
+        QVERIFY2(rig, qPrintable(error));
+        // Supported controllers (including CC21) always have rows; CC99 is absent.
+        const EditorSelectionModel selection = selectedModel(
+            24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}, {0, 99}}, false);
+        const AutomationViewModel model = modelFor(*rig, selection);
 
-        QVERIFY(view.coversLane(ccId(0, 7)));
-        QVERIFY(view.coversNodes(ccId(0, 7)));
-        QVERIFY(!view.coversLane(ccId(0, 10)));
-        QVERIFY(!view.coversNodes(ccId(0, 10)));
-        QVERIFY((view.visibleLanes() == std::vector<std::pair<int, uint8_t>>{{0, 7}}));
+        QVERIFY(coversLane(model, ccId(0, 7)));
+        QVERIFY(coversNodes(model, ccId(0, 7)));
+        QVERIFY(!coversLane(model, ccId(0, 10)));
+        QVERIFY(!coversNodes(model, ccId(0, 10)));
+        QVERIFY(!coversLane(model, invalidId()));
+        QVERIFY(!coversNodes(model, invalidId()));
+        QVERIFY((model.visibleLanes(selection) == std::vector<std::pair<int, uint8_t>>{{0, 7}}));
+
+        // Page readiness hides supported rows without removing their document facts.
+        const AutomationViewModel hidden =
+            buildAutomationViewModel(rig->document(), rig->timeline(), selection, false);
+        QVERIFY(rowFor(hidden, ccId(0, 7)));
+        QVERIFY(!coversLane(hidden, ccId(0, 7)));
+        QVERIFY(!coversNodes(hidden, ccId(0, 7)));
+        QVERIFY(hidden.visibleLanes(selection).empty());
     }
 
-    void rowRebuildFollowsIdentity()
+    void documentFactsFollowIdentity()
     {
-        const uint32_t usedTracks = uint32_t{1} << 0;
-        EditorSelectionModel model = selectedModel(
-            24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}, {0, 21}}, true);
-        std::vector<AutomationRow> rows = {ccRow(0, 7), ccRow(0, 10), ccRow(0, 21)};
-        LaneSelection view(model, rows, usedTracks);
+        QString error;
+        const auto rig = ProjectionRig::create(96.0, 0.0, error);
+        QVERIFY2(rig, qPrintable(error));
+        const EditorSelectionModel selection =
+            selectedModel(24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}}, false);
+        AutomationViewModel model = modelFor(*rig, selection);
+        QCOMPARE(rowFor(model, ccId(0, 7))->eventCount, std::size_t{0});
 
-        rows.insert(rows.cbegin() + 2, ccRow(0, 11));
-        view.setUsedTrackMask(usedTracks);
-        QVERIFY(view.coversLane(tempoId()));
-        QVERIFY(view.coversLane(ccId(0, 7)));
-        QVERIFY(!view.coversLane(ccId(0, 10)));
-        QVERIFY(!view.coversLane(ccId(0, 11)));
-        QVERIFY(view.coversLane(ccId(0, 21)));
-        QVERIFY((view.visibleLanes() == std::vector<std::pair<int, uint8_t>>{{0, 7}, {0, 21}}));
-
-        rows.erase(rows.cbegin() + 2);
-        view.setUsedTrackMask(usedTracks);
-        QVERIFY(view.coversLane(ccId(0, 21)));
-        QVERIFY(!view.coversLane(ccId(0, 11)));
-        QVERIFY(view.laneSet(ccId(0, 11), ccId(0, 11)).second.empty());
-
-        EditorSelectionModel trackModel =
-            selectedModel(24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 10}}, false);
-        const std::vector<AutomationRow> trackRows = {ccRow(0, 10), ccRow(1, 10)};
-        LaneSelection trackView(trackModel, trackRows, usedTracks | (uint32_t{1} << 1));
-        QVERIFY(trackView.coversLane(ccId(0, 10)));
-        QVERIFY(!trackView.coversLane(ccId(1, 10)));
-        QVERIFY(trackView.coversNodes(ccId(0, 10)));
-        QVERIFY(!trackView.coversNodes(ccId(1, 10)));
+        rig->document().addLanePoint(0, 7, 24, 64);
+        model = modelFor(*rig, selection);
+        QCOMPARE(rowFor(model, ccId(0, 7))->eventCount, std::size_t{1});
+        QVERIFY(rowFor(model, ccId(0, 10)));
+        QVERIFY(!rowFor(model, invalidId()));
     }
 
     void hitTest_data()
@@ -235,53 +281,53 @@ class LaneSelectionTest final : public QObject
         QFETCH(double, dpr);
         QFETCH(bool, active);
         QString error;
-        std::unique_ptr<ProjectionRig> rig = ProjectionRig::create(zoom, scroll, error);
+        const auto rig = ProjectionRig::create(zoom, scroll, error);
         QVERIFY2(rig, qPrintable(error));
-        const std::vector<AutomationRow> rows = {ccRow(0, 7), ccRow(0, 10), ccRow(0, 21)};
-        EditorSelectionModel model =
+        const EditorSelectionModel selection =
             active
                 ? selectedModel(48, 96, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}}, false)
                 : selectedModel(96, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}},
                                 false);
-        LaneSelection view(model, rows, uint32_t{1} << 0);
+        const AutomationViewModel model = modelFor(*rig, selection);
         const AutomationProjection projection = rig->projection();
         const qreal startX = projection.displayX(48, dpr);
         const qreal endX = projection.displayX(96, dpr);
         const qreal midX = (startX + endX) / 2.0;
 
         if (!active) {
-            QVERIFY(!view.hitTest(ccId(0, 7), midX, projection, dpr));
+            QVERIFY(!model.hitTest(ccId(0, 7), midX, projection, dpr, selection));
             return;
         }
 
-        QVERIFY(view.hitTest(ccId(0, 7), startX, projection, dpr));
-        QVERIFY(view.hitTest(ccId(0, 7), midX, projection, dpr));
-        QVERIFY(!view.hitTest(ccId(0, 7), startX - 1.0, projection, dpr));
-        QVERIFY(!view.hitTest(ccId(0, 7), endX, projection, dpr));
-        QVERIFY(!view.hitTest(ccId(0, 10), midX, projection, dpr));
-        QVERIFY(!view.hitTest(tempoId(), midX, projection, dpr));
+        QVERIFY(model.hitTest(ccId(0, 7), startX, projection, dpr, selection));
+        QVERIFY(model.hitTest(ccId(0, 7), midX, projection, dpr, selection));
+        QVERIFY(!model.hitTest(ccId(0, 7), startX - 1.0, projection, dpr, selection));
+        QVERIFY(!model.hitTest(ccId(0, 7), endX, projection, dpr, selection));
+        QVERIFY(!model.hitTest(ccId(0, 10), midX, projection, dpr, selection));
+        QVERIFY(!model.hitTest(tempoId(), midX, projection, dpr, selection));
     }
 
     void endpointSemantics()
     {
-        const uint32_t usedTracks = uint32_t{1} << 0;
-        const std::vector<AutomationRow> rows = {ccRow(0, 7), ccRow(0, 10), ccRow(0, 21)};
-        EditorSelectionModel model;
-        LaneSelection view(model, rows, usedTracks);
+        QString error;
+        const auto rig = ProjectionRig::create(96.0, 0.0, error);
+        QVERIFY2(rig, qPrintable(error));
+        const EditorSelectionModel selection;
+        const AutomationViewModel model = modelFor(*rig, selection);
 
-        const auto tempoOnly = view.laneSet(tempoId(), tempoId());
+        const auto tempoOnly = model.laneSet(tempoId(), tempoId());
         QVERIFY(tempoOnly.first);
         QVERIFY(tempoOnly.second.empty());
-        const auto ccOnly = view.laneSet(ccId(0, 7), ccId(0, 7));
+        const auto ccOnly = model.laneSet(ccId(0, 7), ccId(0, 7));
         QVERIFY(!ccOnly.first);
         QVERIFY((ccOnly.second == std::vector<std::pair<int, uint8_t>>{{0, 7}}));
-        const auto mixed = view.laneSet(tempoId(), ccId(0, 10));
+        const auto mixed = model.laneSet(tempoId(), ccId(0, 10));
         QVERIFY(mixed.first);
         QVERIFY((mixed.second == std::vector<std::pair<int, uint8_t>>{{0, 7}, {0, 10}}));
-        const auto reversed = view.laneSet(ccId(0, 10), tempoId());
+        const auto reversed = model.laneSet(ccId(0, 10), tempoId());
         QVERIFY(reversed.first);
         QVERIFY(reversed.second == mixed.second);
-        const auto invalid = view.laneSet(invalidId(), ccId(0, 7));
+        const auto invalid = model.laneSet(invalidId(), ccId(0, 7));
         QVERIFY(!invalid.first);
         QVERIFY(invalid.second.empty());
     }
@@ -291,7 +337,7 @@ class LaneSelectionTest final : public QObject
 
 int runLaneSelectionCheck(const QStringList &qtArguments)
 {
-    LaneSelectionTest test;
+    AutomationCoverageTest test;
     QStringList arguments{QStringLiteral("laneselectioncheck")};
     arguments.append(qtArguments);
     return QTest::qExec(&test, arguments);

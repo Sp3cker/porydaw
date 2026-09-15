@@ -55,15 +55,16 @@ void AutomationCanvas::clearTimeSelectionIfOutsidePress(QPointF position,
                                                         LaneHandle lane, const NodeLaneSlot *slot)
 {
     auto &model = m_page.m_owner.selectionModel();
-    const auto activeTickRange = m_laneSelection.activeTickRange();
+    const auto activeTickRange = m_viewModel.activeTickRange;
     Q_ASSERT(activeTickRange);
     const auto [firstTick, lastTick] = *activeTickRange;
     auto laneSelectionHit = false;
     auto selectedNode = false;
     if (slot) {
-        laneSelectionHit = m_laneSelection.hitTest(slot->id, position.x(), projection,
-                                                   m_inputHost->devicePixelRatio());
-        if (m_laneSelection.coversNodes(slot->id)) {
+        laneSelectionHit = m_viewModel.hitTest(slot->id, position.x(), projection,
+                                               m_inputHost->devicePixelRatio(), model);
+        const AutomationViewModel::Row *const row = m_viewModel.find(slot->id);
+        if (row && row->coversNodes) {
             NodePoint selectedPoint;
             if (nodePointHit(lane, position, projection, &selectedPoint)) {
                 selectedNode =
@@ -181,7 +182,7 @@ bool AutomationCanvas::pointerPress(const songview::TimelinePointerInput &input)
     const LaneHandle pointerLane = laneAt(position.toPoint().y());
     const auto *pointerSlot = resolveSlot(pointerLane);
     if (input.button == Qt::LeftButton || input.button == Qt::RightButton) {
-        if (m_laneSelection.active())
+        if (m_viewModel.activeTickRange)
             clearTimeSelectionIfOutsidePress(position, proj, pointerLane, pointerSlot);
     }
     const auto *laneSlot = resolveSlot(pointerLane);
@@ -310,6 +311,7 @@ bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &inpu
         m_band.extendTo(pointerLane, compatible);
         const auto [laneFirst, laneLast] = m_band.laneRange();
         const LaneHandle contextLane = laneFirst;
+        const auto *contextSlot = resolveSlot(contextLane);
         const auto selection = m_band.release();
         // Publishing and both popup opens below run synchronous callbacks
         // that can tear this canvas down; continuation re-checks this guard.
@@ -332,11 +334,13 @@ bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &inpu
             if (!showNodeMenuNear(contextLane, position, input.globalPosition)) {
                 if (!self)
                     return true;
-                const auto *contextSlot = resolveSlot(contextLane);
+                const AutomationViewModel::Row *const row =
+                    contextSlot ? m_viewModel.find(contextSlot->id) : nullptr;
                 const bool selected =
-                    contextSlot &&
-                    m_laneSelection.hitTest(contextSlot->id, position.x(), projection(),
-                                            m_inputHost->devicePixelRatio());
+                    contextSlot && row &&
+                    m_viewModel.hitTest(contextSlot->id, position.x(), projection(),
+                                        m_inputHost->devicePixelRatio(),
+                                        m_page.m_owner.selectionModel());
                 if (selected) {
                     if (const songview::TimelineInputHost *const menuHost =
                             input.host ? input.host : m_inputHost)

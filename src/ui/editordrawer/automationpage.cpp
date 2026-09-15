@@ -94,18 +94,6 @@ const MidiTimeline *AutomationPage::timeline() const noexcept
     return m_owner.timeline();
 }
 
-uint32_t AutomationPage::usedTrackMask() const noexcept
-{
-    const MidiTimeline *songTimeline = timeline();
-    if (!songTimeline)
-        return 0;
-    uint32_t mask = 0;
-    for (int track = 0; track < 16; ++track)
-        if (songTimeline->tracks[track].used)
-            mask |= 1u << track;
-    return mask;
-}
-
 SongDocument &AutomationPage::document() const noexcept
 {
     return m_owner.document();
@@ -145,6 +133,7 @@ void AutomationPage::refreshLiveState(const DrawerPageLiveState &liveState)
     if (scrollOnly)
         return;
     if (!liveChanged && !viewStateChanged) {
+        m_canvas->rebuildViewModel();
         m_canvas->requestSelectionQuickUpdate();
     } else if (preservePan) {
         m_canvas->requestFullQuickUpdate();

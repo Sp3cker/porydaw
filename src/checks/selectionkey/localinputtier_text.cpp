@@ -319,7 +319,7 @@ void SelectionLocalInputTierTest::numericPromptOwnsKeys()
     automation->forceActiveFocus(Qt::MouseFocusReason);
     quickWindow->requestActivate();
     selectionkey::settle();
-    QVERIFY(canvas->openValuePromptForInsertion(LaneHandle{laneIndex + 1}, kEmptyTick, 64));
+    QVERIFY(canvas->openValuePromptForInsertion(LaneHandle{laneIndex}, kEmptyTick, 64));
     QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
     QPointer<QQuickItem> prompt;
     QTRY_VERIFY2((prompt = automation_valueprompt::focusedTextInput(*quickWindow)),

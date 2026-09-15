@@ -131,8 +131,7 @@ void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
                                                    .tempo = slot->isTempo(),
                                                    .scenePosition = scenePosition};
         if (!request.tempo)
-            request.lanes = m_laneSelection.visibleLanes();
-        // Focus return lives in the owner's terminal menu paths.
+            request.lanes = m_viewModel.visibleLanes(model);
         m_page.showTimeSelectionMenu(request);
         return;
     }

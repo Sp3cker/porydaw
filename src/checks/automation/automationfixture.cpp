@@ -81,7 +81,7 @@ std::pair<int, int> valueRange(const AutomationPage &page, LaneHandle lane)
         return {CoreTimeDefaults::kMinTempoBpm, CoreTimeDefaults::kMaxTempoBpm};
 
     const auto &rows = page.canvas()->rows();
-    const int row = lane.index - 1;
+    const int row = lane.index;
     if (row < 0 || row >= int(rows.size()))
         return {0, 127};
 
@@ -290,7 +290,7 @@ LaneHandle AutomationEditingTest::findRow(const EditorAutomationRowId &row) cons
     const auto &rows = m_page->canvas()->rows();
     for (int index = 0; index < int(rows.size()); ++index) {
         if (rows[std::size_t(index)].id == row)
-            return {index + 1};
+            return {index};
     }
     return {};
 }
@@ -331,7 +331,7 @@ AutomationEditingTest::pointerMapping(LaneHandle lane, QPointF contentPoint) con
     }
 
     const auto &rows = m_page->canvas()->rows();
-    const int row = lane.index - 1;
+    const int row = lane.index;
     if (row < 0 || row >= int(rows.size()))
         return {};
 

@@ -83,23 +83,11 @@ LaneHandle AutomationCanvas::activeLane() const noexcept
 // event inside the selected tick range — scope coverage alone is not enough.
 QList<int> AutomationCanvas::selectedParameters() const
 {
-    const auto range = m_laneSelection.activeTickRange();
-    const SongDocument &document = m_page.document();
-    if (!range)
+    if (!m_viewModel.activeTickRange)
         return {};
-    return parameterIndexesWhere([this, &range, &document](const EditorAutomationRowId &row) {
-        if (!m_laneSelection.coversNodes(row))
-            return false;
-        const auto inRange = [&range](const auto &point) {
-            return point.tick >= range->first && point.tick < range->second;
-        };
-        if (row.kind == EditorAutomationRowKind::Tempo) {
-            const auto &points = document.tempoPoints();
-            return std::any_of(points.cbegin(), points.cend(), inRange);
-        }
-        const std::vector<DocLanePoint> points =
-            document.lanePoints(int(row.track), row.controller);
-        return std::any_of(points.cbegin(), points.cend(), inRange);
+    return parameterIndexesWhere([this](const EditorAutomationRowId &row) {
+        const AutomationViewModel::Row *const fact = m_viewModel.find(row);
+        return fact && fact->selectionHasEvents;
     });
 }
 
@@ -118,10 +106,8 @@ QList<int> AutomationCanvas::ghostParameters() const
 // adapter's projected tick-0 engine default is not an event.
 std::size_t AutomationCanvas::parameterEventCount(const EditorAutomationRowId &row) const
 {
-    const SongDocument &document = m_page.document();
-    return row.kind == EditorAutomationRowKind::Tempo
-               ? document.tempoPoints().size()
-               : document.lanePoints(row.track, row.controller).size();
+    const AutomationViewModel::Row *const fact = m_viewModel.find(row);
+    return fact ? fact->eventCount : std::size_t{0};
 }
 
 bool AutomationCanvas::parameterHasEvents(const EditorAutomationRowId &row) const

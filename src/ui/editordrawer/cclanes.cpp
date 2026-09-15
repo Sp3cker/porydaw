@@ -10,18 +10,6 @@
 #include "core/xcmd.h"
 
 #include "core/m4asemantics.h"
-#include "ui/editordrawer/automationpage.h"
-#include "ui/editordrawer/automationprojection.h"
-#include "ui/editorviewstate.h"
-
-namespace {
-
-EditorAutomationRowId laneRow(int track, uint8_t controller)
-{
-    return {EditorAutomationRowKind::ControlChange, uint8_t(track), controller};
-}
-
-} // namespace
 
 QString CCLanes::laneLabel(uint8_t controller)
 {
@@ -34,10 +22,6 @@ QString CCLanes::laneLabel(uint8_t controller)
     return QStringLiteral("%1 (%2)").arg(QLatin1String(info.display), QLatin1String(info.name));
 }
 
-CCLanes::CCLanes(AutomationPage *page) noexcept : m_page(page) {}
-
-CCLanes::~CCLanes() = default;
-
 uint8_t CCLanes::bendController() noexcept
 {
     return CoreTimeDefaults::kLaneCcBend;
@@ -48,7 +32,7 @@ std::span<const uint8_t> CCLanes::supportedControllers() noexcept
     // Selector display order, deliberately not ascending controller number:
     // related identities are adjacent so the parameter grid reads as groups —
     // mix (Volume, Pan), pitch (Modulation, Pitch bend, LFO speed, Bend range),
-    // then the two XCMD echo lanes. Tempo is appended after this catalog.
+    // then the two XCMD echo lanes.
     static constexpr auto controllers = [] {
         std::array<uint8_t, 6 + xcmd::kLaneDescriptors.size()> result{};
         result[0] = CoreTimeDefaults::kCcVolume;
@@ -85,30 +69,6 @@ int CCLanes::autoRange(int maximum) noexcept
     if (maximum <= 64)
         return 64;
     return 127;
-}
-
-void CCLanes::rebuildRows()
-{
-    m_rows.clear();
-    m_rowText.clear();
-    const auto appendRow = [this](const EditorAutomationRowId &id) {
-        m_rows.push_back({id});
-        m_rowText.emplace_back();
-        m_rowText.back().title = titleFor(m_rows.back());
-    };
-    if (!m_page || !m_page->ready() || !m_page->timeline())
-        return;
-    const int track = m_page->m_owner.selectionModel().primaryTrack();
-    if (track < 0)
-        return;
-    // Every supported identity has a stable row, including lanes without events.
-    for (const uint8_t controller : supportedControllers())
-        appendRow(laneRow(track, controller));
-}
-
-QString CCLanes::titleFor(const AutomationRow &row) const
-{
-    return laneLabel(row.id.controller);
 }
 
 CCLaneAdapter::CCLaneAdapter(SongDocument &document, int engineTrack, uint8_t controller) noexcept

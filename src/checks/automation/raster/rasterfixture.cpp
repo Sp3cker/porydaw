@@ -247,7 +247,7 @@ LaneHandle AutomationRasterFixture::handleFor(const Lane &lane) const noexcept
     const auto &rows = canvas().rows();
     for (int index = 0; index < int(rows.size()); ++index) {
         if (rows[std::size_t(index)].id == lane.row)
-            return {index + 1};
+            return {index};
     }
     return {};
 }

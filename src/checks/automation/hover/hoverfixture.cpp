@@ -236,7 +236,7 @@ LaneHandle findHandle(const AutomationCanvas &canvas, const EditorAutomationRowI
     const auto &rows = canvas.rows();
     for (int index = 0; index < int(rows.size()); ++index) {
         if (rows[std::size_t(index)].id == id)
-            return {index + 1};
+            return {index};
     }
     return {};
 }
@@ -244,9 +244,8 @@ LaneHandle findHandle(const AutomationCanvas &canvas, const EditorAutomationRowI
 bool rowMatches(const AutomationCanvas &canvas, LaneHandle handle, const EditorAutomationRowId &id)
 {
     const auto &rows = canvas.rows();
-    const int row = handle.index - 1;
-    return handle.index > 0 && row >= 0 && row < int(rows.size()) &&
-           rows[std::size_t(row)].id == id;
+    const int row = handle.index;
+    return handle.valid() && row >= 0 && row < int(rows.size()) && rows[std::size_t(row)].id == id;
 }
 
 QPoint windowPoint(const Fixture &fixture, QPointF viewportPoint)

@@ -63,7 +63,7 @@ LaneHandle ccLaneHandle(const AutomationCanvas &canvas)
     for (int index = 0; index < int(rows.size()); ++index) {
         if (rows[std::size_t(index)].id ==
             EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 0, kController})
-            return LaneHandle{index + 1};
+            return LaneHandle{index};
     }
     return {};
 }

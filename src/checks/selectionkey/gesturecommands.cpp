@@ -122,10 +122,10 @@ void SelectionKeyGestureTest::automationPanGuardsSharedCommands()
     const auto laneRow = [&]() -> std::optional<LaneHandle> {
         const auto &rows = automation->canvas()->rows();
         for (int index = 0; index < int(rows.size()); ++index) {
-            const AutomationRow &candidate = rows[std::size_t(index)];
+            const auto &candidate = rows[std::size_t(index)];
             if (candidate.id.kind == EditorAutomationRowKind::ControlChange &&
                 candidate.id.track == kTrack && candidate.id.controller == kAutomationController)
-                return LaneHandle{index + 1};
+                return LaneHandle{index};
         }
         return std::nullopt;
     };

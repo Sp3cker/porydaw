@@ -252,7 +252,7 @@ LaneHandle AutomationPresentationTest::findRow(EditorAutomationRowId id) const
     const auto &rows = automationPage->canvas()->rows();
     for (int index = 0; index < int(rows.size()); ++index) {
         if (rows[std::size_t(index)].id == id)
-            return {index + 1};
+            return {index};
     }
     return {};
 }
