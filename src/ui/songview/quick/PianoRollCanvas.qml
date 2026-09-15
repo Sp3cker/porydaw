@@ -5,6 +5,7 @@ Item {
     id: root
 
     required property Item gutterSide
+    required property Item bandSide
     required property Item plotSide
 
     // Keep pitch rows below pre-roll shading and time marks.
@@ -106,8 +107,11 @@ Item {
         z: 1
     }
 
+    // Wide pad-name chips legitimately span gutter and plot: the band root
+    // does not clip (the gutter box does), and gutterBox sits at band-local
+    // x = 0, so the gutter-local chip coordinates are already band-local.
     Rectangle {
-        parent: root.gutterSide
+        parent: root.bandSide
         objectName: "timelineQuickPianoHoverChip"
         x: timelineScene.hoverChipRect.x
         y: timelineScene.hoverChipRect.y
@@ -116,7 +120,7 @@ Item {
         visible: timelineScene.hoverChipVisible
         color: timelineScene.hoverChipFill
         radius: timelineScene.hoverChipRadius
-        z: 2
+        z: 8
     }
 
     Item {
@@ -154,7 +158,7 @@ Item {
     }
 
     Text {
-        parent: root.gutterSide
+        parent: root.bandSide
         objectName: "timelineQuickPianoHoverChipText"
         x: timelineScene.hoverChipRect.x
         y: timelineScene.hoverChipRect.y
@@ -171,7 +175,7 @@ Item {
         elide: Text.ElideNone
         maximumLineCount: 1
         clip: contentWidth > width || contentHeight > height
-        z: 4
+        z: 9
     }
 
     Item {

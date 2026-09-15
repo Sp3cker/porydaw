@@ -35,6 +35,7 @@ struct BatchAdapter {
 
 bool stageBatchVoicegroup(const QString &root, QString &error);
 VoicegroupProject *openContext(const QString &root, BatchAdapter &adapter);
+void verifyRichSubgroupNames(const LoadedVoiceGroup &bank);
 bool sameBank(const LoadedVoiceGroup &actual, const LoadedVoiceGroup &expected);
 bool sameSampleSet(const LoadedSampleSet &actual, const LoadedSampleSet &expected);
 

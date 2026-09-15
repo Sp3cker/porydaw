@@ -27,6 +27,7 @@ using detail::contrastingTextColor;
 using detail::ghostNoteColor;
 using detail::gridLineColor;
 using detail::isBlackKey;
+using detail::keyboardRowSource;
 using detail::keyName;
 using detail::logicalPhysicalPixel;
 using detail::usedTrackMask;
@@ -579,19 +580,36 @@ void TimelineQuickView::synchronizeKeyboardText()
     const PitchProjection &projection = roll.m_sv->pitchProjection();
     if (roll.m_keyboardLabelFont) {
         const QColor color = themes::color(themes::Role::song_view_piano_keyboard_label);
-        records.reserve(static_cast<std::size_t>(projection.visibleRowCount()));
+        const auto source = keyboardRowSource(roll.m_sv->voicegroup(), roll.m_sv->timeline(),
+                                              roll.m_sv->selectionModel().primaryTrack());
+        const bool drumPads = source.isDrum();
+        std::optional<QFontMetrics> labelMetrics;
+        QColor accidentalLabel;
+        if (drumPads) {
+            // Drum pad names sit on dark accidental lanes too; reuse the
+            // light natural-key color there so they stay legible.
+            labelMetrics.emplace(*roll.m_keyboardLabelFont);
+            accidentalLabel = themes::color(themes::Role::song_view_piano_keyboard_natural_key);
+        }
+        records.reserve(drumPads ? std::size_t(projection.visibleRowCount())
+                                 : std::size_t(projection.visibleRowCount() / 12 + 2));
         for (int row = 0; row < projection.visibleRowCount(); ++row) {
             const int key = projection.visiblePitchAt(row);
             const QRectF rowRect = roll.pitchRowRect(row, 0, keyboardWidth);
-            if (!rowRect.intersects(viewport) || isBlackKey(key) || key % 12 != 0)
+            if (!rowRect.intersects(viewport) || (!drumPads && (isBlackKey(key) || key % 12 != 0)))
                 continue;
+            const QRectF recordRect(0, rowRect.top(),
+                                    keyboardWidth - roll.m_geometry.pianoKeyboardLabelRightInset,
+                                    rowRect.height());
+            const QColor &rowColor = drumPads && isBlackKey(key) ? accidentalLabel : color;
             appendTextRecord(
                 records,
                 TimelineQuickTextKey{TimelineQuickTextKeyKind::PianoMidiLabel, {}, quint64(key)},
-                QRectF(0, rowRect.top(),
-                       keyboardWidth - roll.m_geometry.pianoKeyboardLabelRightInset,
-                       rowRect.height()),
-                keyName(key), *roll.m_keyboardLabelFont, color, Qt::AlignRight, Qt::AlignVCenter);
+                recordRect,
+                drumPads ? labelMetrics->elidedText(source.rowLabel(key), Qt::ElideRight,
+                                                    int(recordRect.width()))
+                         : keyName(key),
+                *roll.m_keyboardLabelFont, rowColor, Qt::AlignRight, Qt::AlignVCenter);
         }
     }
     m_scene->m_pianoKeyboardTextModel->setRecords(records);

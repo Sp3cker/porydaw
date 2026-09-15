@@ -171,16 +171,22 @@ std::optional<PianoRoll::KeyboardHoverGeometry> PianoRoll::keyboardHoverGeometry
         return std::nullopt;
 
     const QRectF highlight = keyRect(key, lyt::space(Space::Zero), m_geometry.pianoKeyboardWidth);
-    const QString name = midiKeyName(key);
+    const auto source = keyboardRowSource(m_sv->voicegroup(), m_sv->timeline(),
+                                          m_sv->selectionModel().primaryTrack());
+    const QString pad = source.drumPadName(key);
+    const QString name = pad.isEmpty() ? keyName(key) : pad;
     const int chipWidth =
-        m_keyboardHoverNameWidths[std::size_t(key)] + m_geometry.keyboardHoverChipHorizontalPadding;
+        (pad.isEmpty() ? m_keyboardHoverNameWidths[std::size_t(key)]
+                       : QFontMetrics(m_keyboardHoverChipFont).horizontalAdvance(name)) +
+        m_geometry.keyboardHoverChipHorizontalPadding;
     const int chipHeight = m_keyboardHoverChipHeight;
     const qreal chipY =
         std::clamp(highlight.center().y() - chipHeight / 2.0, qreal(lyt::space(Space::Zero)),
                    std::max<qreal>(lyt::space(Space::Zero), bounds().height() - chipHeight));
-    const QRectF chip(m_geometry.pianoKeyboardWidth - m_geometry.keyboardHoverChipRightInset -
-                          chipWidth,
-                      chipY, chipWidth, chipHeight);
+    const qreal chipX = std::max<qreal>(lyt::space(Space::Zero),
+                                        m_geometry.pianoKeyboardWidth -
+                                            m_geometry.keyboardHoverChipRightInset - chipWidth);
+    const QRectF chip(chipX, chipY, chipWidth, chipHeight);
     return KeyboardHoverGeometry{highlight, name, m_keyboardHoverChipFont, chip};
 }
 

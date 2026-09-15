@@ -10,8 +10,43 @@
 #include <cstdint>
 
 #include "ui/songview.h"
+extern "C" {
+#include "voicegroup_loader.h"
+}
+struct MidiTimeline;
 
 namespace songview::detail {
+
+// Resolved once per keyboard sync or hover; row formatting never queries a
+// view. Construction is private — only keyboardRowSource produces one — so no
+// caller can pair a drum classification with an unresolved bank/program. Drum
+// classification holds even when the bank carries no names metadata; m_names
+// is the optional O(1) per-slot table behind drumPadName/rowLabel.
+class KeyboardRowSource
+{
+  public:
+    bool isDrum() const { return m_isDrum; }
+    // Trimmed pad name for `key`, or empty when the track is not a drumset,
+    // the bank has no names table, or the slot is unnamed.
+    QString drumPadName(int key) const;
+    // Gutter/hover label: the pad name when one exists, else keyName(key).
+    QString rowLabel(int key) const;
+
+  private:
+    KeyboardRowSource() = default;
+    KeyboardRowSource(bool isDrum, const char (*names)[VG_VOICE_NAME_LEN])
+        : m_isDrum(isDrum)
+        , m_names(names)
+    {}
+    friend KeyboardRowSource keyboardRowSource(const LoadedVoiceGroup *bank,
+                                               const MidiTimeline *timeline, int track);
+
+    bool m_isDrum = false;
+    const char (*m_names)[VG_VOICE_NAME_LEN] = nullptr;
+};
+
+KeyboardRowSource keyboardRowSource(const LoadedVoiceGroup *bank, const MidiTimeline *timeline,
+                                    int track);
 
 inline constexpr int kVoiceAuditionKey = 60; // middle C, matching the voicegroup browser
 inline constexpr int kVoiceAuditionVel = 112;

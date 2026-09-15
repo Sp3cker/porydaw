@@ -982,7 +982,8 @@ void SongView::coordinateSelectionChange(
         } else {
             requestRoll(PianoRollQuickDirty::NoteFills | PianoRollQuickDirty::DrawPreviewFill |
                         PianoRollQuickDirty::NoteBordersAndSelection |
-                        PianoRollQuickDirty::NoteText);
+                        PianoRollQuickDirty::NoteText | PianoRollQuickDirty::KeyboardText |
+                        PianoRollQuickDirty::HoverChip);
         }
         emit selectedTrackChanged(m_selectionModel.primaryTrack());
     } else if (trackScopeChanged) {

@@ -55,6 +55,7 @@ void VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets()
     LoadedVoiceGroup *const batch = voicegroup_load(root.constData(), "check_batch", nullptr);
     QVERIFY(rich);
     QVERIFY(batch);
+    voicegroup_load_test::verifyRichSubgroupNames(*rich);
     voicegroup_load_test::BatchAdapter adapter;
     VoicegroupProject *const project = voicegroup_load_test::openContext(m_copy->root(), adapter);
     QVERIFY(project);
@@ -65,7 +66,16 @@ void VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets()
     LoadedVoiceGroup *const contextRich = voicegroup_project_load(project, &richTarget);
     QVERIFY(contextRich);
     QVERIFY(voicegroup_load_test::sameBank(*contextRich, *rich));
+    voicegroup_load_test::verifyRichSubgroupNames(*contextRich);
     voicegroup_free(contextRich);
+    adapter.reset();
+    LoadedVoiceGroup *const warmRich = voicegroup_project_load(project, &richTarget);
+    QVERIFY(warmRich);
+    voicegroup_load_test::verifyRichSubgroupNames(*warmRich);
+    QCOMPARE(adapter.requestedCount("direct_sound_data.inc"), 0);
+    QCOMPARE(adapter.requestedCount("programmable_wave_data.inc"), 0);
+    QCOMPARE(adapter.requestedCount("keysplit_tables.inc"), 0);
+    voicegroup_free(warmRich);
     adapter.reset();
     LoadedVoiceGroup *const contextBatch = voicegroup_project_load(project, &batchTarget);
     QVERIFY(contextBatch);

@@ -13,6 +13,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QMutexLocker>
+#include <QtTest>
 
 namespace voicegroup_load_test {
 namespace {
@@ -265,6 +266,48 @@ VoicegroupProject *openContext(const QString &root, BatchAdapter &adapter)
     const VoicegroupFileIo fileIo{&adapter, &readBatch, &releaseBatch};
     const QByteArray utf8 = root.toLocal8Bit();
     return voicegroup_project_open(utf8.constData(), nullptr, &fileIo);
+}
+
+void verifyRichSubgroupNames(const LoadedVoiceGroup &bank)
+{
+    // Golden slots from fixture_rich.inc and its fixture_keys/drums_a/drums_b includes.
+    const struct {
+        int program;
+        int type;
+        int slot;
+        const char *name;
+    } entries[] = {
+        {8, VOICE_KEYSPLIT, 0, ""},
+        {8, VOICE_KEYSPLIT, 1, "fixture_loop"},
+        {8, VOICE_KEYSPLIT, 2, "fixture_pulse"},
+        {10, VOICE_KEYSPLIT_ALL, 0, ""},
+        {10, VOICE_KEYSPLIT_ALL, 36, "fixture_drum"},
+        {10, VOICE_KEYSPLIT_ALL, 37, ""},
+        {10, VOICE_KEYSPLIT_ALL, 38, "fixture_pluck"},
+        {11, VOICE_KEYSPLIT_ALL, 36, "fixture_pluck"},
+        {11, VOICE_KEYSPLIT_ALL, 37, "fixture_saw"},
+        {11, VOICE_KEYSPLIT_ALL, 38, "fixture_drum"},
+    };
+    for (const auto &entry : entries) {
+        const ToneData &voice = bank.voices[entry.program];
+        QCOMPARE(int(voice.type), entry.type);
+        const auto *subgroup = static_cast<const ToneData *>(voice.subGroup);
+        QVERIFY(subgroup);
+        const auto *names = voicegroup_subgroup_names(&bank, subgroup);
+        QVERIFY(names);
+        QCOMPARE(names[entry.slot], entry.name);
+        const char *name = voicegroup_subgroup_slot_name(&bank, subgroup, entry.slot);
+        QVERIFY(name); // An unnamed registered slot is empty, not missing metadata.
+        QCOMPARE(name, entry.name);
+        QVERIFY(!voicegroup_subgroup_slot_name(&bank, subgroup, -1));
+        QVERIFY(!voicegroup_subgroup_slot_name(&bank, subgroup, VOICEGROUP_SIZE));
+    }
+    QVERIFY(!voicegroup_subgroup_names(nullptr, bank.voices));
+    QVERIFY(!voicegroup_subgroup_names(&bank, nullptr));
+    QVERIFY(!voicegroup_subgroup_names(&bank, bank.voices));
+    QVERIFY(!voicegroup_subgroup_slot_name(nullptr, bank.voices, 0));
+    QVERIFY(!voicegroup_subgroup_slot_name(&bank, nullptr, 0));
+    QVERIFY(!voicegroup_subgroup_slot_name(&bank, bank.voices, 0));
 }
 
 bool sameBank(const LoadedVoiceGroup &actual, const LoadedVoiceGroup &expected)

@@ -125,6 +125,7 @@ Item {
         required property string plotInputName
         required property string gutterInputName
         readonly property real gutterWidth: Math.max(0, plotRect.x - bandRect.x)
+        property alias bandSide: sceneBand
         property alias gutterSide: gutterBox
         property alias plotSide: plotBox
 
@@ -254,6 +255,7 @@ Item {
         gutterInputName: "timelineRollGutterInput"
 
         PianoRollCanvas {
+            bandSide: rollBand
             gutterSide: rollBand.gutterSide
             plotSide: rollBand.plotSide
         }

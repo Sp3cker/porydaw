@@ -4,6 +4,12 @@
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
 
+extern "C" {
+#include "voicegroup_loader.h"
+}
+
+#include "core/miditimeline.h"
+
 #include <array>
 #include <climits>
 #include <cmath>
@@ -73,9 +79,51 @@ bool isBlackKey(int key)
 
 QString keyName(int key)
 {
+    if (key < 0 || key >= VOICEGROUP_SIZE)
+        return {};
     static const char *const names[] = {"C",  "C#", "D",  "D#", "E",  "F",
                                         "F#", "G",  "G#", "A",  "A#", "B"};
     return QStringLiteral("%1%2").arg(QLatin1String(names[key % 12])).arg(key / 12 - 1);
+}
+
+// Initial program of a track: firstProgram, with -1 (no program change)
+// mapped to 0 because M4ATrack::currentProgram starts there — this is what
+// the track sounds like first.
+static int keyboardInitialProgram(const MidiTimeline &timeline, int track)
+{
+    const int firstProgram = timeline.tracks[track].firstProgram;
+    return firstProgram < 0 ? 0 : firstProgram;
+}
+
+// Drumset classification (spec.md, Porydaw Task 2): the primary track
+// shows drum pads iff its initial program selects a voice with
+// VOICE_KEYSPLIT_ALL in the loaded bank. No bank or timeline -> false.
+// The per-slot names table resolves once here so row lookups stay O(1);
+// a drumset without names metadata still classifies as drum (every row is
+// a pad) and falls back to pitch names.
+KeyboardRowSource keyboardRowSource(const LoadedVoiceGroup *bank, const MidiTimeline *timeline,
+                                    int track)
+{
+    if (!bank || !timeline || track < 0 || track >= int(std::size(timeline->tracks)))
+        return {};
+    const int program = keyboardInitialProgram(*timeline, track);
+    if (program >= VOICEGROUP_SIZE || !(bank->voices[program].type & VOICE_KEYSPLIT_ALL))
+        return {};
+    const auto *subgroup = static_cast<const ToneData *>(bank->voices[program].subGroup);
+    return {true, voicegroup_subgroup_names(bank, subgroup)};
+}
+
+QString KeyboardRowSource::drumPadName(int key) const
+{
+    if (key < 0 || key >= VOICEGROUP_SIZE || !m_names)
+        return {};
+    return QString::fromUtf8(m_names[key]).trimmed();
+}
+
+QString KeyboardRowSource::rowLabel(int key) const
+{
+    const QString pad = drumPadName(key);
+    return pad.isEmpty() ? keyName(key) : pad;
 }
 
 QString contextShortcutText(const QString &commandId)
