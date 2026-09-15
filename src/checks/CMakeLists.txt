@@ -364,11 +364,16 @@ if(APPLE)
     target_sources(porydaw_checks PRIVATE
         nativegraphics/tst_playhead_native_mac.mm
     )
+    # Qt's qdebug.h UInt alias collides with macOS OSTypes.h only in this
+    # Objective-C++ bridge; keep project -Wshadow enabled everywhere else.
+    set_property(SOURCE nativegraphics/tst_playhead_native_mac.mm APPEND PROPERTY
+        COMPILE_OPTIONS -Wno-shadow)
     set_target_properties(porydaw_checks PROPERTIES
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
         MACOSX_BUNDLE_GUI_IDENTIFIER com.sp3cker.porydaw.checks
+        NO_SYSTEM_FROM_IMPORTED ON
     )
     # Keep the cross-platform runner entry path while the resolved executable
     # remains inside its Cocoa foreground-application bundle.

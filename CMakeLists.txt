@@ -423,6 +423,10 @@ if(APPLE)
         src/ui/nativelayerutils_macos_p.h
         src/ui/playheadrenderer_macos.mm
     )
+    # Qt's qdebug.h UInt alias collides with macOS OSTypes.h only in this
+    # Objective-C++ bridge; keep project -Wshadow enabled everywhere else.
+    set_property(SOURCE src/ui/playheadrenderer_macos.mm APPEND PROPERTY
+        COMPILE_OPTIONS -Wno-shadow)
     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
     find_library(QUARTZCORE_FRAMEWORK QuartzCore REQUIRED)
     target_link_libraries(porydaw_app PRIVATE
@@ -457,6 +461,12 @@ target_compile_definitions(porydaw_app PUBLIC
     PORYDAW_VERSION="${PROJECT_VERSION}")
 target_link_libraries(porydaw_app PUBLIC Qt6::Svg Qt6::Widgets poryaaaa_engine)
 target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick Qt6::QuickControls2)
+if(APPLE)
+    # Keep framework headers ahead of stale non-framework Qt installs such
+    # as /usr/local/include/Qt*. Treating imported frameworks as system
+    # headers lets Clang select the unrelated include tree first.
+    set_target_properties(porydaw_app PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
+endif()
 set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 # Each Quick file is bundled at its basename; one loop instead of one
 # set_source_files_properties block per file.
