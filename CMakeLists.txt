@@ -53,6 +53,12 @@ function(porydaw_enable_project_warnings target)
         $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wformat=2>
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wnull-dereference>
         $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wnull-dereference>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wdouble-promotion>
+        $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wdouble-promotion>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wcast-align>
+        $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wcast-align>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wcast-qual>
+        $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wcast-qual>
         $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang>:-Wextra-semi;-Wrange-loop-analysis>
         $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wextra-semi;-Wrange-loop-analysis>
         $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wduplicated-cond;-Wduplicated-branches;-Wlogical-op>
@@ -111,6 +117,23 @@ if(PORYDAW_COVERAGE)
 endif()
 
 find_package(Qt6 6.11 REQUIRED COMPONENTS Qml Quick QuickControls2 Svg Widgets)
+
+function(porydaw_mark_interface_includes_system dependency)
+    get_target_property(dependency_include_dirs ${dependency} INTERFACE_INCLUDE_DIRECTORIES)
+    if(dependency_include_dirs)
+        set_property(TARGET ${dependency} APPEND PROPERTY
+            INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${dependency_include_dirs}")
+    endif()
+endfunction()
+
+if(APPLE)
+    # NO_SYSTEM_FROM_IMPORTED keeps Qt's exact framework-header paths ahead of
+    # unrelated non-framework Qt installs. Also classify those same paths as
+    # system headers so project warning flags do not diagnose Qt internals.
+    foreach(qt_target IN ITEMS Core Gui Qml Quick QuickControls2 Svg Widgets)
+        porydaw_mark_interface_includes_system(Qt6::${qt_target})
+    endforeach()
+endif()
 
 # ---- poryaaaa engine core (MIT, statically linked) ----
 set(PORYAAAA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/poryaaaa"
@@ -460,6 +483,11 @@ target_include_directories(porydaw_app SYSTEM PUBLIC
     ${PORYAAAA_DIR}/third_party
     external/dr_libs
     external/stb
+    ${PORYAAAA_DIR}/plugin/porydaw/..
+    ${PORYAAAA_DIR}/plugin/m4a
+    ${PORYAAAA_DIR}/plugin/m4a/..
+    ${PORYAAAA_DIR}/plugin/hw_audio
+    ${PORYAAAA_DIR}/plugin/hw_audio/..
 )
 target_include_directories(porydaw_app PRIVATE
     src/ui

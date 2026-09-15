@@ -336,7 +336,7 @@ void TimelinePanTest::geometryCountsSurviveReuse()
                 for (int index = 0; index < rectCount; ++index) {
                     const float x = float(index + offset);
                     data.rects.push_back(
-                        {QRectF(x, 2, 3, 4), Qt::red, Qt::green, Qt::blue, translucent});
+                        {QRectF(qreal(x), 2, 3, 4), Qt::red, Qt::green, Qt::blue, translucent});
                     expected.emplace_back(x, 2, 255, 0, 0, 255);
                     expected.emplace_back(x, 6, 100, 50, 25, 128);
                     expected.emplace_back(x + 3, 2, 0, 255, 0, 255);
@@ -346,8 +346,12 @@ void TimelinePanTest::geometryCountsSurviveReuse()
                 }
                 for (int index = 0; index < triangleCount; ++index) {
                     const float x = float(index + offset);
-                    data.triangles.push_back(
-                        {{x, 8}, {x + 1, 10}, {x + 2, 8}, Qt::blue, translucent, Qt::red});
+                    data.triangles.push_back({{qreal(x), 8},
+                                              {qreal(x + 1), 10},
+                                              {qreal(x + 2), 8},
+                                              Qt::blue,
+                                              translucent,
+                                              Qt::red});
                     expected.emplace_back(x, 8, 0, 0, 255, 255);
                     expected.emplace_back(x + 1, 10, 100, 50, 25, 128);
                     expected.emplace_back(x + 2, 8, 255, 0, 0, 255);

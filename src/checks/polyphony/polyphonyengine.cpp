@@ -234,8 +234,10 @@ void PolyphonyGateTest::normalPlaybackKeepsShadowPoolOff()
     EngineFixture fixture;
     const RenderResult result = renderSong(fixture.engine, *songTimeline);
 
-    QVERIFY2(result.maxBeforeSteal > 1e-4f, qPrintable(QString::number(result.maxBeforeSteal)));
-    QVERIFY2(result.maxAfterSteal > 1e-4f, qPrintable(QString::number(result.maxAfterSteal)));
+    QVERIFY2(result.maxBeforeSteal > 1e-4f,
+             qPrintable(QString::number(double(result.maxBeforeSteal))));
+    QVERIFY2(result.maxAfterSteal > 1e-4f,
+             qPrintable(QString::number(double(result.maxAfterSteal))));
     QVERIFY(!result.shadowOnAfterSteal);
 }
 
@@ -248,8 +250,10 @@ void PolyphonyGateTest::invertSilencesUntilOverflowAndClearsShadow()
     // Sequenced dispatch must clear a preview note struck before playback begins.
     fixture.engine.auditionNote = true;
     const RenderResult result = renderSong(fixture.engine, *songTimeline);
-    QVERIFY2(result.maxBeforeSteal < 1e-6f, qPrintable(QString::number(result.maxBeforeSteal)));
-    QVERIFY2(result.maxAfterSteal > 1e-4f, qPrintable(QString::number(result.maxAfterSteal)));
+    QVERIFY2(result.maxBeforeSteal < 1e-6f,
+             qPrintable(QString::number(double(result.maxBeforeSteal))));
+    QVERIFY2(result.maxAfterSteal > 1e-4f,
+             qPrintable(QString::number(double(result.maxAfterSteal))));
     QVERIFY(result.shadowOnAfterSteal);
     m4a_engine_set_poly_debug_invert(&fixture.engine, false);
     for (int channel = MAX_PCM_CHANNELS; channel < TOTAL_PCM_CHANNELS; ++channel)
@@ -272,7 +276,7 @@ void PolyphonyGateTest::auditionRemainsAudibleWithInvert()
         for (uint32_t index = 0; index < kRenderChunk; ++index)
             peak = std::max({peak, std::fabs(left[index]), std::fabs(right[index])});
     }
-    QVERIFY2(peak > 1e-4f, qPrintable(QString::number(peak)));
+    QVERIFY2(peak > 1e-4f, qPrintable(QString::number(double(peak))));
 }
 
 void PolyphonyGateTest::channelModeLeavesCompiledGateIntact_data()
@@ -312,7 +316,7 @@ void PolyphonyGateTest::channelModeLeavesCompiledGateIntact()
     float peak = 0.0f;
     for (uint32_t index = 0; index < kRenderChunk; ++index)
         peak = std::max({peak, std::fabs(left[index]), std::fabs(right[index])});
-    QVERIFY2(peak > 0.01f, qPrintable(QString::number(peak)));
+    QVERIFY2(peak > 0.01f, qPrintable(QString::number(double(peak))));
 }
 
 } // namespace checks

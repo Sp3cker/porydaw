@@ -605,9 +605,10 @@ void addHorizontalGradient(TimelineQuickLayerData &data, const QRectF &rect, con
         return (std::min)(1.0, (std::max)(0.0, interpolation));
     };
     const auto mix = [](const QColor &a, const QColor &b, qreal t) {
-        return QColor::fromRgbF(
-            a.redF() + (b.redF() - a.redF()) * t, a.greenF() + (b.greenF() - a.greenF()) * t,
-            a.blueF() + (b.blueF() - a.blueF()) * t, a.alphaF() + (b.alphaF() - a.alphaF()) * t);
+        return QColor::fromRgbF(qreal(a.redF()) + (qreal(b.redF()) - qreal(a.redF())) * t,
+                                qreal(a.greenF()) + (qreal(b.greenF()) - qreal(a.greenF())) * t,
+                                qreal(a.blueF()) + (qreal(b.blueF()) - qreal(a.blueF())) * t,
+                                qreal(a.alphaF()) + (qreal(b.alphaF()) - qreal(a.alphaF())) * t);
     };
     const QColor clippedLeft = mix(left, right, interpolationAt(clipped.left()));
     const QColor clippedRight = mix(left, right, interpolationAt(clipped.right()));

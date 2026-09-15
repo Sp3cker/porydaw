@@ -29,6 +29,9 @@ set_target_properties(mid2agb PROPERTIES
 # ---- porydaw check executable ----
 # Qt Test is required only by the checks target; app-only builds must not need it.
 find_package(Qt6 REQUIRED COMPONENTS Test)
+if(APPLE)
+    porydaw_mark_interface_includes_system(Qt6::Test)
+endif()
 
 qt_add_executable(porydaw_checks
     checks_main.cpp

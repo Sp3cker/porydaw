@@ -153,9 +153,10 @@ void ResonanceTimingTest::rateParameterizedLawHoldsAt44kHz()
     const auto rate = 44100.0f;
     const auto inputFrames = static_cast<std::size_t>(rate * 4);
     auto input = std::vector<float>(inputFrames * kChannels, 0.0f);
-    const auto omega = 2.0 * kPi * 1000.0 / rate;
+    const auto omega = 2.0 * kPi * 1000.0 / double(rate);
     for (auto frame = std::size_t{0}; frame < inputFrames; ++frame) {
-        const auto value = static_cast<float>(amplitudeForDb(-15.0) * std::sin(omega * frame));
+        const auto value =
+            static_cast<float>(double(amplitudeForDb(-15.0)) * std::sin(omega * frame));
         input[frame * kChannels] = value;
         input[frame * kChannels + 1] = value;
     }

@@ -162,7 +162,7 @@ void SampleProcessingTest::resampleImpulseSymmetry()
     std::vector<float> input(4000, 0.0f);
     input[2000] = 1.0f;
     const std::vector<float> output = SampleDsp::resampleSinc(input, 0.5, 2000);
-    QVERIFY(output[1000] > 0.1);
+    QVERIFY(output[1000] > 0.1f);
     for (int distance = 1; distance <= 500; ++distance)
         QVERIFY(std::abs(double(output[size_t(1000 + distance)]) -
                          double(output[size_t(1000 - distance)])) <= 2e-6);

@@ -49,14 +49,16 @@ NSView *resolveNativeView(QQuickWindow *window)
 void setLayerColor(CALayer *layer, const QColor &color)
 {
     auto nativeColor = RetainedCoreFoundation<CGColor>{
-        CGColorCreateSRGB(color.redF(), color.greenF(), color.blueF(), color.alphaF())};
+        CGColorCreateSRGB(CGFloat(color.redF()), CGFloat(color.greenF()), CGFloat(color.blueF()),
+                          CGFloat(color.alphaF()))};
     layer.backgroundColor = nativeColor.get();
 }
 
 void setShapeColor(CAShapeLayer *layer, const QColor &color)
 {
     auto nativeColor = RetainedCoreFoundation<CGColor>{
-        CGColorCreateSRGB(color.redF(), color.greenF(), color.blueF(), color.alphaF())};
+        CGColorCreateSRGB(CGFloat(color.redF()), CGFloat(color.greenF()), CGFloat(color.blueF()),
+                          CGFloat(color.alphaF()))};
     layer.fillColor = nativeColor.get();
 }
 
@@ -68,7 +70,8 @@ void setGradientColors(CAGradientLayer *left, CAGradientLayer *right, const QCol
     for (int index = 0; index <= 8; ++index) {
         const qreal t = qreal(index) / 8.0;
         auto stopColor = RetainedCoreFoundation<CGColor>{
-            CGColorCreateSRGB(color.redF(), color.greenF(), color.blueF(), peakAlpha * t * t)};
+            CGColorCreateSRGB(CGFloat(color.redF()), CGFloat(color.greenF()),
+                              CGFloat(color.blueF()), peakAlpha * t * t)};
         [colors.get() addObject:(id)stopColor.get()];
         [locations.get() addObject:@(t)];
     }

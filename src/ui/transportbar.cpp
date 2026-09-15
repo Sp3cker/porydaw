@@ -112,9 +112,10 @@ class OutputVolumeDial final : public QDial
         const QColor button = themes::color(themes::Role::button_background);
         const bool darkChrome = qGray(chrome.rgb()) < qGray(ink.rgb());
         const auto mix = [](const QColor &from, const QColor &to, qreal amount) {
-            return QColor::fromRgbF(from.redF() + (to.redF() - from.redF()) * amount,
-                                    from.greenF() + (to.greenF() - from.greenF()) * amount,
-                                    from.blueF() + (to.blueF() - from.blueF()) * amount);
+            return QColor::fromRgbF(
+                qreal(from.redF()) + (qreal(to.redF()) - qreal(from.redF())) * amount,
+                qreal(from.greenF()) + (qreal(to.greenF()) - qreal(from.greenF())) * amount,
+                qreal(from.blueF()) + (qreal(to.blueF()) - qreal(from.blueF())) * amount);
         };
         QColor faceHi = darkChrome ? mix(chrome, ink, 0.75) : mix(button, ink, 0.08);
         QColor faceMid = darkChrome ? mix(chrome, ink, 0.62) : button;

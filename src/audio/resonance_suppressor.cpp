@@ -111,8 +111,8 @@ void ResonanceSuppressor::process(float *interleaved, uint32_t frames)
 
     for (uint32_t i = 0; i < frames; ++i) {
         const size_t inputSlot = static_cast<size_t>(m_count % static_cast<uint64_t>(kN));
-        m_inFifo[2 * inputSlot] = interleaved[2 * i];
-        m_inFifo[2 * inputSlot + 1] = interleaved[2 * i + 1];
+        m_inFifo[2 * inputSlot] = double(interleaved[2 * i]);
+        m_inFifo[2 * inputSlot + 1] = double(interleaved[2 * i + 1]);
         ++m_count;
 
         if (m_count >= static_cast<uint64_t>(kN) && m_count % static_cast<uint64_t>(kH) == 0)
@@ -300,7 +300,7 @@ void ResonanceSuppressor::rebuildDepthEnvelope()
 {
     double effectiveDepth[12] = {};
     for (int i = 0; i < 12; ++i) {
-        const auto nyquist = 0.5 * m_sampleRate;
+        const double nyquist = 0.5 * double(m_sampleRate);
         const auto active = m_params.knotActive[i] && kKnotFrequencies[i] < nyquist;
         double depth = active ? double(m_params.gDb) * double(m_params.knotDepthDb[i]) / 10.0 : 0.0;
         effectiveDepth[i] = std::clamp(depth, 0.0, 10.0);

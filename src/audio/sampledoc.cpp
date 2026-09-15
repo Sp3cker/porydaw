@@ -99,11 +99,11 @@ ProcessedSample SampleDocument::render() const
     if (dcOn) {
         double mean = 0.0;
         for (const float v : buf)
-            mean += v;
+            mean += double(v);
         mean /= double(len);
         if (std::abs(mean) > 1.0 / 256.0) {
             for (float &v : buf)
-                v = float(v - mean);
+                v = float(double(v) - mean);
         }
     }
 
@@ -216,13 +216,13 @@ ProcessedSample SampleDocument::render() const
         qint64 f = qint64(std::llround(0.0015 * outputRate));
         f = qMin(f, loopOn ? loopStartOut : nOut);
         for (qint64 i = 0; i < f; i++)
-            grid[size_t(i)] =
-                float(grid[size_t(i)] * 0.5 * (1.0 - std::cos(kPi * double(i) / double(f))));
+            grid[size_t(i)] = float(double(grid[size_t(i)]) * 0.5 *
+                                    (1.0 - std::cos(kPi * double(i) / double(f))));
     }
     if (p.fadeOut && !loopOn) {
         const qint64 f = qMin<qint64>(qint64(std::llround(0.005 * outputRate)), nOut);
         for (qint64 j = 0; j < f; j++)
-            grid[size_t(nOut - 1 - j)] = float(grid[size_t(nOut - 1 - j)] * 0.5 *
+            grid[size_t(nOut - 1 - j)] = float(double(grid[size_t(nOut - 1 - j)]) * 0.5 *
                                                (1.0 - std::cos(kPi * double(j) / double(f))));
     }
 
