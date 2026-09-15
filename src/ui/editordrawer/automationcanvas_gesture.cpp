@@ -292,8 +292,6 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
             gesture->grabbedPoint < gesture->points.size()) {
             changed = commitNodePointDeletes(gesture->expectedRevision,
                                              {gesture->points[gesture->grabbedPoint]});
-            if (changed)
-                m_deletedNodeClick.markDeleted();
         } else if (finish.release == PointDragRelease::Move && finish.changed) {
             changed = commitNodePointMoves(gesture->expectedRevision, gesture->points);
             if (changed && finish.dTick != 0 && finish.selectionDrag) {
@@ -322,8 +320,10 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
             m_page.commitEditCursor(
                 m_page.snapTick(proj.rawTickAt(gesture->pressPosition.x()), false));
         } else if (lane) {
+            const Tick songEndTick = m_page.timeline() ? m_page.timeline()->lengthTicks : Tick{0};
             auto completion =
-                gesture->finish(handle, document->revision(), lane->points(), fineMode,
+                gesture->finish(handle, document->revision(), lane->points(), fineMode, songEndTick,
+                                lane->minimumValue(), lane->maximumValue(),
                                 [this](Tick tick, bool fineGrid, Tick last) {
                                     return m_page.nextGridTick(tick, fineGrid, last);
                                 });

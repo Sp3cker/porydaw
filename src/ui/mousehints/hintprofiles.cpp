@@ -17,6 +17,12 @@ namespace {
 // fragment reads like the platform's own shortcut text.
 QString fragment(Qt::KeyboardModifiers modifiers, const QString &operation)
 {
+    // House style: the action after the modifier label leads with a capital
+    // ("Ctrl+ Click", "Shift+ Wheel"), so normalize the translated operation
+    // here rather than in every call site.
+    QString action = operation;
+    if (!action.isEmpty())
+        action[0] = action[0].toUpper();
     QString label = QKeySequence(QKeyCombination::fromCombined(modifiers.toInt()))
                         .toString(QKeySequence::NativeText);
     QString separator;
@@ -25,8 +31,8 @@ QString fragment(Qt::KeyboardModifiers modifiers, const QString &operation)
         label.chop(1);
     }
     if (label.isEmpty())
-        return operation;
-    return label + separator + u' ' + operation;
+        return action;
+    return label + separator + u' ' + action;
 }
 
 // Native modifier label without an operation, e.g. "⌃" or "Ctrl". Mirrors
@@ -53,7 +59,7 @@ bool usesStepModifier(Id profile)
 // views and generic scroll areas/sliders.
 QString pageStep()
 {
-    return QCoreApplication::translate("MouseHints", "%1 or %2 wheel: page step")
+    return QCoreApplication::translate("MouseHints", "%1 or %2 Wheel: page step")
         .arg(modifierLabel(Qt::ControlModifier), modifierLabel(Qt::ShiftModifier));
 }
 
@@ -118,15 +124,11 @@ QString render(Id profile, Qt::KeyboardModifiers stepModifier)
                separator + pageStep();
     case Id::RollPlot:
     case Id::RollGutter: {
-        // Right-button alternatives apply over notes and background alike;
-        // the marquee decision reads Control at release, not at press.
+        // Only the Shift time-select right-drag is advertised; the Control
+        // marquee alternative stays working but unadvertised.
         const QString plotAlternatives =
             fragment(Qt::ShiftModifier,
                      QCoreApplication::translate("MouseHints", "right-drag: select time")) +
-            separator +
-            fragment(Qt::ControlModifier,
-                     QCoreApplication::translate("MouseHints",
-                                                 "right-drag release: add marquee notes")) +
             separator +
             fragment(Qt::ControlModifier,
                      QCoreApplication::translate("MouseHints", "wheel: zoom key height")) +
@@ -157,11 +159,11 @@ QString render(Id profile, Qt::KeyboardModifiers stepModifier)
     case Id::TrackScope:
         // Control toggles the track's scope membership, Shift extends a
         // range, and Control+Shift is not an additive-range chord.
-        return fragment(Qt::ControlModifier,
-                        QCoreApplication::translate("MouseHints", "click: toggle track scope")) +
+        return fragment(Qt::ControlModifier, QCoreApplication::translate(
+                                                 "MouseHints", "click: add track to selection")) +
                separator +
                fragment(Qt::ShiftModifier,
-                        QCoreApplication::translate("MouseHints", "click: select track range"));
+                        QCoreApplication::translate("MouseHints", "click: add range to selection"));
     case Id::AutomationNode:
         // Shift constrains to an axis, Alt drags on the fine time grid,
         // Control snaps the value toward the lane's neutral value.
@@ -169,7 +171,7 @@ QString render(Id profile, Qt::KeyboardModifiers stepModifier)
                         QCoreApplication::translate("MouseHints", "drag: constrain to axis")) +
                separator +
                fragment(Qt::AltModifier,
-                        QCoreApplication::translate("MouseHints", "drag: fine time grid")) +
+                        QCoreApplication::translate("MouseHints", "drag: draw in ticks")) +
                separator +
                fragment(Qt::ControlModifier,
                         QCoreApplication::translate("MouseHints", "drag: snap to neutral value")) +
@@ -195,8 +197,7 @@ QString render(Id profile, Qt::KeyboardModifiers stepModifier)
                         QCoreApplication::translate("MouseHints", "drag: draw ramp")) +
                separator +
                fragment(Qt::AltModifier,
-                        QCoreApplication::translate("MouseHints",
-                                                    "drag or double-click: fine time grid")) +
+                        QCoreApplication::translate("MouseHints", "drag: draw in ticks")) +
                separator +
                fragment(Qt::ControlModifier,
                         QCoreApplication::translate("MouseHints", "drag: snap to neutral value")) +
@@ -214,7 +215,7 @@ QString render(Id profile, Qt::KeyboardModifiers stepModifier)
                         QCoreApplication::translate("MouseHints", "drag: hold value")) +
                separator +
                fragment(Qt::AltModifier,
-                        QCoreApplication::translate("MouseHints", "right-drag: fine time grid")) +
+                        QCoreApplication::translate("MouseHints", "right-drag: draw in ticks")) +
                separator +
                fragment(Qt::ShiftModifier,
                         QCoreApplication::translate("MouseHints", "wheel: scroll horizontally"));
@@ -253,7 +254,7 @@ QString render(Id profile, Qt::KeyboardModifiers stepModifier)
     case Id::PitchBendBackground:
         // Shift and Alt are two equivalent chords for the same line-drawing
         // alternative, never a combined Shift+Alt.
-        return QCoreApplication::translate("MouseHints", "%1 or %2 drag: draw line")
+        return QCoreApplication::translate("MouseHints", "%1 or %2 Drag: draw line")
             .arg(modifierLabel(Qt::ShiftModifier), modifierLabel(Qt::AltModifier));
     case Id::EventRows:
         // The combined chord is an additive range, unlike the track

@@ -747,8 +747,10 @@ void AutomationEditingTest::parameterSwitchInvalidatesValuePrompt()
     QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}));
     const LaneHandle tempo = findRow({EditorAutomationRowKind::Tempo, 0, 0});
     QVERIFY(tempo.valid());
-    mouseDClick(Qt::LeftButton,
-                automationWindowPoint(inputPoint(tempo, kFreshTick, CoreTimeDefaults::kTempoBpm)));
+    // The insertion entry point opens the fresh prompt directly now that the
+    // lane double-click no longer inserts.
+    QVERIFY(page().canvas()->openValuePromptForInsertion(tempo, kFreshTick,
+                                                         CoreTimeDefaults::kTempoBpm));
     QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
     QQuickItem *const freshPrompt = automation_valueprompt::focusedTextInput(quickWindow());
     QVERIFY2(freshPrompt, "the fresh Tempo prompt did not take active focus");

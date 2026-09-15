@@ -46,6 +46,7 @@ class AutomationDomainTest final : public QObject
     void xcmdExpansionPaste();
 
     void sweepSteppingAndRampFinish();
+    void sweepFinishRestoresTrailingHeldValue();
     void panNeutralSnap();
     void nodeDragAndPhantomOutcomes();
     void pointRangeAndPencilReplacements();

@@ -39,6 +39,7 @@ namespace {
 
 constexpr uint8_t kController = 10;
 constexpr Tick kNodeTick = 24;
+constexpr Tick kEmptyTick = 96;
 
 Snapshot snapshot(SongDocument &document)
 {
@@ -202,20 +203,11 @@ void DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit()
     const LaneHandle cc = ccLaneHandle(*canvas);
     QVERIFY(cc.valid());
 
-    // Entry point B: a real double click on an empty CC-10 plot spot opens the
-    // insertion prompt in displayed (stored-64) units and writes nothing.
-    auto *const input = automationInput(fixture);
-    QVERIFY(input);
-    QString diagnostics;
-    const auto probe =
-        selectionkey::AutomationProbe::locate(*fixture.view, input, 0, kController, &diagnostics);
-    QVERIFY2(probe.has_value(), qUtf8Printable(diagnostics));
-    QPoint scene;
-    QVERIFY2(probe->emptyNodePoint(96, scene, &diagnostics), qUtf8Printable(diagnostics));
-
+    // Entry point B: the insertion entry point opens at an empty CC-10 plot
+    // tick in displayed (stored-64) units and writes nothing.
     const uint64_t revision = document.revision();
     const int undoIndex = document.undoStack()->index();
-    QTest::mouseDClick(window, Qt::LeftButton, Qt::NoModifier, scene);
+    QVERIFY(canvas->openValuePromptForInsertion(cc, kEmptyTick, 64));
     QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
     QCOMPARE(document.revision(), revision);
     QCOMPARE(chrome.valuePromptMinimum(), -64);
@@ -272,15 +264,11 @@ void DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus()
     QVERIFY2(activateParameter(fixture, *canvas,
                                {EditorAutomationRowKind::ControlChange, 0, kController}),
              "the Pan parameter label did not activate");
-    QString diagnostics;
-    const auto probe =
-        selectionkey::AutomationProbe::locate(*fixture.view, input, 0, kController, &diagnostics);
-    QVERIFY2(probe.has_value(), qUtf8Printable(diagnostics));
-    QPoint scene;
-    QVERIFY2(probe->emptyNodePoint(96, scene, &diagnostics), qUtf8Printable(diagnostics));
+    const LaneHandle escapeCc = ccLaneHandle(*canvas);
+    QVERIFY(escapeCc.valid());
 
     const Snapshot before = snapshot(document);
-    QTest::mouseDClick(window, Qt::LeftButton, Qt::NoModifier, scene);
+    QVERIFY(canvas->openValuePromptForInsertion(escapeCc, kEmptyTick, 64));
     QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
     QQuickItem *const prompt = automation_valueprompt::focusedTextInput(*window);
     QVERIFY2(prompt, "the insertion prompt did not take active focus");

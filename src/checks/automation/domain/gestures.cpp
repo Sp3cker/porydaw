@@ -59,8 +59,8 @@ void AutomationDomainTest::sweepSteppingAndRampFinish()
     ramp.anchor = {0, 0};
     ramp.current = {10, 100};
     const std::vector<NodePoint> existing;
-    const NodeLaneEdit::Completion completion =
-        ramp.finish(LaneHandle{0}, document().revision(), existing, false, nextGridTick);
+    const NodeLaneEdit::Completion completion = ramp.finish(
+        LaneHandle{0}, document().revision(), existing, false, 96, 0, 127, nextGridTick);
     QVERIFY(!completion.unchanged);
     QCOMPARE(completion.points.size(), std::size_t{11});
     QVERIFY(hasPoint(completion.points.front(), 0, 0));
@@ -240,4 +240,41 @@ void AutomationDomainTest::pointRangeAndPencilReplacements()
     const LaneEdit::Completion deletion = heldSpan.replaceHeldSpan(24, 96, 96, 0, 127, {});
     QVERIFY(!deletion.unchanged);
     QVERIFY(deletion.points.empty());
+}
+
+void AutomationDomainTest::sweepFinishRestoresTrailingHeldValue()
+{
+    // Flat 85 lane, stroke releases at 25: the tail must re-anchor at 85 one
+    // grid step past the release instead of holding 25 to song end.
+    const auto nextGridTick = [](Tick tick, bool, Tick limit) {
+        return tick >= limit ? limit : tick + 24;
+    };
+    constexpr Tick kSongEnd = 960;
+    const std::vector<NodePoint> existing{{0, 85}};
+    const auto contains = [](const std::vector<NodePoint> &points, Tick tick, int value) {
+        return std::any_of(points.cbegin(), points.cend(), [tick, value](const NodePoint &point) {
+            return point.tick == tick && point.value == value;
+        });
+    };
+    SweepGesture drag;
+    drag.lane = LaneHandle{0};
+    drag.previousRawTick = 48.0;
+    drag.previousValue = 85;
+    drag.update({144, 25}, 48, 144, 144.0, false, nextGridTick);
+    const NodeLaneEdit::Completion dragCompletion = drag.finish(
+        LaneHandle{0}, document().revision(), existing, false, kSongEnd, 0, 127, nextGridTick);
+    QVERIFY(!dragCompletion.unchanged);
+    QVERIFY(contains(dragCompletion.points, 144, 25));
+    QVERIFY(hasPoint(dragCompletion.points.back(), 168, 85));
+
+    SweepGesture ramp;
+    ramp.lane = LaneHandle{0};
+    ramp.mode = SweepGesture::Mode::Ramp;
+    ramp.anchor = {48, 85};
+    ramp.current = {144, 25};
+    const NodeLaneEdit::Completion rampCompletion = ramp.finish(
+        LaneHandle{0}, document().revision(), existing, false, kSongEnd, 0, 127, nextGridTick);
+    QVERIFY(!rampCompletion.unchanged);
+    QVERIFY(contains(rampCompletion.points, 144, 25));
+    QVERIFY(hasPoint(rampCompletion.points.back(), 168, 85));
 }

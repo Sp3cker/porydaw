@@ -81,14 +81,6 @@ struct NodeDragFinish {
     bool selectionDrag = false;
 };
 
-struct NodeDoubleClickGuard {
-    bool pending = false;
-
-    void clear() noexcept { pending = false; }
-    void markDeleted() noexcept { pending = true; }
-    bool consume() noexcept { return std::exchange(pending, false); }
-};
-
 struct NodeDragGesture {
     LaneHandle lane;
     uint64_t expectedRevision = 0;
@@ -141,6 +133,7 @@ struct SweepGesture {
     template <typename NextGridTick>
     NodeLaneEdit::Completion finish(LaneHandle handle, uint64_t revision,
                                     const std::vector<NodePoint> &existing, bool fineGrid,
+                                    Tick songEndTick, int minimumValue, int maximumValue,
                                     NextGridTick &&nextGridTick) const;
 };
 
@@ -337,6 +330,7 @@ std::vector<NodePoint> SweepGesture::finishedPoints(bool fineGrid,
 template <typename NextGridTick>
 NodeLaneEdit::Completion SweepGesture::finish(LaneHandle handle, uint64_t revision,
                                               const std::vector<NodePoint> &existing, bool fineGrid,
+                                              Tick songEndTick, int minimumValue, int maximumValue,
                                               NextGridTick &&nextGridTick) const
 {
     std::vector<NodePoint> result =
@@ -344,7 +338,16 @@ NodeLaneEdit::Completion SweepGesture::finish(LaneHandle handle, uint64_t revisi
     if (result.empty())
         return {};
     const Tick tickBegin = result.front().tick;
-    const Tick tickEnd = result.back().tick;
+    Tick tickEnd = result.back().tick;
+    // Held lanes keep the release value forever; step one grid tick past the
+    // stroke and re-anchor the original held value there so drawing 25 over a
+    // flat 85 lane leaves the tail at 85. At song end there is no tail.
+    if (tickEnd < songEndTick) {
+        const Tick restore = nextGridTick(tickEnd, fineGrid, songEndTick);
+        if (restore > tickEnd)
+            tickEnd = restore;
+    }
     const NodeLaneEdit laneEdit({handle, revision}, existing);
-    return laneEdit.replacePointRange(tickBegin, tickEnd, std::move(result));
+    return laneEdit.replaceHeldSpan(tickBegin, tickEnd, songEndTick, minimumValue, maximumValue,
+                                    std::move(result));
 }

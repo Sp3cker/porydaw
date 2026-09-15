@@ -264,19 +264,25 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     const qreal labelInset = layout::space(layout::Space::One);
     std::vector<TimelineQuickTextModel::Record> laneTextRecords;
     std::vector<QRectF> placedGhostLabels;
-    // Written-event counts stack upward from the plot's bottom-left corner,
-    // active lane bottom-most. Counts are document-written events only — the
-    // adapter's synthetic tick-0 engine node is not an event.
-    qreal countBottom = viewport.bottom() - labelInset;
-    const auto appendLaneCount = [this, &viewport, &captionMetrics, labelInset, &countBottom,
-                                  &laneTextRecords](int parameterIndex) {
+    // Written-event counts are document-written events only — the adapter's
+    // synthetic tick-0 engine node is not an event. The active lane's count
+    // sits at the plot's bottom-left corner; a ghost's count rides inline
+    // with its right-edge name label instead, so the corner never duplicates
+    // ghost information.
+    const auto laneCountText = [this](int parameterIndex) {
         const std::optional<EditorAutomationRowId> row = parameterRow(parameterIndex);
         const std::size_t eventCount = row ? parameterEventCount(*row) : std::size_t{0};
         if (eventCount == 0)
+            return QString{};
+        return eventCount == 1 ? SongView::tr("1 Event")
+                               : SongView::tr("%1 Events").arg(qulonglong(eventCount));
+    };
+    qreal countBottom = viewport.bottom() - labelInset;
+    const auto appendLaneCount = [this, &viewport, &captionMetrics, labelInset, &countBottom,
+                                  &laneTextRecords, &laneCountText](int parameterIndex) {
+        const QString text = laneCountText(parameterIndex);
+        if (text.isEmpty())
             return;
-        const QString text = eventCount == 1
-                                 ? SongView::tr("1 Event")
-                                 : SongView::tr("%1 Events").arg(qulonglong(eventCount));
         const qreal width = captionMetrics.horizontalAdvance(text);
         const qreal height = captionMetrics.height();
         const QRectF rect(viewport.left() + labelInset, countBottom - height, width, height);
@@ -316,7 +322,6 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     };
     for (int ghostIndex = 0; ghostIndex < int(ghosts.size()); ++ghostIndex) {
         const GhostLane &ghostLane = ghosts[std::size_t(ghostIndex)];
-        appendLaneCount(ghostLane.parameterIndex);
         QColor ghost = themes::color(themes::Role::song_view_automation_node_ink);
         ghost.setAlphaF(0.5);
         const NodeLaneQuickPaint::Context ghostContext = basePaintContext(
@@ -328,7 +333,12 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         const int value = heldValueAt(ghostLane.points, ghostLane.lane.leadIn(), lastTick)
                               .value_or(ghostLane.lane.neutralValue());
         const qreal y = nodelane::valueY(ghostLane.lane, ghostLane.body, m_geometry, value);
-        const QString text = parameterLabelList.value(ghostLane.parameterIndex);
+        QString text = parameterLabelList.value(ghostLane.parameterIndex);
+        // Ghost membership already implies written events, but a future filter
+        // change must never leave a dangling separator behind.
+        const QString countText = laneCountText(ghostLane.parameterIndex);
+        if (!countText.isEmpty())
+            text += QStringLiteral(" · ") + countText;
         const qreal width = captionMetrics.horizontalAdvance(text);
         const qreal height = captionMetrics.height();
         QRectF rect(viewport.right() - labelInset - width, y - height / 2.0, width, height);

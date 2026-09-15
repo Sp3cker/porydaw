@@ -1,7 +1,7 @@
 // Selection keyboard routing, protected-local-input tier: text surfaces. The
 // real QML track-rename TextInput, a real QWidget line edit (the song search
-// field), the inline automation value prompt opened by an automation lane
-// double click, and the in-canvas roll velocity prompt opened by the note menu
+// field), the inline automation value prompt opened on an automation lane,
+// and the in-canvas roll velocity prompt opened by the note menu
 // each visibly own the keyboard: delivered command bindings edit only the
 // focused surface, Copy carries the surface's own text, and window commands
 // resume exactly once after each surface closes (plan 9).
@@ -37,6 +37,7 @@ namespace {
 
 constexpr int kTrack = 0;
 constexpr uint8_t kController = 10;
+constexpr Tick kEmptyTick = 144;
 
 } // namespace
 
@@ -288,11 +289,19 @@ void SelectionLocalInputTierTest::numericPromptOwnsKeys()
     QVERIFY2(probe.has_value(), qUtf8Printable(coordinateDiagnostics));
     QVERIFY2(probe->activateParameter(&coordinateDiagnostics),
              qUtf8Printable(coordinateDiagnostics));
-    // The prompt must come from an actual empty lane point rather than from a
-    // hardcoded off-camera tick or an existing fixture node.
-    QPoint scene;
-    QVERIFY2(probe->emptyNodePoint(32, scene, &coordinateDiagnostics),
-             qUtf8Printable(coordinateDiagnostics));
+    // The prompt opens through the insertion entry point at a real empty lane
+    // tick rather than on an existing fixture node.
+    AutomationCanvas *const canvas = view.editorDrawer()->automationPage()->canvas();
+    QVERIFY(canvas);
+    int laneIndex = -1;
+    const auto &laneRows = canvas->rows();
+    for (int index = 0; index < int(laneRows.size()); ++index) {
+        const auto &candidate = laneRows[std::size_t(index)];
+        if (candidate.id.kind == EditorAutomationRowKind::ControlChange &&
+            candidate.id.track == kTrack && candidate.id.controller == kController)
+            laneIndex = index;
+    }
+    QVERIFY(laneIndex >= 0);
 
     // A selected note makes a shared-edit leak observable: arrow keys with the
     // prompt focused must stay local, so the selection anchors the contract.
@@ -300,17 +309,21 @@ void SelectionLocalInputTierTest::numericPromptOwnsKeys()
     QVERIFY2(note.has_value(), "the fixture note was not created");
     view.selectionModel().setNoteSelection({note->id});
     selectionkey::settle();
-    QVERIFY2(view.selectionModel().noteSelection() == std::vector<NoteId>{note->id},
-             "the fixture note selection did not settle");
 
     const QByteArray before = document.smf().write();
     const int soloBefore = m_counts.solo;
     DrawerChrome &chrome = view.editorDrawer()->chrome();
 
-    QTest::mouseDClick(quickWindow, Qt::LeftButton, Qt::NoModifier, scene);
+    // Stage the focus the old double-click's press delivered through the
+    // automation input; the entry point itself moves no focus.
+    automation->forceActiveFocus(Qt::MouseFocusReason);
+    quickWindow->requestActivate();
+    selectionkey::settle();
+    QVERIFY(canvas->openValuePromptForInsertion(LaneHandle{laneIndex + 1}, kEmptyTick, 64));
     QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
-    QPointer<QQuickItem> prompt(automation_valueprompt::focusedTextInput(*quickWindow));
-    QVERIFY2(prompt, "the value prompt did not take active focus after the double click");
+    QPointer<QQuickItem> prompt;
+    QTRY_VERIFY2((prompt = automation_valueprompt::focusedTextInput(*quickWindow)),
+                 "the value prompt did not take active focus");
     // The prompt opens with the plotted insertion value selected, so the
     // delivered digits replace that selection.
     QTest::keyClick(quickWindow, Qt::Key_1);

@@ -85,6 +85,20 @@ bool containsPoint(const std::vector<NodePoint> &points, Tick tick, int value)
     });
 }
 
+// Held-step value at `tick`: the last point at or before it. Strokes canonicalize
+// away a leading point that merely repeats the held value, so ramp-start
+// coverage asserts this rather than an exact stored point.
+int heldValueAt(const std::vector<NodePoint> &points, Tick tick)
+{
+    int value = points.front().value;
+    for (const NodePoint &point : points) {
+        if (point.tick > tick)
+            break;
+        value = point.value;
+    }
+    return value;
+}
+
 bool samePoints(const std::vector<NodePoint> &actual, const std::vector<NodePoint> &expected)
 {
     return actual.size() == expected.size() &&
@@ -171,49 +185,6 @@ void AutomationEditingTest::stationaryNodeInteractions()
 
     QVERIFY(frozenDocumentState(shiftDocumentChanged.count(), shiftEdited.count()) == beforeShift);
     QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), fixture));
-}
-
-void AutomationEditingTest::independentDoubleClickAfterDeleteOpensValuePrompt_data()
-{
-    QTest::addColumn<int>("adapter");
-    QTest::newRow("tempo") << kTempo;
-    QTest::newRow("cc") << kCc;
-}
-
-void AutomationEditingTest::independentDoubleClickAfterDeleteOpensValuePrompt()
-{
-    QFETCH(int, adapter);
-    const std::vector<NodePoint> fixture{
-        {kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}};
-    setPoints(m_tab->document(), adapter, fixture);
-    const LaneHandle lane = findRow(rowId(adapter));
-    QVERIFY(lane.valid());
-    QVERIFY(activateParameter(rowId(adapter)));
-    const QPoint node = automation_test::windowFromContent(page(), automationInput(),
-                                                           inputPoint(lane, kNodeTick, kNodeValue));
-
-    mousePress(Qt::LeftButton, node, Qt::NoModifier);
-    mouseRelease(Qt::LeftButton, node, Qt::NoModifier);
-    QVERIFY(samePoints(pointsOf(m_tab->document(), adapter),
-                       {{kFirstTick, kFirstValue}, {kLateTick, kLateValue}}));
-
-    QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
-    QSignalSpy edited(&tab(), &SongTab::edited);
-    QVERIFY(documentChanged.isValid());
-    QVERIFY(edited.isValid());
-    const FrozenDocumentState afterDelete =
-        frozenDocumentState(documentChanged.count(), edited.count());
-
-    // A double click away from the surviving nodes opens the inline value
-    // prompt; rejecting it with Escape must leave the document frozen.
-    DrawerChrome &chrome = m_tab->view().editorDrawer()->chrome();
-    mouseDClick(Qt::LeftButton, node, Qt::NoModifier);
-    QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
-    QQuickItem *const prompt = automation_valueprompt::focusedTextInput(quickWindow());
-    QVERIFY2(prompt, "the double-click insertion prompt did not take active focus");
-    QTest::keyClick(&quickWindow(), Qt::Key_Escape);
-    QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome));
-    QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == afterDelete);
 }
 
 void AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt_data()
@@ -322,7 +293,7 @@ void AutomationEditingTest::sweepAndRampCommit()
     QCOMPARE(m_tab->document().undoStack()->index(), rampBefore.undoIndex + 1);
     const std::vector<NodePoint> ramp = pointsOf(m_tab->document(), adapter);
     QVERIFY(containsPoint(ramp, kFirstTick, kFirstValue));
-    QVERIFY(containsPoint(ramp, kSweepStartTick, deliveredStart.point.value));
+    QCOMPARE(heldValueAt(ramp, kSweepStartTick), deliveredStart.point.value);
     QVERIFY(containsPoint(ramp, kSweepEndTick, deliveredTarget.point.value));
     QVERIFY(containsPoint(ramp, kLateTick, kLateValue));
 }

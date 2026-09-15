@@ -287,7 +287,6 @@ bool AutomationCanvas::pointerMove(const songview::TimelinePointerInput &input)
 
 bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &input)
 {
-    m_deletedNodeClick.clear();
     const QPointF position = contentPosition(input.position);
     songview::TimelineInputHost *const host = input.host ? input.host : m_inputHost;
     if (input.surface != songview::TimelineInputSurface::Plot)
@@ -376,7 +375,7 @@ bool AutomationCanvas::pointerDoubleClick(const songview::TimelinePointerInput &
 
     const LaneHandle pointerLane = laneAt(position.toPoint().y());
     const auto *laneSlot = resolveSlot(pointerLane);
-    if (!laneSlot || m_deletedNodeClick.consume())
+    if (!laneSlot)
         return false;
     NodePoint hit;
     if (nodePointHit(pointerLane, position, &hit))
@@ -389,19 +388,11 @@ bool AutomationCanvas::pointerDoubleClick(const songview::TimelinePointerInput &
         requestFullQuickUpdate();
         return true;
     }
+    // Double-click inserts nothing: clear any in-flight preview state and
+    // swallow the event so it never reaches items below the lane.
     m_activeGesture.reset();
     m_hoverState.previewValueLabel = {};
     setGestureActive(false);
-    const AutomationProjection proj = projection();
-    const Tick tick =
-        m_page.snapTick(proj.rawTickAt(position.x()), input.modifiers & Qt::AltModifier);
-    const int storedValue = mappedForLane(pointerLane, position, false, false, proj).value;
-    // End the double-click's implicit grab before publishing the prompt. The
-    // resulting PointerUngrabbed cancellation is synchronous; publishing
-    // first would immediately clear the new pending edit during focus handoff.
-    if (songview::TimelineInputHost *const host = input.host ? input.host : m_inputHost)
-        host->releasePointerGrab();
-    openValuePromptForInsertion(pointerLane, tick, storedValue);
     return true;
 }
 

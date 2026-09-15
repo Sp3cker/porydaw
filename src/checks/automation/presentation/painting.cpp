@@ -587,8 +587,8 @@ void AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover()
     canvas->toggleGhostParameter(tempoIndex);
 
     std::optional<QRectF> label;
-    QTRY_VERIFY(
-        (label = findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport)).has_value());
+    QTRY_VERIFY((label = findTextRecord(ghostModel, QStringLiteral("Tempo · 1 Event"), viewport))
+                    .has_value());
     QVERIFY2(label->right() <= viewport.right() && label->right() > viewport.right() * 0.5,
              "the ghost name label no longer hugs the plot's right edge");
     TempoLane lane(*m_document);

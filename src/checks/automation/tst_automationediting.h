@@ -172,8 +172,6 @@ class AutomationEditingTest final : public QObject
     void hoverInsertionDoesNotMutateDocument();
     void stationaryNodeInteractions_data();
     void stationaryNodeInteractions();
-    void independentDoubleClickAfterDeleteOpensValuePrompt_data();
-    void independentDoubleClickAfterDeleteOpensValuePrompt();
     void doubleClickDeletesOnceWithoutValuePrompt_data();
     void doubleClickDeletesOnceWithoutValuePrompt();
     void sweepAndRampCommit_data();

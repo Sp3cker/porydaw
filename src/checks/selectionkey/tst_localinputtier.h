@@ -7,8 +7,8 @@
 // exactly once after each surface closes.
 //
 // * the real QML track-rename TextInput, a real QWidget line edit (the song
-//   search field), the inline automation value prompt opened by an
-//   automation lane double click, the application modal roll velocity prompt
+//   search field), the inline automation value prompt opened on an
+//   automation lane, the application modal roll velocity prompt
 //   opened by the note menu, and the pitch-bend overlay: keys delivered into
 //   the surface that visibly holds focus edit only that surface, Copy
 //   carries the surface's own text, and every window command that production

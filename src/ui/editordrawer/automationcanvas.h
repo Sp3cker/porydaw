@@ -90,10 +90,10 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     const std::vector<AutomationRow> &rows() const noexcept { return m_rowData.rows(); }
     void rebuildRows();
     void cancelInteraction() override;
-    // Shared inline value prompt behind the Set Value menu action and the
-    // empty-plot double-click. Opening snapshots the document revision and
-    // never writes; acceptance revalidates lane identity and revision before
-    // taking the normal commit path, so a stale prompt edits nothing.
+    // Shared inline value prompt behind the Set Value menu action. Opening
+    // snapshots the document revision and never writes; acceptance
+    // revalidates lane identity and revision before taking the normal commit
+    // path, so a stale prompt edits nothing.
     struct PendingValuePrompt {
         LaneHandle lane;
         NodePoint anchor; // existing node (Set Value) or insertion tick/value
@@ -431,7 +431,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     std::optional<PendingCcDeletePrompt> m_pendingCcDeletePrompt;
     QMetaObject::Connection m_ccDeletePromptCancellation;
     NodeLaneHoverState m_hoverState;
-    NodeDoubleClickGuard m_deletedNodeClick;
     // Active CC controller; nullopt selects Tempo (see Q_PROPERTY docs).
     std::optional<uint8_t> m_activeController = CoreTimeDefaults::kCcVolume;
     std::vector<uint8_t> m_ghostControllers;
