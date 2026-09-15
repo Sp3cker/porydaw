@@ -285,7 +285,7 @@ SongView::SongView(SongDocument &document, QObject *parent)
     m_strip = new OtherStrip(*this);
 
     m_editorDrawer = new EditorDrawer(*this, m_editorViewState);
-    m_events = new EventListController(this, this);
+    m_events = new EventListController(*this, this);
     // Event-list row interactions surface through SongView's continuations:
     // status-bar announcements and jump-from-context voice reveal.
     connect(m_events, &EventListController::announce, this, &SongView::announce);

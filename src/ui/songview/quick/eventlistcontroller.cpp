@@ -64,11 +64,11 @@ bool hasChunk(const SongDocument &document, int chunk)
 
 } // namespace
 
-EventListController::EventListController(SongView *songView, QObject *parent)
+EventListController::EventListController(SongView &songView, QObject *parent)
     : QObject(parent)
     , m_songView(songView)
-    , m_document(songView->document())
-    , m_model(new eventlist::EventTableModel(songView, this))
+    , m_document(songView.document())
+    , m_model(new eventlist::EventTableModel(&songView, this))
 {
     m_model->setSelectionHandler([this](int chunk, Tick tick) { selectRowAtTick(chunk, tick); });
     m_menuHost = new songview::QuickMenuHost(this);
@@ -78,29 +78,26 @@ EventListController::EventListController(SongView *songView, QObject *parent)
     m_typeMenu = new songview::QuickMenuModel(this);
     connect(m_menuHost, &songview::QuickMenuHost::isOpenChanged, this,
             [this] { updateMenuOpen(m_menuHost->isOpen()); });
-    if (m_songView) {
-        connect(m_songView, &SongView::selectedTrackChanged, this,
-                [this](int) { syncTrackSelection(); });
-        // The owned row menu retires whenever its target context moves:
-        // row/chunk/filter/selection changes on this controller and the
-        // view's document/selection invalidation. The session lookup stays
-        // lazy so an unhosted controller never touches the canvas.
-        const auto retireRowMenu = [this](bool restoreFocus) {
-            songview::TimelineQuickView *const quick =
-                m_songView ? m_songView->quickView() : nullptr;
-            songview::retireHostMenu(quick ? quick->popupSession() : nullptr, m_menuHost, m_rowMenu,
-                                     restoreFocus);
-        };
-        connect(m_songView, &SongView::contextMenusInvalidated, this, retireRowMenu);
-        connect(this, &EventListController::currentRowChanged, this,
-                [retireRowMenu] { retireRowMenu(true); });
-        connect(this, &EventListController::chunkChanged, this,
-                [retireRowMenu] { retireRowMenu(true); });
-        connect(this, &EventListController::filterMaskChanged, this,
-                [retireRowMenu] { retireRowMenu(true); });
-        connect(this, &EventListController::selectedRowsChanged, this,
-                [retireRowMenu] { retireRowMenu(true); });
-    }
+    connect(&m_songView, &SongView::selectedTrackChanged, this,
+            [this](int) { syncTrackSelection(); });
+    // The owned row menu retires whenever its target context moves:
+    // row/chunk/filter/selection changes on this controller and the
+    // view's document/selection invalidation. The session lookup stays
+    // lazy because the Quick view is created after this controller.
+    const auto retireRowMenu = [this](bool restoreFocus) {
+        songview::TimelineQuickView *const quick = m_songView.quickView();
+        songview::retireHostMenu(quick ? quick->popupSession() : nullptr, m_menuHost, m_rowMenu,
+                                 restoreFocus);
+    };
+    connect(&m_songView, &SongView::contextMenusInvalidated, this, retireRowMenu);
+    connect(this, &EventListController::currentRowChanged, this,
+            [retireRowMenu] { retireRowMenu(true); });
+    connect(this, &EventListController::chunkChanged, this,
+            [retireRowMenu] { retireRowMenu(true); });
+    connect(this, &EventListController::filterMaskChanged, this,
+            [retireRowMenu] { retireRowMenu(true); });
+    connect(this, &EventListController::selectedRowsChanged, this,
+            [retireRowMenu] { retireRowMenu(true); });
     connect(m_chunkMenu, &songview::QuickMenuModel::activated, this,
             &EventListController::chunkPicked);
     connect(m_filterMenu, &songview::QuickMenuModel::activated, this,
@@ -343,14 +340,14 @@ void EventListController::setChunk(int chunk, bool followTrack)
     updateCountText();
     updatePlayRow();
 
-    if (!followTrack || target < 0 || !m_songView)
+    if (!followTrack || target < 0)
         return;
     for (int track = 0; track < m_document.engineTrackCount(); ++track) {
         if (m_document.smfTrackFor(track) != target)
             continue;
-        if (track != m_songView->selectionModel().primaryTrack()) {
+        if (track != m_songView.selectionModel().primaryTrack()) {
             m_syncing = true;
-            m_songView->selectTrack(track);
+            m_songView.selectTrack(track);
             m_syncing = false;
         }
         break;
@@ -396,9 +393,9 @@ void EventListController::refresh()
 void EventListController::syncTrackSelection()
 {
     if (m_syncing || !m_visible || !m_documentChangedConnection ||
-        m_document.revision() != m_documentRevision || !m_songView)
+        m_document.revision() != m_documentRevision)
         return;
-    const int chunk = m_document.smfTrackFor(m_songView->selectionModel().primaryTrack());
+    const int chunk = m_document.smfTrackFor(m_songView.selectionModel().primaryTrack());
     if (chunk < 0 || chunk == m_currentChunk)
         return;
     setChunk(chunk, false);
@@ -586,7 +583,7 @@ void EventListController::setPointerDown(bool pointerDown)
 
 void EventListController::jumpCursorToRow(int row)
 {
-    if (!hasChunk(m_document, m_model->chunk()) || !m_songView)
+    if (!hasChunk(m_document, m_model->chunk()))
         return;
     const auto rowTick = m_model->exactTickForRow(row);
     Tick tick = 0;
@@ -597,9 +594,9 @@ void EventListController::jumpCursorToRow(int row)
             return;
         tick = m_document.smf().tracks[m_model->chunk()].endTick;
     }
-    if (tick != m_songView->editCursorTick()) {
-        m_songView->commitEditCursor(tick);
-        m_songView->ensureTickVisible(tick);
+    if (tick != m_songView.editCursorTick()) {
+        m_songView.commitEditCursor(tick);
+        m_songView.ensureTickVisible(tick);
     }
     updatePlayRow();
 }
@@ -629,11 +626,11 @@ void EventListController::filterToggled(int bit)
 void EventListController::addEvent()
 {
     const int currentChunk = m_currentChunk;
-    if (!hasChunk(m_document, currentChunk) || !m_songView)
+    if (!hasChunk(m_document, currentChunk))
         return;
     if (currentChunk == 0) {
         if (const auto tempo = m_model->tempoPointForRow(m_currentRow)) {
-            const TempoPoint copy{Tick(m_songView->editCursorTick()),
+            const TempoPoint copy{Tick(m_songView.editCursorTick()),
                                   tempo->microsecondsPerQuarterNote};
             m_document.applyTempoEdit({{}, {copy}});
             selectRowAtTick(currentChunk, copy.tick);
@@ -650,7 +647,7 @@ void EventListController::addEvent()
         event.data0 = 7;
         event.data1 = 100;
     }
-    event.tick = m_songView->editCursorTick();
+    event.tick = m_songView.editCursorTick();
     m_document.insertRawEvent(currentChunk, event);
     selectEventRow(currentChunk, event);
 }
@@ -1072,8 +1069,7 @@ void EventListController::rebuildRowMenu(int row)
         // The canonical actions carry text, shortcut and live eligibility;
         // the host triggers them directly on the current row established
         // before open.
-        const songview::EditActions *const actions =
-            m_songView ? m_songView->editActions() : nullptr;
+        const songview::EditActions *const actions = m_songView.editActions();
         QAction *const moveUp =
             actions ? actions->action(SongView::EditCommand::MoveEventUp) : nullptr;
         QAction *const moveDown =

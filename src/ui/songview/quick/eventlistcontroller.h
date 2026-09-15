@@ -50,7 +50,7 @@ class EventListController : public QObject
     Q_PROPERTY(bool menuOpen READ menuOpen NOTIFY menuOpenChanged FINAL)
 
   public:
-    explicit EventListController(SongView *songView, QObject *parent = nullptr);
+    explicit EventListController(SongView &songView, QObject *parent = nullptr);
 
     eventlist::EventTableModel *model() const noexcept { return m_model; }
     QVariantMap appearance() const { return m_appearance; }
@@ -167,7 +167,7 @@ class EventListController : public QObject
     void rebuildTypeMenu();
     void updateMenuOpen(bool open);
 
-    SongView *m_songView = nullptr;
+    SongView &m_songView;
     SongDocument &m_document;
     QMetaObject::Connection m_documentChangedConnection;
     QMetaObject::Connection m_tracksRemappedConnection;
