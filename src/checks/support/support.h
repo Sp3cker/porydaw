@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ui/songview/grid.h"
 class SongView;
 
 namespace checks::support {
@@ -10,5 +11,12 @@ namespace checks::support {
 // construction seam keeps any bind-order or lifetime change out of every rig.
 // Returns the view for call-site chaining.
 SongView &bindEditActionsForTest(SongView &view);
+
+inline int alternateGridMenuId(songview::GridSelection selection)
+{
+    return (selection == songview::GridSelection::musical(8) ? songview::GridSelection::musical(16)
+                                                             : songview::GridSelection::musical(8))
+        .toMenuId();
+}
 
 } // namespace checks::support

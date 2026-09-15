@@ -46,45 +46,25 @@ const MidiTimeline *AutomationProjection::timeline() const
     return m_songView ? m_songView->timeline() : nullptr;
 }
 
-uint32_t AutomationProjection::gridSnapTicks(Tick tick, bool fine) const
-{
-    if (m_page)
-        return m_page->gridState(tick, fine).snapTicks;
-    if (m_grid)
-        return fine ? m_grid->fineGridTicks() : m_grid->snapTicksAt(tick);
-    return 1;
-}
-
 Tick AutomationProjection::snapTickDown(double tick, bool fine) const
 {
     tick = std::max(0.0, tick);
-    if (!fine) {
-        if (m_page)
-            return m_page->snapTickDown(tick, false);
-        return m_grid ? m_grid->snapTickDown(tick) : 0;
-    }
-    const uint32_t spacing = gridSnapTicks(CoreTimeDefaults::tickFromDouble(tick), true);
-    return CoreTimeDefaults::tickFromDouble(std::floor(tick / double(spacing)) * spacing);
+    if (m_page)
+        return m_page->snapTickDown(tick, fine);
+    if (m_grid)
+        return m_grid->snapTickDown(tick, fine);
+    return fine ? CoreTimeDefaults::tickFromDouble(tick) : 0;
 }
 
 Tick AutomationProjection::nextGridTick(Tick tick, bool fine, Tick limit) const
 {
     if (tick >= limit)
         return limit;
-    const uint32_t spacing = gridSnapTicks(tick, fine);
-    const Tick candidate = spacing >= limit - tick ? limit : tick + spacing;
-    if (gridSnapTicks(candidate, fine) == spacing)
-        return candidate;
-    Tick first = tick + 1;
-    Tick last = candidate;
-    while (first < last) {
-        const Tick probe = first + (last - first) / 2;
-        if (gridSnapTicks(probe, fine) == spacing)
-            first = probe + 1;
-        else
-            last = probe;
-    }
-    return first;
+    if (m_page)
+        return m_page->nextGridTick(tick, fine, limit);
+    if (m_grid)
+        return std::min(limit, m_grid->nextSnapTickAfter(tick, fine));
+    return tick + 1;
 }
 
 AutomationProjection::PointerMapping AutomationProjection::pointerMapping(const NodeLane &lane,

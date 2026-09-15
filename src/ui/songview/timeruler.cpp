@@ -62,9 +62,17 @@ int TimeRuler::rowHeight()
 
 namespace {
 
-QString gridDivisionText(int minDenom)
+QString gridDivisionText(const songview::GridSelection &selection)
 {
-    return minDenom == 0 ? SongView::tr("Auto") : QStringLiteral("1/%1").arg(minDenom);
+    switch (selection.kind) {
+    case songview::GridSelection::Kind::Auto:
+        return SongView::tr("Auto");
+    case songview::GridSelection::Kind::Clock:
+        return SongView::tr("Clock");
+    case songview::GridSelection::Kind::Musical:
+        return QStringLiteral("1/%1").arg(selection.denominator);
+    }
+    return {};
 }
 
 } // namespace
@@ -81,9 +89,9 @@ QString TimeRuler::feelText() const
 
 QString TimeRuler::divisionToolTip() const
 {
-    return SongView::tr("Finest drawn subdivision. Auto follows the zoom down to "
-                        "the mid2agb clock grid; edits snap one step finer than "
-                        "the drawn grid.");
+    return SongView::tr("Editing snap grid. Auto follows the zoom one step finer "
+                        "than the drawn grid; a fixed division snaps to that "
+                        "note value; Clock snaps to the mid2agb clock grid.");
 }
 
 QString TimeRuler::feelToolTip() const
@@ -103,7 +111,7 @@ QVariantMap TimeRuler::gridControlAppearance() const
 
 void TimeRuler::syncGridControls()
 {
-    const QString division = gridDivisionText(m_grid.minDenom());
+    const QString division = gridDivisionText(m_grid.selection());
     const QString feel =
         m_grid.feel() == GridFeel::Triplet ? SongView::tr("Triplet") : SongView::tr("Straight");
     const bool enabled = m_inputHost != nullptr;
@@ -169,7 +177,9 @@ void TimeRuler::ensureMenuAdapters()
     // setters run against a settled view; the completion signal then
     // hands focus back to the invoking control (notifyGridMenuChoice).
     connect(m_divisionModel, &QuickMenuModel::activated, this, [this](int id) {
-        m_owner.setGridMinDenom(id);
+        // Row ids encode the selection: -1 = Auto, 0 = Clock, else the
+        // musical denominator.
+        m_owner.setGridSelection(songview::GridSelection::fromMenuId(id));
         notifyGridMenuChoice(true);
     });
     connect(m_feelModel, &QuickMenuModel::activated, this, [this](int id) {
@@ -239,9 +249,12 @@ void TimeRuler::openGridMenu(QPointF position, bool division)
         rows.push_back(std::move(item));
     };
     if (division) {
-        rows.reserve(5);
-        for (const int denom : {0, 4, 8, 16, 32})
-            addRow(denom, gridDivisionText(denom), m_grid.minDenom() == denom);
+        const auto selections = m_grid.selections();
+        rows.reserve(selections.size());
+        for (const songview::GridSelection selection : selections) {
+            addRow(selection.toMenuId(), gridDivisionText(selection),
+                   m_grid.selection() == selection);
+        }
         m_divisionModel->setItems(std::move(rows));
         m_menuHost->open(m_divisionModel, position);
     } else {

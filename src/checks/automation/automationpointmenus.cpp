@@ -10,6 +10,7 @@
 // projected nodes that carry no written event.
 
 #include "checks/automation/tst_automationediting.h"
+#include "checks/support/support.h"
 
 #include <QAccessible>
 
@@ -555,8 +556,8 @@ void AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget()
              "the foreign ruler menu did not publish over the pending point menu");
 
     // The foreign menu keeps working: a real row pick changes the grid.
-    const int currentDenom = songTab.view().viewState().gridMinDenom;
-    const int targetDenom = currentDenom == 8 ? 16 : 8;
+    const songview::GridSelection currentSelection = songTab.view().viewState().gridSelection;
+    const int targetDenom = checks::support::alternateGridMenuId(currentSelection);
     const int targetRow =
         quick_popup::menuModel(*quick_popup::menuPanel(*live))->rowForId(targetDenom);
     QVERIFY2(targetRow >= 0, "the foreign division menu omitted the chosen denominator");
@@ -564,10 +565,10 @@ void AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget()
              "the foreign division row did not receive a real click");
     QCoreApplication::processEvents();
     QVERIFY2(!live->isOpen(), "the foreign division pick left the shared menu open");
-    QCOMPARE(songTab.view().viewState().gridMinDenom, targetDenom);
+    QCOMPARE(songTab.view().viewState().gridSelection,
+             songview::GridSelection::musical(uint32_t(targetDenom)));
     QTRY_VERIFY2(division->hasActiveFocus(),
                  "the foreign pick did not return focus to the ruler control");
-
     // The displaced node target never fired: exactly nothing was written, and
     // no value prompt surfaced late.
     QCOMPARE(songTab.document().revision(), revision);
@@ -647,15 +648,16 @@ void AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives()
     QVERIFY2(survivor, "the surviving division menu lost its rendered panel");
 
     // The survivor still works: a real row pick changes the grid.
-    const int currentDenom = songTab.view().viewState().gridMinDenom;
-    const int targetDenom = currentDenom == 8 ? 16 : 8;
+    const songview::GridSelection currentSelection = songTab.view().viewState().gridSelection;
+    const int targetDenom = checks::support::alternateGridMenuId(currentSelection);
     const int targetRow = quick_popup::menuModel(*survivor)->rowForId(targetDenom);
     QVERIFY2(targetRow >= 0, "the surviving division menu omitted the chosen denominator");
     QVERIFY2(quick_popup::clickMenuRow(*live, targetRow),
              "the surviving division row did not receive a real click");
     QCoreApplication::processEvents();
     QVERIFY2(!live->isOpen(), "the division pick left the shared menu open");
-    QCOMPARE(songTab.view().viewState().gridMinDenom, targetDenom);
+    QCOMPARE(songTab.view().viewState().gridSelection,
+             songview::GridSelection::musical(uint32_t(targetDenom)));
 
     // The consumed node hit stayed consumed: nothing was written, and no
     // late value prompt surfaced.
@@ -730,8 +732,8 @@ void AutomationEditingTest::parameterSwitchInvalidatesValuePrompt()
 
     // The surviving foreign menu still works: a real row pick changes the
     // grid.
-    const int currentDenom = songTab.view().viewState().gridMinDenom;
-    const int targetDenom = currentDenom == 8 ? 16 : 8;
+    const songview::GridSelection currentSelection = songTab.view().viewState().gridSelection;
+    const int targetDenom = checks::support::alternateGridMenuId(currentSelection);
     const int targetRow =
         quick_popup::menuModel(*quick_popup::menuPanel(*live))->rowForId(targetDenom);
     QVERIFY2(targetRow >= 0, "the surviving division menu omitted the chosen denominator");
@@ -739,7 +741,8 @@ void AutomationEditingTest::parameterSwitchInvalidatesValuePrompt()
              "the surviving division row did not receive a real click");
     QCoreApplication::processEvents();
     QVERIFY2(!live->isOpen(), "the division pick left the shared menu open");
-    QCOMPARE(songTab.view().viewState().gridMinDenom, targetDenom);
+    QCOMPARE(songTab.view().viewState().gridSelection,
+             songview::GridSelection::musical(uint32_t(targetDenom)));
 
     // A fresh Tempo prompt edits Tempo, not the old CC: the held default
     // arrives selected, and the typed BPM commits exactly one tempo event

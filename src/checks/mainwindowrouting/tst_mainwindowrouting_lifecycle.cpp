@@ -83,7 +83,7 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         requested.selectedTrack = alternateTrack;
         requested.editCursorTick =
             before.editCursorTick == 0 ? reopened->timeline()->ticksPerBeat : 0;
-        requested.gridMinDenom = 16;
+        requested.gridSelection = songview::GridSelection::musical(16);
         requested.gridTriplet = true;
         requested.eventList = true;
         view.applyViewState(requested);
@@ -99,7 +99,7 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         QVERIFY(seeded.scrollPx != before.scrollPx);
         QVERIFY(seeded.scrollY != before.scrollY);
         QCOMPARE(seeded.selectedTrack, alternateTrack);
-        QCOMPARE(seeded.gridMinDenom, 16);
+        QCOMPARE(seeded.gridSelection, songview::GridSelection::musical(16));
         QVERIFY(seeded.gridTriplet);
         QVERIFY(seeded.eventList);
         QTabBar *tabBar = window.findChild<QTabBar *>();
@@ -209,7 +209,7 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         state.pxPerBeat *= 2.0;
         state.keyHeight *= 1.5;
         state.editCursorTick = probe.timeline()->ticksPerBeat * 4;
-        state.gridMinDenom = 16;
+        state.gridSelection = songview::GridSelection::musical(16);
         state.gridTriplet = true;
         probe.view().applyViewState(state);
         const SongView::ViewState retained = probe.view().viewState();

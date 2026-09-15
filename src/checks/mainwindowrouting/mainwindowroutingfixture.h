@@ -210,7 +210,7 @@ class MainWindowRoutingFixture
                left.keyHeight == right.keyHeight && left.scrollPx == right.scrollPx &&
                left.scrollY == right.scrollY && left.selectedTrack == right.selectedTrack &&
                left.editCursorTick == right.editCursorTick &&
-               left.gridMinDenom == right.gridMinDenom && left.gridTriplet == right.gridTriplet &&
+               left.gridSelection == right.gridSelection && left.gridTriplet == right.gridTriplet &&
                left.eventList == right.eventList;
     }
 
@@ -220,7 +220,8 @@ class MainWindowRoutingFixture
         const SongView::ViewState landed = view.viewState();
         if (!landed.valid || landed.pxPerBeat != defaults.pxPerBeat ||
             landed.keyHeight != defaults.keyHeight || landed.editCursorTick != 0 ||
-            landed.gridMinDenom != 0 || landed.gridTriplet || landed.eventList)
+            landed.gridSelection != songview::GridSelection::automatic() || landed.gridTriplet ||
+            landed.eventList)
             return false;
         int firstUsedTrack = 0;
         for (int track = 0; track < 16; ++track) {

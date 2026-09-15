@@ -347,8 +347,6 @@ void PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid()
     QCOMPARE(editor->endTick(), start + duration);
     songview::PitchBendGraph *graph = m_fixture.graph(QStringLiteral("pitchBendGraph"));
     QVERIFY(graph);
-    const QRect canvas = graph->canvasRect();
-    const double pixelsPerTick = double(canvas.width()) / double(duration);
     QVERIFY(
         m_fixture.stroke(*graph, canvasPoint(*graph, 0.10, 0.80), canvasPoint(*graph, 0.90, 0.20)));
     bool before = false;
@@ -356,10 +354,9 @@ void PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid()
     for (const DocLanePoint &point : m_fixture.document().lanePoints(0, DOC_CC_BEND)) {
         if (point.tick <= start || point.tick >= start + duration)
             continue;
-        const songview::Grid::Segment segment = m_fixture.view().grid().segmentAt(point.tick);
-        const Tick cell = m_fixture.view().grid().gridTicksAtScale(point.tick, pixelsPerTick);
-        QVERIFY(cell > 0 && point.tick >= segment.start &&
-                (point.tick - segment.start) % cell == 0);
+        // Committed points land on the canonical snap lattice: the
+        // selection's editing grid, re-anchored at the signature seam.
+        QCOMPARE(m_fixture.view().grid().snapTick(double(point.tick)), point.tick);
         before |= point.tick < boundary;
         after |= point.tick > boundary;
     }

@@ -77,7 +77,6 @@ class AutomationPage final : public QObject
     const LoadedVoiceGroup *voicegroup() const noexcept;
     Tick snapTick(double tick, bool fineMode) const noexcept;
     Tick snapTickDown(double tick, bool fineMode) const noexcept;
-    DrawerPageGridState gridState(Tick tick, bool fineMode) const noexcept;
     Tick nextGridTick(Tick tick, bool fineMode, Tick limit) const noexcept;
     double tickAtContentX(double x) const noexcept;
     qreal displayX(double tick, qreal origin, qreal dpr) const noexcept;

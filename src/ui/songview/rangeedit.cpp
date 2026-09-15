@@ -783,7 +783,7 @@ void SongView::pasteFromClipboard()
 }
 uint32_t SongView::copiedNoteDuration(const DocNote &note) const
 {
-    return note.duration ? note.duration : uint32_t(m_grid.gridTicksAt(note.tick));
+    return note.duration ? note.duration : uint32_t(m_grid.snapTicksAt(note.tick));
 }
 
 std::optional<Clip> SongView::readClipboardClip()

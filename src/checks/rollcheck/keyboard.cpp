@@ -7,6 +7,7 @@
 #include "core/timedefaults.h"
 
 #include "checks/support/eventsynth.h"
+#include "checks/support/quickframebuffer.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
 #include "ui/songview/pianoroll.h"
@@ -167,12 +168,15 @@ void PianoRollTest::timelineRulerScope()
              "Quick header records did not match the current timeline");
     QVERIFY2(rulerInput && rulerBand, "could not find the time ruler");
     const qreal rulerDpr = rulerInput->devicePixelRatio();
-    const Tick startTick = d.tick + snapCell;
-    const Tick endTick = d.tick + 2 * snapCell;
+    // Press at the drawn-cell edge: snapCell ticks past the cell start can
+    // land inside the fixture's tick-12 signature chip label.
+    const Tick startTick = d.tick + d.dur;
+    const Tick endTick = d.tick + d.dur + snapCell;
     const QPointF start(view.camera().displayX(double(startTick), 0.0, rulerDpr),
                         rulerBand->rect.height() - 2.0);
     const QPointF end(view.camera().displayX(double(endTick), 0.0, rulerDpr),
                       rulerBand->rect.height() - 2.0);
+    const QPointF activate = start + QPointF(qreal(QApplication::startDragDistance() + 2), 0.0);
 
     view.selectionModel().clearTimeSelection();
     view.selectionModel().applyTrackScopeAdjustment(
@@ -184,10 +188,12 @@ void PianoRollTest::timelineRulerScope()
     }
     checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::LeftButton,
                               Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*rulerInput, QEvent::MouseMove, activate, Qt::NoButton,
+                              Qt::LeftButton, Qt::NoModifier);
     checks::events::sendMouse(*rulerInput, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
-                              Qt::ControlModifier);
+                              Qt::NoModifier);
     checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::LeftButton,
-                              Qt::NoButton, Qt::ControlModifier);
+                              Qt::NoButton, Qt::NoModifier);
     QVERIFY2(view.selectionModel().timeSelection().active() &&
                  view.selectionModel().timeSelection().startTick == startTick &&
                  view.selectionModel().timeSelection().endTick == endTick &&
@@ -217,10 +223,12 @@ void PianoRollTest::timelineRulerScope()
         secondaryRecord ? headercheck::captureBand(check, view) : QImage{};
     checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::LeftButton,
                               Qt::LeftButton, Qt::ControlModifier);
+    checks::events::sendMouse(*rulerInput, QEvent::MouseMove, activate, Qt::NoButton,
+                              Qt::LeftButton, Qt::ControlModifier);
     checks::events::sendMouse(*rulerInput, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
-                              Qt::NoModifier);
+                              Qt::ControlModifier);
     checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::LeftButton,
-                              Qt::NoButton, Qt::NoModifier);
+                              Qt::NoButton, Qt::ControlModifier);
     QVERIFY2(view.selectionModel().timeSelection().startTick == startTick &&
                  view.selectionModel().timeSelection().endTick == endTick &&
                  view.selectionModel().storedTrackScope() == expectedScope,

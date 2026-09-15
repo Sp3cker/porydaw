@@ -75,7 +75,7 @@ void WorkspaceTabsTest::persistenceRestoresTabs()
         QCOMPARE(fresh.scrollY, firstCanonical.scrollY);
         QCOMPARE(fresh.selectedTrack, firstCanonical.selectedTrack);
         QCOMPARE(fresh.editCursorTick, uint64_t(0));
-        QCOMPARE(fresh.gridMinDenom, 0);
+        QCOMPARE(fresh.gridSelection, songview::GridSelection::automatic());
         QVERIFY(!fresh.gridTriplet);
         QVERIFY(!fresh.eventList);
         QVERIFY(!first->view().eventListVisible());

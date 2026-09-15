@@ -121,8 +121,10 @@ void PianoRollTest::rulerLoopMenuSetAndTwoStepUndo()
     QVERIFY2(input, "could not find the time ruler Quick input");
     SongDocument &doc = check.document();
     const Tick snapCell = seed->snapCell;
-    const Tick startTick = seed->cell.tick + snapCell;
-    const Tick endTick = seed->cell.tick + 2 * snapCell;
+    // Press at the drawn-cell edge: snapCell ticks past the cell start can
+    // land inside the fixture's tick-12 signature chip label.
+    const Tick startTick = seed->cell.tick + seed->cell.dur;
+    const Tick endTick = seed->cell.tick + seed->cell.dur + snapCell;
     QVERIFY2(view.grid().snapTick(double(startTick)) == startTick &&
                  view.grid().snapTick(double(endTick)) == endTick,
              "the ruler loop fixture ticks are not snap-aligned");
@@ -368,7 +370,7 @@ void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
     QVERIFY2(input, "could not find the time ruler Quick input");
     SongDocument &doc = check.document();
     const Tick snapCell = seed->snapCell;
-    const Tick tick = seed->cell.tick + snapCell;
+    const Tick tick = seed->cell.tick + seed->cell.dur;
     QVERIFY2(view.grid().snapTick(double(tick)) == tick,
              "the ruler menu fixture tick is not snap-aligned");
     // The escape focus contract routes to a visible drawer page first; close

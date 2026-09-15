@@ -9,7 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "ui/songview.h"
+#include "ui/songview/grid.h"
 extern "C" {
 #include "voicegroup_loader.h"
 }
@@ -89,26 +89,27 @@ struct TickRange {
 TickRange tickRange(double begin, double end) noexcept;
 
 // Calls fn(tick, level) for every sub-beat visible-grid position in
-// [range.begin, range.end) that is not a beat line, at the current zoom's
+// [range.begin, range.end) that is not a beat line, at the selection's
 // drawn resolution (Grid::gridTicksAt, which bottoms out at the mid2agb
 // clock grid; the snap grid runs one ladder step finer between these
-// lines). Walks time-signature segments so the positions stay snappable
-// and match the beat lines. No callbacks in segments whose grid is at (or
-// coarser than) whole beats.
+// lines under Auto). Auto/Musical positions re-anchor at each
+// time-signature segment; Clock positions stay on the absolute lattice
+// across seams. No callbacks in segments whose grid is at (or coarser
+// than) whole beats, or where Grid::drawsSubGridIn suppresses the
+// sub-grid at the current zoom.
 template <typename F>
-void forEachSubGridLine(const Grid &grid, const TimeCamera &camera, TickRange range,
-                        int timelineDetailMinimumPixelsPerBeat, F &&fn)
+void forEachSubGridLine(const Grid &grid, TickRange range, F &&fn)
 {
     const bool triplet = grid.feel() == GridFeel::Triplet;
     Tick at = range.begin;
     while (at < range.end) {
         const Grid::Segment seg = grid.segmentAt(at);
         const Tick segEnd = std::min(seg.next, range.end);
-        const uint64_t g = grid.gridTicksAt(at);
-        if (g > 0 && g < seg.beatTicks &&
-            camera.pxPerTick() * double(seg.beatTicks) >= timelineDetailMinimumPixelsPerBeat) {
-            const uint64_t k = at > seg.start ? (uint64_t(at) - seg.start + g - 1) / g : 0;
-            const uint64_t first = uint64_t(seg.start) + k * g;
+        const uint64_t g = uint64_t(grid.gridTicksAt(at));
+        if (g < seg.beatTicks && grid.drawsSubGridIn(seg)) {
+            const uint64_t anchor = uint64_t(grid.subGridAnchorIn(seg));
+            const uint64_t k = at > anchor ? (uint64_t(at) - anchor + g - 1) / g : 0;
+            const uint64_t first = anchor + k * g;
             for (uint64_t tick = first; tick < segEnd; tick += g) {
                 if ((tick - seg.start) % seg.beatTicks == 0)
                     continue; // beat/bar lines are drawn separately

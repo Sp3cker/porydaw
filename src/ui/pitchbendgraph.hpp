@@ -207,8 +207,6 @@ class PitchBendGraph : public QQuickItem
     void replaceSegment(Tick tick0, int value0, Tick tick1, int value1, Sampling sampling);
     bool isLineGesture() const;
     Sampling gestureSampling() const;
-    uint32_t normalCellTicksAt(Tick tick) const;
-    uint32_t samplingCellTicksAt(Tick tick, Sampling sampling) const;
     Tick nextSampleTick(Tick tick, Sampling sampling) const;
     Tick lastEditableTick(Sampling sampling) const;
     Tick tickAtFraction(double fraction, Sampling sampling) const;

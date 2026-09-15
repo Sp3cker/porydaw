@@ -81,7 +81,6 @@ class AutomationProjection
 
   private:
     const MidiTimeline *timeline() const;
-    uint32_t gridSnapTicks(Tick tick, bool fine) const;
     Tick snapTickDown(double tick, bool fine) const;
     Tick nextGridTick(Tick tick, bool fine, Tick limit) const;
 

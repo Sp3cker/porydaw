@@ -106,5 +106,7 @@ class ViewBucketsGridTest final : public QObject
     void snapLadder();
     void gridLinesSnappable_data();
     void gridLinesSnappable();
+    void clockLatticeCrossesSignatureSeam();
+    void fixedGridPaintDensityGuard();
     void paintSmoke();
 };

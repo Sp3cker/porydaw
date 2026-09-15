@@ -100,7 +100,7 @@ void PianoRollStaticTest::tickRangeWalksFractionalLattice()
     const SongView::ViewState original = view.viewState();
     SongView::ViewState zoomed = original;
     zoomed.pxPerBeat = 384.0;
-    zoomed.gridMinDenom = 0;
+    zoomed.gridSelection = songview::GridSelection::automatic();
     view.applyViewState(zoomed);
     const songview::Grid::Segment segment = view.grid().segmentAt(96);
     QVERIFY(segment.start <= 96);
@@ -110,8 +110,7 @@ void PianoRollStaticTest::tickRangeWalksFractionalLattice()
     QVERIFY(lattice < segment.beatTicks);
     const auto walk = [&view](double begin, double end) {
         std::vector<Tick> ticks;
-        songview::detail::forEachSubGridLine(view.grid(), view.camera(),
-                                             songview::detail::tickRange(begin, end), 1,
+        songview::detail::forEachSubGridLine(view.grid(), songview::detail::tickRange(begin, end),
                                              [&ticks](Tick tick, int) { ticks.push_back(tick); });
         return ticks;
     };
@@ -122,8 +121,7 @@ void PianoRollStaticTest::tickRangeWalksFractionalLattice()
             const songview::Grid::Segment s = view.grid().segmentAt(tick);
             const Tick step = view.grid().gridTicksAt(tick);
             if (step > 0 && step < s.beatTicks && (tick - s.start) % step == 0 &&
-                (tick - s.start) % s.beatTicks != 0 &&
-                view.camera().pxPerTick() * double(s.beatTicks) >= 1)
+                (tick - s.start) % s.beatTicks != 0 && view.grid().drawsSubGridIn(s))
                 ticks.push_back(tick);
         }
         return ticks;
@@ -133,7 +131,7 @@ void PianoRollStaticTest::tickRangeWalksFractionalLattice()
     // A coarser lattice keeps both drawn and snap strides above the clock floor.
     SongView::ViewState coarse = original;
     coarse.pxPerBeat = 192.0;
-    coarse.gridMinDenom = 16;
+    coarse.gridSelection = songview::GridSelection::musical(16);
     view.applyViewState(coarse);
     const Tick latticeG = view.grid().gridTicksAt(0);
     const Tick snapG = view.grid().snapTicksAt(0);
@@ -332,7 +330,7 @@ void PianoRollStaticTest::affineCameraProjection()
     SongView::ViewState state = original;
     state.pxPerBeat = pxPerBeat;
     state.scrollPx = scrollPx;
-    state.gridMinDenom = 0;
+    state.gridSelection = songview::GridSelection::automatic();
     view.applyViewState(state);
     const qreal visibleWidth = fixture.rollInput()->bounds().width();
     const double affineTick = view.camera().tickAtContentX(visibleWidth * 0.371) + 0.375;

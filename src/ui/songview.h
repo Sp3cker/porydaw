@@ -1,5 +1,4 @@
 #pragma once
-
 #include <QColor>
 #include <QFlags>
 #include <QHash>
@@ -174,14 +173,12 @@ class SongView : public QObject
         double scrollY = 0.0;
         int selectedTrack = 0;
         Tick editCursorTick = 0;
-        int gridMinDenom = 0;     // drawn-grid floor as a note denominator
-                                  // (4/8/16/32); 0 = down to the clock grid
-        bool gridTriplet = false; // triplet vs straight beat subdivisions
-        bool eventList = false;   // raw MIDI event list instead of the roll
+        songview::GridSelection gridSelection; // editing snap selection
+                                               // (Auto/musical denom/clock)
+        bool gridTriplet = false;              // triplet vs straight beat subdivisions
+        bool eventList = false;                // raw MIDI event list instead of the roll
     };
     ViewState viewState() const;
-    // Call after setSong (and setDocument); a default-constructed (invalid)
-    // state is a no-op.
     void applyViewState(const ViewState &state);
 
     // Complete application-wide drawer and automation-lane projection.
@@ -434,14 +431,20 @@ class SongView : public QObject
                          const std::function<void(Tick, bool, int, int)> &fn) const;
 
     // --- editing support for the child widgets ---
-    // Grid feel and floor (the ruler's grid controls): the zoom-adaptive
-    // grid subdivides beats by powers of two (straight) or by threes
-    // (triplet), and the minimum subdivision — a note denominator, quarter =
-    // one beat — stops the DRAWN grid from refining past the note value the
-    // user cares about (display only; snapping still steps one rung finer).
-    // 0 keeps the default clock-grid floor. Per-song view state.
+    // Grid feel and editing selection (the ruler's grid controls): the
+    // zoom-adaptive grid subdivides beats by powers of two (straight) or by
+    // threes (triplet), and the selection pins editing snap spacing — Auto
+    // keeps the adaptive snap grid, a musical denominator fixes it, Clock
+    // snaps to the document's clock lattice. The painted grid stays
+    // adaptive regardless. Per-song view state.
     void setGridFeel(songview::GridFeel feel);
-    void setGridMinDenom(int denom); // 4/8/16/32; anything else means 0
+    void setGridSelection(songview::GridSelection selection);
+    // Keyboard commands: step the editing-grid selection one ladder
+    // position finer/coarser, or toggle the feel keeping the nearest
+    // representable spacing. No-ops at the ladder ends.
+    void narrowGrid();
+    void widenGrid();
+    void toggleGridFeel();
 
     DrawerPageVoiceContext voiceContext(Tick tick) const;
     // Shared deferred velocity gesture; document mutation happens only when
@@ -708,6 +711,7 @@ class SongView : public QObject
     bool eventFilter(QObject *watched, QEvent *event) override;
 
   private:
+    void gridStateChanged(bool changed);
     friend class EditorDrawer;
     friend class songview::PianoRoll;
     friend class songview::TrackHeaderModel;

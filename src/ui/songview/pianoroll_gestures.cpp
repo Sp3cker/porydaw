@@ -257,7 +257,7 @@ void PianoRoll::beginDraw()
     }
     m_drawAnchor = m_grid.snapTickDown(m_pressTick);
     m_drawTick = m_drawAnchor;
-    m_drawDur = int64_t(m_grid.gridTicksAt(m_drawAnchor));
+    m_drawDur = int64_t(m_grid.snapTicksAt(m_drawAnchor));
     m_drawKey = m_pressKey;
     activateLeftDrag(LeftDrag::Draw);
     m_sv->selectionModel().clearNoteSelection();

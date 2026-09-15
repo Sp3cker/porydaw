@@ -30,7 +30,9 @@ bool PianoRollFixture::prepare()
     QCoreApplication::processEvents();
 
     SongView &songView = view();
-    songView.setGridMinDenom(4);
+    // Automatic keeps the deterministic sixteenth-note snap while selecting
+    // a coarser drawn grid at this zoom, matching the suite's drag math.
+    songView.setGridSelection(songview::GridSelection::automatic());
     m_pianoRollDefaultKeyHeight = layout::fontPx(1.0);
     auto *quick = songView.quickView();
     QQuickItem *const quickRoot = quick ? quick->rootObject() : nullptr;
@@ -159,7 +161,12 @@ Cell PianoRollFixture::findFreeCell(int firstProbe, bool checkAllTracks)
             continue;
         for (int probe = firstProbe; probe < int(pianoRoll.bounds().width()) - 40; probe += 24) {
             const Tick tick = songView.grid().snapTickDown(songView.camera().tickAtContentX(probe));
+            // Cells sit on the drawn lattice: a snap-lattice seed can land a
+            // ruler press on a signature chip (the fixture has one at tick 12).
             const Tick dur = songView.grid().gridTicksAt(tick);
+            const songview::Grid::Segment seg = songView.grid().segmentAt(tick);
+            if ((uint64_t(tick) - seg.start) % uint64_t(dur) != 0)
+                continue;
             const int x0 = songView.camera().contentX(double(tick));
             const int x1 = songView.camera().contentX(double(tick + dur));
             const int xs =

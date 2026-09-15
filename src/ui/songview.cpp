@@ -593,9 +593,8 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     m_events->setPlayheadTick(-1.0, false); // another song's ticks are stale
     // Song attachment resets transient grid controls; editor cosmetics remain
     // global and are rebuilt above.
-    m_grid.setTicksPerClock(m_document ? m_document->ticksPerClock() : 0);
-    m_grid.setFeel(GridFeel::Straight);
-    m_grid.setMinDenom(0);
+    gridStateChanged(m_grid.setTicksPerClock(m_document ? m_document->ticksPerClock() : 0));
+    m_grid.setState(songview::GridSelection::automatic(), GridFeel::Straight);
     m_ruler->syncGridControls();
 
     int firstUsedTrack = 0;
@@ -731,7 +730,7 @@ void SongView::disconnectDocument()
         disconnect(m_document, &SongDocument::documentChanged, this, nullptr);
     }
     m_document = nullptr;
-    m_grid.setTicksPerClock(0);
+    gridStateChanged(m_grid.setTicksPerClock(0));
     m_events->setDocument(nullptr);
 }
 
@@ -811,7 +810,7 @@ void SongView::setDocument(SongDocument *document)
         }
     }
     m_document = document;
-    m_grid.setTicksPerClock(document ? document->ticksPerClock() : 0);
+    gridStateChanged(m_grid.setTicksPerClock(document ? document->ticksPerClock() : 0));
     m_events->setDocument(document);
     m_selectionModel.clearNoteSelection();
     m_headers->rebuild(m_trackActivity, m_playing);
@@ -892,7 +891,7 @@ SongView::ViewState SongView::viewState() const
     state.scrollY = m_camera.scrollY();
     state.selectedTrack = m_selectionModel.primaryTrack();
     state.editCursorTick = m_editCursorTick;
-    state.gridMinDenom = m_grid.minDenom();
+    state.gridSelection = m_grid.selection();
     state.gridTriplet = m_grid.feel() == GridFeel::Triplet;
     state.eventList = eventListVisible();
     return state;
@@ -902,19 +901,25 @@ void SongView::applyViewState(const ViewState &state)
 {
     if (!state.valid || !m_timeline)
         return;
-    const int gridMinDenom = songview::Grid::normalizeMinDenom(state.gridMinDenom);
     const GridFeel gridFeel = state.gridTriplet ? GridFeel::Triplet : GridFeel::Straight;
     const double pxPerBeat =
         std::clamp(state.pxPerBeat, double(m_geometry.timelineMinimumPixelsPerBeat),
                    double(m_geometry.timelineMaximumPixelsPerBeat));
     const bool zoomChanged = m_camera.setTimeZoom(pxPerBeat);
-    const bool gridChanged = gridMinDenom != m_grid.minDenom() || gridFeel != m_grid.feel();
+    // One atomic assignment: the selection canonicalizes against the
+    // restored feel's ladder, never the live feel being replaced. The
+    // result is the effective grid change — a persisted selection that
+    // canonicalizes to the live one does not cancel an interaction.
+    const bool gridChanged = m_grid.setState(state.gridSelection, gridFeel);
     if ((zoomChanged || gridChanged) && m_editorDrawer)
         m_editorDrawer->cancelVisiblePageInteraction();
     (void)m_camera.setKeyHeight(state.keyHeight); // clamps internally
     m_roll->refreshTextLayout();
-    setGridMinDenom(gridMinDenom);
-    setGridFeel(state.gridTriplet ? GridFeel::Triplet : GridFeel::Straight);
+    if (gridChanged) {
+        m_ruler->syncGridControls();
+        refreshTimelineViews(PianoRollQuickDirty::GridTime);
+        refreshDrawerPages();
+    }
     if (state.selectedTrack >= 0 && state.selectedTrack < 16 &&
         m_timeline->tracks[state.selectedTrack].used)
         selectTrack(state.selectedTrack);

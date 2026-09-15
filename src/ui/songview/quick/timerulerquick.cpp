@@ -178,15 +178,12 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan)
     const bool drawBeatTicks =
         m_camera.pxPerBeat() >= m_geometry.timelineDetailMinimumPixelsPerBeat;
 
-    detail::forEachSubGridLine(
-        m_owner.grid(), m_camera, range, m_geometry.timelineDetailMinimumPixelsPerBeat,
-        [&](Tick tick, int level) {
-            const qreal x = m_camera.displayX(double(tick), 0.0, dpr);
-            const int tickHeight = level == 1 ? lyt::space(Space::Half) : lyt::singlePixel();
-            addVerticalLine(scene.layer(marksLayer), x,
-                            tickBottom - tickHeight + lyt::singlePixel(), tickBottom,
-                            lyt::singlePixel(), indicatorColor, area);
-        });
+    detail::forEachSubGridLine(m_owner.grid(), range, [&](Tick tick, int level) {
+        const qreal x = m_camera.displayX(double(tick), 0.0, dpr);
+        const int tickHeight = level == 1 ? lyt::space(Space::Half) : lyt::singlePixel();
+        addVerticalLine(scene.layer(marksLayer), x, tickBottom - tickHeight + lyt::singlePixel(),
+                        tickBottom, lyt::singlePixel(), indicatorColor, area);
+    });
 
     int widestDetailWidth = 0;
     if (m_camera.pxPerBeat() >= m_geometry.timeRulerBeatLabelZoomFactor *

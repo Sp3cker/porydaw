@@ -12,6 +12,7 @@
 #include "core/miditimeline.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/detail.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songviewmodel.h"
 
@@ -147,7 +148,7 @@ void ViewBucketsGridTest::quirkProjection()
 void ViewBucketsGridTest::snapLadder_data()
 {
     QTest::addColumn<double>("pixelsPerBeat");
-    QTest::addColumn<int>("minimumDenom");
+    QTest::addColumn<int>("selectionDenom"); // 0 = Auto, -1 = Clock
     QTest::addColumn<int>("feel");
     QTest::addColumn<Tick>("grid");
     QTest::addColumn<Tick>("snap");
@@ -158,18 +159,22 @@ void ViewBucketsGridTest::snapLadder_data()
         << 4.0 * cell << 0 << int(songview::GridFeel::Straight) << Tick{6} << Tick{3};
     QTest::newRow("triplet") << 6.0 * cell << 0 << int(songview::GridFeel::Triplet) << Tick{4}
                              << Tick{2};
-    QTest::newRow("triplet eighth floor")
-        << 6.0 * cell << 8 << int(songview::GridFeel::Triplet) << Tick{8} << Tick{4};
-    QTest::newRow("straight sixteenth floor")
-        << 4.0 * cell << 16 << int(songview::GridFeel::Straight) << Tick{6} << Tick{3};
-    QTest::newRow("straight quarter floor")
-        << 4.0 * cell << 4 << int(songview::GridFeel::Straight) << Tick{24} << Tick{12};
+    // Fixed selections pin both the snap spacing and the drawn grid to the
+    // selection — painted cells and snap stride coincide.
+    QTest::newRow("triplet eighth fixed")
+        << 6.0 * cell << 8 << int(songview::GridFeel::Triplet) << Tick{8} << Tick{8};
+    QTest::newRow("straight sixteenth fixed")
+        << 4.0 * cell << 16 << int(songview::GridFeel::Straight) << Tick{6} << Tick{6};
+    QTest::newRow("straight quarter fixed")
+        << 4.0 * cell << 4 << int(songview::GridFeel::Straight) << Tick{24} << Tick{24};
+    QTest::newRow("clock fixed") << 4.0 * cell << -1 << int(songview::GridFeel::Straight) << Tick{1}
+                                 << Tick{1};
 }
 
 void ViewBucketsGridTest::snapLadder()
 {
     QFETCH(double, pixelsPerBeat);
-    QFETCH(int, minimumDenom);
+    QFETCH(int, selectionDenom);
     QFETCH(int, feel);
     QFETCH(Tick, grid);
     QFETCH(Tick, snap);
@@ -180,7 +185,10 @@ void ViewBucketsGridTest::snapLadder()
     state.pxPerBeat = pixelsPerBeat;
     opened.fixture->view().applyViewState(state);
     opened.fixture->view().setGridFeel(songview::GridFeel(feel));
-    opened.fixture->view().setGridMinDenom(minimumDenom);
+    opened.fixture->view().setGridSelection(
+        selectionDenom < 0    ? songview::GridSelection::clock()
+        : selectionDenom == 0 ? songview::GridSelection::automatic()
+                              : songview::GridSelection::musical(uint32_t(selectionDenom)));
     QCOMPARE(opened.fixture->view().grid().gridTicksAt(0), grid);
     QCOMPARE(opened.fixture->view().grid().snapTicksAt(0), snap);
 }
@@ -188,19 +196,20 @@ void ViewBucketsGridTest::snapLadder()
 void ViewBucketsGridTest::gridLinesSnappable_data()
 {
     QTest::addColumn<int>("shape");
-    QTest::addColumn<int>("minimumDenom");
-    QTest::newRow("flat quarter grid") << int(FixtureShape::Basic) << 4;
-    QTest::newRow("mid-song signature restart") << int(FixtureShape::Signatures) << 4;
-    QTest::newRow("denominator rescale") << int(FixtureShape::Signatures) << 8;
+    QTest::newRow("flat quarter grid") << int(FixtureShape::Basic);
+    QTest::newRow("mid-song signature restart") << int(FixtureShape::Signatures);
+    QTest::newRow("denominator rescale") << int(FixtureShape::Signatures);
 }
 
 void ViewBucketsGridTest::gridLinesSnappable()
 {
     QFETCH(int, shape);
-    QFETCH(int, minimumDenom);
     const auto opened = checks::eventviews::openRigFixture(FixtureShape(shape));
     QVERIFY2(opened, qPrintable(opened.error));
-    opened.fixture->view().setGridMinDenom(minimumDenom);
+    // The drawn-lines-snappable invariant holds under the Auto selection:
+    // the adaptive snap grid is a divisor of the drawn grid. Fixed
+    // selections pin snap spacing to the same stride as painted cells.
+    opened.fixture->view().setGridSelection(songview::GridSelection::automatic());
     const MidiTimeline *timeline = opened.fixture->view().timeline();
     QVERIFY(timeline);
     int lines = 0;
@@ -213,6 +222,84 @@ void ViewBucketsGridTest::gridLinesSnappable()
         });
     QVERIFY(lines > 0);
     QCOMPARE(unsnappable.size(), size_t(0));
+}
+
+void ViewBucketsGridTest::clockLatticeCrossesSignatureSeam()
+{
+    const auto opened = checks::eventviews::openTabFixture(FixtureShape::Signatures);
+    QVERIFY2(opened, qPrintable(opened.error));
+    SongView &view = opened.fixture->view();
+    // The 48-PPQN fixture's clock stride is 2 ticks; a signature at the odd
+    // tick 37 sits off the absolute clock lattice.
+    opened.fixture->document().setTimeSig(37, 5, 3);
+    QTRY_VERIFY(view.grid().segmentAt(37).start == 37);
+    QCOMPARE(view.grid().segmentAt(36).next, Tick(37));
+    view.setGridSelection(songview::GridSelection::clock());
+    const Tick clock = view.grid().snapTicksAt(0);
+    QVERIFY2(clock > 1 && 37 % clock != 0, "the seam must sit off the clock lattice");
+    // The painted sub-grid needs the fixed cell at least the minimum cell
+    // width; zoom so the clock stride clears it.
+    SongView::ViewState zoomed = view.viewState();
+    zoomed.valid = true;
+    zoomed.pxPerBeat = 24.0 * layout::fontPx(4.0 / 3.0);
+    view.applyViewState(zoomed);
+    // Snap positions and next operations stay on the absolute lattice:
+    // nothing clamps to or re-anchors at the off-lattice seam.
+    QCOMPARE(view.grid().snapTickDown(37.0), Tick(36));
+    QCOMPARE(view.grid().snapTickUp(37.0), Tick(38));
+    QCOMPARE(view.grid().nextSnapTickAfter(Tick(35)), Tick(36));
+    QCOMPARE(view.grid().nextSnapTickAfter(Tick(36)), Tick(38));
+    QCOMPARE(view.grid().nextSubdivisionTickAfter(Tick(36)), Tick(38));
+    QCOMPARE(view.grid().nextSnapTickAfter(Tick(37)), Tick(38));
+    // Painted sub-grid lines are the same absolute ticks: the seam itself
+    // is a beat line, not a sub-grid line.
+    std::vector<Tick> lines;
+    songview::detail::forEachSubGridLine(view.grid(), songview::detail::tickRange(30.0, 46.0),
+                                         [&lines](Tick tick, int) { lines.push_back(tick); });
+    const std::vector<Tick> expected{30, 32, 34, 38, 40, 42, 44};
+    QCOMPARE(lines.size(), expected.size());
+    for (size_t i = 0; i < lines.size() && i < expected.size(); ++i)
+        QCOMPARE(lines[i], expected[i]);
+}
+
+void ViewBucketsGridTest::fixedGridPaintDensityGuard()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+    QVERIFY2(opened, qPrintable(opened.error));
+    SongView &view = opened.fixture->view();
+    const double cell = layout::fontPx(4.0 / 3.0);
+    const auto applyZoom = [&view](double pxPerBeat) {
+        SongView::ViewState state = view.viewState();
+        state.valid = true;
+        state.pxPerBeat = pxPerBeat;
+        view.applyViewState(state);
+    };
+    const auto subGridLines = [&view](double begin, double end) {
+        std::vector<Tick> lines;
+        songview::detail::forEachSubGridLine(view.grid(), songview::detail::tickRange(begin, end),
+                                             [&lines](Tick tick, int) { lines.push_back(tick); });
+        return lines;
+    };
+    // A fixed eighth selection: 12-tick cells paint while each cell is at
+    // least the minimum cell width — pxPerBeat * stride / ticksPerBeat —
+    // and suppress below it.
+    view.setGridSelection(songview::GridSelection::musical(8));
+    applyZoom(2.0 * cell);
+    QVERIFY(!subGridLines(0.0, 120.0).empty());
+    applyZoom(cell);
+    QVERIFY(subGridLines(0.0, 120.0).empty());
+    // Suppression is paint-only: the editing snap lattice is unchanged.
+    QCOMPARE(view.grid().snapTicksAt(0), Tick(12));
+    QCOMPARE(view.grid().snapTickDown(37.0), Tick(36));
+    QCOMPARE(view.grid().nextSnapTickAfter(Tick(24)), Tick(36));
+    // The Clock selection follows the same guard on its own stride.
+    view.setGridSelection(songview::GridSelection::clock());
+    const Tick clock = view.grid().snapTicksAt(0);
+    applyZoom(24.0 * cell);
+    QVERIFY(!subGridLines(0.0, 120.0).empty());
+    applyZoom(12.0 * cell);
+    QVERIFY(subGridLines(0.0, 120.0).empty());
+    QCOMPARE(view.grid().snapTicksAt(0), clock);
 }
 
 void ViewBucketsGridTest::paintSmoke()

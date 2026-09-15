@@ -7,6 +7,7 @@
 // directly.
 
 #include "checks/automation/tst_automationediting.h"
+#include "checks/support/support.h"
 
 #include <QtTest>
 
@@ -455,8 +456,8 @@ void AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup()
     const QByteArray smfAfterWrite = songTab.document().smf().write();
 
     // The foreign menu keeps working: a real row pick changes the grid.
-    const int currentDenom = songTab.view().viewState().gridMinDenom;
-    const int targetDenom = currentDenom == 8 ? 16 : 8;
+    const songview::GridSelection currentSelection = songTab.view().viewState().gridSelection;
+    const int targetDenom = checks::support::alternateGridMenuId(currentSelection);
     const int targetRow =
         quick_popup::menuModel(*quick_popup::menuPanel(*live))->rowForId(targetDenom);
     QVERIFY2(targetRow >= 0, "the foreign division menu omitted the chosen denominator");
@@ -464,7 +465,8 @@ void AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup()
              "the foreign division row did not receive a real click");
     QCoreApplication::processEvents();
     QVERIFY2(!live->isOpen(), "the foreign division pick left the shared menu open");
-    QCOMPARE(songTab.view().viewState().gridMinDenom, targetDenom);
+    QCOMPARE(songTab.view().viewState().gridSelection,
+             songview::GridSelection::musical(uint32_t(targetDenom)));
 
     // Focus belongs to the invoking ruler control, and its keyboard path
     // still works: Return reopens the foreign menu.

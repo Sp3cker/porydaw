@@ -109,23 +109,16 @@ void PitchBendGraph::buildGrid(const QRectF &plot)
 {
     const QColor gridColor = themes::color(themes::Role::song_view_grid);
     if (m_grid && m_endTick > m_startTick) {
-        Tick segmentTick = m_startTick;
-        while (segmentTick < m_endTick) {
-            const Grid::Segment segment = m_grid->segmentAt(segmentTick);
-            const Tick segmentEnd = std::min(m_endTick, segment.next);
-            const uint32_t cell = normalCellTicksAt(segmentTick);
-            const Tick anchor = segment.start;
-            const uint64_t offset = segmentTick > anchor ? segmentTick - anchor : 0;
-            const uint64_t quotient = offset / cell;
-            uint64_t tick = uint64_t(anchor) + (quotient + 1) * cell;
-            while (tick < segmentEnd) {
-                addVerticalLine(m_layer, xAtTick(Tick(tick)), plot.top(), plot.bottom(),
-                                m_geometry.hairline, gridColor, plot);
-                tick += cell;
-            }
-            if (segmentEnd >= m_endTick)
-                break;
-            segmentTick = segmentEnd;
+        // The editing lattice, one line per snap position: segment-anchored
+        // for Auto/Musical, absolute for Clock — nextSnapTickAfter owns the
+        // anchor and seam rules. Signature seams carry their own marker, so
+        // a lattice tick landing exactly on one is not repainted.
+        for (Tick tick = m_grid->nextSnapTickAfter(m_startTick); tick < m_endTick;
+             tick = m_grid->nextSnapTickAfter(tick)) {
+            if (tick == m_grid->segmentAt(tick).start)
+                continue;
+            addVerticalLine(m_layer, xAtTick(tick), plot.top(), plot.bottom(), m_geometry.hairline,
+                            gridColor, plot);
         }
     }
     addDashedHorizontal(m_layer, plot.left(), plot.right(), yAtValue(0), m_geometry.hairline,

@@ -8,6 +8,7 @@
 // a foreign takeover strands the displaced target.
 
 #include "checks/drawerpresentation/tst_drawerpresentation.h"
+#include "checks/support/support.h"
 
 #include <QCoreApplication>
 #include <QEnterEvent>
@@ -339,8 +340,8 @@ void DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable()
              "the foreign ruler menu did not publish over the pending voice menu");
 
     // The foreign menu keeps working: a real row pick changes the grid.
-    const int currentDenom = view.viewState().gridMinDenom;
-    const int targetDenom = currentDenom == 8 ? 16 : 8;
+    const songview::GridSelection currentSelection = view.viewState().gridSelection;
+    const int targetDenom = checks::support::alternateGridMenuId(currentSelection);
     const int targetRow =
         quick_popup::menuModel(*quick_popup::menuPanel(*live))->rowForId(targetDenom);
     QVERIFY2(targetRow >= 0, "the foreign division menu omitted the chosen denominator");
@@ -348,7 +349,8 @@ void DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable()
              "the foreign division row did not receive a real click");
     pump();
     QVERIFY2(!live->isOpen(), "the foreign division pick left the shared menu open");
-    QCOMPARE(view.viewState().gridMinDenom, targetDenom);
+    QCOMPARE(view.viewState().gridSelection,
+             songview::GridSelection::musical(uint32_t(targetDenom)));
     QTRY_VERIFY2(division->hasActiveFocus(),
                  "the foreign pick did not return focus to the ruler control");
 

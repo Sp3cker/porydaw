@@ -320,10 +320,7 @@ void PianoRollTest::quickLifecycle()
     QCOMPARE(view.selectionModel().noteSelection(), std::vector<NoteId>{note.noteId});
 
     const auto cancellationLeavesNoMutation = [&](const auto &cancel) {
-        const qreal dpr = rollInput.devicePixelRatio();
-        const QPointF press(
-            view.camera().displayX(double(cell.tick) + double(cell.dur) / 2, 0.0, dpr),
-            cell.center.y());
+        const QPointF press(cell.center);
         const uint64_t revision = doc.revision();
         const int index = doc.undoStack()->index();
         const int count = doc.undoStack()->count();
