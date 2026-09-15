@@ -178,6 +178,12 @@ bool SongView::editCommandAvailable(EditCommand command, bool ignorePointerGestu
         // the count so a stale enablement cannot join a lone note.
         case EditNotesOperation::Join:
             return m_roll && m_selectionModel.noteSelection().size() >= 2;
+        // A time selection owns the timeline; resizing notes while a range
+        // is armed is not this command's job.
+        case EditNotesOperation::Lengthen:
+        case EditNotesOperation::Shorten:
+            return m_roll && !m_selectionModel.timeSelection().active() &&
+                   !m_selectionModel.noteSelection().empty();
         case EditNotesOperation::None:
             break;
         }
@@ -210,6 +216,10 @@ bool SongView::editCommandAvailable(EditCommand command, bool ignorePointerGestu
         return m_timeline && m_ruler.get();
     case EditStandaloneOperation::RemoveTimeSignature:
         return canRemoveTimeSignature(m_timeline, m_timeAxis, m_editCursorTick);
+    case EditStandaloneOperation::GridNarrow:
+    case EditStandaloneOperation::GridWiden:
+    case EditStandaloneOperation::GridTriplet:
+        return m_timeline != nullptr;
     case EditStandaloneOperation::None:
         break;
     }
@@ -266,6 +276,8 @@ void SongView::executeEditCommand(EditCommand command)
             Q_ASSERT(canLoopFromSelection(m_timeline, timeSelection));
             runLoopFromSelection(*m_document, m_timeline, timeSelection);
             break;
+        case EditRangeOperation::None:
+            Q_UNREACHABLE();
         }
         return;
     }
@@ -308,6 +320,11 @@ void SongView::executeEditCommand(EditCommand command)
             if (m_roll)
                 m_roll->duplicateSelectedNotes();
             break;
+        case EditNotesOperation::Lengthen:
+        case EditNotesOperation::Shorten:
+            if (m_roll)
+                m_roll->resizeSelectedNotes(policy.notesOperation == EditNotesOperation::Lengthen);
+            break;
         case EditNotesOperation::Split:
             if (m_roll)
                 m_roll->splitNotes();
@@ -317,7 +334,7 @@ void SongView::executeEditCommand(EditCommand command)
                 m_roll->joinSelectedNotes();
             break;
         case EditNotesOperation::None:
-            break;
+            Q_UNREACHABLE();
         }
         return;
     }
@@ -370,8 +387,17 @@ void SongView::executeEditCommand(EditCommand command)
         Q_ASSERT(canRemoveTimeSignature(m_timeline, m_timeAxis, m_editCursorTick));
         m_document->deleteTimeSig(m_editCursorTick);
         break;
-    case EditStandaloneOperation::None:
+    case EditStandaloneOperation::GridNarrow:
+        narrowGrid();
         break;
+    case EditStandaloneOperation::GridWiden:
+        widenGrid();
+        break;
+    case EditStandaloneOperation::GridTriplet:
+        toggleGridFeel();
+        break;
+    case EditStandaloneOperation::None:
+        Q_UNREACHABLE();
     }
 }
 
@@ -413,9 +439,12 @@ bool SongView::handleEditKey(const songview::TimelineKeyInput &input, EditKeyOri
     if (timelinePointerGestureActive() && !policy.survivesPointerGesture)
         return true;
 
-    // Origin rows: the event page alone receives row-reorder delivery; other
-    // editor surfaces yield the key back to their local owner.
+    // Origin rows: the event page alone receives row-reorder delivery, and
+    // grid commands belong to the timeline surface; other editor surfaces
+    // yield the key back to their local owner.
     if (policy.originRule == EditOriginRule::EventListOnly && origin != EditKeyOrigin::EventList)
+        return false;
+    if (policy.originRule == EditOriginRule::TimelineOnly && origin != EditKeyOrigin::Timeline)
         return false;
 
     switch (policy.keyRoute) {

@@ -23,14 +23,42 @@
 #include <QVariantMap>
 
 #include <algorithm>
-#include <cmath>
 #include <map>
+#include <optional>
+#include <span>
 #include <utility>
 #include <vector>
 
 namespace songview {
 using namespace songview::detail;
 using namespace songview::pianoroll_detail;
+
+namespace {
+std::optional<int64_t> calculateUniformResizeDelta(std::span<const DocNote> notes, const Grid &grid,
+                                                   bool longer)
+{
+    if (notes.empty())
+        return std::nullopt;
+    Tick anchor = CoreTimeDefaults::kMaxTick;
+    uint32_t maximum = 0, minimum = UINT32_MAX;
+    for (const DocNote &note : notes) {
+        if (note.unterminated())
+            return std::nullopt;
+        anchor = std::min(anchor, note.tick);
+        maximum = std::max(maximum, note.duration);
+        minimum = std::min(minimum, note.duration);
+    }
+    // Fixed selections ignore the anchor; Auto uses the earliest selected
+    // onset, never an extremal right edge or a floating-point snap boundary.
+    const uint64_t step = grid.snapTicksAt(anchor);
+    if (longer) {
+        if (step > uint64_t(UINT32_MAX) - maximum)
+            return std::nullopt;
+        return int64_t(step);
+    }
+    return minimum <= 1 ? 0 : -int64_t(std::min<uint64_t>(step, minimum - 1));
+}
+} // namespace
 
 bool PianoRoll::keyPress(const TimelineKeyInput &input)
 {
@@ -228,6 +256,38 @@ void PianoRoll::nudgeSelectedNotes(bool right)
         hi = std::max(hi, Tick(std::min<uint64_t>(end, CoreTimeDefaults::kMaxTick)));
     }
     m_sv->ensureRangeVisible(lo, hi, right);
+    // Only note pixels changed here; the ensureRangeVisible reveal above
+    // queues its own camera request when it actually scrolls.
+    requestQuickUpdate(cNoteMutationDirty);
+}
+
+void PianoRoll::resizeSelectedNotes(bool longer)
+{
+    SongDocument *doc = m_sv->document();
+    const std::vector<DocNote> notes = resolveSelection();
+    if (!doc || notes.empty())
+        return;
+    const auto delta = calculateUniformResizeDelta(notes, m_grid, longer);
+    if (!delta || *delta == 0)
+        return;
+    const int64_t dDuration = *delta;
+    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    const uint64_t revision = doc->revision();
+    doc->resizeNotes(notes, dDuration, /*mergeable=*/true);
+    // A rejected or no-op resize leaves the revision untouched; there is no
+    // accepted destination to reveal.
+    if (doc->revision() == revision)
+        return;
+    // Keep the resized notes in sight, scrolling just enough.
+    Tick lo = CoreTimeDefaults::kNoTick, hi = 0;
+    for (const DocNote &note : notes) {
+        const uint64_t duration = uint64_t(int64_t(note.duration) + dDuration);
+        const uint64_t end =
+            std::min<uint64_t>(uint64_t(note.tick) + duration, CoreTimeDefaults::kMaxTick);
+        lo = std::min(lo, note.tick);
+        hi = std::max(hi, Tick(end));
+    }
+    m_sv->ensureRangeVisible(lo, hi, longer);
     // Only note pixels changed here; the ensureRangeVisible reveal above
     // queues its own camera request when it actually scrolls.
     requestQuickUpdate(cNoteMutationDirty);

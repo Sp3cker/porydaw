@@ -330,6 +330,67 @@ constexpr std::array kCommandTable = {
             .keyRoute = EditKeyRoute::SelectionTargeted,
         },
     },
+    CommandRow{
+        EditCommand::LengthenNote,
+        "roll.lengthen_note",
+        false,
+        nullptr,
+        EditDeliveryClass::EditorRouted,
+        {
+            .notesOperation = EditNotesOperation::Lengthen,
+            .keyRoute = EditKeyRoute::SelectionTargeted,
+        },
+    },
+    CommandRow{
+        EditCommand::ShortenNote,
+        "roll.shorten_note",
+        false,
+        nullptr,
+        EditDeliveryClass::EditorRouted,
+        {
+            .notesOperation = EditNotesOperation::Shorten,
+            .keyRoute = EditKeyRoute::SelectionTargeted,
+        },
+    },
+    CommandRow{
+        EditCommand::GridNarrow,
+        "roll.grid_narrow",
+        false,
+        nullptr,
+        EditDeliveryClass::EditorRouted,
+        {
+            .standaloneOperation = EditStandaloneOperation::GridNarrow,
+            .keyRoute = EditKeyRoute::AlwaysConsume,
+            .originRule = EditOriginRule::TimelineOnly,
+        },
+    },
+    CommandRow{
+        EditCommand::GridWiden,
+        "roll.grid_widen",
+        false,
+        nullptr,
+        EditDeliveryClass::EditorRouted,
+        {
+            .standaloneOperation = EditStandaloneOperation::GridWiden,
+            .keyRoute = EditKeyRoute::AlwaysConsume,
+            .originRule = EditOriginRule::TimelineOnly,
+        },
+    },
+    CommandRow{
+        EditCommand::GridTriplet,
+        "roll.grid_triplet",
+        false,
+        nullptr,
+        EditDeliveryClass::EditorRouted,
+        {
+            .standaloneOperation = EditStandaloneOperation::GridTriplet,
+            .keyRoute = EditKeyRoute::AvailabilityGated,
+            .originRule = EditOriginRule::TimelineOnly,
+            // Toggling feel re-lattices the drag's snap positions, so it
+            // stays gesture-gated; repeats consume without retoggling.
+            .autoRepeatRule = EditAutoRepeatRule::ConsumeWhenEligible,
+        },
+    },
 };
 
 constexpr bool commandTableFollowsEnumOrder()
@@ -341,7 +402,7 @@ constexpr bool commandTableFollowsEnumOrder()
     return true;
 }
 
-static_assert(kCommandTable.size() == actionIndex(EditCommand::Join) + 1);
+static_assert(kCommandTable.size() == actionIndex(EditCommand::GridTriplet) + 1);
 static_assert(commandTableFollowsEnumOrder());
 
 // Copy alone becomes enabled for focused text; Solo still requires its

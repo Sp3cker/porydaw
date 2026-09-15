@@ -212,7 +212,15 @@ class SongDocument : public QObject
     bool moveNotesToPitches(const std::vector<DocNote> &notes,
                             const std::vector<uint8_t> &destPitches, int64_t dTick,
                             bool mergeable = false);
-    void resizeNotes(const std::vector<DocNote> &notes, int64_t dDuration);
+    // Resize by a duration delta (note-ons pinned). mergeable marks a
+    // keyboard lengthen/shorten press: consecutive mergeable resizes of the
+    // same notes collapse into one undo command that re-lands from the
+    // gesture's start, so a neighbor trimmed by a merely-passed-through
+    // overlap comes back (only the final duration trims). An inverse merged
+    // press restores the start and removes that command, but still
+    // publishes the current-state mutation. Mouse gestures stay one command
+    // per drag.
+    void resizeNotes(const std::vector<DocNote> &notes, int64_t dDuration, bool mergeable = false);
     // Left-edge resize: move the note-on by dTick with the note-off pinned
     // (tick and duration adjust together, at least 1 tick of note remains).
     void resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dTick);
@@ -448,6 +456,7 @@ class SongDocument : public QObject
     friend class TempoEditCommand;
     friend class SongCfgCommand;
     friend class MoveNotesCommand;
+    friend class ResizeNotesCommand;
     friend class MixedEditCommand;
     friend class MoveNotesToPitchesCommand;
 
@@ -543,6 +552,8 @@ class SongDocument : public QObject
     // mints fresh events and drops unterminated or no-op pitches.
     std::vector<EditOp> buildMoveNotesOps(const std::vector<DocNote> &notes, int64_t dTick,
                                           int dKey) const;
+    std::vector<EditOp> buildResizeNotesOps(const std::vector<DocNote> &notes,
+                                            int64_t dDuration) const;
     std::vector<EditOp> buildMoveNotesToPitchesOps(const std::vector<DocNote> &notes,
                                                    const std::vector<uint8_t> &destPitches,
                                                    int64_t dTick) const;

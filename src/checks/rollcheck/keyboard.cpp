@@ -723,3 +723,116 @@ void PianoRollTest::timelineInsertBlankTimeLanes()
         doc.undoStack()->undo();
     QCOMPARE(doc.smf().write(), before);
 }
+
+void PianoRollTest::keyboardResizeNotes()
+{
+    PianoRollFixture &check = *m_fixture;
+    const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+    QVERIFY(seed.has_value());
+    SongDocument &doc = check.document();
+    SongView &view = check.view();
+    songview::TimelineInputItem &roll = check.rollInput();
+    const int track = check.track();
+    const Cell &d = seed->cell;
+    const Tick snapCell = seed->snapCell;
+    const QByteArray before = doc.smf().write();
+    const int undo = doc.undoStack()->index();
+    DocNote noteA;
+    QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA),
+             "keyboard resize seed note was not found");
+
+    // A second selected note starts strictly after the seed's onset and
+    // carries a different duration: the batch delta must come from the grid
+    // snap at the earliest onset and apply uniformly to both.
+    const Tick laterTick = d.tick + 2 * d.dur + snapCell;
+    const uint32_t laterDur = uint32_t(snapCell) + (d.dur == snapCell + 1 ? 2 : 1);
+    int laterKey = -1;
+    for (int key = 115; key >= 24 && laterKey < 0; --key) {
+        if (key == d.key)
+            continue;
+        if (!check.isOccupied(laterTick, laterDur, key, true))
+            laterKey = key;
+    }
+    QVERIFY2(laterKey >= 0, "could not find a free row for the second resize note");
+    doc.addNote(track, laterTick, uint8_t(laterKey), laterDur, 100);
+    DocNote noteB;
+    QVERIFY2(doc.findNote(track, laterTick, uint8_t(laterKey), &noteB),
+             "could not create the second resize note");
+    QVERIFY2(noteB.duration != noteA.duration, "the resize fixture is not mixed-duration");
+    view.selectionModel().setNoteSelection({noteA.noteId, noteB.noteId});
+
+    const QByteArray resizedBefore = doc.smf().write();
+    const int resizeUndo = doc.undoStack()->index();
+    const int resizeUndoCount = doc.undoStack()->count();
+    // Two compatible presses merge into one undo command that re-lands the
+    // accumulated delta from the gesture's start.
+    sendKeyStroke(roll, Qt::Key_Right, Qt::ShiftModifier, false);
+    sendKeyStroke(roll, Qt::Key_Right, Qt::ShiftModifier, false);
+    QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA) &&
+                 doc.findNote(track, laterTick, uint8_t(laterKey), &noteB) &&
+                 uint64_t(noteA.duration) == uint64_t(d.dur) + 2 * snapCell &&
+                 uint64_t(noteB.duration) == uint64_t(laterDur) + 2 * snapCell,
+             "Shift+Right did not lengthen every selected note by the earliest-onset snap");
+    QVERIFY2(doc.undoStack()->index() == resizeUndo + 1 &&
+                 doc.undoStack()->count() == resizeUndoCount + 1,
+             "repeated Shift+Right presses did not merge into one undo entry");
+    doc.undoStack()->undo();
+    QCOMPARE(doc.smf().write(), resizedBefore);
+
+    // Shortening applies the same uniform delta until the shortest selected
+    // note reaches one tick; further presses are consumed no-ops.
+    QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA) &&
+                 doc.findNote(track, laterTick, uint8_t(laterKey), &noteB),
+             "the merged resize undo did not restore the seeded notes");
+    view.selectionModel().setNoteSelection({noteA.noteId, noteB.noteId});
+    const int floorUndo = doc.undoStack()->index();
+    for (int press = 0; press < 256 && std::min(noteA.duration, noteB.duration) > 1; ++press) {
+        const uint32_t previousA = noteA.duration;
+        const uint32_t previousB = noteB.duration;
+        const uint32_t previousMin = std::min(previousA, previousB);
+        sendKeyStroke(roll, Qt::Key_Left, Qt::ShiftModifier, false);
+        QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA) &&
+                     doc.findNote(track, laterTick, uint8_t(laterKey), &noteB),
+                 "Shift+Left lost a resized note");
+        const uint32_t shrink = previousMin - std::min(noteA.duration, noteB.duration);
+        QVERIFY2(shrink > 0 && noteA.duration == previousA - shrink &&
+                     noteB.duration == previousB - shrink,
+                 "Shift+Left did not shorten every selected note by one uniform delta");
+    }
+    QVERIFY2(std::min(noteA.duration, noteB.duration) == 1,
+             "Shift+Left did not stop at the one-tick duration floor");
+    const QByteArray floorBytes = doc.smf().write();
+    const int floorIndex = doc.undoStack()->index();
+    const int floorCount = doc.undoStack()->count();
+    sendKeyStroke(roll, Qt::Key_Left, Qt::ShiftModifier, false);
+    QVERIFY2(doc.smf().write() == floorBytes && doc.undoStack()->index() == floorIndex &&
+                 doc.undoStack()->count() == floorCount,
+             "Shift+Left at the duration floor changed the document or history");
+    while (doc.undoStack()->index() > floorUndo && doc.undoStack()->canUndo())
+        doc.undoStack()->undo();
+    QCOMPARE(doc.smf().write(), resizedBefore);
+
+    // An active time selection owns the timeline: the resize commands refuse
+    // without touching the document or history.
+    QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA) &&
+                 doc.findNote(track, laterTick, uint8_t(laterKey), &noteB),
+             "the floor undo did not restore the seeded notes");
+    view.selectionModel().setNoteSelection({noteA.noteId, noteB.noteId});
+    view.selectionModel().setTimeSelection(
+        {d.tick, d.tick + snapCell, songview::EditorSelectionModel::TimeSelection::Tracks});
+    const QByteArray blockedBytes = doc.smf().write();
+    const int blockedIndex = doc.undoStack()->index();
+    const int blockedCount = doc.undoStack()->count();
+    const uint64_t blockedRevision = doc.revision();
+    sendKeyStroke(roll, Qt::Key_Right, Qt::ShiftModifier, false);
+    sendKeyStroke(roll, Qt::Key_Left, Qt::ShiftModifier, false);
+    QVERIFY2(doc.smf().write() == blockedBytes && doc.revision() == blockedRevision &&
+                 doc.undoStack()->index() == blockedIndex &&
+                 doc.undoStack()->count() == blockedCount &&
+                 view.selectionModel().timeSelection().active(),
+             "an active time selection did not block the note resize keys");
+    view.selectionModel().clearTimeSelection();
+    while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+        doc.undoStack()->undo();
+    QCOMPARE(doc.smf().write(), before);
+}

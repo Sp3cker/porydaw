@@ -115,6 +115,10 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     void selectAllNotes();
     void transposeSelectedNotes(int semitones);
     void nudgeSelectedNotes(bool right);
+    // Grid-step resize of every selected note's right edge by one shared
+    // duration delta; an unterminated note or an active time selection is a
+    // no-op (availability gates the latter).
+    void resizeSelectedNotes(bool longer);
     void openPitchBendEditor();
     // Narrow semantic entry for the shared Set Velocity action: resolves the
     // current selected notes and opens the existing guarded velocity form.

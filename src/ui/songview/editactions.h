@@ -65,6 +65,8 @@ enum class EditNotesOperation {
     Duplicate,
     Split,
     Join,
+    Lengthen,
+    Shorten,
 };
 
 // An operation that runs when neither selection family owns the command.
@@ -81,6 +83,9 @@ enum class EditStandaloneOperation {
     RemoveLoop,
     EditTimeSignature,
     RemoveTimeSignature,
+    GridNarrow,
+    GridWiden,
+    GridTriplet,
 };
 
 // Text focus is a distinct physical owner for the window actions that defer
@@ -119,6 +124,8 @@ enum class EditKeyOwnershipOnUnavailable {
 enum class EditOriginRule {
     AnyOrigin,
     EventListOnly, // the event page alone owns row-reorder delivery
+    TimelineOnly,  // grid commands belong to the timeline surface; the
+                   // event list declines them to its local input
 };
 
 // One policy row of the canonical command table (editactions.cpp).
@@ -172,7 +179,7 @@ class EditActions final : public QObject
     // One slot per EditCommand value; editactions.cpp pins the canonical
     // table to this count and to per-position enum identity.
     static constexpr std::size_t cActionCount =
-        static_cast<std::size_t>(SongView::EditCommand::Join) + 1;
+        static_cast<std::size_t>(SongView::EditCommand::GridTriplet) + 1;
 
     void observeTarget(SongView &target);
     void disconnectTargetObservations();

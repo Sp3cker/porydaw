@@ -98,6 +98,7 @@ class PianoRollTest final : public QObject
     void keyboardNoteCommandPopupActivation();
     void timelineInsertBlankTimeTracks();
     void timelineInsertBlankTimeLanes();
+    void keyboardResizeNotes();
     void timeSelectionMenuOpensWithPasteEnablement();
     void timeSelectionMenuStaleAndCancelNoOp();
     void timeSelectionMenuInsertTimeAndStaleNoOp();

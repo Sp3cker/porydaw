@@ -559,6 +559,11 @@ class SongView : public QObject
         MoveEventDown,
         Split,
         Join,
+        LengthenNote,
+        ShortenNote,
+        GridNarrow,
+        GridWiden,
+        GridTriplet,
     };
     // Domain availability for the canonical action set. It does not encode
     // keyboard origin or focus routing. The transient pointer-gesture gate

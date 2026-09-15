@@ -357,6 +357,107 @@ class MoveNotesToPitchesCommand : public QUndoCommand
     std::vector<SongDocument::EditOp> m_ops;
 };
 
+// A note resize that may merge with the next one (keyboard lengthen/shorten —
+// rapid presses form one gesture). Merging first reverts both commands,
+// which restores any neighbor the intermediate duration had trimmed via
+// resolveNoteOverlaps, then re-lands the accumulated delta from the
+// gesture's ORIGINAL notes — only the final duration decides what gets
+// trimmed. QUndoStack refuses to merge across its clean index, so a save
+// between presses keeps its own command.
+class ResizeNotesCommand : public QUndoCommand
+{
+  public:
+    ResizeNotesCommand(SongDocument *doc, std::vector<DocNote> notes, int64_t dDuration,
+                       bool mergeable)
+        : QUndoCommand(SongDocument::tr("resize %n note(s)", nullptr, int(notes.size())))
+        , m_doc(doc)
+        , m_notes(std::move(notes))
+        , m_dDuration(dDuration)
+        , m_mergeable(mergeable)
+        , m_ops(doc->buildResizeNotesOps(m_notes, dDuration))
+    {}
+
+    int id() const override { return m_mergeable ? 0x5273 : -1; } // 'Rs'
+
+    void redo() override
+    {
+        const auto before = m_doc->trackMapState();
+        m_doc->applyOps(m_ops);
+        m_doc->rebuildTrackMap();
+        m_remap = m_doc->trackRemap(before, m_ops);
+        if (m_initialRedo) {
+            m_initialRedo = false;
+            return;
+        }
+        m_doc->publishMutation(m_remap);
+    }
+
+    void undo() override
+    {
+        m_doc->revertOps(m_ops);
+        m_doc->rebuildTrackMap();
+        m_doc->publishMutation(m_remap.inverse());
+    }
+
+    bool mergeWith(const QUndoCommand *command) override
+    {
+        // id() matched, so the cast is safe; on success the stack deletes
+        // the other command, so mutating it is fine.
+        auto *other =
+            const_cast<ResizeNotesCommand *>(static_cast<const ResizeNotesCommand *>(command));
+        if (!other->m_mergeable || !resizesMyOutputs(other->m_notes))
+            return false;
+        // Both commands are applied here (the stack redoes the new one
+        // before offering the merge). Rewind to the pre-gesture state, then
+        // land the accumulated resize in one hop.
+        m_doc->revertOps(other->m_ops);
+        m_doc->revertOps(m_ops);
+        m_dDuration += other->m_dDuration;
+        m_ops = m_doc->buildResizeNotesOps(m_notes, m_dDuration);
+        if (resizesMyOutputs(m_notes)) {
+            setObsolete(true);
+            return true;
+        }
+        m_doc->applyOps(m_ops);
+        m_doc->rebuildTrackMap();
+        m_remap = m_doc->currentTrackRemap();
+        return true;
+    }
+
+  private:
+    // The next press must edit the notes exactly where this command left
+    // them; anything else (new selection, another note landing on the same
+    // spot) is a separate gesture.
+    bool resizesMyOutputs(const std::vector<DocNote> &next) const
+    {
+        if (next.size() != m_notes.size())
+            return false;
+        for (const DocNote &note : m_notes) {
+            const uint32_t outputDuration =
+                uint32_t(std::max<int64_t>(1, int64_t(note.duration) + m_dDuration));
+            const auto output =
+                std::find_if(next.begin(), next.end(), [&](const DocNote &candidate) {
+                    return candidate.noteId == note.noteId &&
+                           candidate.engineTrack == note.engineTrack &&
+                           candidate.tick == note.tick && candidate.key == note.key &&
+                           candidate.duration == outputDuration &&
+                           candidate.velocity == note.velocity && candidate.channel == note.channel;
+                });
+            if (output == next.end())
+                return false;
+        }
+        return true;
+    }
+
+    SongDocument *m_doc;
+    std::vector<DocNote> m_notes; // resolved against the pre-gesture state
+    int64_t m_dDuration;
+    bool m_mergeable;
+    bool m_initialRedo = true;
+    std::vector<SongDocument::EditOp> m_ops;
+    TrackRemap m_remap;
+};
+
 SongDocument::SongDocument(QObject *parent) : QObject(parent)
 {
     // Only a published document mutation moves the save-state token; raw
@@ -1260,28 +1361,9 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesToPitchesOps(
     return ops;
 }
 
-void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDuration)
+std::vector<SongDocument::EditOp>
+SongDocument::buildResizeNotesOps(const std::vector<DocNote> &notes, int64_t dDuration) const
 {
-    if (notes.empty() || dDuration == 0)
-        return;
-    // The resized end of every note this writes must stay at or below
-    // kMaxTick. Classify the delta against the remaining headroom before
-    // any addition so an out-of-range resize is rejected rather than
-    // overflowing the int64_t sum; one overflow rejects the batch.
-    for (const DocNote &note : notes) {
-        if (dDuration >
-            int64_t(CoreTimeDefaults::kMaxTick) - int64_t(note.tick) - int64_t(note.duration))
-            return;
-        const int64_t newDuration = std::max<int64_t>(1, int64_t(note.duration) + dDuration);
-        if (uint64_t(note.tick) + uint64_t(newDuration) > CoreTimeDefaults::kMaxTick)
-            return;
-    }
-    const bool changes = std::any_of(notes.begin(), notes.end(), [dDuration](const DocNote &note) {
-        return note.unterminated() ||
-               uint32_t(std::max<int64_t>(1, int64_t(note.duration) + dDuration)) != note.duration;
-    });
-    if (!changes)
-        return;
     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
     std::vector<PlannedNote> written;
     for (const DocNote &note : notes) {
@@ -1310,7 +1392,37 @@ void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDurat
         ops.push_back(end);
     }
     ops.insert(ops.end(), trims.begin(), trims.end());
-    pushEdit(tr("resize %n note(s)", nullptr, int(notes.size())), std::move(ops));
+    return ops;
+}
+
+void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDuration, bool mergeable)
+{
+    if (notes.empty() || dDuration == 0)
+        return;
+    // The resized end of every note this writes must stay at or below
+    // kMaxTick. Classify the delta against the remaining headroom before
+    // any addition so an out-of-range resize is rejected rather than
+    // overflowing the int64_t sum; one overflow rejects the batch.
+    for (const DocNote &note : notes) {
+        if (dDuration >
+            int64_t(CoreTimeDefaults::kMaxTick) - int64_t(note.tick) - int64_t(note.duration))
+            return;
+        const int64_t newDuration = std::max<int64_t>(1, int64_t(note.duration) + dDuration);
+        if (uint64_t(note.tick) + uint64_t(newDuration) > CoreTimeDefaults::kMaxTick)
+            return;
+    }
+    const bool changes = std::any_of(notes.begin(), notes.end(), [dDuration](const DocNote &note) {
+        return note.unterminated() ||
+               uint32_t(std::max<int64_t>(1, int64_t(note.duration) + dDuration)) != note.duration;
+    });
+    if (!changes)
+        return;
+    m_history.pushDocument(std::make_unique<ResizeNotesCommand>(this, notes, dDuration, mergeable));
+    // The command suppresses publication from its initial redo because a
+    // merge can replace that provisional state. Publish the public resize
+    // call after the stack settles: an inverse merge may remove the command
+    // but has still restored live state.
+    publishMutation(currentTrackRemap());
 }
 
 void SongDocument::resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dTick)
