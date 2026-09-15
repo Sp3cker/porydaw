@@ -741,9 +741,16 @@ void AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge()
             return std::abs(tickY - y) <= 2.0 * layout::singlePixel();
         });
     };
-    QTRY_VERIFY(ticksNear(maxY) == 1);
+    QTRY_VERIFY(ticksNear(maxY) == 1 && ticksNear(neutralY) == 1 && ticksNear(minY) == 1 &&
+                edgeTickYs().size() == 3);
+
+    // Hover must preserve the scale labels, their non-overlap contract, and
+    // the exact three-tick edge set.
     mouseMove(*m_plotInput, lanePoint(panHandle, kHeldTick, 32));
     QTRY_VERIFY(scene->automationHoverTextModel()->rowCount() > 0);
+    QCOMPARE(findTextRecord(laneTextModel, QStringLiteral("c_v+63"), viewport), maxLabel);
+    QCOMPARE(findTextRecord(laneTextModel, QStringLiteral("c_v-64"), viewport), minLabel);
+    QCOMPARE(findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport), neutralLabel);
     QVERIFY2(ticksNear(maxY) == 1 && ticksNear(neutralY) == 1 && ticksNear(minY) == 1,
              "a scale tick no longer sits at its label's curve height");
     QVERIFY2(edgeTickYs().size() == 3,

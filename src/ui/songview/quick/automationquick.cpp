@@ -4,6 +4,7 @@
 #include <QPalette>
 
 #include <algorithm>
+#include <array>
 
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
@@ -99,38 +100,60 @@ void addBandFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal top
     addHorizontalLine(scene.layer(layer), 0.0, width, bottom, stroke, color, clip);
 }
 
+enum class ScaleLabelRole { Maximum, Minimum, Neutral };
 struct LaneScaleLabel {
+    ScaleLabelRole role;
     QString text;
     qreal y = 0.0;
+    QRectF rect;
+};
+struct LaneScaleLabels {
+    std::array<LaneScaleLabel, 3> labels{};
+    std::size_t count = 0;
+};
+struct LaneScaleLabelSpec {
+    ScaleLabelRole role;
+    int value = 0;
 };
 
 // Active-lane scale labels in emission order max, min, neutral (only when the
-// lane has one). A label whose left-aligned, caption-sized rect would
-// intersect an already-kept label is dropped, which covers neutral==max/min
-// degeneracies and viewports too short to separate max from min.
-std::vector<LaneScaleLabel> laneScaleLabels(const NodeLane &lane, const QRect &body,
-                                            const AutomationGeometry &geometry,
-                                            const QFontMetricsF &metrics)
+// lane has one). Each spec pairs its role with its value so the text-record
+// key stays semantic instead of depending on a loop-index cast. A label whose
+// rect would intersect an already-kept label is dropped, which covers
+// neutral==max/min degeneracies and viewports too short to separate max from
+// min.
+LaneScaleLabels laneScaleLabels(const NodeLane &lane, const QRect &body,
+                                const AutomationGeometry &geometry, const QFontMetricsF &metrics,
+                                const QRectF &viewport, qreal left,
+                                const std::optional<QRectF> &countRect)
 {
     const int neutral = lane.neutralValue();
-    const int values[] = {lane.maximumValue(), lane.minimumValue(), neutral};
+    const LaneScaleLabelSpec specs[] = {{ScaleLabelRole::Maximum, lane.maximumValue()},
+                                        {ScaleLabelRole::Minimum, lane.minimumValue()},
+                                        {ScaleLabelRole::Neutral, neutral}};
     const qreal height = metrics.height();
-    std::vector<LaneScaleLabel> labels;
-    std::vector<QRectF> placed;
-    for (int index = 0; index < (neutral >= 0 ? 3 : 2); ++index) {
-        const QString text = lane.valueText(values[index]);
+    LaneScaleLabels result;
+    for (const LaneScaleLabelSpec &spec : specs) {
+        if (spec.role == ScaleLabelRole::Neutral && neutral < 0)
+            continue;
+        const QString text = lane.valueText(spec.value);
         if (text.isEmpty())
             continue;
-        const qreal y = nodelane::valueY(lane, body, geometry, values[index]);
-        const qreal width = metrics.horizontalAdvance(text);
-        const QRectF rect(body.left(), y - height / 2.0, width, height);
-        if (std::any_of(placed.begin(), placed.end(),
-                        [&rect](const QRectF &prior) { return prior.intersects(rect); }))
+        const qreal y = nodelane::valueY(lane, body, geometry, spec.value);
+        QRectF rect = clampedToViewport(
+            QRectF(left, y - height / 2.0, metrics.horizontalAdvance(text), height), viewport);
+        while (countRect && rect.intersects(*countRect) && rect.top() - height >= viewport.top())
+            rect.moveTop(rect.top() - height);
+        if (countRect && rect.intersects(*countRect))
             continue;
-        placed.push_back(rect);
-        labels.push_back({text, y});
+        const auto end = result.labels.begin() + result.count;
+        if (std::any_of(result.labels.begin(), end, [&rect](const LaneScaleLabel &prior) {
+                return prior.rect.intersects(rect);
+            }))
+            continue;
+        result.labels[result.count++] = {spec.role, text, y, rect};
     }
-    return labels;
+    return result;
 }
 
 } // namespace
@@ -341,24 +364,16 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         // shifts up above it; ticks are content-gated: the grid layer is not
         // reset on hover/transient passes, so appends there would accumulate.
         const qreal tickLength = 3.0 * layout::space(layout::Space::Half);
-        const std::vector<LaneScaleLabel> scaleLabels =
-            laneScaleLabels(*active->slot->lane, active->body, m_geometry, captionMetrics);
-        for (std::size_t i = 0; i < scaleLabels.size(); ++i) {
-            const LaneScaleLabel &label = scaleLabels[i];
-            const qreal width = captionMetrics.horizontalAdvance(label.text);
-            const qreal height = captionMetrics.height();
-            QRectF rect = clampedToViewport(QRectF(viewport.left() + labelInset + tickLength,
-                                                   label.y - height / 2.0, width, height),
-                                            viewport);
-            while (activeCountRect && rect.intersects(*activeCountRect) &&
-                   rect.top() - height >= viewport.top())
-                rect.moveTop(rect.top() - height);
-            rect = clampedToViewport(rect, viewport);
-            if (activeCountRect && rect.intersects(*activeCountRect))
-                continue;
-            appendText(laneTextRecords, TimelineQuickTextKeyKind::AutomationScaleLabel, quint64(i),
-                       rect, label.text, themes::color(themes::Role::song_view_secondary_text),
-                       m_laneCaptionFont, Qt::AlignLeft, viewport);
+        const auto scaleLabels =
+            laneScaleLabels(*active->slot->lane, active->body, m_geometry, captionMetrics, viewport,
+                            viewport.left() + labelInset + tickLength, activeCountRect);
+        for (std::size_t i = 0; i < scaleLabels.count; ++i) {
+            const LaneScaleLabel &label = scaleLabels.labels[i];
+            const QRectF &rect = label.rect;
+            appendText(laneTextRecords, TimelineQuickTextKeyKind::AutomationScaleLabel,
+                       quint64(label.role), rect, label.text,
+                       themes::color(themes::Role::song_view_secondary_text), m_laneCaptionFont,
+                       Qt::AlignLeft, viewport);
             placedGhostLabels.push_back(rect);
             if (content)
                 addHorizontalLine(scene.layer(TimelineQuickLayer::AutomationGrid), viewport.left(),
