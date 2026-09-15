@@ -10,14 +10,19 @@ paths; pick one. Decidable without subagents.
 ## Size the dispatch (both paths)
 
 Every implementation task item lists files touched, numbered steps, and one
-acceptance predicate. Caps: at most 3 files, 5 steps, 1 acceptance.
-Over cap, split BEFORE sending:
-1. Cut at interface boundaries.
+acceptance predicate. Defaults: 3 files, 5 steps, 1 acceptance. They bound
+dispatch and review effort, never design: they never justify splitting
+cohesive work. If the pieces share one behavior change and one verification
+surface, keep them in one task however many files it closes over — name the
+over-cap exception in the dispatch.
+Over the defaults, split BEFORE sending — only at real seams:
+1. Cut at interface boundaries; a boundary invented to satisfy the file
+   count is not a seam.
 2. Give each piece its interfaces and acceptance.
 3. Write earlier pieces' outputs as interfaces in later pieces.
 Never one big call to save rounds — huge jobs stall, split jobs flow.
 Mechanical same-shape edits (same one-line fix across N files) are exempt
-from the file cap: one dispatch with a per-file list.
+from the file count: one dispatch with a per-file list.
 An implementer returning BLOCKED/NEEDS_CONTEXT on size means split and
 re-dispatch, never push through.
 

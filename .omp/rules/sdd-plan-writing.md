@@ -90,8 +90,13 @@ envelopes; the brief owns requirements.
   Slices sharing a single verification surface (one check run proves both)
   are ONE task — micro-slices that each demand a full build are churn.
   Merge until the work exceeds the verification cost.
-- Upper bound: triage caps (at most 3 files, 5 steps, 1 acceptance
-  predicate). Over cap → split at interface boundaries.
+- Upper bound: triage defaults (3 files, 5 steps, 1 acceptance predicate).
+  They bound dispatch and review effort, never design. Over the file
+  count → split at interface boundaries only; a boundary invented to
+  satisfy the file count is churn. A single behavior change with one
+  verification surface stays ONE task however many files it closes over —
+  plan it over the count and name the exception in the dispatch table
+  instead.
 - Batching: same-shape mechanical edits across files go in one dispatch
   with a per-file list, reviewed as one unit.
 - Route honestly: mechanical, reversible, single-predicate work goes Direct
