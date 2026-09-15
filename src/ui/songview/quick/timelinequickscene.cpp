@@ -655,7 +655,7 @@ void composeBandedGrid(TimelineQuickScene &scene, TimelineQuickLayer layer, cons
     owner.forEachGridLine(range.begin, range.end, [&](Tick tick, bool isBar, int, int) {
         if (!isBar && !drawBeats)
             return;
-        const bool finest = owner.document() && grid.gridTicksAt(tick) == grid.fineGridTicks();
+        const bool finest = grid.gridTicksAt(tick) == grid.fineGridTicks();
         const std::size_t color = isBar ? 5u : finest ? 4u : 3u;
         const qreal x = camera.displayX(double(tick), origin, dpr);
         addVerticalLine(scene.layer(layer), x, plot.top(), plot.bottom(), gridWidth,

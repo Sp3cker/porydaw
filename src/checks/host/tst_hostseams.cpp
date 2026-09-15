@@ -138,7 +138,8 @@ class HostSeamsTest final : public QObject
         int detachCount = 0;
         bool detachWhileWindowValid = false;
         {
-            auto view = std::make_unique<SongView>();
+            SongDocument document;
+            auto view = std::make_unique<SongView>(document);
             checks::support::bindEditActionsForTest(*view);
             songview::TimelineQuickView *const quick = view->quickView();
             QVERIFY(quick);
@@ -187,7 +188,8 @@ class HostSeamsTest final : public QObject
     // the getters, and repeating it is inert.
     void unhostedDetachEmitsOnceDestroysWindowAndClearsGetters()
     {
-        auto view = std::make_unique<SongView>();
+        SongDocument document;
+        auto view = std::make_unique<SongView>(document);
         checks::support::bindEditActionsForTest(*view);
         songview::TimelineQuickView *const quick = view->quickView();
         QVERIFY(quick);

@@ -207,7 +207,7 @@ void SongView::openInsertTimePrompt(Tick cursorTick, const songview::Grid::Segme
 {
     songview::TimelineQuickView *const quick = quickView();
     songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
-    if (!m_document || !session)
+    if (!session)
         return;
 
     // Replacement ends the active shared-popup session before this bridge
@@ -217,8 +217,8 @@ void SongView::openInsertTimePrompt(Tick cursorTick, const songview::Grid::Segme
         cancelInsertTimePromptWithoutFocus();
 
     PendingInsertTimePrompt pending;
-    pending.document = m_document;
-    pending.documentRevision = m_document->revision();
+    pending.document = &m_document;
+    pending.documentRevision = m_document.revision();
     pending.cursorTick = cursorTick;
     pending.beatTicks = segment.beatTicks;
     pending.beatsPerBar = segment.beatsPerBar;
@@ -259,8 +259,8 @@ void SongView::acceptInsertTimePrompt(int bars, int beats, int fractions)
         }
     }
 
-    SongDocument *const document = m_document;
-    if (document == pending.document.data() && document->revision() == pending.documentRevision) {
+    SongDocument &document = m_document;
+    if (&document == pending.document.data() && document.revision() == pending.documentRevision) {
         const Tick maximum = CoreTimeDefaults::kMaxTick;
         bool overflow =
             pending.beatsPerBar != 0 && uint64_t(pending.beatTicks) > maximum / pending.beatsPerBar;
@@ -288,7 +288,7 @@ void SongView::acceptInsertTimePrompt(int bars, int beats, int fractions)
         } else {
             SongDocument::TimeScope scope;
             scope.wholeSong = true;
-            if (!document->insertBlankTime(
+            if (!document.insertBlankTime(
                     {pending.cursorTick, Tick(uint64_t(pending.cursorTick) + span)}, scope))
                 announce(tr("Nothing to insert at the cursor"));
             else
@@ -384,13 +384,13 @@ std::optional<SongView::TimeScopeResolution> SongView::resolveTimeSelectionScope
 std::vector<int> SongView::timeSelectionTracks() const
 {
     std::vector<int> tracks;
-    if (!m_timeline || !m_document)
+    if (!m_timeline)
         return tracks;
     const uint32_t mask = m_selectionModel.resolvedTrackScope(usedTrackMask(m_timeline));
     for (int track = 0; track < 16; ++track) {
         if (!m_timeline->tracks[track].used || !(mask & (1u << track)))
             continue;
-        if (m_document->smfTrackFor(track) < 0)
+        if (m_document.smfTrackFor(track) < 0)
             continue;
         tracks.push_back(track);
     }
@@ -408,7 +408,7 @@ std::vector<uint8_t> SongView::trackCcs(int track) const
 std::optional<SongDocument::TimeScope> SongView::timeSelectionScope() const
 {
     const auto &selection = m_selectionModel.timeSelection();
-    if (!m_document || !m_timeline || !selection.active())
+    if (!m_timeline || !selection.active())
         return std::nullopt;
     SongDocument::TimeScope scope;
     if (selection.scope == EditorSelectionModel::TimeSelection::Lanes) {
@@ -431,13 +431,13 @@ std::optional<SongDocument::TimeScope> SongView::timeSelectionScope() const
 void SongView::copyTimeSelection()
 {
     const auto &selection = m_selectionModel.timeSelection();
-    if (!m_document || !selection.active())
+    if (!selection.active())
         return;
     const auto scope = timeSelectionScope();
     if (!scope)
         return;
     const auto range = SongDocument::TimeRange{Tick(selection.startTick), Tick(selection.endTick)};
-    const TimeRangeContents contents = gatherRange(*m_document, range, *scope);
+    const TimeRangeContents contents = gatherRange(m_document, range, *scope);
     Clip clip;
     clip.span = range.span();
     int noteCount = 0;
@@ -471,7 +471,7 @@ void SongView::copyTimeSelection()
 void SongView::deleteTimeSelection()
 {
     const auto &selection = m_selectionModel.timeSelection();
-    if (!m_document || !selection.active())
+    if (!selection.active())
         return;
     const auto scope = timeSelectionScope();
     if (!scope) {
@@ -479,7 +479,7 @@ void SongView::deleteTimeSelection()
         return;
     }
     const auto range = SongDocument::TimeRange{Tick(selection.startTick), Tick(selection.endTick)};
-    TimeRangeContents contents = gatherRange(*m_document, range, *scope);
+    TimeRangeContents contents = gatherRange(m_document, range, *scope);
     SongDocument::RangeEdit edit;
     for (const TimeRangeContents::TrackNotes &track : contents.tracks) {
         for (const DocNote &note : track.notes)
@@ -496,13 +496,13 @@ void SongView::deleteTimeSelection()
     }
     const int notes = int(edit.removeNotes.size());
     const int points = int(edit.removePoints.size() + edit.removeTempo.size());
-    m_document->applyRangeEdit(tr("delete range"), edit);
+    m_document.applyRangeEdit(tr("delete range"), edit);
     announce(tr("Deleted range: %1 note(s), %2 automation point(s)").arg(notes).arg(points));
 }
 void SongView::transposeTimeSelection(int dKey)
 {
     const auto &selection = m_selectionModel.timeSelection();
-    if (!m_document || !selection.active() || dKey == 0 ||
+    if (!selection.active() || dKey == 0 ||
         selection.scope == EditorSelectionModel::TimeSelection::Lanes)
         return;
     const auto scope = timeSelectionScope();
@@ -511,7 +511,7 @@ void SongView::transposeTimeSelection(int dKey)
     // gatherRange also collects lanes/tempo, but transpose only moves notes:
     // flatten the track groups into the scan's note list.
     const TimeRangeContents contents = gatherRange(
-        *m_document, SongDocument::TimeRange{Tick(selection.startTick), Tick(selection.endTick)},
+        m_document, SongDocument::TimeRange{Tick(selection.startTick), Tick(selection.endTick)},
         *scope);
     std::vector<DocNote> notes;
     for (const TimeRangeContents::TrackNotes &track : contents.tracks) {
@@ -530,7 +530,7 @@ void SongView::transposeTimeSelection(int dKey)
         }
     }
     const SongView::DocumentSwapHintScope swapHint{*this, cNoteMutationDirty};
-    m_document->moveNotes(notes, 0, dKey, /*mergeable=*/true);
+    m_document.moveNotes(notes, 0, dKey, /*mergeable=*/true);
     // Keep the moved notes in sight: the row the move headed toward
     // scrolls into view just enough (no re-centering).
     int edge = int(notes.front().key) + dKey;
@@ -544,11 +544,11 @@ void SongView::transposeTimeSelection(int dKey)
 }
 void SongView::foldTransposeSelection(int degreeDelta)
 {
-    if (!m_document || degreeDelta == 0)
+    if (degreeDelta == 0)
         return;
     const auto &noteSelection = m_selectionModel.noteSelection();
     std::vector<DocNote> notes;
-    for (const DocNote &note : m_document->notesForTrack(m_selectionModel.primaryTrack())) {
+    for (const DocNote &note : m_document.notesForTrack(m_selectionModel.primaryTrack())) {
         const NoteId id = note.noteId;
         if (std::find(noteSelection.begin(), noteSelection.end(), id) != noteSelection.end())
             notes.push_back(note);
@@ -557,7 +557,7 @@ void SongView::foldTransposeSelection(int degreeDelta)
     if (!m_scaleController.resolveFoldDestinations(notes, degreeDelta, destinations))
         return;
     const SongView::DocumentSwapHintScope swapHint{*this, cNoteMutationDirty};
-    if (!m_document->moveNotesToPitches(notes, destinations, 0, /*mergeable=*/true))
+    if (!m_document.moveNotesToPitches(notes, destinations, 0, /*mergeable=*/true))
         return;
     std::vector<NoteId> ids;
     ids.reserve(notes.size());
@@ -573,7 +573,7 @@ void SongView::foldTransposeSelection(int degreeDelta)
 void SongView::nudgeTimeSelection(bool right)
 {
     const auto &selection = m_selectionModel.timeSelection();
-    if (!m_document || !selection.active())
+    if (!selection.active())
         return;
     const Tick s = selection.startTick;
     const Tick e = selection.endTick;
@@ -585,7 +585,7 @@ void SongView::nudgeTimeSelection(bool right)
     const auto scope = timeSelectionScope();
     if (!scope)
         return;
-    TimeRangeContents contents = gatherRange(*m_document, SongDocument::TimeRange{s, e}, *scope);
+    TimeRangeContents contents = gatherRange(m_document, SongDocument::TimeRange{s, e}, *scope);
     std::vector<DocNote> notes;
     std::vector<DocLanePoint> points;
     std::vector<TempoPoint> tempo;
@@ -598,7 +598,7 @@ void SongView::nudgeTimeSelection(bool right)
             points.push_back(point);
     }
     tempo = std::move(contents.tempo);
-    m_document->moveRange(notes, points, dTick, tempo);
+    m_document.moveRange(notes, points, dTick, tempo);
     // The band follows even over empty content, so repeated nudges keep
     // aiming at the same region.
     EditorSelectionModel::TimeSelection moved = selection;
@@ -614,7 +614,7 @@ void SongView::removeTimeSelectionContents()
         return;
     const auto &selection = m_selectionModel.timeSelection();
     const SongDocument::TimeRange range{selection.startTick, selection.endTick};
-    if (!m_document->removeTimeRange(range, resolved->scope)) {
+    if (!m_document.removeTimeRange(range, resolved->scope)) {
         announce(tr("Nothing to remove in the time selection"));
         return;
     }
@@ -630,7 +630,7 @@ void SongView::removeTimeSelectionContents()
 }
 void SongView::insertTime()
 {
-    if (!m_document || !m_timeline)
+    if (!m_timeline)
         return;
     // Activity is not scope validity: an active but unresolved selection is
     // a rejected command, never a fall-through to the whole-song prompt.
@@ -653,7 +653,7 @@ void SongView::insertBlankTime()
         return;
     const EditorSelectionModel::TimeSelection selection = m_selectionModel.timeSelection();
     const SongDocument::TimeRange range{selection.startTick, selection.endTick};
-    if (!m_document->insertBlankTime(range, resolved->scope)) {
+    if (!m_document.insertBlankTime(range, resolved->scope)) {
         announce(tr("Nothing to insert in the time selection"));
         return;
     }
@@ -671,7 +671,7 @@ void SongView::duplicateTimeSelection()
         return;
     const auto &selection = m_selectionModel.timeSelection();
     const SongDocument::TimeRange range{selection.startTick, selection.endTick};
-    if (!m_document->duplicateTimeRange(range, resolved->scope)) {
+    if (!m_document.duplicateTimeRange(range, resolved->scope)) {
         announce(tr("Nothing to duplicate in the time selection"));
         return;
     }
@@ -688,14 +688,14 @@ void SongView::duplicateTimeSelection()
 }
 void SongView::pasteRangeAtEditCursor(const Clip &clip)
 {
-    if (!m_document || !m_timeline || clip.span == 0 || clip.empty())
+    if (!m_timeline || clip.span == 0 || clip.empty())
         return;
     const Tick s = m_grid.snapTick(double(m_editCursorTick));
     const uint64_t e = uint64_t(s) + clip.span;
 
     // A clip whose content came from one track retargets to the selected
     // track (cross-track copy); multi-track clips paste back in place.
-    const DestinationMapper destinations(*m_document, m_selectionModel, singleSourceTrack(clip));
+    const DestinationMapper destinations(m_document, m_selectionModel, singleSourceTrack(clip));
     SongDocument::RangeEdit edit;
     for (const ClipTrack &track : clip.tracks) {
         if (track.notes.empty())
@@ -722,7 +722,7 @@ void SongView::pasteRangeAtEditCursor(const Clip &clip)
         SongDocument::RangeEdit::LaneWrite write{*destinationTrack, lane.cc, {}};
         for (const auto &[relativeTick, value] : lane.points)
             write.points.push_back({Tick(uint64_t(s) + relativeTick), value});
-        appendExactTickRemovals(m_document->lanePoints(*destinationTrack, lane.cc), write.points,
+        appendExactTickRemovals(m_document.lanePoints(*destinationTrack, lane.cc), write.points,
                                 edit.removePoints);
         edit.addPoints.push_back(std::move(write));
     }
@@ -730,13 +730,13 @@ void SongView::pasteRangeAtEditCursor(const Clip &clip)
         for (const auto &point : clip.tempo)
             edit.addTempo.push_back(
                 {Tick(uint64_t(s) + point.tick), point.microsecondsPerQuarterNote});
-        appendExactTickRemovals(m_document->tempoPoints(), edit.addTempo, edit.removeTempo);
+        appendExactTickRemovals(m_document.tempoPoints(), edit.addTempo, edit.removeTempo);
     }
     if (edit.empty()) {
         announce(tr("Nothing useful to paste"));
         return;
     }
-    m_document->applyRangeEdit(tr("paste range"), edit);
+    m_document.applyRangeEdit(tr("paste range"), edit);
 
     // Set up for tiling: advance to the clip's end while keeping the newly
     // merged content, rather than the advanced cursor, in view.
@@ -747,8 +747,6 @@ void SongView::pasteRangeAtEditCursor(const Clip &clip)
 }
 void SongView::pasteFromClipboard()
 {
-    if (!m_document)
-        return;
     auto clip = readClipboardClip();
     if (!clip)
         return;
@@ -763,7 +761,7 @@ void SongView::pasteFromClipboard()
         return;
     const Tick base = m_grid.snapTick(double(m_editCursorTick));
     const int selectedTrack = m_selectionModel.primaryTrack();
-    const std::vector<DocNote> before = m_document->notesForTrack(selectedTrack);
+    const std::vector<DocNote> before = m_document.notesForTrack(selectedTrack);
     std::vector<SongDocument::NewNote> notes;
     Tick end = base;
     for (const ClipNote &cn : clip->tracks.front().notes) {
@@ -772,8 +770,8 @@ void SongView::pasteFromClipboard()
         end = Tick(std::max<Tick>(end, tick + Tick(cn.duration)));
     }
     const SongView::DocumentSwapHintScope swapHint{*this, cNoteMutationDirty};
-    m_document->addNotes(selectedTrack, notes);
-    m_selectionModel.setNoteSelection(m_document->insertedNoteIds(selectedTrack, before));
+    m_document.addNotes(selectedTrack, notes);
+    m_selectionModel.setNoteSelection(m_document.insertedNoteIds(selectedTrack, before));
     // Like pasteRangeAtEditCursor: advance the edit cursor past the pasted
     // notes so repeated Ctrl+V lays copies back-to-back, but keep the view
     // anchored on the content that just landed.
@@ -832,7 +830,7 @@ std::vector<QuickMenuItem> SongView::buildTimeSelectionItems() const
 
 void SongView::openTimeSelectionMenu(const QPointF &scenePos)
 {
-    if (!m_document || !m_selectionModel.timeSelection().active())
+    if (!m_selectionModel.timeSelection().active())
         return;
     songview::TimelineQuickView *const quick = quickView();
     songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;

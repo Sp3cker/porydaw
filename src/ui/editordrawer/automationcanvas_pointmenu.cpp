@@ -76,10 +76,10 @@ bool AutomationCanvas::showNodeMenuNear(LaneHandle handle, const QPointF &positi
     // only a genuine miss, which keeps the caller's fallback alive; a hit
     // whose open aborts — teardown, refused publish, displaced by a newer
     // popup, stale snapshot — returns true and never opens a second menu.
-    SongDocument *const document = m_page.document();
+    SongDocument &document = m_page.document();
     songview::QuickPopupSession *const session = m_menuSession.data();
     // No menu surface: nothing consumed; the miss fallback proceeds.
-    if (!document || !session || !session->window())
+    if (!session || !session->window())
         return false;
     const auto *slot = resolveSlot(handle);
     NodePoint point;
@@ -94,8 +94,8 @@ bool AutomationCanvas::showNodeMenuNear(LaneHandle handle, const QPointF &positi
     // cancellation of a displaced session can all re-enter this canvas
     // synchronously, so nothing below trusts state re-read after them.
     PendingNodeMenu target;
-    target.document = document;
-    target.documentRevision = document->revision();
+    target.document = &document;
+    target.documentRevision = document.revision();
     target.lane = handle;
     target.rowId = slot->id;
     target.point = point;
@@ -109,12 +109,11 @@ bool AutomationCanvas::showNodeMenuNear(LaneHandle handle, const QPointF &positi
     // state or lead-in subtraction.
     const bool writtenAtTick =
         slot->isTempo()
-            ? std::any_of(document->tempoPoints().cbegin(), document->tempoPoints().cend(),
+            ? std::any_of(document.tempoPoints().cbegin(), document.tempoPoints().cend(),
                           [tick = point.tick](const TempoPoint &tempoPoint) {
                               return tempoPoint.tick == tick;
                           })
-            : document->findLanePoint(int(slot->id.track), slot->id.controller, point.tick,
-                                      nullptr);
+            : document.findLanePoint(int(slot->id.track), slot->id.controller, point.tick, nullptr);
 
     std::vector<songview::QuickMenuItem> rows;
     rows.reserve(2);
@@ -160,9 +159,9 @@ bool AutomationCanvas::showNodeMenuNear(LaneHandle handle, const QPointF &positi
     // identity, revision, and the handle's row must all still hold before
     // anything is published. A stale open ends only a menu this canvas still
     // owns, never a foreign popup.
-    SongDocument *const settled = m_page.document();
+    SongDocument &settled = m_page.document();
     const auto *settledSlot = resolveSlot(handle);
-    if (!settled || settled != target.document || settled->revision() != target.documentRevision ||
+    if (&settled != target.document || settled.revision() != target.documentRevision ||
         !settledSlot || settledSlot->id != target.rowId) {
         cancelNodeMenuWithoutFocus();
         return true;
@@ -210,9 +209,8 @@ void AutomationCanvas::handleNodeMenuAction(int actionId)
     }
     if (!self)
         return; // The focus swap tore this canvas down.
-    SongDocument *const document = m_page.document();
-    if (!document || document != pending.document ||
-        document->revision() != pending.documentRevision)
+    SongDocument &document = m_page.document();
+    if (&document != pending.document || document.revision() != pending.documentRevision)
         return; // Stale document: no mutation.
     // Re-resolve the captured handle and require the same row: a rebuild
     // remap landing between open and dispatch cannot mutate a different lane.

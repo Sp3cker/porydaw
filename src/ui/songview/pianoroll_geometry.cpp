@@ -286,7 +286,7 @@ void PianoRoll::refreshHoverCursor(QPointF pos, Qt::KeyboardModifiers modifiers)
 {
     if (m_cursors.dpr != devicePixelRatio())
         m_cursors = loadMidiCursors(devicePixelRatio(), m_geometry.midiCursorExtent);
-    const ViewNote *hit = m_sv->document() ? hitNote(pos) : nullptr;
+    const ViewNote *hit = hitNote(pos);
     const bool rightEdge = hit && nearRightEdge(*hit, pos);
     const bool leftEdge = hit && !rightEdge && nearLeftEdge(*hit, pos);
     // Resize edges win over the modifier velocity hover.

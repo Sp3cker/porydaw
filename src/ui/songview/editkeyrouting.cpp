@@ -118,8 +118,6 @@ bool canRemoveTimeSignature(const MidiTimeline *timeline, const TimeAxis &axis, 
 
 bool SongView::editCommandAvailable(EditCommand command, bool ignorePointerGesture) const
 {
-    if (!m_document)
-        return false;
     const EditCommandPolicy &policy = editCommandPolicy(command);
     if (!ignorePointerGesture && timelinePointerGestureActive() && !policy.survivesPointerGesture)
         return false;
@@ -228,8 +226,6 @@ bool SongView::editCommandAvailable(EditCommand command, bool ignorePointerGestu
 
 void SongView::executeEditCommand(EditCommand command)
 {
-    if (!m_document)
-        return;
     const EditCommandPolicy &policy = editCommandPolicy(command);
     if (timelinePointerGestureActive() && !policy.survivesPointerGesture)
         return;
@@ -274,7 +270,7 @@ void SongView::executeEditCommand(EditCommand command)
             break;
         case EditRangeOperation::LoopFromSelection:
             Q_ASSERT(canLoopFromSelection(m_timeline, timeSelection));
-            runLoopFromSelection(*m_document, m_timeline, timeSelection);
+            runLoopFromSelection(m_document, m_timeline, timeSelection);
             break;
         case EditRangeOperation::None:
             Q_UNREACHABLE();
@@ -368,15 +364,15 @@ void SongView::executeEditCommand(EditCommand command)
         break;
     case EditStandaloneOperation::SetLoopStart:
         Q_ASSERT(canWriteLoopMarkers(m_timeline));
-        m_document->setLoopTick(false, int64_t(m_editCursorTick));
+        m_document.setLoopTick(false, int64_t(m_editCursorTick));
         break;
     case EditStandaloneOperation::SetLoopEnd:
         Q_ASSERT(canWriteLoopMarkers(m_timeline));
-        m_document->setLoopTick(true, int64_t(m_editCursorTick));
+        m_document.setLoopTick(true, int64_t(m_editCursorTick));
         break;
     case EditStandaloneOperation::RemoveLoop:
         Q_ASSERT(canRemoveLoop(m_timeline));
-        runRemoveLoop(*m_document, m_timeline);
+        runRemoveLoop(m_document, m_timeline);
         break;
     case EditStandaloneOperation::EditTimeSignature:
         Q_ASSERT(m_timeline && m_ruler.get());
@@ -385,7 +381,7 @@ void SongView::executeEditCommand(EditCommand command)
         break;
     case EditStandaloneOperation::RemoveTimeSignature:
         Q_ASSERT(canRemoveTimeSignature(m_timeline, m_timeAxis, m_editCursorTick));
-        m_document->deleteTimeSig(m_editCursorTick);
+        m_document.deleteTimeSig(m_editCursorTick);
         break;
     case EditStandaloneOperation::GridNarrow:
         narrowGrid();
@@ -403,9 +399,6 @@ void SongView::executeEditCommand(EditCommand command)
 
 bool SongView::handleEditKey(const songview::TimelineKeyInput &input, EditKeyOrigin origin)
 {
-    if (!m_document)
-        return false;
-
     // Escape is the platform gesture-cancel key: with a pointer gesture
     // live it cancels only that gesture and preserves its captured
     // selection; an idle Escape clears the song selection.

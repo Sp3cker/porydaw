@@ -256,14 +256,13 @@ qreal VoiceChangeArea::devicePixelRatio() const
 void VoiceChangeArea::rebuildVisualState()
 {
     m_engineTrack = primaryTrack();
-    const SongDocument *document = m_owner.document();
-    const uint64_t revision = document ? document->revision() : 0;
-    if (document != m_voicePointsDocument || revision != m_voicePointsRevision ||
+    const SongDocument &document = m_owner.document();
+    const uint64_t revision = document.revision();
+    if (&document != m_voicePointsDocument || revision != m_voicePointsRevision ||
         m_engineTrack != m_voicePointsTrack) {
-        m_voicePoints = document && m_engineTrack >= 0
-                            ? document->lanePoints(m_engineTrack, DOC_CC_VOICE)
-                            : std::vector<DocLanePoint>{};
-        m_voicePointsDocument = document;
+        m_voicePoints = m_engineTrack >= 0 ? document.lanePoints(m_engineTrack, DOC_CC_VOICE)
+                                           : std::vector<DocLanePoint>{};
+        m_voicePointsDocument = &document;
         m_voicePointsRevision = revision;
         m_voicePointsTrack = m_engineTrack;
         m_changeCount = -1;
@@ -434,9 +433,7 @@ bool VoiceChangeArea::pointerPress(const songview::TimelinePointerInput &input)
         clearHover();
         return false;
     }
-    SongDocument *document = m_owner.document();
-    if (!document)
-        return false;
+    SongDocument &document = m_owner.document();
     const QPointF position = input.position;
     m_previousPosition = position;
     if (input.button == Qt::MiddleButton) {
@@ -461,7 +458,7 @@ bool VoiceChangeArea::pointerPress(const songview::TimelinePointerInput &input)
                 .pressPosition = position,
                 .engineTrack = m_engineTrack,
                 .point = point,
-                .revision = document->revision(),
+                .revision = document.revision(),
                 .previewTick = point.tick,
             };
         }
@@ -549,11 +546,11 @@ bool VoiceChangeArea::pointerRelease(const songview::TimelinePointerInput &input
             m_inputHost->clearCursor();
             requestQuickUpdate();
         }
-        SongDocument *document = m_owner.document();
-        if (active && completed.previewTick != completed.point.tick && document &&
-            document->revision() == completed.revision) {
-            document->moveLanePoints({{completed.engineTrack, DOC_CC_VOICE, completed.point,
-                                       completed.previewTick, completed.point.value}});
+        SongDocument &document = m_owner.document();
+        if (active && completed.previewTick != completed.point.tick &&
+            document.revision() == completed.revision) {
+            document.moveLanePoints({{completed.engineTrack, DOC_CC_VOICE, completed.point,
+                                      completed.previewTick, completed.point.value}});
             m_owner.refreshAllDrawerPages();
         }
         return true;

@@ -26,8 +26,8 @@ void AutomationCanvas::tapTempo()
     if (m_tapTempo.tapCount() == 1) {
         // First tap of a fresh session: pin the document identity and start
         // revision here, so a later commit ignores any interim edit.
-        m_tapDocument = m_page.document();
-        m_tapRevision = m_page.document()->revision();
+        m_tapDocument = &m_page.document();
+        m_tapRevision = m_page.document().revision();
     }
     // One emission per tap: the draft Text also keys on tapCount > 0, so the
     // first tap (draft still 0) must notify too.
@@ -41,7 +41,7 @@ void AutomationCanvas::commitTapTempo()
     if (!m_tapTempo.readyToCommit() || !parametersEnabled() || !m_tapDocument)
         return resetTapTempo();
     SongDocument *const document = m_tapDocument.data();
-    if (m_page.document() != document || document->revision() != m_tapRevision)
+    if (&m_page.document() != document || document->revision() != m_tapRevision)
         return resetTapTempo();
     // Idempotent: only a difference from the tick-0 tempo writes.
     const int bpm = m_tapTempo.draftBpm();

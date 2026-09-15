@@ -263,8 +263,9 @@ void SongView::refreshViewportLayout()
         m_playheadOverlay->updateBands(m_timelineBandLayout);
 }
 
-SongView::SongView(QObject *parent)
+SongView::SongView(SongDocument &document, QObject *parent)
     : QObject(parent)
+    , m_document(document)
     , m_geometry(Geometry::resolve())
     , m_camera(m_timeAxis, m_projection)
     , m_grid(m_timeAxis, m_camera)
@@ -345,6 +346,8 @@ SongView::SongView(QObject *parent)
     // updateScrollbars() keeps re-homing it as resize resolves the lead pad
     // until a song binds.
     m_camera.setHScroll(m_camera.minHScroll());
+    observeDocument();
+    m_events->resumeDocumentObservation();
 }
 
 SongView::~SongView()
@@ -385,13 +388,13 @@ void SongView::requestVoicePicker(const QString &title, int initialVoice, QObjec
 {
     songview::TimelineQuickView *const quick = quickView();
     songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
-    if (!m_document || !context || !accepted || !session)
+    if (!context || !accepted || !session)
         return;
 
     // The replacement cancellation below cascades synchronously: it can swap
     // the document, replace the quick view or its session, or end this
     // SongView. Everything the gate after it judges is pinned first.
-    const QPointer<SongDocument> document = m_document;
+    const QPointer<SongDocument> document = &m_document;
     const uint64_t documentRevision = document->revision();
     const QPointer<songview::TimelineQuickView> liveQuick(quick);
     const QPointer<songview::QuickPopupSession> liveSession(session);
@@ -409,7 +412,7 @@ void SongView::requestVoicePicker(const QString &title, int initialVoice, QObjec
     // publication, and every pinned object alive.
     if (!self || !liveQuick || !liveSession || !liveContext || !document ||
         quickView() != liveQuick || liveQuick->popupSession() != liveSession ||
-        m_document != document || document->revision() != documentRevision ||
+        &m_document != document || document->revision() != documentRevision ||
         liveSession->isOpen()) {
         return;
     }
@@ -463,7 +466,7 @@ void SongView::requestVoicePicker(const QString &title, int initialVoice, QObjec
         if (!self || !liveQuick || !pending.session || m_pendingVoicePicker || !pending.context ||
             !pending.document || quickView() != liveQuick ||
             liveQuick->popupSession() != pending.session || pending.session->isOpen() ||
-            m_document != pending.document ||
+            &m_document != pending.document ||
             pending.document->revision() != pending.documentRevision) {
             return;
         }
@@ -593,7 +596,7 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     m_events->setPlayheadTick(-1.0, false); // another song's ticks are stale
     // Song attachment resets transient grid controls; editor cosmetics remain
     // global and are rebuilt above.
-    gridStateChanged(m_grid.setTicksPerClock(m_document ? m_document->ticksPerClock() : 0));
+    gridStateChanged(m_grid.setTicksPerClock(m_document.ticksPerClock()));
     m_grid.setState(songview::GridSelection::automatic(), GridFeel::Straight);
     m_ruler->syncGridControls();
 
@@ -613,6 +616,8 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
 
     rebuildAfterSongChange();
     m_headers->syncActivity(m_trackActivity, false);
+    observeDocument();
+    m_events->resumeDocumentObservation();
 }
 
 double SongView::defaultVerticalScroll() const
@@ -723,15 +728,13 @@ void SongView::updateSong(const MidiTimeline *timeline)
     refreshTimelineViews(swapDirty);
 }
 
-void SongView::disconnectDocument()
+void SongView::suspendDocumentObservation()
 {
-    if (m_document) {
-        disconnect(m_document, &SongDocument::tracksRemapped, this, nullptr);
-        disconnect(m_document, &SongDocument::documentChanged, this, nullptr);
-    }
-    m_document = nullptr;
-    gridStateChanged(m_grid.setTicksPerClock(0));
-    m_events->setDocument(nullptr);
+    disconnect(m_documentChangedConnection);
+    disconnect(m_tracksRemappedConnection);
+    m_documentChangedConnection = {};
+    m_tracksRemappedConnection = {};
+    m_events->suspendDocumentObservation();
 }
 
 void SongView::prepareForSongReplacement()
@@ -748,7 +751,9 @@ void SongView::prepareForSongReplacement()
     cancelTimeSelectionMenuWithoutFocus();
     cancelActiveInteractions();
     m_headers->cancelTransientState();
-    disconnectDocument();
+    invalidateContextMenus(/*restoreFocus=*/false);
+    m_selectionModel.clearNoteSelection();
+    suspendDocumentObservation();
 }
 
 void SongView::cancelTransientInput()
@@ -779,48 +784,29 @@ void SongView::cancelTransientInput()
         m_headers->cancelTransientState();
 }
 
-void SongView::setDocument(SongDocument *document)
+void SongView::observeDocument()
 {
-    const bool documentChanged = m_document != document;
-    if (documentChanged) {
-        if (m_roll) {
-            m_roll->cancelVelocityPromptWithoutFocus();
-            m_roll->cancelPitchBendPopup();
-        }
-        if (m_ruler)
-            m_ruler->cancelTimeSigPromptWithoutFocus();
-        cancelInsertTimePromptWithoutFocus();
-        cancelActiveInteractions();
-        disconnectDocument();
-        if (document) {
-            connect(document, &SongDocument::tracksRemapped, this, &SongView::onTracksRemapped);
-            connect(document, &SongDocument::documentChanged, this, [this] {
-                // Any document edit invalidates a preview captured at the
-                // previous revision before the normal page refresh.
-                invalidateContextMenus(/*restoreFocus=*/true);
-                cancelActiveInteractions();
-                cancelInsertTimePromptWithoutFocus();
-                if (m_ruler)
-                    m_ruler->cancelTimeSigPromptWithoutFocus();
-                m_editorDrawer->automationPage()->documentChanged();
-                m_editorDrawer->velocityArea()->documentChanged();
-                m_editorDrawer->voiceChangeArea()->documentChanged();
-                refreshDrawerPages();
-            });
-        }
-    }
-    m_document = document;
-    gridStateChanged(m_grid.setTicksPerClock(document ? document->ticksPerClock() : 0));
-    m_events->setDocument(document);
-    m_selectionModel.clearNoteSelection();
-    m_headers->rebuild(m_trackActivity, m_playing);
-    notifyDrawerSongChanged();
-    if (documentChanged) {
-        if (m_editActions)
-            m_editActions->rebind(this);
-        else
-            invalidateContextMenus(/*restoreFocus=*/false);
-    }
+    if (m_documentChangedConnection)
+        return;
+    m_tracksRemappedConnection =
+        connect(&m_document, &SongDocument::tracksRemapped, this, &SongView::onTracksRemapped);
+    m_documentChangedConnection =
+        connect(&m_document, &SongDocument::documentChanged, this, &SongView::onDocumentChanged);
+}
+
+void SongView::onDocumentChanged()
+{
+    // Any document edit invalidates a preview captured at the previous
+    // revision before the normal page refresh.
+    invalidateContextMenus(/*restoreFocus=*/true);
+    cancelActiveInteractions();
+    cancelInsertTimePromptWithoutFocus();
+    if (m_ruler)
+        m_ruler->cancelTimeSigPromptWithoutFocus();
+    m_editorDrawer->automationPage()->documentChanged();
+    m_editorDrawer->velocityArea()->documentChanged();
+    m_editorDrawer->voiceChangeArea()->documentChanged();
+    refreshDrawerPages();
 }
 
 bool SongView::eventListVisible() const

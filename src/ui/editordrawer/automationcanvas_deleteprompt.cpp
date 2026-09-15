@@ -48,10 +48,10 @@ QVariantMap AutomationCanvas::ccDeletePromptAppearance() const
 
 bool AutomationCanvas::openCcDeletePrompt(LaneHandle handle, std::size_t writtenEventCount)
 {
-    SongDocument *const document = m_page.document();
+    SongDocument &document = m_page.document();
     songview::QuickPopupSession *const session = m_menuSession.data();
     const auto *slot = resolveSlot(handle);
-    if (!document || !session || !session->window() || !slot || !slot->lane)
+    if (!session || !session->window() || !slot || !slot->lane)
         return false;
     // writtenEventCount comes from the caller's show-time document-written
     // query: adapter points() projects a synthetic tick-0 engine node for
@@ -65,8 +65,8 @@ bool AutomationCanvas::openCcDeletePrompt(LaneHandle handle, std::size_t written
     // a displaced session's cleanup callbacks can re-enter document state,
     // so no raw document or slot pointer is held or dereferenced across it.
     PendingCcDeletePrompt pending;
-    pending.document = document;
-    pending.documentRevision = document->revision();
+    pending.document = &document;
+    pending.documentRevision = document.revision();
     pending.lane = handle;
     pending.rowId = slot->id;
     pending.laneTitle = slot->lane->title();
@@ -81,11 +81,10 @@ bool AutomationCanvas::openCcDeletePrompt(LaneHandle handle, std::size_t written
     // That cancellation was a re-entry point: revalidate the snapshot against
     // live state before anything is published. Nothing was emitted yet, so a
     // stale target simply refuses to open.
-    SongDocument *const current = m_page.document();
+    SongDocument &current = m_page.document();
     const auto *settled = resolveSlot(handle);
-    if (!current || current != pending.document ||
-        current->revision() != pending.documentRevision || !settled || !settled->lane ||
-        settled->id != pending.rowId)
+    if (&current != pending.document || current.revision() != pending.documentRevision ||
+        !settled || !settled->lane || settled->id != pending.rowId)
         return false;
 
     m_pendingCcDeletePrompt = std::move(pending);
@@ -120,11 +119,10 @@ void AutomationCanvas::acceptCcDeletePrompt()
         session->close();
     }
 
-    SongDocument *const document = m_page.document();
+    SongDocument &document = m_page.document();
     const auto *slot = resolveSlot(pending->lane);
-    if (!document || document != pending->document ||
-        document->revision() != pending->documentRevision || !slot || !slot->lane ||
-        slot->id != pending->rowId)
+    if (&document != pending->document || document.revision() != pending->documentRevision ||
+        !slot || !slot->lane || slot->id != pending->rowId)
         return; // Stale request: document, lane, or row changed since open.
 
     // replaceSpan's documentChanged fan-out rebuilds m_nodeStack

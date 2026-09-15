@@ -28,7 +28,8 @@ struct BareView {
     MidiTimeline default44;
     MidiTimeline t48;
     MidiTimeline t34;
-    SongView view;
+    SongDocument document;
+    SongView view{document};
 
     BareView()
     {

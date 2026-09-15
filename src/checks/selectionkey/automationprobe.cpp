@@ -252,19 +252,14 @@ bool AutomationProbe::emptyNodePoint(int value, QPoint &point, QString *diagnost
             *diagnostics = QStringLiteral("the automation probe surface was destroyed");
         return false;
     }
-    SongDocument *const document = m_view->document();
-    if (!document) {
-        if (diagnostics)
-            *diagnostics = QStringLiteral("the automation probe has no live SongDocument");
-        return false;
-    }
+    SongDocument &document = m_view->document();
     const AutomationGeometry geometry = AutomationGeometry::resolve();
     const AutomationProjection projection(geometry, m_page);
     const QRectF bounds = m_input->bounds();
     const qreal firstVisibleTick = qMax(0.0, projection.rawTickAt(bounds.left()));
     const qreal lastVisibleTick = qMax(0.0, projection.rawTickAt(bounds.right()));
     const qreal clearance = qreal(geometry.pointHitRadius) * 4.0 + 8.0;
-    const std::vector<DocLanePoint> lanePoints = document->lanePoints(m_track, m_controller);
+    const std::vector<DocLanePoint> lanePoints = document.lanePoints(m_track, m_controller);
     std::optional<uint64_t> tick;
     for (const int permille : {500, 350, 650, 250, 750, 150, 850}) {
         const qreal x = bounds.left() + bounds.width() * (qreal(permille) / 1000.0);

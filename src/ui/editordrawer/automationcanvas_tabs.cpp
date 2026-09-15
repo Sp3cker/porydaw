@@ -84,21 +84,21 @@ LaneHandle AutomationCanvas::activeLane() const noexcept
 QList<int> AutomationCanvas::selectedParameters() const
 {
     const auto range = m_laneSelection.activeTickRange();
-    const SongDocument *document = m_page.document();
-    if (!range || !document)
+    const SongDocument &document = m_page.document();
+    if (!range)
         return {};
-    return parameterIndexesWhere([this, &range, document](const EditorAutomationRowId &row) {
+    return parameterIndexesWhere([this, &range, &document](const EditorAutomationRowId &row) {
         if (!m_laneSelection.coversNodes(row))
             return false;
         const auto inRange = [&range](const auto &point) {
             return point.tick >= range->first && point.tick < range->second;
         };
         if (row.kind == EditorAutomationRowKind::Tempo) {
-            const auto &points = document->tempoPoints();
+            const auto &points = document.tempoPoints();
             return std::any_of(points.cbegin(), points.cend(), inRange);
         }
         const std::vector<DocLanePoint> points =
-            document->lanePoints(int(row.track), row.controller);
+            document.lanePoints(int(row.track), row.controller);
         return std::any_of(points.cbegin(), points.cend(), inRange);
     });
 }
@@ -118,12 +118,10 @@ QList<int> AutomationCanvas::ghostParameters() const
 // adapter's projected tick-0 engine default is not an event.
 std::size_t AutomationCanvas::parameterEventCount(const EditorAutomationRowId &row) const
 {
-    const SongDocument *document = m_page.document();
-    if (!document)
-        return 0;
+    const SongDocument &document = m_page.document();
     return row.kind == EditorAutomationRowKind::Tempo
-               ? document->tempoPoints().size()
-               : document->lanePoints(row.track, row.controller).size();
+               ? document.tempoPoints().size()
+               : document.lanePoints(row.track, row.controller).size();
 }
 
 bool AutomationCanvas::parameterHasEvents(const EditorAutomationRowId &row) const
@@ -178,7 +176,7 @@ void AutomationCanvas::toggleGhostParameter(int index)
 
 bool AutomationCanvas::parametersEnabled() const noexcept
 {
-    return m_page.ready() && m_page.document() != nullptr;
+    return m_page.ready();
 }
 
 // Tab switching is view-only: the document, revision, undo stack, edit

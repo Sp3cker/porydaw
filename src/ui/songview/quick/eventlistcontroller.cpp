@@ -57,9 +57,9 @@ songview::QuickMenuItem menuItem(int id, const QString &text, bool enabled = tru
     return item;
 }
 
-bool hasChunk(const SongDocument *document, int chunk)
+bool hasChunk(const SongDocument &document, int chunk)
 {
-    return document && chunk >= 0 && chunk < int(document->smf().tracks.size());
+    return chunk >= 0 && chunk < int(document.smf().tracks.size());
 }
 
 } // namespace
@@ -67,6 +67,7 @@ bool hasChunk(const SongDocument *document, int chunk)
 EventListController::EventListController(SongView *songView, QObject *parent)
     : QObject(parent)
     , m_songView(songView)
+    , m_document(songView->document())
     , m_model(new eventlist::EventTableModel(songView, this))
 {
     m_model->setSelectionHandler([this](int chunk, Tick tick) { selectRowAtTick(chunk, tick); });
@@ -116,7 +117,7 @@ EventListController::EventListController(SongView *songView, QObject *parent)
             if (!hasChunk(m_document, m_model->chunk()))
                 break;
             const auto index = m_model->rawEventIndexForRow(m_menuRow);
-            const auto &events = m_document->smf().tracks[m_model->chunk()].events;
+            const auto &events = m_document.smf().tracks[m_model->chunk()].events;
             if (index && *index < events.size() &&
                 eventlist::typeKindOf(events[*index]) == eventlist::TypeProgram) {
                 emit revealVoice(events[*index].data0);
@@ -232,8 +233,8 @@ QString EventListController::countText() const
 {
     if (!hasChunk(m_document, m_currentChunk))
         return {};
-    const size_t total = m_document->smf().tracks[m_currentChunk].events.size() +
-                         (m_currentChunk == 0 ? m_document->tempoPoints().size() : 0);
+    const size_t total = m_document.smf().tracks[m_currentChunk].events.size() +
+                         (m_currentChunk == 0 ? m_document.tempoPoints().size() : 0);
     const size_t shown = m_model->shownEvents();
     return shown == total ? tr("%n event(s)", nullptr, int(total))
                           : tr("%1 of %2 events").arg(shown).arg(total);
@@ -253,21 +254,18 @@ int EventListController::headerAlignment(int column) const
 void EventListController::rebuildChunks()
 {
     QStringList labels;
-    if (m_document) {
-        const SmfFile &smf = m_document->smf();
-        labels.reserve(int(smf.tracks.size()));
-        for (int chunk = 0; chunk < int(smf.tracks.size()); ++chunk) {
-            int engineTrack = -1;
-            for (int track = 0; track < m_document->engineTrackCount(); ++track) {
-                if (m_document->smfTrackFor(track) == chunk) {
-                    engineTrack = track;
-                    break;
-                }
+    const SmfFile &smf = m_document.smf();
+    labels.reserve(int(smf.tracks.size()));
+    for (int chunk = 0; chunk < int(smf.tracks.size()); ++chunk) {
+        int engineTrack = -1;
+        for (int track = 0; track < m_document.engineTrackCount(); ++track) {
+            if (m_document.smfTrackFor(track) == chunk) {
+                engineTrack = track;
+                break;
             }
-            labels.append(engineTrack >= 0
-                              ? tr("Chunk %1 — Track %2").arg(chunk).arg(engineTrack + 1)
-                              : tr("Chunk %1 (tempo/meta)").arg(chunk));
         }
+        labels.append(engineTrack >= 0 ? tr("Chunk %1 — Track %2").arg(chunk).arg(engineTrack + 1)
+                                       : tr("Chunk %1 (tempo/meta)").arg(chunk));
     }
     if (labels == m_chunkLabels)
         return;
@@ -275,54 +273,70 @@ void EventListController::rebuildChunks()
     emit chunkLabelsChanged();
 }
 
-void EventListController::setDocument(SongDocument *document)
+void EventListController::suspendDocumentObservation()
 {
-    if (m_document == document) {
-        rebuildChunks();
-        const int target = hasChunk(m_document, m_currentChunk)
-                               ? m_currentChunk
-                               : (m_chunkLabels.isEmpty() ? -1 : 0);
-        setChunk(target, false);
-        return;
-    }
-
-    if (m_document)
-        disconnect(m_document, nullptr, this, nullptr);
-    m_document = document;
-    m_documentRevision = document ? document->revision() : 0;
+    disconnect(m_documentChangedConnection);
+    disconnect(m_tracksRemappedConnection);
+    m_documentChangedConnection = {};
+    m_tracksRemappedConnection = {};
+    clearEditing();
+    m_documentRevision = 0;
     m_chunkRemapped = false;
-    if (m_document) {
-        connect(m_document, &SongDocument::tracksRemapped, this,
-                &EventListController::onTracksRemapped);
-        connect(m_document, &SongDocument::documentChanged, this, &EventListController::refresh);
+    m_selectionAnchor = -1;
+    setCurrentRow(-1);
+    setSelectedRows({});
+    if (m_currentChunk != -1) {
+        m_currentChunk = -1;
+        emit chunkChanged();
     }
+    if (!m_chunkLabels.isEmpty()) {
+        m_chunkLabels.clear();
+        emit chunkLabelsChanged();
+    }
+    m_model->setSource(nullptr, -1);
+    updateCountText();
+    if (m_playRow != -1) {
+        m_playRow = -1;
+        emit playRowChanged(-1);
+    }
+}
 
+void EventListController::resumeDocumentObservation()
+{
+    if (m_documentChangedConnection)
+        return;
+    m_tracksRemappedConnection = connect(&m_document, &SongDocument::tracksRemapped, this,
+                                         &EventListController::onTracksRemapped);
+    m_documentChangedConnection =
+        connect(&m_document, &SongDocument::documentChanged, this, &EventListController::refresh);
+    m_documentRevision = m_document.revision();
+    m_chunkRemapped = false;
     rebuildChunks();
-    const int target =
-        hasChunk(m_document, m_currentChunk) ? m_currentChunk : (m_chunkLabels.isEmpty() ? -1 : 0);
+    const int target = m_chunkLabels.isEmpty() ? -1 : 0;
     if (target != m_currentChunk) {
         m_currentChunk = target;
         emit chunkChanged();
     }
-    m_model->setSource(m_document, target);
     m_selectionAnchor = -1;
     setCurrentRow(-1);
     setSelectedRows({});
+    m_model->setSource(&m_document, target);
     updateCountText();
     updatePlayRow();
-    if (m_visible)
-        syncTrackSelection();
+    syncTrackSelection();
 }
 
 void EventListController::setChunk(int chunk, bool followTrack)
 {
+    if (!m_documentChangedConnection)
+        return;
     const int target = hasChunk(m_document, chunk) ? chunk : -1;
     if (target == m_currentChunk && m_model->chunk() == target)
         return;
 
     m_currentChunk = target;
     emit chunkChanged();
-    m_model->setSource(m_document, target);
+    m_model->setSource(&m_document, target);
     m_selectionAnchor = -1;
     setCurrentRow(-1);
     setSelectedRows({});
@@ -331,8 +345,8 @@ void EventListController::setChunk(int chunk, bool followTrack)
 
     if (!followTrack || target < 0 || !m_songView)
         return;
-    for (int track = 0; track < m_document->engineTrackCount(); ++track) {
-        if (m_document->smfTrackFor(track) != target)
+    for (int track = 0; track < m_document.engineTrackCount(); ++track) {
+        if (m_document.smfTrackFor(track) != target)
             continue;
         if (track != m_songView->selectionModel().primaryTrack()) {
             m_syncing = true;
@@ -345,21 +359,14 @@ void EventListController::setChunk(int chunk, bool followTrack)
 
 void EventListController::refresh()
 {
-    if (!m_document) {
-        m_documentRevision = 0;
-        m_model->setSource(nullptr, -1);
-        rebuildChunks();
-        setCurrentRow(-1);
-        setSelectedRows({});
-        updateCountText();
+    if (!m_documentChangedConnection)
         return;
-    }
     if (!m_visible)
         return;
 
     const int savedCurrent = m_currentRow;
     const QList<int> savedSelection = m_selectedRows;
-    const bool chunkCountChanged = m_chunkLabels.size() != int(m_document->smf().tracks.size());
+    const bool chunkCountChanged = m_chunkLabels.size() != int(m_document.smf().tracks.size());
     if (m_chunkRemapped || chunkCountChanged) {
         const int target = hasChunk(m_document, m_currentChunk) ? m_currentChunk : -1;
         m_chunkRemapped = false;
@@ -368,7 +375,7 @@ void EventListController::refresh()
             m_currentChunk = target;
             emit chunkChanged();
         }
-        m_model->setSource(m_document, target);
+        m_model->setSource(&m_document, target);
     } else {
         m_model->reload();
     }
@@ -383,15 +390,15 @@ void EventListController::refresh()
     setSelectedRows(std::move(restored));
     updateCountText();
     updatePlayRow();
-    m_documentRevision = m_document->revision();
+    m_documentRevision = m_document.revision();
 }
 
 void EventListController::syncTrackSelection()
 {
-    if (m_syncing || !m_visible || !m_document || m_document->revision() != m_documentRevision ||
-        !m_songView)
+    if (m_syncing || !m_visible || !m_documentChangedConnection ||
+        m_document.revision() != m_documentRevision || !m_songView)
         return;
-    const int chunk = m_document->smfTrackFor(m_songView->selectionModel().primaryTrack());
+    const int chunk = m_document.smfTrackFor(m_songView->selectionModel().primaryTrack());
     if (chunk < 0 || chunk == m_currentChunk)
         return;
     setChunk(chunk, false);
@@ -588,7 +595,7 @@ void EventListController::jumpCursorToRow(int row)
     } else {
         if (row != int(m_model->shownEvents()))
             return;
-        tick = m_document->smf().tracks[m_model->chunk()].endTick;
+        tick = m_document.smf().tracks[m_model->chunk()].endTick;
     }
     if (tick != m_songView->editCursorTick()) {
         m_songView->commitEditCursor(tick);
@@ -628,12 +635,12 @@ void EventListController::addEvent()
         if (const auto tempo = m_model->tempoPointForRow(m_currentRow)) {
             const TempoPoint copy{Tick(m_songView->editCursorTick()),
                                   tempo->microsecondsPerQuarterNote};
-            m_document->applyTempoEdit({{}, {copy}});
+            m_document.applyTempoEdit({{}, {copy}});
             selectRowAtTick(currentChunk, copy.tick);
             return;
         }
     }
-    const auto &events = m_document->smf().tracks[currentChunk].events;
+    const auto &events = m_document.smf().tracks[currentChunk].events;
     SmfEvent event;
     const auto source = m_model->rawEventIndexForRow(m_currentRow);
     if (source && *source < events.size()) {
@@ -644,7 +651,7 @@ void EventListController::addEvent()
         event.data1 = 100;
     }
     event.tick = m_songView->editCursorTick();
-    m_document->insertRawEvent(currentChunk, event);
+    m_document.insertRawEvent(currentChunk, event);
     selectEventRow(currentChunk, event);
 }
 
@@ -655,17 +662,17 @@ void EventListController::insertCopyOfRow(int row)
         return;
     if (currentChunk == 0) {
         if (const auto tempo = m_model->tempoPointForRow(row)) {
-            m_document->applyTempoEdit({{}, {*tempo}});
+            m_document.applyTempoEdit({{}, {*tempo}});
             selectRowAtTick(currentChunk, tempo->tick);
             return;
         }
     }
-    const auto &events = m_document->smf().tracks[currentChunk].events;
+    const auto &events = m_document.smf().tracks[currentChunk].events;
     const auto source = m_model->rawEventIndexForRow(row);
     if (!source || *source >= events.size())
         return;
     const SmfEvent event = events[*source];
-    m_document->insertRawEvent(currentChunk, event);
+    m_document.insertRawEvent(currentChunk, event);
     selectEventRow(currentChunk, event);
 }
 
@@ -693,12 +700,12 @@ void EventListController::deleteSelected()
     }
     if (!indices.empty() && !tempoEdit.empty()) {
         const int count = int(indices.size() + tempoEdit.remove.size());
-        m_document->removeRawEventsAndEditTempo(tr("delete %n event(s)", nullptr, count),
-                                                currentChunk, std::move(indices), tempoEdit);
+        m_document.removeRawEventsAndEditTempo(tr("delete %n event(s)", nullptr, count),
+                                               currentChunk, std::move(indices), tempoEdit);
     } else if (!indices.empty()) {
-        m_document->deleteRawEvents(currentChunk, std::move(indices));
+        m_document.deleteRawEvents(currentChunk, std::move(indices));
     } else {
-        m_document->applyTempoEdit(tempoEdit);
+        m_document.applyTempoEdit(tempoEdit);
     }
 }
 
@@ -709,12 +716,12 @@ void EventListController::reorderRawEvent(size_t from, size_t destination)
         return;
     size_t first = 0;
     size_t last = 0;
-    if (!m_document->rawEventMoveBounds(currentChunk, from, &first, &last))
+    if (!m_document.rawEventMoveBounds(currentChunk, from, &first, &last))
         return;
     destination = std::clamp(destination, first, last);
     if (destination == from)
         return;
-    m_document->moveRawEvent(currentChunk, from, destination);
+    m_document.moveRawEvent(currentChunk, from, destination);
     const int row = m_model->rowForRawEventIndex(destination);
     if (row >= 0) {
         setCurrentRow(row);
@@ -731,7 +738,7 @@ bool EventListController::isLegalRawMove(size_t source, size_t destination) cons
         return false;
     size_t first = 0;
     size_t last = 0;
-    return m_document->rawEventMoveBounds(currentChunk, source, &first, &last) &&
+    return m_document.rawEventMoveBounds(currentChunk, source, &first, &last) &&
            destination >= first && destination <= last && destination != source;
 }
 
@@ -763,13 +770,13 @@ bool EventListController::dropDestinationForGap(int fromRow, int gap, size_t *so
     const int currentChunk = m_model->chunk();
     if (!anchor || !hasChunk(m_document, currentChunk))
         return false;
-    const auto &events = m_document->smf().tracks[currentChunk].events;
+    const auto &events = m_document.smf().tracks[currentChunk].events;
     if (*rawSource >= events.size() || *anchor >= events.size() ||
         events[*rawSource].tick != events[*anchor].tick)
         return false;
     size_t first = 0;
     size_t last = 0;
-    if (!m_document->rawEventMoveBounds(currentChunk, *rawSource, &first, &last))
+    if (!m_document.rawEventMoveBounds(currentChunk, *rawSource, &first, &last))
         return false;
     rawDestination = std::clamp(rawDestination, first, last);
     *source = *rawSource;
@@ -813,7 +820,7 @@ qlonglong EventListController::moveDestForRow(int row, int delta, QString *why) 
     const auto target = m_model->rawEventIndexForRow(row + delta);
     if (!source || !target)
         return -1;
-    const auto &events = m_document->smf().tracks[currentChunk].events;
+    const auto &events = m_document.smf().tracks[currentChunk].events;
     if (*source >= events.size() || *target >= events.size())
         return -1;
     if (events[*target].tick != events[*source].tick) {
@@ -823,7 +830,7 @@ qlonglong EventListController::moveDestForRow(int row, int delta, QString *why) 
     }
     size_t first = 0;
     size_t last = 0;
-    if (!m_document->rawEventMoveBounds(currentChunk, *source, &first, &last))
+    if (!m_document.rawEventMoveBounds(currentChunk, *source, &first, &last))
         return -1;
     if (*target < first || *target > last) {
         if (why) {
@@ -1056,7 +1063,7 @@ void EventListController::rebuildRowMenu(int row)
     items.push_back(menuItem(kRowMenuInsert, tr("Insert event")));
     const auto source = m_model->rawEventIndexForRow(row);
     if (source && hasChunk(m_document, m_model->chunk())) {
-        const auto &events = m_document->smf().tracks[m_model->chunk()].events;
+        const auto &events = m_document.smf().tracks[m_model->chunk()].events;
         if (*source < events.size() &&
             eventlist::typeKindOf(events[*source]) == eventlist::TypeProgram)
             items.push_back(menuItem(kRowMenuShowVoice, tr("Show voice in voicegroup")));
@@ -1154,7 +1161,7 @@ void EventListController::openTypeMenu(const QPointF &scenePosition)
 
 void EventListController::selectRowAtTick(int chunk, Tick tick)
 {
-    if (!m_document || m_model->chunk() != chunk)
+    if (m_model->chunk() != chunk)
         return;
     int row = m_model->tempoRowForExactTick(tick);
     if (row < 0) {
@@ -1179,7 +1186,7 @@ void EventListController::selectEventRow(int chunk, const SmfEvent &target)
 {
     if (!hasChunk(m_document, chunk) || m_model->chunk() != chunk)
         return;
-    const auto &events = m_document->smf().tracks[chunk].events;
+    const auto &events = m_document.smf().tracks[chunk].events;
     for (size_t index = 0; index < events.size(); ++index) {
         if (events[index] != target)
             continue;

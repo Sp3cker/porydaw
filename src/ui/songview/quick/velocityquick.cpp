@@ -80,8 +80,8 @@ void VelocityArea::rebuildQuickAxis(songview::TimelineQuickScene &scene, const Q
         if (!m_hoveredNote)
             return false;
         DocNote note;
-        const SongDocument *document = m_owner.document();
-        return document && document->findNote(*m_hoveredNote, &note);
+        const SongDocument &document = m_owner.document();
+        return document.findNote(*m_hoveredNote, &note);
     }();
     const bool relativeGesture = m_relativeActivated ||
                                  m_owner.selectionModel().noteSelection().size() > 1 ||

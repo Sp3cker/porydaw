@@ -110,7 +110,6 @@ std::unique_ptr<SongViewRig> SongViewRig::create(std::unique_ptr<LoadedSong> loa
     auto rig = std::unique_ptr<SongViewRig>(
         new SongViewRig(std::move(loadedSong), std::move(timeline), sampleRate));
     rig->m_view->setSong(rig->m_timeline.get(), nullptr);
-    rig->m_view->setDocument(&rig->m_song->document());
     support::bindEditActionsForTest(*rig->m_view);
     return rig;
 }
@@ -120,13 +119,12 @@ SongViewRig::SongViewRig(std::unique_ptr<LoadedSong> loadedSong,
     : m_sampleRate(sampleRate)
     , m_song(std::move(loadedSong))
     , m_timeline(std::move(timeline))
-    , m_view(std::make_unique<SongView>())
+    , m_view(std::make_unique<SongView>(m_song->document()))
 {}
 
 SongViewRig::~SongViewRig()
 {
     m_view->setSong(nullptr, nullptr);
-    m_view->setDocument(nullptr);
 }
 
 SongDocument &SongViewRig::document() noexcept

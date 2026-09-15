@@ -4,6 +4,7 @@
 #include "ui/songview/quick/timelineinput.h"
 
 #include <QList>
+#include <QMetaObject>
 #include <QObject>
 #include <QPointF>
 #include <QSet>
@@ -75,7 +76,8 @@ class EventListController : public QObject
     bool canMoveCurrentRow(int delta) const;
 
     // The controller owns document and track-selection signal registration.
-    void setDocument(SongDocument *document);
+    void suspendDocumentObservation();
+    void resumeDocumentObservation();
     void refresh();
     void syncTrackSelection();
     void onTracksRemapped(const TrackRemap &remap);
@@ -166,7 +168,9 @@ class EventListController : public QObject
     void updateMenuOpen(bool open);
 
     SongView *m_songView = nullptr;
-    SongDocument *m_document = nullptr;
+    SongDocument &m_document;
+    QMetaObject::Connection m_documentChangedConnection;
+    QMetaObject::Connection m_tracksRemappedConnection;
     eventlist::EventTableModel *m_model = nullptr;
     songview::QuickMenuHost *m_menuHost = nullptr;
     songview::QuickMenuModel *m_chunkMenu = nullptr;

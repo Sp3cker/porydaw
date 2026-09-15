@@ -85,7 +85,6 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene, boo
 
     const QColor primaryText = themes::color(themes::Role::song_view_primary_text);
     const QColor secondaryText = themes::color(themes::Role::song_view_secondary_text);
-    SongDocument *document = m_owner.document();
     if (!horizontalPan) {
         const QColor background = themes::color(themes::Role::window_background);
         constexpr TimelineQuickLayer gutterChromeLayer =
@@ -112,7 +111,7 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene, boo
         appendText(gutterTextRecords, kVoiceTitleTextKey, QRectF(textBoxes.primary), tr("Voice"),
                    primaryText, m_titleFont, Qt::AlignLeft, Qt::AlignVCenter);
 
-        if (document && m_engineTrack >= 0) {
+        if (m_engineTrack >= 0) {
             const int changeCount = int(m_voicePoints.size());
             if (m_changeCount != changeCount) {
                 m_secondary = changeCount
@@ -128,12 +127,6 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene, boo
 
     std::vector<TimelineQuickTextModel::Record> plotTextRecords;
     const QRect plotRect = plot.toRect();
-    if (!document) {
-        appendText(plotTextRecords, kVoiceReadoutTextKey, plot, tr("Voice changes are read-only"),
-                   secondaryText, m_captionFont, Qt::AlignCenter, Qt::AlignVCenter);
-        scene.setVoiceChangesTextRecords(plotTextRecords);
-        return;
-    }
 
     const MidiTimeline *timeline = m_owner.timeline();
     if (!timeline || m_engineTrack < 0 || m_engineTrack >= 16) {
@@ -272,8 +265,8 @@ void VoiceChangeArea::rebuildQuickHover(songview::TimelineQuickScene &scene)
     timeline_quick::resetLayer(scene.layer(hoverLayer));
 
     const QRectF plot(plotRect());
-    if (!m_hoverActive || plot.width() <= 0.0 || plot.height() <= 0.0 || !m_owner.document() ||
-        !m_owner.timeline() || m_engineTrack < 0 || m_engineTrack >= 16 || m_hoverLabel.isEmpty()) {
+    if (!m_hoverActive || plot.width() <= 0.0 || plot.height() <= 0.0 || !m_owner.timeline() ||
+        m_engineTrack < 0 || m_engineTrack >= 16 || m_hoverLabel.isEmpty()) {
         scene.setVoiceChangesHoverTextRecords({});
         return;
     }

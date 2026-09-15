@@ -181,7 +181,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     if (hover)
         resetLayer(scene.layer(TimelineQuickLayer::AutomationHover));
     const QRectF viewport = m_inputHost ? m_inputHost->bounds() : QRectF{};
-    if (!m_inputHost || !m_page.document() || viewport.height() <= 0.0) {
+    if (!m_inputHost || viewport.height() <= 0.0) {
         if (transient)
             scene.setAutomationTransientTextRecords({});
         if (hover)

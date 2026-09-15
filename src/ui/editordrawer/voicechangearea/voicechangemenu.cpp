@@ -103,12 +103,12 @@ void VoiceChangeArea::cancelMenuWithoutFocus()
 
 std::optional<VoiceChangeArea::PendingVoiceMenu> VoiceChangeArea::captureTargetAt(qreal plotX) const
 {
-    SongDocument *const document = m_owner.document();
-    if (!document || m_engineTrack < 0)
+    SongDocument &document = m_owner.document();
+    if (m_engineTrack < 0)
         return std::nullopt;
     PendingVoiceMenu target;
-    target.document = document;
-    target.revision = document->revision();
+    target.document = &document;
+    target.revision = document.revision();
     target.track = m_engineTrack;
     DocLanePoint markerPoint;
     if (voiceMarkerAt(plotX, &markerPoint)) {
@@ -168,8 +168,8 @@ void VoiceChangeArea::showContextMenu(qreal plotX, const QPointF &globalPosition
         m_inputHost->requestFocus(Qt::MouseFocusReason);
     if (!self)
         return;
-    SongDocument *const settled = m_owner.document();
-    if (!settled || settled != captured->document || settled->revision() != captured->revision ||
+    SongDocument &settled = m_owner.document();
+    if (&settled != captured->document || settled.revision() != captured->revision ||
         primaryTrack() != captured->track || !m_inputHost)
         return;
     m_menuModel->setItems(std::move(rows));
@@ -203,8 +203,8 @@ void VoiceChangeArea::showContextMenu(qreal plotX, const QPointF &globalPosition
     // a foreign popup.
     if (!m_menuSession || m_menuSession != session || !m_menuSession->owns(m_menuHost))
         return;
-    SongDocument *const live = m_owner.document();
-    if (!live || live != captured->document || live->revision() != captured->revision ||
+    SongDocument &live = m_owner.document();
+    if (&live != captured->document || live.revision() != captured->revision ||
         primaryTrack() != captured->track || !m_inputHost) {
         cancelMenuWithoutFocus();
         return;
@@ -220,9 +220,9 @@ void VoiceChangeArea::openPickerForTarget(const PendingVoiceMenu &target)
     // internal cancellations and returns focus to the origin band before its
     // acceptance guard, so the callback below re-judges the post-focus
     // document state.
-    SongDocument *const live = m_owner.document();
-    if (!live || live != target.document || primaryTrack() != target.track ||
-        live->revision() != target.revision)
+    SongDocument &live = m_owner.document();
+    if (&live != target.document || primaryTrack() != target.track ||
+        live.revision() != target.revision)
         return;
     // Serial snapshot taken before the signal-producing open: acceptance is
     // only live while nothing hard-cancelled this band's handed-off picker.
@@ -236,9 +236,9 @@ void VoiceChangeArea::openPickerForTarget(const PendingVoiceMenu &target)
             // through the raw pointer before it is proven alive.
             if (!self)
                 return;
-            SongDocument *const document = m_owner.document();
-            if (!document || document != target.document || primaryTrack() != target.track ||
-                document->revision() != target.revision)
+            SongDocument &document = m_owner.document();
+            if (&document != target.document || primaryTrack() != target.track ||
+                document.revision() != target.revision)
                 return;
             // Irreversible surface fence: the serial advanced at every hard
             // cancellation boundary (hidden, window deactivated, detached,
@@ -248,13 +248,13 @@ void VoiceChangeArea::openPickerForTarget(const PendingVoiceMenu &target)
             if (m_pickerSerial != pickerSerial)
                 return;
             DocLanePoint existing;
-            if (document->findLanePoint(target.track, DOC_CC_VOICE, target.tick, &existing)) {
+            if (document.findLanePoint(target.track, DOC_CC_VOICE, target.tick, &existing)) {
                 if (existing.value == selectedVoice)
                     return;
-                document->moveLanePoints(
+                document.moveLanePoints(
                     {{target.track, DOC_CC_VOICE, existing, target.tick, selectedVoice}});
             } else {
-                document->addLanePoint(target.track, DOC_CC_VOICE, target.tick, selectedVoice);
+                document.addLanePoint(target.track, DOC_CC_VOICE, target.tick, selectedVoice);
             }
             // The mutation's synchronous document fan-out can tear this band
             // down before the refresh runs.
@@ -285,9 +285,9 @@ void VoiceChangeArea::handleMenuAction(int actionId)
     }
     if (!self)
         return; // The focus swap tore this band down.
-    SongDocument *const document = m_owner.document();
-    if (!document || document != pending.document || primaryTrack() != pending.track ||
-        document->revision() != pending.revision)
+    SongDocument &document = m_owner.document();
+    if (&document != pending.document || primaryTrack() != pending.track ||
+        document.revision() != pending.revision)
         return; // Stale target: no mutation, no picker.
 
     switch (static_cast<VoiceMenuAction>(actionId)) {
@@ -307,9 +307,9 @@ void VoiceChangeArea::handleMenuAction(int actionId)
         // captured tick, so the removed occurrence is the one the document
         // holds now, never a stale copy.
         DocLanePoint currentMarker;
-        if (!document->findLanePoint(pending.track, DOC_CC_VOICE, pending.tick, &currentMarker))
+        if (!document.findLanePoint(pending.track, DOC_CC_VOICE, pending.tick, &currentMarker))
             return;
-        document->deleteLanePoints(pending.track, DOC_CC_VOICE, {currentMarker});
+        document.deleteLanePoints(pending.track, DOC_CC_VOICE, {currentMarker});
         // Deletion's synchronous documentChanged fan-out can tear this band
         // down before the refresh runs.
         if (!self)

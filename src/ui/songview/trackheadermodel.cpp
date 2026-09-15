@@ -252,8 +252,8 @@ void TrackHeaderModel::resolveRecordColors(TrackHeaderRecord &record) const
         backdrop = record.overlayColor;
     }
 
-    const SongDocument *document = m_owner.document();
-    if (document && record.track >= document->trackBudget()) {
+    const SongDocument &document = m_owner.document();
+    if (record.track >= document.trackBudget()) {
         record.titleColor = mixTowardOklab(record.titleColor, backdrop, overBudgetMix);
         record.subtitleColor = mixTowardOklab(record.subtitleColor, backdrop, overBudgetMix);
     }
@@ -308,14 +308,14 @@ void TrackHeaderModel::rebuild(const TrackActivity &activity, bool playing)
 
     std::vector<TrackHeaderRecord> next;
     const MidiTimeline *timeline = m_owner.timeline();
-    SongDocument *document = m_owner.document();
+    SongDocument &document = m_owner.document();
     if (timeline) {
         next.reserve(17); // 16 engine tracks plus the optional add row.
         for (int track = 0; track < 16; ++track) {
             if (timeline->tracks[track].used)
                 next.push_back(makeTrackRecord(track, activity, playing));
         }
-        if (document && document->canAddTrack())
+        if (document.canAddTrack())
             next.push_back(makeAddTrackRecord());
     }
 
@@ -495,8 +495,8 @@ void TrackHeaderModel::syncAppearance()
 
 void TrackHeaderModel::beginRename(int track)
 {
-    SongDocument *document = m_owner.document();
-    if (!document || track < 0 || track >= 16 || document->smfTrackFor(track) < 0 ||
+    SongDocument &document = m_owner.document();
+    if (track < 0 || track >= 16 || document.smfTrackFor(track) < 0 ||
         std::none_of(
             m_rows.begin(), m_rows.end(),
             [track](const TrackHeaderRecord &record) { return record.track == track; })) {
@@ -506,7 +506,7 @@ void TrackHeaderModel::beginRename(int track)
         return;
     cancelRename();
     m_renamingTrack = track;
-    m_renameDraft = document->trackName(track);
+    m_renameDraft = document.trackName(track);
     m_renamePlaceholder = SongView::tr("Track %1").arg(track + 1);
     emit renameChanged();
 }
@@ -562,8 +562,8 @@ void TrackHeaderModel::activateSolo(int track)
 
 void TrackHeaderModel::activateAddTrack()
 {
-    SongDocument *document = m_owner.document();
-    if (!document || !document->canAddTrack())
+    SongDocument &document = m_owner.document();
+    if (!document.canAddTrack())
         return;
     QPointer<SongView> owner(&m_owner);
     m_owner.queueHeaderMutation([owner] {
@@ -944,8 +944,7 @@ bool TrackHeaderModel::pointerPress(const TimelinePointerInput &input)
 
     m_owner.trackHeaderClicked(track, input.modifiers);
     const bool plainLeft = input.button == Qt::LeftButton &&
-                           !(input.modifiers & (Qt::ControlModifier | Qt::ShiftModifier)) &&
-                           m_owner.document();
+                           !(input.modifiers & (Qt::ControlModifier | Qt::ShiftModifier));
     if (plainLeft) {
         m_pointer.pressedTrack = track;
         m_pointer.pressPosition = input.position;
@@ -1110,7 +1109,7 @@ void TrackHeaderModel::inputCancelled(TimelineInputCancelReason)
 void TrackHeaderModel::beginReorder(int track, const QPointF &position)
 {
     Q_ASSERT(m_inputHost);
-    if (!m_inputHost || m_pointer.dragging || !m_owner.document() || track < 0)
+    if (!m_inputHost || m_pointer.dragging || track < 0)
         return;
     if (trackRowCount() < 2)
         return;

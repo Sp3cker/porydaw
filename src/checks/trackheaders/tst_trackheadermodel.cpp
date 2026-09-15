@@ -265,7 +265,7 @@ class TrackHeaderModelTest final : public QObject
     struct HeaderFixture {
         SongDocument document;
         std::unique_ptr<MidiTimeline> timeline;
-        SongView view;
+        SongView view{document};
         songview::TrackHeaderModel *headers = nullptr;
         int firstUsed = -1;
         bool documentLoaded = false;
@@ -280,7 +280,6 @@ class TrackHeaderModelTest final : public QObject
             if (!checks::support::showQuickViewport(view, QSize(800, 480)))
                 return false;
             view.setSong(timeline.get(), nullptr);
-            view.setDocument(&document);
             checks::support::bindEditActionsForTest(view);
             headers =
                 view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));

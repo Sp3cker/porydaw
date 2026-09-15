@@ -27,13 +27,11 @@ void SongView::notifyVelocityGestureChanged()
 }
 bool SongView::beginVelocityGesture(const std::vector<DocNote> &notes)
 {
-    if (!m_document)
-        return false;
     std::vector<NoteVelocity> targets;
     targets.reserve(notes.size());
     for (const DocNote &note : notes)
         targets.push_back({note.noteId, int(note.velocity)});
-    if (!m_velocityGesture.begin(m_document->revision(), std::move(targets)))
+    if (!m_velocityGesture.begin(m_document.revision(), std::move(targets)))
         return false;
     notifyVelocityGestureChanged();
     return true;
@@ -64,11 +62,9 @@ SongView::VelocityCommitResult SongView::commitVelocityGesture()
         return VelocityCommitResult::NoGesture;
     const uint64_t expectedRevision = completion->expectedRevision;
     notifyVelocityGestureChanged();
-    if (!m_document)
-        return VelocityCommitResult::Rejected;
     const DocumentSwapHintScope swapHint{*this, cVelocityMutationDirty};
     const std::optional<uint64_t> revision =
-        m_document->setNotesVelocities(expectedRevision, completion->targets);
+        m_document.setNotesVelocities(expectedRevision, completion->targets);
     if (!revision)
         return VelocityCommitResult::Rejected;
     if (*revision > expectedRevision)

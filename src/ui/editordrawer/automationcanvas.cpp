@@ -29,7 +29,7 @@ AutomationCanvas::AutomationCanvas(AutomationPage &page)
     , m_laneCaptionFont(typography::regular(typography::caption(QGuiApplication::font())))
     , m_page(page)
     , m_rowData(&page)
-    , m_tempoLane(&page)
+    , m_tempoLane(page.document())
     , m_laneSelection(page.m_owner.selectionModel(), m_rowData.rows(), page.usedTrackMask())
     , m_hoverState(QGuiApplication::font())
 {
@@ -325,13 +325,11 @@ void AutomationCanvas::rebuildNodeStack()
     // valid value geometry; only activeLane() decides what renders and hit-tests.
     const QRect body(QPoint{}, m_page.automationViewportSize());
     m_nodeStack.push_back({{EditorAutomationRowKind::Tempo, 0, 0}, &m_tempoLane, body, nullptr});
-    if (!m_page.document())
-        return;
     const auto &rows = m_rowData.rows();
     auto &rowText = m_rowData.rowText();
     m_ccAdapters.reserve(rows.size());
     for (const auto &row : rows)
-        m_ccAdapters.emplace_back(*m_page.document(), int(row.id.track), row.id.controller);
+        m_ccAdapters.emplace_back(m_page.document(), int(row.id.track), row.id.controller);
     for (int i = 0; i < int(rows.size()); ++i)
         m_nodeStack.push_back({rows[std::size_t(i)].id, &m_ccAdapters[std::size_t(i)], body,
                                &rowText[std::size_t(i)]});
@@ -514,11 +512,11 @@ void AutomationCanvas::cancelNodeGestures()
 
 bool AutomationCanvas::openValuePromptForNode(LaneHandle handle, const NodePoint &point)
 {
-    SongDocument *document = m_page.document();
+    SongDocument &document = m_page.document();
     const NodeLaneSlot *slot = resolveSlot(handle);
-    if (!document || !slot || !slot->lane)
+    if (!slot || !slot->lane)
         return false;
-    m_pendingValuePrompt = PendingValuePrompt{handle, point, document->revision(),
+    m_pendingValuePrompt = PendingValuePrompt{handle, point, document.revision(),
                                               slot->lane->valuePrompt(point.value), true};
     emit valuePromptChanged();
     return true;
@@ -526,13 +524,13 @@ bool AutomationCanvas::openValuePromptForNode(LaneHandle handle, const NodePoint
 
 bool AutomationCanvas::openValuePromptForInsertion(LaneHandle handle, Tick tick, int storedValue)
 {
-    SongDocument *document = m_page.document();
+    SongDocument &document = m_page.document();
     const NodeLaneSlot *slot = resolveSlot(handle);
-    if (!document || !slot || !slot->lane)
+    if (!slot || !slot->lane)
         return false;
     m_pendingValuePrompt = PendingValuePrompt{handle,
                                               {tick, storedValue},
-                                              document->revision(),
+                                              document.revision(),
                                               slot->lane->valuePrompt(storedValue),
                                               false};
     emit valuePromptChanged();
@@ -546,10 +544,10 @@ void AutomationCanvas::acceptNodeValuePrompt(int displayedValue)
     if (!pending)
         return;
     emit valuePromptChanged();
-    SongDocument *document = m_page.document();
+    SongDocument &document = m_page.document();
     const NodeLaneSlot *slot = resolveSlot(pending->lane);
     NodeLane *lane = slot ? slot->lane : nullptr;
-    if (!document || !lane || document->revision() != pending->expectedRevision) {
+    if (!lane || document.revision() != pending->expectedRevision) {
         // Stale prompt — replacement, lane removal, or a document change
         // since it opened. No edit, no undo entry, only the focus return.
         if (m_inputHost)

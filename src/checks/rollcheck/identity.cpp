@@ -55,13 +55,12 @@ void PianoRollTest::duplicateNoteIdentity()
         QFAIL("document did not mint distinct equal-visible duplicate note IDs");
     }
 
-    SongView identityView;
+    SongView identityView(projectionDoc);
     auto identityTimeline = projectionDoc.buildTimeline(48000.0);
     songview::TimelineQuickView *const identityQuick = identityView.quickView();
     QVERIFY(identityQuick && identityQuick->quickWindow());
     identityQuick->quickWindow()->resize(QSize(800, 480));
     identityView.setSong(identityTimeline.get(), nullptr);
-    identityView.setDocument(&projectionDoc);
     checks::support::bindEditActionsForTest(identityView);
     QObject::connect(&projectionDoc, &SongDocument::documentChanged, &identityView, [&] {
         auto rebuilt = projectionDoc.buildTimeline(48000.0);

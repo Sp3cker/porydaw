@@ -87,7 +87,7 @@ QList<int> activityRoles(const songview::TrackHeaderModel &model)
 
 void TrackActivityMeterTest::init()
 {
-    m_view = std::make_unique<SongView>();
+    m_view = std::make_unique<SongView>(m_document);
     m_timeline = std::make_shared<MidiTimeline>();
     m_timeline->tracks[kTrack].used = true;
     m_timeline->usedTrackCount = 1;

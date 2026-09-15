@@ -100,12 +100,12 @@ bool AutomationCanvas::beginPencilPress(QPointF position, Qt::KeyboardModifiers 
             }
         }
     }
-    const AutomationPencilGesture::Target target{handle, m_page.document()->revision()};
+    const AutomationPencilGesture::Target target{handle, m_page.document().revision()};
     const AutomationPencilGesture::Sample sample{mapped.rawTick, position.x(), mapped.point,
                                                  double(mapped.point.value)};
     auto stroke = AutomationPencilGesture::start(
         target, lane.minimumValue(), lane.maximumValue(), timeline->lengthTicks,
-        m_page.document()->ticksPerClock(), lane.points(), lane.leadIn(), sample, mapped.cell);
+        m_page.document().ticksPerClock(), lane.points(), lane.leadIn(), sample, mapped.cell);
     if (!stroke)
         return false;
     PencilGesture pencil{.lane = handle,
@@ -158,8 +158,6 @@ bool AutomationCanvas::pointerPress(const songview::TimelinePointerInput &input)
 {
     m_hoverState.clearHover();
     requestHoverQuickUpdate();
-    if (!m_page.document())
-        return false;
     const QPointF position = contentPosition(input.position);
     songview::TimelineInputHost *const host = input.host ? input.host : m_inputHost;
 
@@ -371,8 +369,6 @@ bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &inpu
 
 bool AutomationCanvas::pointerDoubleClick(const songview::TimelinePointerInput &input)
 {
-    if (!m_page.document())
-        return false;
     const QPointF position = contentPosition(input.position);
     if (input.surface != songview::TimelineInputSurface::Plot || input.button != Qt::LeftButton)
         return false;
@@ -428,7 +424,7 @@ bool AutomationCanvas::keyPress(const songview::TimelineKeyInput &input)
                     NodeLane *lane = slot->lane;
                     const NodeDrag drag{hover.lane, hover.point, hover.point, lane->minimumValue(),
                                         lane->maximumValue()};
-                    commitNodePointDeletes(m_page.document()->revision(), {drag});
+                    commitNodePointDeletes(m_page.document().revision(), {drag});
                     m_hoverState.clearHover();
                     requestHoverQuickUpdate();
                     m_page.requestRefresh();

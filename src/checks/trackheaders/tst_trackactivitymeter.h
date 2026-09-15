@@ -6,6 +6,7 @@
 
 #include "audio/trackactivitylevel.h"
 #include "core/miditimeline.h"
+#include "core/songdocument.h"
 
 #include <memory>
 
@@ -37,6 +38,7 @@ class TrackActivityMeterTest final : public QObject
     int rowForTrack(int track) const;
 
     std::shared_ptr<MidiTimeline> m_timeline;
+    SongDocument m_document;
     std::unique_ptr<SongView> m_view;
     QPointer<songview::TimelineQuickView> m_quick;
     QPointer<songview::TrackHeaderModel> m_model;

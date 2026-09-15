@@ -78,13 +78,13 @@ QPointF TrackHeaderModel::headerMenuScenePosition(const QPointF &globalPosition)
 
 void TrackHeaderModel::showContextMenu(int track, const QPointF &scenePosition)
 {
-    SongDocument *const document = m_owner.document();
+    SongDocument &document = m_owner.document();
     QuickPopupSession *const session = m_headerMenuSession.data();
-    if (!document || !session)
+    if (!session)
         return;
 
     ensureHeaderMenuAdapters();
-    m_headerMenuModel->setItems(buildHeaderMenuItems(*document));
+    m_headerMenuModel->setItems(buildHeaderMenuItems(document));
 
     // Snapshot the guarded open-time target first, but publish it only
     // after open()'s implicit cancellation of a displaced session has
@@ -92,8 +92,8 @@ void TrackHeaderModel::showContextMenu(int track, const QPointF &scenePosition)
     // open failure publishes nothing. The snapshot travels through the
     // session close until activation consumes it; cancellation clears it.
     PendingHeaderMenu target;
-    target.document = document;
-    target.documentRevision = document->revision();
+    target.document = &document;
+    target.documentRevision = document.revision();
     target.track = track;
 
     m_headerMenuHost->open(m_headerMenuModel, scenePosition);
@@ -110,8 +110,8 @@ void TrackHeaderModel::handleHeaderMenuAction(int actionId)
     // that rebuilds this model, and a target must never fire twice.
     const PendingHeaderMenu target = std::move(*m_pendingHeaderMenu);
     m_pendingHeaderMenu.reset();
-    SongDocument *const document = m_owner.document();
-    if (!document || document != target.document || document->revision() != target.documentRevision)
+    SongDocument &document = m_owner.document();
+    if (&document != target.document || document.revision() != target.documentRevision)
         return; // Stale raw index: no reveal, no queued mutation, no rename.
 
     // The activation close drops Quick focus without restoration, so hand
@@ -131,7 +131,7 @@ void TrackHeaderModel::handleHeaderMenuAction(int actionId)
         // re-checks the captured document identity and revision so a remap
         // landing between pick and execution cannot reinterpret the raw index.
         m_owner.queueHeaderMutation([owner, snapshot = target] {
-            if (!owner || owner->document() != snapshot.document || !snapshot.document ||
+            if (!owner || &owner->document() != snapshot.document || !snapshot.document ||
                 snapshot.document->revision() != snapshot.documentRevision)
                 return;
             owner->editTrackVoice(snapshot.track);
@@ -147,7 +147,7 @@ void TrackHeaderModel::handleHeaderMenuAction(int actionId)
         break;
     case HeaderMenuAction::DuplicateTrack:
         m_owner.queueHeaderMutation([owner, snapshot = target] {
-            if (!owner || owner->document() != snapshot.document || !snapshot.document ||
+            if (!owner || &owner->document() != snapshot.document || !snapshot.document ||
                 snapshot.document->revision() != snapshot.documentRevision)
                 return;
             owner->duplicateTrack(snapshot.track);
@@ -155,7 +155,7 @@ void TrackHeaderModel::handleHeaderMenuAction(int actionId)
         break;
     case HeaderMenuAction::DeleteTrack:
         m_owner.queueHeaderMutation([owner, snapshot = target] {
-            if (!owner || owner->document() != snapshot.document || !snapshot.document ||
+            if (!owner || &owner->document() != snapshot.document || !snapshot.document ||
                 snapshot.document->revision() != snapshot.documentRevision)
                 return;
             owner->deleteTrack(snapshot.track);

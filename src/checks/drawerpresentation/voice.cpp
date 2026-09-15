@@ -350,10 +350,10 @@ void DrawerPresentationTest::voicePickerTransactions()
     checks::voicepicker::filter(picker, QStringLiteral("007"));
     QTRY_VERIFY(checks::voicepicker::row(picker, 7));
     const Snapshot frozen = fixture.snapshot();
-    fixture.view().setDocument(nullptr);
+    fixture.view().prepareForSongReplacement();
     QTRY_VERIFY(!checks::voicepicker::active(fixture.view()));
     QVERIFY(fixture.snapshot() == frozen);
-    fixture.view().setDocument(&fixture.document());
+    fixture.view().setSong(fixture.view().timeline(), fixture.view().voicegroup());
 
     doubleClick(fixture, 96);
     QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())));

@@ -106,7 +106,7 @@ uint32_t AutomationPage::usedTrackMask() const noexcept
     return mask;
 }
 
-SongDocument *AutomationPage::document() const noexcept
+SongDocument &AutomationPage::document() const noexcept
 {
     return m_owner.document();
 }

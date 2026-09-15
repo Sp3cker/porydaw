@@ -13,7 +13,6 @@
 
 class QAction;
 class AutomationCanvas;
-class TempoLane;
 class CCLanes;
 struct NodeLaneHoverState;
 class MidiTimeline;
@@ -57,7 +56,6 @@ class AutomationPage final : public QObject
   private:
     friend class AutomationCanvas;
     friend class CCLanes;
-    friend class TempoLane;
     friend struct NodeLaneHoverState;
     friend class songview::TimelineQuickView;
     // Read-only access to the timeline mapping queries (tickAtContentX,
@@ -73,7 +71,7 @@ class AutomationPage final : public QObject
     const DrawerPageLiveState &liveState() const noexcept { return m_liveState; }
     const MidiTimeline *timeline() const noexcept;
     uint32_t usedTrackMask() const noexcept;
-    SongDocument *document() const noexcept;
+    SongDocument &document() const noexcept;
     const LoadedVoiceGroup *voicegroup() const noexcept;
     Tick snapTick(double tick, bool fineMode) const noexcept;
     Tick snapTickDown(double tick, bool fineMode) const noexcept;

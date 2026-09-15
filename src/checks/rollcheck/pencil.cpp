@@ -110,7 +110,6 @@ void PianoRollTest::pencilFractionalPlacement()
              "undo left the fractional displayed-cell probe in the document");
     QCOMPARE(doc.undoStack()->index(), undo);
     QCOMPARE(doc.smf().write(), before);
-    QCOMPARE(view.document(), &doc);
     QVERIFY(view.timeline());
     view.applyViewState(original);
     QCoreApplication::processEvents();

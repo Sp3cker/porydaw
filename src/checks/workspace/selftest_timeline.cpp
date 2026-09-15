@@ -90,8 +90,8 @@ void WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo()
     const int track = view->selectionModel().primaryTrack();
     const MidiTimeline *const beforeEdit = tab->timeline().get();
     const uint64_t sampleBeforeEdit = window.m_audio.playheadSamples();
-    view->document()->addNote(track, 0, 60, 24, 100);
-    view->document()->addLanePoint(track, 7, 0, 100);
+    view->document().addNote(track, 0, 60, 24, 100);
+    view->document().addLanePoint(track, 7, 0, 100);
     QVERIFY(tab->document().isDirty());
     QTRY_VERIFY(tab->timeline().get() != beforeEdit &&
                 window.m_audio.timeline() == tab->timeline().get() &&

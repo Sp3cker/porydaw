@@ -144,7 +144,6 @@ class HostIntegrationTest final : public QObject
         const std::optional<Session> session = openSession();
         QVERIFY(session.has_value());
         QVERIFY(session->first != session->active);
-        QVERIFY(session->active->view().document());
         QVERIFY(twoNoteTrack(session->active->document()) >= 0);
         QCOMPARE(session->active->view().selectionModel().noteSelection().size(), size_t{2});
     }
@@ -426,7 +425,7 @@ class HostIntegrationTest final : public QObject
         QTest::newRow("drawer-hide") << QStringLiteral("drawer-hide");
         QTest::newRow("track-replace") << QStringLiteral("track-replace");
         QTest::newRow("song-null") << QStringLiteral("song-null");
-        QTest::newRow("document-null") << QStringLiteral("document-null");
+        QTest::newRow("song-replacement") << QStringLiteral("song-replacement");
         QTest::newRow("voice-replace") << QStringLiteral("voice-replace");
         QTest::newRow("voice-null") << QStringLiteral("voice-null");
         QTest::newRow("quick-ungrab") << QStringLiteral("quick-ungrab");
@@ -485,7 +484,7 @@ class HostIntegrationTest final : public QObject
         QVERIFY(view.userGestureActive());
         const bool clearsSelection = route == QStringLiteral("track-replace") ||
                                      route == QStringLiteral("song-null") ||
-                                     route == QStringLiteral("document-null");
+                                     route == QStringLiteral("song-replacement");
         LoadedVoiceGroup replacement = {};
         if (route == QStringLiteral("page-switch")) {
             view.setDrawerActivePage(EditorDrawerPage::Automations);
@@ -495,8 +494,8 @@ class HostIntegrationTest final : public QObject
             view.selectTrack(track == 0 ? 1 : 0);
         } else if (route == QStringLiteral("song-null")) {
             view.setSong(nullptr, nullptr);
-        } else if (route == QStringLiteral("document-null")) {
-            view.setDocument(nullptr);
+        } else if (route == QStringLiteral("song-replacement")) {
+            view.prepareForSongReplacement();
         } else if (route == QStringLiteral("voice-replace")) {
             view.setVoicegroup(&replacement);
         } else if (route == QStringLiteral("voice-null")) {
@@ -527,6 +526,8 @@ class HostIntegrationTest final : public QObject
         QVERIFY(!quickWindow->mouseGrabberItem());
         const QCursor *cursor = QApplication::overrideCursor();
         QVERIFY(!cursor || cursor->shape() != Qt::ClosedHandCursor);
+        if (route == QStringLiteral("song-replacement"))
+            view.setSong(timeline.get(), view.voicegroup());
         if (route == QStringLiteral("voice-replace"))
             view.setVoicegroup(nullptr);
     }

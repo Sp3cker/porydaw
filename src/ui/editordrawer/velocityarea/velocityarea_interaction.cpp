@@ -42,7 +42,7 @@ void VelocityArea::beginFrozenGesture(const std::vector<DocNote> &notes, Interac
     m_pressedNote = pressedNote;
     m_selectionBeforePress = selectionBeforePress;
     m_controlPress = controlPress;
-    if (!hasDocument() || notes.empty())
+    if (notes.empty())
         return;
     m_detentUnlock = detentUnlock;
     appendFrozenNotes(notes);
@@ -66,8 +66,6 @@ void VelocityArea::beginVelocityPaint(const QPointF &position, bool detentUnlock
     m_pressedNote = pressedNote;
     m_selectionBeforePress = selectionBeforePress;
     m_controlPress = controlPress;
-    if (!hasDocument())
-        return;
     m_detentUnlock = detentUnlock;
     m_pressPosition = position;
     m_previousPosition = position;
@@ -213,8 +211,6 @@ void VelocityArea::finishGesture(bool commit)
 
 bool VelocityArea::pointerPress(const songview::TimelinePointerInput &input)
 {
-    if (!hasDocument())
-        return false;
     Q_ASSERT(m_inputHost);
     if (!m_inputHost)
         return false;

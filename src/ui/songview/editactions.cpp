@@ -590,9 +590,8 @@ void EditActions::observeTarget(SongView &target)
     m_targetConnections.emplace_back(
         connect(&target, &SongView::editCursorMoved, this, &EditActions::refresh));
 
-    if (SongDocument *const document = target.document())
-        m_targetConnections.emplace_back(connect(document, &SongDocument::documentChanged, this,
-                                                 &EditActions::refreshPasteEligibility));
+    m_targetConnections.emplace_back(connect(&target.document(), &SongDocument::documentChanged,
+                                             this, &EditActions::refreshPasteEligibility));
 
     if (EventListController *const events = target.eventListController()) {
         m_targetConnections.emplace_back(

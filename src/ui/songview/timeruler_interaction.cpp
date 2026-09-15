@@ -38,8 +38,6 @@ QuickPopupSession *quickSessionFor(SongView &owner)
 TimeRuler::PressTarget TimeRuler::pressTargetAt(QPointF pos) const
 {
     PressTarget target;
-    if (!m_owner.document())
-        return target;
     target.marker = hitMarker(pos);
     if (target.marker >= 0)
         return target;
@@ -55,7 +53,6 @@ TimeRuler::PressTarget TimeRuler::pressTargetAt(QPointF pos) const
 
 bool TimeRuler::pointerPress(const TimelinePointerInput &input)
 {
-    SongDocument *doc = m_owner.document();
     const MidiTimeline *timeline = m_owner.timeline();
     if (!timeline || input.surface != TimelineInputSurface::Plot)
         return false;
@@ -65,8 +62,6 @@ bool TimeRuler::pointerPress(const TimelinePointerInput &input)
         // exact chip identity — never the left-drag snapped anchor — and
         // showRulerMenu consumes it through the two terminal
         // target-establishment paths.
-        if (!doc)
-            return false;
         m_rightPress = true;
         m_rightPressTick = m_camera.tickAtContentX(input.position.x());
         int sigNum, sigDen;
@@ -218,8 +213,7 @@ bool TimeRuler::pointerRelease(const TimelinePointerInput &input)
     }
     if (m_dragTimeSig) {
         m_dragTimeSig = false;
-        if (SongDocument *doc = m_owner.document())
-            doc->moveTimeSig(m_dragTimeSigFrom, m_dragTick);
+        m_owner.document().moveTimeSig(m_dragTimeSigFrom, m_dragTick);
         requestQuickUpdate();
         return true;
     }
@@ -227,8 +221,7 @@ bool TimeRuler::pointerRelease(const TimelinePointerInput &input)
         return false;
     const bool endMarker = m_dragMarker == 1;
     m_dragMarker = -1;
-    if (SongDocument *doc = m_owner.document())
-        doc->setLoopTick(endMarker, int64_t(m_dragTick));
+    m_owner.document().setLoopTick(endMarker, int64_t(m_dragTick));
     requestQuickUpdate();
     return true;
 }
@@ -238,11 +231,10 @@ bool TimeRuler::pointerDoubleClick(const TimelinePointerInput &input)
     if (input.surface != TimelineInputSurface::Plot)
         return false;
 
-    SongDocument *doc = m_owner.document();
     Tick sigTick;
     int numerator, denomPow2;
     bool implicit;
-    if (input.button != Qt::LeftButton || !doc ||
+    if (input.button != Qt::LeftButton ||
         !hitTimeSigChip(input.position, &sigTick, &numerator, &denomPow2, &implicit)) {
         return false;
     }
@@ -259,8 +251,6 @@ bool TimeRuler::pointerDoubleClick(const TimelinePointerInput &input)
 
 void TimeRuler::editTimeSignatureAtCursor()
 {
-    if (!m_owner.document())
-        return;
     const Tick tick = m_owner.editCursorTick();
     int numerator, denomPow2;
     sigAtTick(tick, &numerator, &denomPow2);
@@ -328,11 +318,10 @@ void TimeRuler::showRulerMenu(const QPointF &scenePos)
     const Tick chipTick = m_rightPressChipTick;
     clearRightPressTarget();
 
-    SongDocument *doc = m_owner.document();
     const MidiTimeline *timeline = m_owner.timeline();
     QuickPopupSession *const session = quickSessionFor(m_owner);
     const EditActions *const actions = m_owner.editActions();
-    if (!doc || !timeline || !session || !actions)
+    if (!timeline || !session || !actions)
         return;
 
     // Target establishment (spec.md#target-establishment): the selection

@@ -15,9 +15,7 @@ QString translated(const char *text)
 
 } // namespace
 
-TempoLane::TempoLane(AutomationPage *page) noexcept : m_page(page) {}
-
-TempoLane::TempoLane(SongDocument &document) noexcept : m_document(&document) {}
+TempoLane::TempoLane(SongDocument &document) noexcept : m_document(document) {}
 
 NodeValuePrompt TempoLane::valuePrompt(int storedValue) const
 {

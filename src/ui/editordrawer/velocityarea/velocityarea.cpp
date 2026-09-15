@@ -113,8 +113,8 @@ void VelocityArea::refreshLiveState(const DrawerPageLiveState &liveState)
         const VelocityMap context = [this] {
             if (m_hoveredNote) {
                 DocNote note;
-                const SongDocument *document = m_owner.document();
-                if (document && document->findNote(*m_hoveredNote, &note))
+                const SongDocument &document = m_owner.document();
+                if (document.findNote(*m_hoveredNote, &note))
                     return contextForNote(note);
             }
             return currentContext();
@@ -249,8 +249,8 @@ void VelocityArea::rebuildAxis()
     VelocityMap context = currentContext();
     if (m_hoveredNote) {
         DocNote note;
-        const SongDocument *document = m_owner.document();
-        if (document && document->findNote(*m_hoveredNote, &note)) {
+        const SongDocument &document = m_owner.document();
+        if (document.findNote(*m_hoveredNote, &note)) {
             activeValues.push_back(displayedVelocity(note));
             context = contextForNote(note);
         }
@@ -343,12 +343,10 @@ VelocityMap VelocityArea::contextForNote(const DocNote &note) const
 std::vector<DocNote> VelocityArea::selectedNotes() const
 {
     std::vector<DocNote> notes;
-    const SongDocument *document = m_owner.document();
-    if (!document)
-        return notes;
+    const SongDocument &document = m_owner.document();
     for (const NoteId noteId : m_owner.selectionModel().noteSelection()) {
         DocNote note;
-        if (document->findNote(noteId, &note))
+        if (document.findNote(noteId, &note))
             notes.push_back(note);
     }
     return notes;
@@ -356,10 +354,8 @@ std::vector<DocNote> VelocityArea::selectedNotes() const
 
 std::vector<DocNote> VelocityArea::primaryTrackNotes() const
 {
-    const SongDocument *document = m_owner.document();
-    if (!document)
-        return {};
-    return document->notesForTrack(m_owner.selectionModel().primaryTrack());
+    const SongDocument &document = m_owner.document();
+    return document.notesForTrack(m_owner.selectionModel().primaryTrack());
 }
 
 std::optional<DocNote> VelocityArea::notesAt(const QPointF &position, bool includeStems) const
@@ -516,9 +512,4 @@ void VelocityArea::clearPreview()
     m_selectionBeforePress.clear();
     m_controlPress = false;
     m_detentUnlock = false;
-}
-
-bool VelocityArea::hasDocument() const
-{
-    return m_owner.document() != nullptr;
 }

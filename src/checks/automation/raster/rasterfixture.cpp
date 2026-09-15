@@ -187,7 +187,6 @@ void AutomationRasterFixture::shutdown()
 
     if (m_view) {
         m_view->setSong(nullptr, nullptr);
-        m_view->setDocument(nullptr);
     }
     QCoreApplication::sendPostedEvents();
     QCoreApplication::processEvents(QEventLoop::AllEvents);
@@ -419,13 +418,12 @@ bool AutomationRasterFixture::initialize(QString &error)
     std::strncpy(m_voicegroup->voiceNames[3], "automation-voice",
                  sizeof(m_voicegroup->voiceNames[3]) - 1);
     m_timeline = songDocument.buildTimeline(kCheckSampleRate);
-    m_view = std::make_unique<SongView>();
+    m_view = std::make_unique<SongView>(songDocument);
     songview::TimelineQuickView *const quick = m_view->quickView();
     if (!quick) {
         error = QStringLiteral("concrete SongView did not expose an unhosted Quick view");
         return false;
     }
-    m_view->setDocument(&songDocument);
     m_view->setSong(m_timeline.get(), m_voicegroup.get());
     checks::support::bindEditActionsForTest(*m_view);
     m_view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);

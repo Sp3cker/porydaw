@@ -349,13 +349,13 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QSignalSpy origin(&b, &SongView::editorViewStateChanged);
         QSignalSpy hub(window.m_workspace.get(), &WorkspaceUi::editorViewStateChanged);
         QSignalSpy persisted(&window, &MainWindow::editorViewStatePersisted);
-        const int tracks = b.document()->engineTrackCount();
+        const int tracks = b.document().engineTrackCount();
         QVERIFY(tracks >= 2);
         const int source = 1;
         const int target = source == tracks - 1 ? 0 : tracks - 1;
-        const QByteArray midi = b.document()->smf().write();
+        const QByteArray midi = b.document().smf().write();
         const EditorViewState before = b.editorViewState();
-        QVERIFY(b.document()->moveTrack(source, target));
+        QVERIFY(b.document().moveTrack(source, target));
         QCoreApplication::processEvents();
         QCOMPARE(origin.count(), 1);
         QCOMPARE(hub.count(), 1);
@@ -371,15 +371,15 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QCOMPARE(remapped.laneRanges.at(tempo), uint8_t{100});
         QCOMPARE(a.editorViewState(), remapped);
         QCOMPARE(loadEditorViewState(QSettings{}), remapped);
-        b.document()->undoStack()->undo();
+        b.document().undoStack()->undo();
         QCoreApplication::processEvents();
         QCOMPARE(origin.count(), 2);
         QCOMPARE(hub.count(), 2);
         QCOMPARE(persisted.count(), 2);
         QCOMPARE(a.editorViewState(), before);
         QCOMPARE(b.editorViewState(), before);
-        QCOMPARE(b.document()->smf().write(), midi);
-        QVERIFY(!b.document()->isDirty());
+        QCOMPARE(b.document().smf().write(), midi);
+        QVERIFY(!b.document().isDirty());
         QCOMPARE(projection.count(), 0);
 
         EditorViewState reduced;
@@ -392,20 +392,20 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         origin.clear();
         hub.clear();
         persisted.clear();
-        const QByteArray quietMidi = b.document()->smf().write();
-        QVERIFY(b.document()->moveTrack(source, target));
+        const QByteArray quietMidi = b.document().smf().write();
+        QVERIFY(b.document().moveTrack(source, target));
         QCoreApplication::processEvents();
         QCOMPARE(origin.count(), 0);
         QCOMPARE(hub.count(), 0);
         QCOMPARE(persisted.count(), 0);
-        b.document()->undoStack()->undo();
+        b.document().undoStack()->undo();
         QCoreApplication::processEvents();
         QCOMPARE(origin.count(), 0);
         QCOMPARE(projection.count(), 0);
         QCOMPARE(hub.count(), 0);
         QCOMPARE(persisted.count(), 0);
-        QCOMPARE(b.document()->smf().write(), quietMidi);
-        QVERIFY(!b.document()->isDirty());
+        QCOMPARE(b.document().smf().write(), quietMidi);
+        QVERIFY(!b.document().isDirty());
     }
 
     void viewOnlyLaneMutationsPersistWithoutDocumentMutation()
@@ -416,9 +416,9 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         SongView &a = session->a->view();
         SongView &b = session->b->view();
         b.setEditorViewState(completeSeed());
-        const QByteArray midi = b.document()->smf().write();
-        const uint64_t revision = b.document()->revision();
-        const int undoCount = b.document()->undoStack()->count();
+        const QByteArray midi = b.document().smf().write();
+        const uint64_t revision = b.document().revision();
+        const int undoCount = b.document().undoStack()->count();
         const auto snapshot = porydawSnapshot(session->fixture->root());
         QSignalSpy origin(&b, &SongView::editorViewStateChanged);
         QSignalSpy hub(window.m_workspace.get(), &WorkspaceUi::editorViewStateChanged);
@@ -433,9 +433,9 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QCOMPARE(persisted.count(), 1);
         QCOMPARE(a.editorViewState(), b.editorViewState());
         QCOMPARE(loadEditorViewState(QSettings{}), b.editorViewState());
-        QCOMPARE(b.document()->smf().write(), midi);
-        QCOMPARE(b.document()->revision(), revision);
-        QCOMPARE(b.document()->undoStack()->count(), undoCount);
+        QCOMPARE(b.document().smf().write(), midi);
+        QCOMPARE(b.document().revision(), revision);
+        QCOMPARE(b.document().undoStack()->count(), undoCount);
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot);
         next = b.editorViewState();
         next.emptyLanes.erase(lane);
@@ -444,9 +444,9 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QCOMPARE(origin.count(), 2);
         QCOMPARE(hub.count(), 2);
         QCOMPARE(persisted.count(), 2);
-        QCOMPARE(b.document()->smf().write(), midi);
-        QCOMPARE(b.document()->revision(), revision);
-        QCOMPARE(b.document()->undoStack()->count(), undoCount);
+        QCOMPARE(b.document().smf().write(), midi);
+        QCOMPARE(b.document().revision(), revision);
+        QCOMPARE(b.document().undoStack()->count(), undoCount);
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot);
     }
 
@@ -459,8 +459,8 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         SongView &b = session->b->view();
         const EditorViewState beforeA = a.editorViewState();
         const EditorViewState beforeB = b.editorViewState();
-        const QByteArray midi = b.document()->smf().write();
-        const uint64_t revision = b.document()->revision();
+        const QByteArray midi = b.document().smf().write();
+        const uint64_t revision = b.document().revision();
         const EditorViewState settings = loadEditorViewState(QSettings{});
         const auto snapshot = porydawSnapshot(session->fixture->root());
         QSignalSpy origin(&b, &SongView::editorViewStateChanged);
@@ -469,12 +469,12 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         TrackRemap rejected;
         rejected.engineTrackMap = {0, 0};
         rejected.newEngineTrackCount = 2;
-        emit b.document()->tracksRemapped(rejected);
+        emit b.document().tracksRemapped(rejected);
         QCoreApplication::processEvents();
         QCOMPARE(a.editorViewState(), beforeA);
         QCOMPARE(b.editorViewState(), beforeB);
-        QCOMPARE(b.document()->smf().write(), midi);
-        QCOMPARE(b.document()->revision(), revision);
+        QCOMPARE(b.document().smf().write(), midi);
+        QCOMPARE(b.document().revision(), revision);
         QCOMPARE(loadEditorViewState(QSettings{}), settings);
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot);
         QCOMPARE(origin.count(), 0);

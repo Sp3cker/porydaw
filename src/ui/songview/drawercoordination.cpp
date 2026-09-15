@@ -122,7 +122,7 @@ void SongView::showDrawerPageTimeSelectionMenu(const DrawerPageTimeSelectionMenu
 DrawerPageLiveState SongView::drawerPageLiveState() const
 {
     return {
-        m_document ? m_document->revision() : 0,
+        m_document.revision(),
         pxPerBeat(),
         m_camera.scrollX(),
         m_editCursorTick,

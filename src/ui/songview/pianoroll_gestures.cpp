@@ -112,18 +112,16 @@ bool PianoRoll::contentPressRejectedByScaleFold(const SongDocument *doc, const V
 void PianoRoll::pressContent(const TimelinePointerInput &input)
 {
     beginLeftPress(input);
-    SongDocument *doc = m_sv->document();
-    const ViewNote *hit = doc ? hitNote(input.position) : nullptr;
-    if (contentPressRejectedByScaleFold(doc, hit))
+    SongDocument &doc = m_sv->document();
+    const ViewNote *hit = hitNote(input.position);
+    if (contentPressRejectedByScaleFold(&doc, hit))
         return;
     if (hit) {
         beginNotePress(*hit, input);
         if (m_leftDrag == LeftDrag::PendingVelocity) // deferred path already invalidated
             return;
-    } else if (doc) {
-        beginPendingDraw();
     } else {
-        m_sv->commitEditCursor(m_grid.snapTick(m_pressTick));
+        beginPendingDraw();
     }
     requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection | PianoRollQuickDirty::Overlay);
 }

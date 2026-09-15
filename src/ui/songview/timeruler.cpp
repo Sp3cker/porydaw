@@ -311,10 +311,10 @@ QVariantMap TimeRuler::timeSigPromptAppearance() const
 
 void TimeRuler::openTimeSigPrompt(Tick tick, int numerator, int denominatorPow2)
 {
-    SongDocument *const document = m_owner.document();
+    SongDocument &document = m_owner.document();
     TimelineQuickView *const quick = m_owner.quickView();
     QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
-    if (!document || !session)
+    if (!session)
         return;
 
     // Replacement ends the active shared-popup session before this bridge
@@ -324,8 +324,8 @@ void TimeRuler::openTimeSigPrompt(Tick tick, int numerator, int denominatorPow2)
         cancelTimeSigPromptWithoutFocus();
 
     PendingTimeSigPrompt pending;
-    pending.document = document;
-    pending.documentRevision = document->revision();
+    pending.document = &document;
+    pending.documentRevision = document.revision();
     pending.tick = tick;
     pending.initialNumerator =
         std::clamp(numerator, timeSigPromptMinimumNumerator(), timeSigPromptMaximumNumerator());
@@ -366,11 +366,11 @@ void TimeRuler::acceptTimeSigPrompt(int numerator, int denominatorPow2)
             session->close();
         }
     }
-    SongDocument *const document = m_owner.document();
-    if (document == pending.document.data() && document->revision() == pending.documentRevision &&
+    SongDocument &document = m_owner.document();
+    if (&document == pending.document.data() && document.revision() == pending.documentRevision &&
         (numerator != pending.initialNumerator ||
          denominatorPow2 != pending.initialDenominatorPow2)) {
-        document->setTimeSig(pending.tick, numerator, denominatorPow2);
+        document.setTimeSig(pending.tick, numerator, denominatorPow2);
     }
     restoreRulerFocus();
 }

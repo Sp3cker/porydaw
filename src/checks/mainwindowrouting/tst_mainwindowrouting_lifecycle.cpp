@@ -164,7 +164,6 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
                              workspace.projectState().snapshot.trackBudgetFor(*song));
         QVERIFY(!probe.isReady());
         QVERIFY(probe.timeline());
-        QCOMPARE(probe.view().document(), &probe.document());
         QCOMPARE(probe.view().editorViewState(), global);
         QVERIFY(hasCanonicalFreshViewState(probe.view(), *probe.timeline()));
         QCOMPARE(ready.count(), 0);

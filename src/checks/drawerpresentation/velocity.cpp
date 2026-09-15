@@ -91,10 +91,9 @@ void VelocityPageTest::fixtureRoute101AndInputGeometry()
     LoadedVoiceGroup voices{};
     for (ToneData &voice : voices.voices)
         voice.type = VOICE_DIRECTSOUND;
-    SongView view;
+    SongView view(song->document());
     songview::TimelineQuickView *const quick = view.quickView();
     QVERIFY(quick);
-    view.setDocument(&song->document());
     view.setSong(timeline.get(), &voices);
     checks::support::bindEditActionsForTest(view);
     view.setDrawerActivePage(EditorDrawerPage::Velocity);

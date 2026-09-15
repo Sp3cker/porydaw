@@ -24,7 +24,7 @@ using trackheaders_test::recordsMatchTimeline;
 struct RemapFixture {
     SongDocument document;
     std::unique_ptr<MidiTimeline> timeline;
-    SongView view;
+    SongView view{document};
     std::vector<QString> order;
 
     bool prepare(const SongInfo &song, QString *error)
@@ -35,7 +35,6 @@ struct RemapFixture {
         if (!checks::support::showQuickViewport(view, QSize(800, 480)))
             return false;
         view.setSong(timeline.get(), nullptr);
-        view.setDocument(&document);
         checks::support::bindEditActionsForTest(view);
         QObject::connect(&document, &SongDocument::tracksRemapped, &view,
                          [this] { order.push_back(QStringLiteral("remap")); });

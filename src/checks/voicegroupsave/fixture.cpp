@@ -116,11 +116,7 @@ bool VoicegroupSaveTest::openSong(QString &error)
         return false;
     }
 
-    m_document = m_tab->view().document();
-    if (!m_document) {
-        error = QStringLiteral("SongView did not expose its document");
-        return false;
-    }
+    m_document = &m_tab->view().document();
     m_browser = std::make_unique<VoicegroupBrowserDriver>(workspace);
     if (!m_browser->isAvailable()) {
         error = QStringLiteral("voicegroup browser was not constructed");

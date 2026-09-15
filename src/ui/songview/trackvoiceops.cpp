@@ -258,9 +258,9 @@ QSet<int> SongView::usedVoices() const
 }
 void SongView::editTrackVoice(int track)
 {
-    if (!m_document || track < 0 || track > 15)
+    if (track < 0 || track > 15)
         return;
-    const std::vector<DocLanePoint> changes = m_document->lanePoints(track, DOC_CC_VOICE);
+    const std::vector<DocLanePoint> changes = m_document.lanePoints(track, DOC_CC_VOICE);
     // The track's initial voice is the LAST change on the first change's
     // tick: same-tick duplicates are audibly last-wins, and the header label
     // (currentProgram) already reads them that way — edit what it shows.
@@ -274,9 +274,7 @@ void SongView::editTrackVoice(int track)
     requestVoicePicker(
         tr("Track %1 voice").arg(track + 1), initial, this,
         [this, track, initial](int voice) {
-            if (!m_document)
-                return;
-            const std::vector<DocLanePoint> current = m_document->lanePoints(track, DOC_CC_VOICE);
+            const std::vector<DocLanePoint> current = m_document.lanePoints(track, DOC_CC_VOICE);
             const DocLanePoint *currentTarget = nullptr;
             for (const DocLanePoint &pt : current) {
                 if (currentTarget && pt.tick != currentTarget->tick)
@@ -284,9 +282,9 @@ void SongView::editTrackVoice(int track)
                 currentTarget = &pt;
             }
             if (!currentTarget) {
-                m_document->addLanePoint(track, DOC_CC_VOICE, 0, voice);
+                m_document.addLanePoint(track, DOC_CC_VOICE, 0, voice);
             } else if (voice != initial) {
-                m_document->moveLanePoints(
+                m_document.moveLanePoints(
                     {{track, DOC_CC_VOICE, *currentTarget, currentTarget->tick, voice}});
             }
         },
@@ -294,34 +292,31 @@ void SongView::editTrackVoice(int track)
 }
 void SongView::renameTrack(int track)
 {
-    if (!m_document || track < 0 || track > 15 || m_document->smfTrackFor(track) < 0)
+    if (track < 0 || track > 15 || m_document.smfTrackFor(track) < 0)
         return;
     m_headers->beginRename(track);
 }
 void SongView::commitTrackRename(int track, const QString &name)
 {
-    if (!m_document || track < 0 || track > 15 || m_document->smfTrackFor(track) < 0)
+    if (track < 0 || track > 15 || m_document.smfTrackFor(track) < 0)
         return;
     const QString trimmed = name.trimmed();
     if (nameIsLoopMarker(trimmed))
         return;
     // Queued: the commit originates in the Quick rename field, and the edit
     // rebuilds its model while the input handler is still active.
-    queueHeaderMutation([this, track, trimmed] {
-        if (m_document)
-            m_document->renameTrack(track, trimmed);
-    });
+    queueHeaderMutation([this, track, trimmed] { m_document.renameTrack(track, trimmed); });
 }
 void SongView::addTrack()
 {
-    if (!m_document || !m_document->canAddTrack())
+    if (!m_document.canAddTrack())
         return;
     requestVoicePicker(
         tr("New track voice"), 0, this,
         [this](int voice) {
-            if (!m_document || !m_document->canAddTrack())
+            if (!m_document.canAddTrack())
                 return;
-            const int track = m_document->addTrack(voice); // rebuilds via documentChanged
+            const int track = m_document.addTrack(voice); // rebuilds via documentChanged
             if (track >= 0)
                 selectTrack(track);
         },
@@ -329,23 +324,21 @@ void SongView::addTrack()
 }
 void SongView::duplicateTrack(int track)
 {
-    if (!m_document || track < 0 || track > 15 || m_document->smfTrackFor(track) < 0)
+    if (track < 0 || track > 15 || m_document.smfTrackFor(track) < 0)
         return;
-    const int copy = m_document->duplicateTrack(track); // rebuilds via documentChanged
+    const int copy = m_document.duplicateTrack(track); // rebuilds via documentChanged
     if (copy >= 0)
         selectTrack(copy);
 }
 void SongView::deleteTrack(int track)
 {
-    if (!m_document || track < 0 || track > 15 || m_document->smfTrackFor(track) < 0)
+    if (track < 0 || track > 15 || m_document.smfTrackFor(track) < 0)
         return;
-    m_document->deleteTrack(track); // remaps before documentChanged
+    m_document.deleteTrack(track); // remaps before documentChanged
 }
 void SongView::moveTrack(int from, int to)
 {
-    if (!m_document)
-        return;
-    m_document->moveTrack(from, to); // remaps before documentChanged
+    m_document.moveTrack(from, to); // remaps before documentChanged
 }
 void SongView::onTracksRemapped(const TrackRemap &remap)
 {

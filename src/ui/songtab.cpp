@@ -81,7 +81,7 @@ SongTab::SongTab(SongName name, QWidget *parent)
     : QWidget(parent)
     , m_name(std::move(name))
     , m_document(this)
-    , m_view(new SongView(this))
+    , m_view(new SongView(m_document, this))
 {
     auto *pageLayout = new QVBoxLayout(this);
     pageLayout->setContentsMargins(0, 0, 0, 0);
@@ -161,7 +161,6 @@ void SongTab::applyMidiStage(SongInfo info, SmfFile smf, int trackBudget)
     // only after setSong repoints the view's timeline borrow.
     std::shared_ptr<const MidiTimeline> newTimeline(m_document.buildTimeline(m_sampleRate));
     const LoadedVoiceGroup *const voicegroup = m_voicegroupBound ? m_voicegroup.get() : nullptr;
-    m_view->setDocument(&m_document);
     m_view->setSong(newTimeline.get(), voicegroup);
     m_timeline = std::move(newTimeline);
     // VoicegroupBound may arrive before MidiBound. In that order it already

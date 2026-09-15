@@ -38,7 +38,6 @@ std::unique_ptr<EditorRig> EditorRig::create(SongDocument &document, const Edito
     }
     quickWindow->resize(config.viewSize);
     // Production wiring order (SongTab): document first, then song.
-    rig->m_view->setDocument(&document);
     rig->m_view->setSong(rig->m_timeline.get(), config.voicegroup);
     support::bindEditActionsForTest(*rig->m_view);
     if (config.track >= 0)
@@ -75,13 +74,12 @@ std::unique_ptr<EditorRig> EditorRig::create(SongDocument &document, const Edito
 
 EditorRig::EditorRig(SongDocument &document)
     : m_document(document)
-    , m_view(std::make_unique<SongView>())
+    , m_view(std::make_unique<SongView>(document))
 {}
 
 EditorRig::~EditorRig()
 {
     m_view->setSong(nullptr, nullptr);
-    m_view->setDocument(nullptr);
 }
 
 SongDocument &EditorRig::document() noexcept

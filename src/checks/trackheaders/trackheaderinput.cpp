@@ -347,7 +347,8 @@ void TrackHeadersTest::hoveringHeadersDoesNotCreateTooltip()
 void TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation()
 {
     MidiTimeline timeline;
-    SongView emptyView;
+    SongDocument document;
+    SongView emptyView(document);
     emptyView.setSong(&timeline, nullptr);
     checks::support::bindEditActionsForTest(emptyView);
     QVERIFY(checks::support::showQuickViewport(emptyView, QSize(320, 180)));

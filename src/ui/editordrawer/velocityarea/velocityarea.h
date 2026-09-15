@@ -161,7 +161,6 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
     void finishGesture(bool commit);
     void pauseFollowScroll(bool paused);
     void clearPreview();
-    bool hasDocument() const;
 
     SongView &m_owner;
     const songview::TimeCamera &m_camera;

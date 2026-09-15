@@ -110,11 +110,9 @@ enum class TimeSelectionAction : int {
 // Song view: time ruler, multi-track piano roll (selected track in full
 // color, others ghosted), per-track automation lanes with m4a names, an
 // "other events" strip, and track headers with instrument names from the
-// loaded voicegroup. Read-only over a MidiTimeline (M1); when a SongDocument
-// is attached (M2) the selected track is editable: note draw/move/resize/
-// velocity/delete in the roll, point editing in the lanes, loop-marker
-// dragging in the ruler. The MidiTimeline and LoadedVoiceGroup must outlive
-// the view or be cleared with setSong(nullptr, nullptr) first.
+// loaded voicegroup. The bound SongDocument must outlive the view. The
+// MidiTimeline and LoadedVoiceGroup must outlive the view or be cleared with
+// setSong(nullptr, nullptr) first.
 class SongView : public QObject
 {
     Q_OBJECT
@@ -140,7 +138,7 @@ class SongView : public QObject
                    insertTimePromptChanged FINAL)
 
   public:
-    explicit SongView(QObject *parent = nullptr);
+    explicit SongView(SongDocument &document, QObject *parent = nullptr);
     ~SongView() override;
 
     void setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voicegroup);
@@ -151,13 +149,11 @@ class SongView : public QObject
     bool advanceTrackActivity(const TrackActivityLevels &levels, float elapsedSeconds,
                               bool playing);
 
-    // Editing is enabled while a document is attached (may be null).
-    void setDocument(SongDocument *document);
     void prepareForSongReplacement();
     // Cancels only ephemeral user input after a readiness drop; it never
     // changes persistent view or document state.
     void cancelTransientInput();
-    SongDocument *document() const { return m_document; }
+    SongDocument &document() const noexcept { return m_document; }
     // Voicegroup swap after a -G settings change (labels only; may be null
     // while the audio engine frees the old one).
     void setVoicegroup(const LoadedVoiceGroup *voicegroup);
@@ -801,7 +797,9 @@ class SongView : public QObject
     void requestPianoRollQuickUpdate(songview::PianoRollQuickDirtySet dirty);
     void syncTimelineQuickAppearance();
 
-    void disconnectDocument();
+    void observeDocument();
+    void suspendDocumentObservation();
+    void onDocumentChanged();
     void notifyDrawerSongChanged();
     void notifyVelocityGestureChanged();
     void refreshDrawerPages();
@@ -927,7 +925,9 @@ class SongView : public QObject
     songview::TimeAxis m_timeAxis;            // musical time; fallback until a song binds
     const MidiTimeline *m_timeline = nullptr; // loaded content only
     const LoadedVoiceGroup *m_voicegroup = nullptr;
-    SongDocument *m_document = nullptr;
+    SongDocument &m_document;
+    QMetaObject::Connection m_documentChangedConnection;
+    QMetaObject::Connection m_tracksRemappedConnection;
     QPointer<songview::EditActions> m_editActions;
     uint64_t m_transientInputGeneration = 0; // advanced only by cancelTransientInput()
     SongViewModel m_model;

@@ -8,13 +8,11 @@
 #include "core/songdocument.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 
-class AutomationPage;
 // Song-global NodeLane adapter for Tempo, with no controller or track identity.
 // Interaction goes through the canvas NodeLane dispatcher.
 class TempoLane final : public NodeLane
 {
   public:
-    explicit TempoLane(AutomationPage *page) noexcept;
     explicit TempoLane(SongDocument &document) noexcept;
 
     QString title() const override;
@@ -27,6 +25,5 @@ class TempoLane final : public NodeLane
     NodeValuePrompt valuePrompt(int storedValue) const override;
 
   private:
-    AutomationPage *m_page = nullptr;
-    SongDocument *m_document = nullptr;
+    SongDocument &m_document;
 };

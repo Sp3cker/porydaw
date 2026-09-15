@@ -163,9 +163,9 @@ void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
 
 void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPointF &scenePosition)
 {
-    SongDocument *const document = m_page.document();
+    SongDocument &document = m_page.document();
     songview::QuickPopupSession *const session = m_menuSession.data();
-    if (!document || !session || !session->window())
+    if (!session || !session->window())
         return;
     const auto *slot = resolveSlot(handle);
     if (!slot || !slot->lane)
@@ -237,8 +237,8 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPointF &scenePo
     // callback can observe a half-published target, and an open failure
     // publishes nothing. Cancellation clears it.
     PendingMenu target;
-    target.document = document;
-    target.documentRevision = document->revision();
+    target.document = &document;
+    target.documentRevision = document.revision();
     target.lane = handle;
     target.rowId = slot->id;
 
@@ -273,9 +273,8 @@ void AutomationCanvas::handleMenuAction(int actionId)
     }
     if (!self)
         return; // The focus swap tore this canvas down.
-    SongDocument *const document = m_page.document();
-    if (!document || document != pending.document ||
-        document->revision() != pending.documentRevision)
+    SongDocument &document = m_page.document();
+    if (&document != pending.document || document.revision() != pending.documentRevision)
         return; // Stale document: no mutation, no announcement.
 
     // Lane-menu commands re-resolve the captured handle and require the same
@@ -309,7 +308,7 @@ void AutomationCanvas::handleMenuAction(int actionId)
         // engine node for Volume and Pan is not an event — so the pick ends
         // without a write and without a confirmation.
         const std::size_t writtenEventCount =
-            document->lanePoints(int(slot->id.track), slot->id.controller).size();
+            document.lanePoints(int(slot->id.track), slot->id.controller).size();
         if (writtenEventCount != 0) {
             // The QML confirmation opens on the shared canvas popup session;
             // activateRow has already closed the menu before this dispatch,
