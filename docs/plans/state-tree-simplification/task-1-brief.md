@@ -58,17 +58,26 @@ Document access, constructor and null-guard migration:
 - `src/checks/support/editorrig.cpp`
 - `src/checks/support/songfixture.cpp`
 - `src/checks/automation/raster/rasterfixture.cpp`
+- `src/checks/selectionkey/automationprobe.cpp`
 - `src/checks/drawerpresentation/velocity.cpp`
 - `src/checks/drawerpresentation/voice.cpp`
 - `src/checks/rollcheck/identity.cpp`
+- `src/checks/rollcheck/pencil.cpp`
 - `src/checks/rollcheck/remap.cpp`
 - `src/checks/rollcheck/static/geometry.cpp`
 - `src/checks/trackheaders/tst_trackheadermodel.cpp`
 - `src/checks/trackheaders/tst_trackactivitymeter.h`
 - `src/checks/trackheaders/tst_trackactivitymeter.cpp`
+- `src/checks/trackheaders/trackheaderinput.cpp`
 - `src/checks/host/tst_hostintegration.cpp`
 - `src/checks/host/tst_hostseams.cpp`
 - `src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp`
+- `src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp`
+- `src/checks/voicegroupsave/fixture.cpp`
+- `src/checks/workspace/selftest_timeline.cpp`
+
+The six additional check callers were discovered during the complete
+reference-API migration and belong to this atomic cutover.
 
 ## 3. Prerequisites
 
