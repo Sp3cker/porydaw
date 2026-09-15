@@ -49,6 +49,7 @@ class AutomationPresentationTest final : public QObject
     void selectedInactiveParametersKeepScopeIndicators();
     void ghostLabelNamesCurveAndFollowsHover();
     void laneEventCountsRenderAtLeftEdge();
+    void laneScaleLabelsRenderAtLeftEdge();
 
     void pencilCursorUsesPlotGutterBoundary();
     void pencilCursorUsesInputDevicePixelRatio();

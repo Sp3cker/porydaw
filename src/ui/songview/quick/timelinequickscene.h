@@ -41,6 +41,7 @@ enum class TimelineQuickTextKeyKind : quint8 {
     AutomationHover,
     AutomationTransient,
     AutomationLaneCount,
+    AutomationScaleLabel,
 };
 
 struct TimelineQuickTextKey {

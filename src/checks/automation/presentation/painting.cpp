@@ -20,6 +20,7 @@
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/tempolane.h"
@@ -655,4 +656,146 @@ void AutomationPresentationTest::laneEventCountsRenderAtLeftEdge()
     refreshDocumentPresentation();
     QTRY_VERIFY(!findTextRecord(laneTextModel, QStringLiteral("0 Events"), viewport).has_value());
     QTRY_VERIFY(!findTextRecord(laneTextModel, QStringLiteral("2 Events"), viewport).has_value());
+}
+
+void AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge()
+{
+    AutomationPage *const automationPage = page();
+    songview::TimelineQuickScene *const scene = quickScene();
+    AutomationCanvas *const canvas = automationPage ? automationPage->canvas() : nullptr;
+    QVERIFY(automationPage);
+    QVERIFY(scene);
+    QVERIFY(canvas);
+    const QRectF viewport(QPointF{}, QSizeF(automationPage->automationViewportSize()));
+    const QAbstractItemModel *const laneTextModel = scene->automationLaneTextModel();
+    QVERIFY(laneTextModel);
+    const EditorAutomationRowId pan{EditorAutomationRowKind::ControlChange, kTrack,
+                                    CoreTimeDefaults::kCcPan};
+    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, kTrack,
+                                       CoreTimeDefaults::kCcVolume};
+    const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
+    const EditorAutomationRowId bend{EditorAutomationRowKind::ControlChange, kTrack,
+                                     CoreTimeDefaults::kLaneCcBend};
+
+    // Pan labels: max, min, and neutral hug the left edge at their curve
+    // heights, spread across the plot's thirds without overlapping.
+    QVERIFY(activateParameter(pan));
+    refreshDocumentPresentation();
+    std::optional<QRectF> maxLabel;
+    std::optional<QRectF> minLabel;
+    std::optional<QRectF> neutralLabel;
+    QTRY_VERIFY(
+        (maxLabel = findTextRecord(laneTextModel, QStringLiteral("c_v+63"), viewport)).has_value());
+    QTRY_VERIFY(
+        (minLabel = findTextRecord(laneTextModel, QStringLiteral("c_v-64"), viewport)).has_value());
+    QTRY_VERIFY((neutralLabel = findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport))
+                    .has_value());
+    for (const QRectF &rect : {*maxLabel, *minLabel, *neutralLabel}) {
+        QVERIFY2(rect.left() < viewport.left() + viewport.width() / 4.0,
+                 "a scale label no longer hugs the viewport's left edge");
+    }
+    QVERIFY2(maxLabel->center().y() < viewport.top() + viewport.height() / 3.0,
+             "the maximum scale label left the plot's top third");
+    QVERIFY2(neutralLabel->center().y() >= viewport.top() + viewport.height() / 3.0 &&
+                 neutralLabel->center().y() < viewport.top() + viewport.height() * 2.0 / 3.0,
+             "the neutral scale label left the plot's middle third");
+    QVERIFY2(minLabel->center().y() >= viewport.top() + viewport.height() * 2.0 / 3.0,
+             "the minimum scale label left the plot's bottom third");
+    QVERIFY(!maxLabel->intersects(*minLabel));
+    QVERIFY(!maxLabel->intersects(*neutralLabel));
+    QVERIFY(!minLabel->intersects(*neutralLabel));
+    std::optional<QRectF> count;
+    QTRY_VERIFY(
+        (count = findTextRecord(laneTextModel, QStringLiteral("2 Events"), viewport)).has_value());
+    QVERIFY2(!count->intersects(*minLabel),
+             "the lane event count collides with the minimum scale label");
+
+    // Ticks: short left-edge horizontals in the grid layer at each label's
+    // curve-true Y, emitted only on content passes so hover passes never
+    // accumulate duplicates.
+    const LaneHandle panHandle = findRow(pan);
+    QVERIFY(panHandle.valid());
+    const QRect body = canvas->laneBody(panHandle);
+    QVERIFY(!body.isEmpty());
+    const CCLaneAdapter panLane(*m_document, kTrack, CoreTimeDefaults::kCcPan);
+    const AutomationGeometry geometry = AutomationGeometry::resolve();
+    const qreal maxY = nodelane::valueY(panLane, body, geometry, 127);
+    const qreal neutralY = nodelane::valueY(panLane, body, geometry, 64);
+    const qreal minY = nodelane::valueY(panLane, body, geometry, 0);
+    const qreal tickLength = 3.0 * layout::space(layout::Space::Half);
+    const auto edgeTickYs = [&scene, &viewport, tickLength] {
+        std::vector<qreal> ys;
+        for (const songview::TimelineQuickRect &rect :
+             scene->layer(songview::TimelineQuickLayer::AutomationGrid).rects) {
+            if (rect.rect.left() <= viewport.left() + layout::singlePixel() &&
+                rect.rect.width() >= 2.0 * layout::singlePixel() &&
+                rect.rect.width() <= tickLength + layout::singlePixel()) {
+                ys.push_back(rect.rect.center().y());
+            }
+        }
+        return ys;
+    };
+    const auto ticksNear = [&edgeTickYs](qreal y) {
+        const std::vector<qreal> ys = edgeTickYs();
+        return std::count_if(ys.begin(), ys.end(), [y](qreal tickY) {
+            return std::abs(tickY - y) <= 2.0 * layout::singlePixel();
+        });
+    };
+    QTRY_VERIFY(ticksNear(maxY) == 1);
+    mouseMove(*m_plotInput, lanePoint(panHandle, kHeldTick, 32));
+    QTRY_VERIFY(scene->automationHoverTextModel()->rowCount() > 0);
+    QVERIFY2(ticksNear(maxY) == 1 && ticksNear(neutralY) == 1 && ticksNear(minY) == 1,
+             "a scale tick no longer sits at its label's curve height");
+    QVERIFY2(edgeTickYs().size() == 3,
+             "a hover-only pass appended duplicate left-edge scale ticks");
+
+    // Ghost labels ride the right edge while scale labels ride the left, so
+    // the seeded rects never collide — the ghost keeps its at-height
+    // placement instead of shifting down or dropping.
+    m_document->writeLanePoints(kTrack, CoreTimeDefaults::kCcVolume, 0, CoreTimeDefaults::kNoTick,
+                                {{24, 127}, {96, 127}});
+    refreshDocumentPresentation();
+    const int volumeIndex = checks::support::automationParameterIndex(*canvas, volume);
+    QVERIFY(volumeIndex >= 0);
+    canvas->toggleGhostParameter(volumeIndex);
+    std::optional<QRectF> ghostLabel;
+    QTRY_VERIFY(
+        (ghostLabel = findTextRecord(laneTextModel, QStringLiteral("Volume · 2 Events"), viewport))
+            .has_value());
+    QTRY_VERIFY(
+        (maxLabel = findTextRecord(laneTextModel, QStringLiteral("c_v+63"), viewport)).has_value());
+    QTRY_VERIFY(
+        (minLabel = findTextRecord(laneTextModel, QStringLiteral("c_v-64"), viewport)).has_value());
+    QTRY_VERIFY((neutralLabel = findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport))
+                    .has_value());
+    for (const QRectF &rect : {*maxLabel, *minLabel, *neutralLabel}) {
+        QVERIFY2(!ghostLabel->intersects(rect),
+                 "the ghost label overlaps a scale label instead of keeping its side");
+    }
+    canvas->toggleGhostParameter(volumeIndex);
+    QVERIFY(canvas->ghostParameters().isEmpty());
+
+    // Neutral rule: volume has no neutral value, so only min and max emit.
+    canvas->activateParameter(volumeIndex);
+    refreshDocumentPresentation();
+    QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("127"), viewport).has_value());
+    QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("0"), viewport).has_value());
+    QTRY_VERIFY(!findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport).has_value());
+
+    // Tempo inherits neutral -1, so its 120-BPM lead-in never labels; pitch
+    // bend's negative minimum and zero neutral take the bend format path.
+    const int tempoIndex = checks::support::automationParameterIndex(*canvas, tempo);
+    QVERIFY(tempoIndex >= 0);
+    canvas->activateParameter(tempoIndex);
+    refreshDocumentPresentation();
+    QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("255"), viewport).has_value());
+    QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("20"), viewport).has_value());
+    QTRY_VERIFY(!findTextRecord(laneTextModel, QStringLiteral("120"), viewport).has_value());
+    const int bendIndex = checks::support::automationParameterIndex(*canvas, bend);
+    QVERIFY(bendIndex >= 0);
+    canvas->activateParameter(bendIndex);
+    refreshDocumentPresentation();
+    QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("+8191"), viewport).has_value());
+    QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("-8192"), viewport).has_value());
+    QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("0"), viewport).has_value());
 }
