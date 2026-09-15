@@ -373,6 +373,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/editorviewstate.h
     src/ui/editordrawer/editordrawer.cpp
     src/ui/editordrawer/editordrawer.h
+    src/ui/editordrawer/taptempo.h
     src/ui/editordrawer/drawersections.cpp
     src/ui/editordrawer/drawersections.h
     src/ui/editordrawer/drawerchrome.cpp
@@ -384,6 +385,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/automationcanvas_menu.cpp
     src/ui/editordrawer/automationcanvas_pointmenu.cpp
     src/ui/editordrawer/automationcanvas_deleteprompt.cpp
+    src/ui/editordrawer/automationcanvas_taptempo.cpp
     src/ui/editordrawer/laneselection.cpp
     src/ui/editordrawer/laneselection.h
     src/ui/editordrawer/nodelane/gesture.cpp

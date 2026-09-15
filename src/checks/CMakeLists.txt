@@ -333,6 +333,7 @@ qt_add_executable(porydaw_checks
     automation/automationcanvaslayout.cpp
     automation/automationcanvasediting.cpp
     automation/ccdeleteconfirmation.cpp
+    automation/automationtaptempo.cpp
     automation/domain/tst_automationdomain.h
     automation/domain/tst_automationdomain.cpp
     automation/domain/gestures.cpp

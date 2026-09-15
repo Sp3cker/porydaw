@@ -16,6 +16,7 @@
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QQuickItem>
+#include <QSignalSpy>
 #include <QStringList>
 #include <QStyleHints>
 #include <QUndoStack>
@@ -336,6 +337,103 @@ void SelectionWindowTierTest::parameterLabelActivationAndSharedCommands()
         QCOMPARE(moved->key, uint8_t(pair->notes[index].key + 1));
     }
     QCOMPARE(canvas->parameterRow(canvas->activeParameter()), std::optional{volume});
+}
+
+// The tempo tab's tap-tempo Tap button keeps the same activation-key contract
+// as the parameter labels above: plain Enter and Return each add exactly one
+// tap through real window delivery, tempo-row focus and selection stay
+// untouched, modified and auto-repeat Return remain shared editing input, and
+// bare Space stays with the window transport shortcut — no tap, no edit.
+void SelectionWindowTierTest::tapButtonKeysAndTransportCession()
+{
+    SongView &view = this->view();
+    SongDocument &document = this->document();
+    const selectionkey::ScenarioRollback rollback(view, document);
+    view.selectTrack(kTrack);
+    view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations, 200);
+    const std::optional<NotePair> pair = addNotePair(document, kTrack, 2400);
+    QVERIFY2(pair.has_value(),
+             "the reserved tick-2400 note pair could not be inserted and resolved");
+    QVERIFY2(focusAutomationBand(view), "could not focus the automation band");
+    view.selectionModel().setNoteSelection({pair->ids[0], pair->ids[1]});
+    auto *const canvas = view.editorDrawer()->automationPage()->canvas();
+    auto *const quick = selectionkey::quickCanvas(view);
+    QVERIFY(canvas && quick);
+    QTRY_VERIFY(quickWindow()->isActive() && QGuiApplication::focusWindow() == quickWindow());
+
+    QPointer<QQuickItem> button;
+    const auto focusTap = [&] {
+        if (!QTest::qWaitFor([&] {
+                button = checks::support::visualDescendant(
+                    quick->rootObject(), QStringLiteral("automationTempoTapButton"));
+                return button && button->window() == quickWindow() && button->isVisible() &&
+                       button->isEnabled() && button->width() > 0 && button->height() > 0;
+            }))
+            return false;
+        button->forceActiveFocus(Qt::OtherFocusReason);
+        selectionkey::settle();
+        return button && button->hasActiveFocus();
+    };
+    QVERIFY2(focusTap(), "the tempo Tap button never became focusable");
+    QVERIFY2(canvas->parametersEnabled(),
+             "the tap-tempo canvas session would be disabled for this staging");
+
+    const QByteArray before = document.smf().write();
+    const int undoIndexBefore = document.undoStack()->index();
+    const int undoCountBefore = document.undoStack()->count();
+    const uint64_t revisionBefore = document.revision();
+    const int activeBefore = canvas->activeParameter();
+    const auto timeSelectionBefore = view.selectionModel().timeSelection();
+    const auto noteSelectionBefore = view.selectionModel().noteSelection();
+    const auto selectionUnchanged = [&] {
+        const auto &actual = view.selectionModel().timeSelection();
+        return actual.tempo == timeSelectionBefore.tempo &&
+               actual.startTick == timeSelectionBefore.startTick &&
+               actual.endTick == timeSelectionBefore.endTick &&
+               actual.scope == timeSelectionBefore.scope &&
+               actual.lanes == timeSelectionBefore.lanes &&
+               view.selectionModel().noteSelection() == noteSelectionBefore;
+    };
+    QVERIFY(focusTap());
+    selectionkey::deliverKey(quickWindow(), Qt::Key_Enter);
+    QVERIFY2(canvas->tapTempoTapCount() == 1 && button && button->hasActiveFocus(),
+             "Enter on the focused Tap button did not register exactly one tap");
+    selectionkey::deliverKey(quickWindow(), Qt::Key_Return);
+    QVERIFY2(canvas->tapTempoTapCount() == 2,
+             "Return on the focused Tap button did not add the second tap");
+    QVERIFY2(document.smf().write() == before, "Return changed the document");
+    QVERIFY2(document.revision() == revisionBefore, "Return changed the revision");
+    QVERIFY2(document.undoStack()->index() == undoIndexBefore, "Return changed the undo index");
+    QVERIFY2(document.undoStack()->count() == undoCountBefore, "Return changed the undo count");
+    QVERIFY2(canvas->activeParameter() == activeBefore, "Return changed the active parameter");
+    QVERIFY2(selectionUnchanged(), "Return changed the selection");
+    // The draft readout reflects the two-tap accumulator.
+    const QPointer<QQuickItem> draft = checks::support::visualDescendant(
+        quick->rootObject(), QStringLiteral("automationTempoTapDraft"));
+    QVERIFY2(draft && draft->isVisible(),
+             "the two-tap session did not make the draft tempo readout visible");
+
+    // Modified Return is shared editing input, not button activation: the
+    // session stays where it was.
+    selectionkey::deliverKey(quickWindow(), Qt::Key_Return, Qt::ShiftModifier);
+    QVERIFY2(canvas->tapTempoTapCount() == 2,
+             "Shift+Return on the focused Tap button registered a tap");
+
+    // Bare Space is transport input: the window-level play/pause shortcut
+    // outranks incidental focus in this persistent control.
+    QSignalSpy playPause(m_workspace, &WorkspaceUi::playPauseRequested);
+    selectionkey::deliverKey(quickWindow(), Qt::Key_Space);
+    QVERIFY2(playPause.count() == 1, "bare Space did not request exactly one play/pause");
+    QVERIFY2(canvas->tapTempoTapCount() == 2, "bare Space changed the tap count");
+    QVERIFY2(document.smf().write() == before, "bare Space changed the document");
+    QVERIFY2(document.revision() == revisionBefore, "bare Space changed the revision");
+    QVERIFY2(document.undoStack()->count() == undoCountBefore, "bare Space changed the undo count");
+    QVERIFY2(selectionUnchanged(), "bare Space changed the selection");
+
+    canvas->resetTapTempo();
+    QVERIFY2(canvas->tapTempoTapCount() == 0, "resetTapTempo did not drop the draft");
+    view.selectionModel().clearNoteSelection();
 }
 
 void SelectionWindowTierTest::chromeToggleRoutesNoteArrows()

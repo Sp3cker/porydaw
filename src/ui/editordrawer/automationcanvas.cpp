@@ -34,6 +34,13 @@ AutomationCanvas::AutomationCanvas(AutomationPage &page)
     , m_hoverState(QGuiApplication::font())
 {
     refreshGeometry();
+    // The tap-tempo draft commits from an idle window sized to the
+    // session's own tap gap: the same silence starts a new session and then
+    // commits the previous one. Timer pattern follows
+    // QuickMenuHost::m_typeAheadReset (quickmenuhost.cpp).
+    m_tapIdleCommit.setSingleShot(true);
+    m_tapIdleCommit.setInterval(kTapCommitMs);
+    connect(&m_tapIdleCommit, &QTimer::timeout, this, &AutomationCanvas::commitTapTempo);
     // The lane menus are typed adapters over the shared canvas popup session;
     // the session itself is assigned later by the Quick host view. The host
     // closes the session before emitting activated(), so the guarded open-
@@ -474,6 +481,9 @@ void AutomationCanvas::cancelInteraction()
         m_pendingValuePrompt.reset();
         emit valuePromptChanged();
     }
+    // Shared view-state reset: a canvas interaction cancel drops the tap-
+    // tempo draft and its idle commit together with the rest of the goo.
+    resetTapTempo();
     // Same shared policy for the CC-lane delete confirmation: rebuilds,
     // hides, detaches, and document changes drop its pending target and end
     // only a session this canvas still owns, without stealing focus.
