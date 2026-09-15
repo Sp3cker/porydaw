@@ -299,6 +299,35 @@ class HostAdapterTest final : public QObject
         QVERIFY(quick->quickWindow()->devicePixelRatio() > 0.0);
     }
 
+    void bandGeometryPublishesWithTheChoreography()
+    {
+        SyntheticHost host;
+        QString error;
+        QVERIFY2(host.prepare(&error), qPrintable(error));
+        SongView &view = host.view();
+        auto *quick = view.quickView();
+        QVERIFY(quick);
+        QQuickItem *root = quick->rootObject();
+        QVERIFY(root);
+        EditorDrawer *drawer = view.editorDrawer();
+        QVERIFY(drawer);
+        const DrawerChrome &chrome = drawer->chrome();
+        const auto before = view.timelineBandLayout().geometry(songview::TimelineBand::Velocity);
+        QVERIFY(before.has_value());
+
+        view.setDrawerSectionHeight(EditorDrawerPage::Velocity, 260);
+        const auto after = view.timelineBandLayout().geometry(songview::TimelineBand::Velocity);
+        QVERIFY(after.has_value());
+        QVERIFY(after->rect != before->rect);
+        // No event-loop pump: the drawer chrome snapshot publishes through
+        // chromeChanged inside the same GUI-thread pass as the choreography,
+        // so the published band rectangle must be current in that same pass.
+        // A queued publication left a live-resize frame rendering moved resize
+        // handles against unmoved panes, showing the roll through the gap.
+        QCOMPARE(root->property("velocityBandRect").toRectF(), QRectF(after->rect));
+        QCOMPARE(chrome.velocityHandleRect().bottom(), QRectF(after->rect).top());
+    }
+
     void hiddenBandsClearEveryProjection_data()
     {
         QTest::addColumn<EditorDrawerPage>("page");

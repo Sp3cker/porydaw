@@ -58,7 +58,6 @@ void TimelineQuickView::detachWindow()
     if (!m_view && !m_popupSession)
         return;
 
-    m_layoutTimer.stop();
     m_flushTimer.stop();
 
     if (m_popupSession)
@@ -163,17 +162,15 @@ bool TimelineQuickView::eventFilter(QObject *watched, QEvent *event)
     switch (event->type()) {
     case QEvent::Resize:
         // The window is the canonical viewport: surface resizes reframe the
-        // camera and the band layout, so SongView reruns its former resize
-        // choreography while this view republishes its stored layout.
+        // camera and the band layout, and SongView's choreography republishes
+        // the stored layout synchronously.
         emit viewportChanged();
-        scheduleTimelineBandLayoutPublication();
         break;
     case QEvent::DevicePixelRatioChange:
         // A DPR change can leave logical layout unchanged while invalidating
         // every physical-pixel snap, text layout, and native cursor.
         syncAppearance();
         emit viewportChanged();
-        scheduleTimelineBandLayoutPublication();
         break;
     // No FocusIn handling by design: Qt clears the scene's activeFocusItem
     // while the window is inactive, so any retarget here fires with a null

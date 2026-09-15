@@ -115,9 +115,6 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     , m_camera(songView.camera())
     , m_playheadColor(themes::color(themes::Role::song_view_playhead))
 {
-    m_layoutTimer.setSingleShot(true);
-    m_layoutTimer.setInterval(std::chrono::milliseconds::zero());
-    connect(&m_layoutTimer, &QTimer::timeout, this, &TimelineQuickView::publishTimelineBandLayout);
     m_flushTimer.setSingleShot(true);
     m_flushTimer.setInterval(std::chrono::milliseconds::zero());
     connect(&m_flushTimer, &QTimer::timeout, this, &TimelineQuickView::flushUpdate);
@@ -641,11 +638,6 @@ void TimelineQuickView::setEditChrome(std::optional<qreal> songViewContentX)
     emit editChromeChanged();
 }
 
-void TimelineQuickView::scheduleTimelineBandLayoutPublication()
-{
-    m_layoutTimer.start();
-}
-
 void TimelineQuickView::setBandLayout(TimelineBandLayout layout)
 {
     if (m_bandLayout == layout)
@@ -666,9 +658,10 @@ void TimelineQuickView::setBandLayout(TimelineBandLayout layout)
     TimelineQuickDirtySet timelineDirty = TimelineQuickDirty::None;
     AutomationRefreshSet automationRefresh = AutomationRefresh::None;
 
-    // Accumulate the size-dependent dirty domains first so the zero-timeout
-    // publication below is scheduled before any zero-timeout dirty flush; a
-    // scene rebuild must never run against stale band geometry.
+    // Accumulate the size-dependent dirty domains first so the synchronous
+    // publication below precedes every dirty request: a scene rebuild, which
+    // flushUpdate can only run on a later pass, must never run against stale
+    // band geometry.
     if (becameVisibleOrChangedSize(m_bandLayout, layout, TimelineBand::Ruler))
         timelineDirty |= TimelineQuickDirty::Ruler;
     if (becameVisibleOrChangedSize(m_bandLayout, layout, TimelineBand::Roll)) {
@@ -688,7 +681,13 @@ void TimelineQuickView::setBandLayout(TimelineBandLayout layout)
         timelineDirty |= TimelineQuickDirty::VoiceChanges;
 
     m_bandLayout = std::move(layout);
-    scheduleTimelineBandLayoutPublication();
+    // Publish synchronously: the drawer chrome snapshot lands through
+    // chromeChanged during the same GUI-thread pass, so the band rectangles
+    // must not wait for a queued pass. A queued publication let a live-resize
+    // frame render moved resize handles against unmoved panes, showing the
+    // roll through the gap between them.
+    publishTimelineBandLayout();
+
     requestUpdate(pianoDirty);
     requestTimelineUpdate(timelineDirty);
     requestAutomationUpdate(automationRefresh);
@@ -697,9 +696,9 @@ void TimelineQuickView::setBandLayout(TimelineBandLayout layout)
 void TimelineQuickView::refreshBandLayout()
 {
     // Quick-window lifecycle events (resize, screen, DPR) can drop published
-    // QML geometry; republish the stored layout as-is, without changing the
-    // canonical value or queueing dirty domains.
-    scheduleTimelineBandLayoutPublication();
+    // QML geometry; republish the stored layout as-is, synchronously with the
+    // chrome snapshot. Changes neither the canonical value nor dirty domains.
+    publishTimelineBandLayout();
 }
 
 bool TimelineQuickView::focusBand(TimelineBand band, Qt::FocusReason reason)
@@ -857,13 +856,6 @@ void TimelineQuickView::flushUpdate()
 {
     if (!m_view)
         return; // detached: borrows cleared; no window left to sync into
-
-    // A flush queued before the latest setBandLayout()/refreshBandLayout() must
-    // not rebuild scenes ahead of geometry publication: publish first.
-    if (m_layoutTimer.isActive()) {
-        m_layoutTimer.stop();
-        publishTimelineBandLayout();
-    }
 
     const PianoRollQuickDirtySet pianoDirty =
         std::exchange(m_pendingDirty, PianoRollQuickDirty::None);

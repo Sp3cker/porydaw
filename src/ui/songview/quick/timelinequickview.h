@@ -316,7 +316,6 @@ class TimelineQuickView final : public QObject
     void setHoverChrome(std::optional<qreal> songViewContentX);
     void setEditChrome(std::optional<qreal> songViewContentX);
 
-    void scheduleTimelineBandLayoutPublication();
     void publishTimelineBandLayout();
     void discoverGestureScrollbars(QObject &root);
     void registerGestureScrollbar(TimelineGestureScrollbar &scrollbar);
@@ -418,7 +417,6 @@ class TimelineQuickView final : public QObject
     PianoRollQuickDirtySet m_pendingDirty = {PianoRollQuickDirty::None};
     TimelineQuickDirtySet m_pendingTimelineDirty = {TimelineQuickDirty::None};
     AutomationRefreshSet m_pendingAutomationRefresh = {AutomationRefresh::None};
-    QTimer m_layoutTimer;
     QTimer m_flushTimer;
     std::vector<TimelineQuickTextModel::Record> m_noteTextRecords;
     std::vector<TimelineQuickTextModel::Record> m_loadingTextRecords;
