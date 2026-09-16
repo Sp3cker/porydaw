@@ -31,23 +31,23 @@ std::span<const uint8_t> CCLanes::supportedControllers() noexcept
 {
     // Selector display order, deliberately not ascending controller number:
     // related identities are adjacent so the parameter grid reads as groups —
-    // mix (Volume, Pan), modulation (Modulation, LFO type, LFO speed, LFO
-    // delay), pitch (Pitch bend, Bend range), then the XCMD echo lanes and
-    // the Fine tune singleton.
+    // mix (Volume, Pan), pitch (Modulation, Pitch bend, LFO speed, Bend
+    // range), then the XCMD echo lanes, with the MODT/TUNE/LFODL trio closing
+    // the catalog just above song-global Tempo.
     static constexpr auto controllers = [] {
         std::array<uint8_t, 9 + xcmd::kLaneDescriptors.size()> result{};
         result[0] = CoreTimeDefaults::kCcVolume;
         result[1] = CoreTimeDefaults::kCcPan;
         result[2] = CoreTimeDefaults::kCcModulation;
-        result[3] = CoreTimeDefaults::kCcModType;
+        result[3] = CoreTimeDefaults::kLaneCcBend;
         result[4] = CoreTimeDefaults::kCcLfoSpeed;
-        result[5] = CoreTimeDefaults::kCcLfoDelay;
-        result[6] = CoreTimeDefaults::kLaneCcBend;
-        result[7] = CoreTimeDefaults::kCcBendRange;
-        std::size_t next = 8;
+        result[5] = CoreTimeDefaults::kCcBendRange;
+        std::size_t next = 6;
         for (const auto &descriptor : xcmd::kLaneDescriptors)
             result[next++] = descriptor.laneController;
-        result[next] = CoreTimeDefaults::kCcFineTune;
+        result[next++] = CoreTimeDefaults::kCcModType;
+        result[next++] = CoreTimeDefaults::kCcFineTune;
+        result[next] = CoreTimeDefaults::kCcLfoDelay;
         return result;
     }();
     return controllers;

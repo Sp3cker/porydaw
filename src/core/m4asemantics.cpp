@@ -137,6 +137,17 @@ QString m4aFormatCcValue(uint8_t cc, uint8_t value)
         return QStringLiteral("c_v%1%2")
             .arg(value >= 64 ? QStringLiteral("+") : QString())
             .arg(int(value) - 64);
+    case 0x16: // MODT: the engine selects vibrato/tremolo/autopan for 0/1/2.
+        switch (value) {
+        case 0:
+            return QStringLiteral("Vibrato");
+        case 1:
+            return QStringLiteral("Tremolo");
+        case 2:
+            return QStringLiteral("Autopan");
+        default:
+            return QString::number(value);
+        }
     default:
         return QString::number(value);
     }

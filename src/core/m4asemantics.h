@@ -75,7 +75,7 @@ M4aLane m4aLaneForXcmdSelector(uint8_t selector);
 QString m4aLaneName(M4aLane lane);
 
 // Value formatting for lane readouts, mirroring how mid2agb would emit the
-// value (PAN/TUNE as c_v±, bend as signed 14-bit, etc.).
+// value (PAN/TUNE as c_v±, MODT as its LFO type name, bend as signed 14-bit, etc.).
 QString m4aFormatCcValue(uint8_t cc, uint8_t value);
 QString m4aFormatBend(int bend14);
 
