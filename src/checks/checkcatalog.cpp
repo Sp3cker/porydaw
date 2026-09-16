@@ -81,7 +81,8 @@ const std::vector<CheckDefinition> &catalog()
              .framework = Framework::Process},
             {.name = "roundtrip",
              // imports each decomp song and byte-compares exported assembly against a fresh mid2agb
-             // compile
+             // compile; synthetic XCMD traffic compiles to XCMD xIECV/xIECL and unknown-selector
+             // payloads emit no XCMD op
              .argv = strings({"--roundtrip", "{scratch}", "{mid2agb}"}),
              .handler = qtWithTwoArguments<runRoundTrip>,
              .scratchKind = ScratchKind::ExistingDirectory,
@@ -401,7 +402,7 @@ const std::vector<CheckDefinition> &catalog()
              .handler = qtOnly<runXcmdCheck>},
             {.name = "smfcheck",
              // SMF read/write: save parity, format0 to format1 conversion, SYSEX/meta round trip,
-             // duplicate EOT, tick rejects
+             // duplicate EOT, tick rejects; import-report verdicts for XCMD epochs and ordinary CCs
              .argv = strings({"--smfcheck"}),
              .handler = qtOnly<runSmfCheck>},
             {.name = "transportcheck",

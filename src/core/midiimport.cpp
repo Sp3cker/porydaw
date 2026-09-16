@@ -8,10 +8,46 @@
 #include "core/m4asemantics.h"
 #include "core/timedefaults.h"
 #include "core/tracklimits.h"
+#include "core/xcmd.h"
 
 namespace {
 
 constexpr int kDefaultPcmBudget = 5; // pokeemerald m4aSoundInit maxChans
+
+// The report's single verdict vocabulary, mapped from both verdict sources.
+ImportSupport importSupport(M4aExportSupport support)
+{
+    switch (support) {
+    case M4aExportSupport::Supported:
+        return ImportSupport::Supported;
+    case M4aExportSupport::NotExported:
+        return ImportSupport::NotExported;
+    case M4aExportSupport::NeedsReview:
+        return ImportSupport::NeedsReview;
+    }
+    return ImportSupport::NeedsReview;
+}
+
+ImportSupport importSupport(xcmd::ExportClass exportClass)
+{
+    switch (exportClass) {
+    case xcmd::ExportClass::Supported:
+        return ImportSupport::Supported;
+    case xcmd::ExportClass::NotExported:
+        return ImportSupport::NotExported;
+    case xcmd::ExportClass::NeedsReview:
+        return ImportSupport::NeedsReview;
+    }
+    return ImportSupport::NeedsReview;
+}
+
+// The three coupled-protocol CCs: collected for the XCMD assessment instead
+// of the per-CC histogram.
+bool isXcmdPlumbingCc(uint8_t cc)
+{
+    return cc == xcmd::kSelectorController || cc == xcmd::kPayloadController ||
+           cc == xcmd::kAlternatePayloadController;
+}
 
 } // namespace
 
@@ -29,6 +65,9 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget, const QStri
         a.silentTracks = std::max(0, a.mappedTracks - trackBudget);
 
     QMap<uint8_t, int> ccCounts;
+    // XCMD plumbing CCs (0x1D/0x1E/0x1F) in scan order, adapted for
+    // xcmd::assessTraffic; `index` is the running ordinal in this list.
+    std::vector<xcmd::Event> xcmdTraffic;
     // (engineTrack << 8 | key) -> depth, so overlapping same-key notes count
     // once per sounding instance.
     QMap<int, int> sounding;
@@ -68,7 +107,11 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget, const QStri
                 edges.push_back({ev.tick, false, et, ev.data0});
                 break;
             case 0xB:
-                ccCounts[ev.data0]++;
+                if (isXcmdPlumbingCc(ev.data0))
+                    xcmdTraffic.push_back({xcmdTraffic.size(), ev.tick, uint8_t(et), ev.data0,
+                                           ev.data1, ev.channel()});
+                else
+                    ccCounts[ev.data0]++;
                 break;
             case 0xC:
                 if (std::find(info.programs.begin(), info.programs.end(), ev.data0) ==
@@ -107,10 +150,85 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget, const QStri
         ImportCcUsage usage;
         usage.cc = it.key();
         usage.count = it.value();
-        usage.audible = info.eventClass == M4aEventClass::AudibleLane;
+        usage.support = importSupport(m4aExportSupport(it.key()));
         usage.label =
             QStringLiteral("%1 — %2").arg(QLatin1String(info.name), QLatin1String(info.display));
         a.ccs.push_back(usage);
+    }
+
+    // Logical XCMD rows take over where the histogram stops: assessTraffic
+    // parses the coupled 0x1D/0x1E/0x1F traffic collected above and hands
+    // back per-selector point counts plus one block per unresolved run.
+    // Counts stay logical — points and payload bytes — never raw CC events.
+    const xcmd::TrafficAssessment traffic = xcmd::assessTraffic(xcmdTraffic);
+    for (const xcmd::Descriptor &descriptor : xcmd::kLaneDescriptors) {
+        // Completed pairs split per selector (0x08 -> volume, 0x09 -> length).
+        const uint32_t points =
+            descriptor.selector == 0x08 ? traffic.echoPoints.volume : traffic.echoPoints.length;
+        if (points == 0)
+            continue;
+        ImportXcmdUsage usage;
+        usage.label = QLatin1String(descriptor.displayName);
+        usage.count = points;
+        usage.support = ImportSupport::Supported; // a complete pair always exports
+        a.xcmds.push_back(usage);
+    }
+
+    // Group the remaining blocks per selector; all blocks of one kind share
+    // one verdict, carried here from each block's own exportClass.
+    struct XcmdGroup {
+        uint32_t count = 0;
+        ImportSupport support = ImportSupport::Supported;
+    };
+    QMap<uint8_t, XcmdGroup> unknownEpochs; // selector -> payload bytes
+    QMap<uint8_t, XcmdGroup> danglingLanes; // selector -> payload-less epochs
+    XcmdGroup strayPayloads;
+    for (const xcmd::TrafficBlock &block : traffic.blocks) {
+        switch (block.kind) {
+        case xcmd::TrafficKind::CompleteEchoPoints:
+            break; // summarized per descriptor from echoPoints above
+        case xcmd::TrafficKind::UnknownSelectorEpoch: {
+            XcmdGroup &group = unknownEpochs[block.selector];
+            group.count += block.payloadCount;
+            group.support = importSupport(block.exportClass);
+            break;
+        }
+        case xcmd::TrafficKind::DanglingSelector: {
+            XcmdGroup &group = danglingLanes[block.selector];
+            group.count++;
+            group.support = importSupport(block.exportClass);
+            break;
+        }
+        case xcmd::TrafficKind::StrayPayloads:
+            strayPayloads.count += block.payloadCount;
+            strayPayloads.support = importSupport(block.exportClass);
+            break;
+        }
+    }
+    for (auto it = unknownEpochs.constBegin(); it != unknownEpochs.constEnd(); ++it) {
+        ImportXcmdUsage usage;
+        usage.label =
+            QObject::tr("Unknown XCMD selector 0x%1").arg(it.key(), 2, 16, QLatin1Char('0'));
+        usage.count = it.value().count;
+        usage.support = it.value().support;
+        a.xcmds.push_back(usage);
+    }
+    for (auto it = danglingLanes.constBegin(); it != danglingLanes.constEnd(); ++it) {
+        // assessTraffic reports dangling epochs for known selectors only, so
+        // the descriptor lookup always lands.
+        const xcmd::Descriptor *descriptor = xcmd::descriptorForSelector(it.key());
+        ImportXcmdUsage usage;
+        usage.label = QLatin1String(descriptor ? descriptor->displayName : "XCMD selector");
+        usage.count = it.value().count;
+        usage.support = it.value().support;
+        a.xcmds.push_back(usage);
+    }
+    if (strayPayloads.count > 0) {
+        ImportXcmdUsage usage;
+        usage.label = QObject::tr("XCMD payload without a selector");
+        usage.count = strayPayloads.count;
+        usage.support = strayPayloads.support;
+        a.xcmds.push_back(usage);
     }
 
     if (a.droppedTracks > 0)

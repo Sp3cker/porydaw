@@ -562,6 +562,52 @@ Projection projectEvents(std::span<const Event> events) noexcept
     return toProjection(parseEvents(events));
 }
 
+TrafficAssessment assessTraffic(std::span<const Event> events) noexcept
+{
+    const ParsedEvents parsed = parseEvents(events);
+    TrafficAssessment assessment;
+    assessment.blocks.reserve(parsed.blocks.size());
+    for (const SelectorBlock &block : parsed.blocks) {
+        TrafficBlock entry;
+        entry.stream = block.stream;
+        entry.selector = block.selector;
+        entry.payloadCount = uint32_t(block.payloadEvents.size());
+        entry.firstTick = block.firstTick;
+        entry.lastTick = block.lastTick;
+        switch (block.kind) {
+        case SelectorBlockKind::KnownEpoch: {
+            entry.kind = TrafficKind::CompleteEchoPoints;
+            entry.exportClass = ExportClass::Supported;
+            // KnownEpoch always carries a known selector: each payload byte
+            // is one completed logical point on that selector's lane.
+            if (descriptorForSelector(block.selector)->laneController == kEchoVolumeLane)
+                assessment.echoPoints.volume += entry.payloadCount;
+            else
+                assessment.echoPoints.length += entry.payloadCount;
+            break;
+        }
+        case SelectorBlockKind::OpaqueEpoch:
+            if (descriptorForSelector(block.selector)) {
+                // The register latched but no payload byte followed: the
+                // command never fires (stock mid2agb drops the wait too).
+                entry.kind = TrafficKind::DanglingSelector;
+                entry.exportClass = ExportClass::NeedsReview;
+            } else {
+                // PrintExtendedOp's default: PrintWait only.
+                entry.kind = TrafficKind::UnknownSelectorEpoch;
+                entry.exportClass = ExportClass::NotExported;
+            }
+            break;
+        case SelectorBlockKind::StrayRun:
+            entry.kind = TrafficKind::StrayPayloads;
+            entry.exportClass = ExportClass::NeedsReview;
+            break;
+        }
+        assessment.blocks.push_back(entry);
+    }
+    return assessment;
+}
+
 std::optional<Patch> rewritePoints(std::span<const Event> events,
                                    std::span<const uint64_t> removeIdentities,
                                    std::span<const PointWrite> writes) noexcept

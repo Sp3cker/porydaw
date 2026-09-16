@@ -103,6 +103,58 @@ struct Projection {
 Projection projectEvents(std::span<const Event> events) noexcept;
 
 // ---------------------------------------------------------------------------
+// Export-compatibility assessment of the protocol traffic. Read-only lens
+// over the same per-stream parse projectEvents uses — never a presentation
+// verdict. Converter mapping (bundled mid2agb, agb.cpp): CC 0x1E only
+// latches the extended-command register and emits nothing; the payload CCs
+// 0x1D/0x1F route to PrintExtendedOp, which emits the game commands XCMD
+// xIECV (selector 0x08) and XCMD xIECL (selector 0x09) and falls back to a
+// bare PrintWait for every other selector. So only complete 0x08/0x09
+// pairs export; all other opaque traffic is byte-preserved here but never
+// becomes a game command.
+// ---------------------------------------------------------------------------
+
+enum class TrafficKind : uint8_t {
+    CompleteEchoPoints,   // known 0x08/0x09 epoch with payload bytes
+    DanglingSelector,     // known 0x08/0x09 epoch with zero payload bytes
+    UnknownSelectorEpoch, // selector outside the known set (payloads optional)
+    StrayPayloads,        // payload bytes before any selector in their stream
+};
+
+enum class ExportClass : uint8_t {
+    Supported,   // converter emits the game command (XCMD xIECV / xIECL)
+    NotExported, // converter drops it (PrintExtendedOp default: PrintWait)
+    NeedsReview, // unresolved or incomplete protocol traffic
+};
+
+struct EchoPointCounts {
+    uint32_t volume = 0; // complete selector-0x08 payload bytes (xIECV)
+    uint32_t length = 0; // complete selector-0x09 payload bytes (xIECL)
+};
+
+struct TrafficBlock {
+    TrafficKind kind = TrafficKind::StrayPayloads;
+    ExportClass exportClass = ExportClass::NeedsReview;
+    uint8_t stream = 0;
+    uint8_t selector = 0;      // epoch selector; unset for StrayPayloads
+    uint32_t payloadCount = 0; // payload bytes; == logical points when complete
+    Tick firstTick = 0;        // occupied tick span (selector and payloads)
+    Tick lastTick = 0;
+};
+
+struct TrafficAssessment {
+    EchoPointCounts echoPoints;       // completed logical points, per selector
+    std::vector<TrafficBlock> blocks; // every protocol block, scan order
+};
+
+// Classify every per-stream protocol block. Complete 0x08/0x09 pairs are
+// Supported and counted per selector; unknown-selector epochs are
+// NotExported; dangling known selectors (incomplete) and stray payload runs
+// (unresolved: the converter would print them against whatever the register
+// held earlier) are NeedsReview.
+TrafficAssessment assessTraffic(std::span<const Event> events) noexcept;
+
+// ---------------------------------------------------------------------------
 // Logical lane rewrite: remove known point identities and write known lane
 // points. Any epoch owning a removed point or containing a write tick is
 // rebuilt — its bytes leave and its surviving points are re-emitted as

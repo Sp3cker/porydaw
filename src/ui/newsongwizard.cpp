@@ -30,6 +30,21 @@ static QString trackRangeText(int first, int last)
                          : QObject::tr("tracks %1 through %2").arg(first).arg(last);
 }
 
+// "Yes" / "No" / "Needs review" — the verdict column for both the CC rows and
+// the XCMD rows of the import-compatibility tree, one wording per verdict.
+static QString importSupportText(ImportSupport support)
+{
+    switch (support) {
+    case ImportSupport::Supported:
+        return QObject::tr("Yes");
+    case ImportSupport::NotExported:
+        return QObject::tr("No");
+    case ImportSupport::NeedsReview:
+        return QObject::tr("Needs review");
+    }
+    return QString();
+}
+
 static NewSongWizard::ProjectData projectDataFrom(DecompProject *project,
                                                   const QStringList &voicegroupArgs)
 {
@@ -331,7 +346,7 @@ class AnalysisPage : public QWizardPage
             layout->addWidget(m_rescale);
         }
 
-        if (!m_analysis.ccs.empty()) {
+        if (!m_analysis.ccs.empty() || !m_analysis.xcmds.empty()) {
             auto *ccToggle = new QToolButton(this);
             ccToggle->setText(tr("CC commands"));
             ccToggle->setCheckable(true);
@@ -352,15 +367,20 @@ class AnalysisPage : public QWizardPage
             tree->setRootIsDecorated(false);
             tree->setUniformRowHeights(true);
             tree->header()->setSectionResizeMode(1, QHeaderView::Stretch);
-            for (const ImportCcUsage &cc : m_analysis.ccs) {
+            const auto addRow = [tree](const QString &controller, const QString &function,
+                                       int count, ImportSupport support) {
                 auto *item = new QTreeWidgetItem(tree);
-                item->setText(0, QStringLiteral("CC %1").arg(cc.cc));
-                item->setText(1, cc.label);
-                item->setText(2, QString::number(cc.count));
-                item->setText(3, cc.audible ? tr("Yes") : tr("No"));
-                if (!cc.audible)
+                item->setText(0, controller);
+                item->setText(1, function);
+                item->setText(2, QString::number(count));
+                item->setText(3, importSupportText(support));
+                if (support != ImportSupport::Supported)
                     item->setForeground(3, QBrush(QColor(0xc0, 0x80, 0x30)));
-            }
+            };
+            for (const ImportCcUsage &cc : m_analysis.ccs)
+                addRow(QStringLiteral("CC %1").arg(cc.cc), cc.label, cc.count, cc.support);
+            for (const ImportXcmdUsage &xcmd : m_analysis.xcmds)
+                addRow(tr("XCMD"), xcmd.label, static_cast<int>(xcmd.count), xcmd.support);
             ccLayout->addWidget(tree);
             ccBody->setVisible(false);
             layout->addWidget(ccBody);
@@ -483,12 +503,30 @@ class AnalysisPage : public QWizardPage
                                 ? tr("This MIDI file contains all channels in one track. Porydaw "
                                      "will put each channel in a different track.")
                                 : QString());
-        const bool hasSilentController =
-            std::any_of(m_analysis.ccs.cbegin(), m_analysis.ccs.cend(),
-                        [](const ImportCcUsage &cc) { return !cc.audible; });
-        setNotice(m_controller, hasSilentController
-                                    ? tr("Some CC commands do not change the sound in the game.")
-                                    : QString());
+        const bool hasNotExported =
+            std::any_of(
+                m_analysis.ccs.cbegin(), m_analysis.ccs.cend(),
+                [](const ImportCcUsage &cc) { return cc.support == ImportSupport::NotExported; }) ||
+            std::any_of(m_analysis.xcmds.cbegin(), m_analysis.xcmds.cend(),
+                        [](const ImportXcmdUsage &xcmd) {
+                            return xcmd.support == ImportSupport::NotExported;
+                        });
+        const bool hasNeedsReview =
+            std::any_of(
+                m_analysis.ccs.cbegin(), m_analysis.ccs.cend(),
+                [](const ImportCcUsage &cc) { return cc.support == ImportSupport::NeedsReview; }) ||
+            std::any_of(m_analysis.xcmds.cbegin(), m_analysis.xcmds.cend(),
+                        [](const ImportXcmdUsage &xcmd) {
+                            return xcmd.support == ImportSupport::NeedsReview;
+                        });
+        QStringList controllerNotices;
+        if (hasNotExported)
+            controllerNotices.append(
+                tr("Some controller commands do not change the sound in the game."));
+        if (hasNeedsReview)
+            controllerNotices.append(
+                tr("Some controller commands need review. Check how the MIDI file uses them."));
+        setNotice(m_controller, controllerNotices.join(QLatin1Char(' ')));
     }
 
     const SmfFile &m_smf;

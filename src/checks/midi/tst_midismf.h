@@ -26,6 +26,12 @@ class MidiSmfTest final : public QObject
     void tempoConversionSchedulesExactSamples();
     void overlongTickFailsParsing();
     void engineTrackMappingAgreesAcrossProjections();
+    void importReportSummarizesCompleteEchoPairs();
+    void importReportCountsEveryPayloadOfSharedSelector();
+    void importReportKeepsSupportedAndUnknownSelectorsApart();
+    void importReportFlagsDanglingSelectorForReview();
+    void importReportFlagsStrayPayloadForReview();
+    void importReportVerdictsOrdinaryControllers();
 };
 
 int runSmfCheck(const QStringList &qtArguments);

@@ -150,6 +150,73 @@ void MidiRoundtripTest::songM2Roundtrip()
                             .arg(song.label, firstDiffLine(originalAssembly, savedAssembly))));
 }
 
+// Grounds the import report's XCMD verdicts against the bundled converter
+// itself: a latched selector 0x08/0x09 turns each payload byte into the game
+// commands XCMD xIECV / xIECL, while an unknown selector's payload emits no
+// XCMD op at all (PrintExtendedOp falls back to a bare wait).
+void MidiRoundtripTest::xcmdEchoTrafficCompilesToGameCommands()
+{
+    auto smf = SmfFile{};
+    smf.format = 1;
+    smf.division = 24;
+    smf.tracks.resize(2);
+    auto tempo = SmfEvent{};
+    tempo.tick = 0;
+    tempo.status = 0xFF;
+    tempo.metaType = 0x51;
+    tempo.blob = QByteArray::fromHex("07A120");
+    smf.tracks[0].events.push_back(tempo);
+    auto controller = [](Tick tick, uint8_t cc, uint8_t value) {
+        auto event = SmfEvent{};
+        event.tick = tick;
+        event.status = 0xB0;
+        event.data0 = cc;
+        event.data1 = value;
+        return event;
+    };
+    auto note = [](Tick tick, uint8_t status, uint8_t pitch, uint8_t velocity) {
+        auto event = SmfEvent{};
+        event.tick = tick;
+        event.status = status;
+        event.data0 = pitch;
+        event.data1 = velocity;
+        return event;
+    };
+    auto &channel = smf.tracks[1];
+    // mid2agb only maps a MIDI channel onto an AGB track when the channel
+    // carries at least one ended note (s_minNote must move off 0xFF); a
+    // controller-only channel is scanned and discarded before printing.
+    // One sustained note under the echo traffic keeps the fixture on the
+    // converter's print path without touching the XCMD event ticks.
+    channel.events.push_back(note(0, 0x90, 60, 64));
+    channel.events.push_back(controller(0, 0x1E, 0x08));
+    channel.events.push_back(controller(0, 0x1D, 0x40));
+    channel.events.push_back(controller(10, 0x1E, 0x09));
+    channel.events.push_back(controller(10, 0x1D, 0x33));
+    channel.events.push_back(controller(20, 0x1E, 0x2A));
+    channel.events.push_back(controller(20, 0x1D, 0x7F));
+    channel.events.push_back(note(24, 0x80, 60, 0));
+    channel.endTick = 24;
+
+    auto scratch = QTemporaryDir{};
+    QVERIFY2(scratch.isValid(), "could not create xcmd compile scratch directory");
+    const QString midPath = scratch.filePath(QStringLiteral("echo_traffic.mid"));
+    auto error = QString{};
+    QVERIFY2(writeBytes(midPath, smf.write(), error), qPrintable(error));
+
+    auto assembly = QByteArray{};
+    QVERIFY2(compileMid(m_mid2agbPath, {}, midPath, assembly, error), qPrintable(error));
+
+    // Each echo selector compiled exactly one game command with its payload.
+    QCOMPARE(assembly.count(QByteArrayLiteral("xIECV")), qsizetype{1});
+    QCOMPARE(assembly.count(QByteArrayLiteral("xIECL")), qsizetype{1});
+    // The unknown selector's payload byte (0x7F) produced no echo command:
+    // the extended op stream carries only the two completed pairs.
+    QVERIFY2(!assembly.contains(QByteArrayLiteral("xIECV , 127")) &&
+                 !assembly.contains(QByteArrayLiteral("xIECL , 127")),
+             "unknown-selector payload compiled into an XCMD op");
+}
+
 int runRoundTrip(const QString &projectRoot, const QString &mid2agbPath,
                  const QStringList &qtArguments)
 {

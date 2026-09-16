@@ -18,6 +18,7 @@ class MidiRoundtripTest final : public QObject
     void initTestCase();
     void songM2Roundtrip_data();
     void songM2Roundtrip();
+    void xcmdEchoTrafficCompilesToGameCommands();
 
   private:
     QString m_projectRoot;

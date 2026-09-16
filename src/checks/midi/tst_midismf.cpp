@@ -195,6 +195,37 @@ void installKeysplitVoicegroup(M4AEngine &engine, std::array<ToneData, 128> &voi
     m4a_engine_set_voicegroup(&engine, voices.data());
 }
 
+// One conductor chunk plus one channel chunk carrying `events` — the minimal
+// file shape for import-report rows (a CC-only chunk is still channel-bearing,
+// so it maps to engine 0).
+ImportAnalysis analyzeChannelTrack(const std::vector<SmfEvent> &events)
+{
+    auto smf = SmfFile{};
+    smf.format = 1;
+    smf.division = 24;
+    smf.tracks.resize(2);
+    smf.tracks[1].events = events;
+    if (!events.empty())
+        smf.tracks[1].endTick = events.back().tick;
+    return analyzeForImport(smf);
+}
+
+const ImportCcUsage *ccRow(const ImportAnalysis &analysis, uint8_t cc)
+{
+    for (const ImportCcUsage &usage : analysis.ccs)
+        if (usage.cc == cc)
+            return &usage;
+    return nullptr;
+}
+
+const ImportXcmdUsage *xcmdRow(const ImportAnalysis &analysis, const QString &label)
+{
+    for (const ImportXcmdUsage &usage : analysis.xcmds)
+        if (usage.label == label)
+            return &usage;
+    return nullptr;
+}
+
 } // namespace
 
 void MidiSmfTest::validFormat0ParsingAndCoercion()
@@ -856,6 +887,134 @@ void MidiSmfTest::engineTrackMappingAgreesAcrossProjections()
     QCOMPARE(smf.write(), sourceBytes);
     QVERIFY2(semanticReparseMatches(smf, error), qPrintable(error));
     QVERIFY(sameSmf(document.smf(), smf));
+}
+
+// Complete selector+payload pairs are the only XCMD traffic that exports:
+// each completed point lands on its descriptor row (volume first, length
+// second — kLaneDescriptors order), and the plumbing CCs 29/30/31 never leak
+// into the ordinary-CC histogram.
+void MidiSmfTest::importReportSummarizesCompleteEchoPairs()
+{
+    const auto analysis = analyzeChannelTrack({
+        channelEvent(0, 0xB0, 0x1E, 0x08),
+        channelEvent(0, 0xB0, 0x1D, 0x40),
+        channelEvent(10, 0xB0, 0x1E, 0x09),
+        channelEvent(10, 0xB0, 0x1D, 0x33),
+    });
+
+    QCOMPARE(analysis.ccs.size(), qsizetype{0});
+    for (const ImportCcUsage &usage : analysis.ccs)
+        QVERIFY2(usage.cc < 29 || usage.cc > 31, "XCMD plumbing leaked into the CC histogram");
+
+    QCOMPARE(analysis.xcmds.size(), qsizetype{2});
+    QCOMPARE(analysis.xcmds[0].label, QStringLiteral("Echo volume"));
+    QCOMPARE(analysis.xcmds[0].count, uint32_t{1});
+    QCOMPARE(analysis.xcmds[0].support, ImportSupport::Supported);
+    QCOMPARE(analysis.xcmds[1].label, QStringLiteral("Echo length"));
+    QCOMPARE(analysis.xcmds[1].count, uint32_t{1});
+    QCOMPARE(analysis.xcmds[1].support, ImportSupport::Supported);
+}
+
+// One selector epoch may feed several payload bytes: each completed payload
+// is one logical point, so the row counts points — never raw CC events.
+void MidiSmfTest::importReportCountsEveryPayloadOfSharedSelector()
+{
+    const auto analysis = analyzeChannelTrack({
+        channelEvent(0, 0xB0, 0x1E, 0x08),
+        channelEvent(0, 0xB0, 0x1D, 0x10),
+        channelEvent(0, 0xB0, 0x1D, 0x20),
+    });
+
+    QCOMPARE(analysis.xcmds.size(), qsizetype{1});
+    QCOMPARE(analysis.xcmds[0].label, QStringLiteral("Echo volume"));
+    QCOMPARE(analysis.xcmds[0].count, uint32_t{2});
+    QCOMPARE(analysis.xcmds[0].support, ImportSupport::Supported);
+}
+
+// Supported and not-exported traffic coexist in one report: the completed
+// echo pair keeps its Supported row next to the unknown selector's
+// not-exported row (payload bytes counted, selector named in hex).
+void MidiSmfTest::importReportKeepsSupportedAndUnknownSelectorsApart()
+{
+    const auto analysis = analyzeChannelTrack({
+        channelEvent(0, 0xB0, 0x1E, 0x08),
+        channelEvent(0, 0xB0, 0x1D, 0x40),
+        channelEvent(10, 0xB0, 0x1E, 0x2A),
+        channelEvent(10, 0xB0, 0x1D, 0x7F),
+    });
+
+    QCOMPARE(analysis.xcmds.size(), qsizetype{2});
+    QCOMPARE(analysis.xcmds[0].label, QStringLiteral("Echo volume"));
+    QCOMPARE(analysis.xcmds[0].count, uint32_t{1});
+    QCOMPARE(analysis.xcmds[0].support, ImportSupport::Supported);
+    QCOMPARE(analysis.xcmds[1].label, QStringLiteral("Unknown XCMD selector 0x2a"));
+    QCOMPARE(analysis.xcmds[1].count, uint32_t{1});
+    QCOMPARE(analysis.xcmds[1].support, ImportSupport::NotExported);
+}
+
+// A selector that never receives a payload never exports: the epoch is
+// reported for review under its descriptor name, and nothing in the report
+// claims support.
+void MidiSmfTest::importReportFlagsDanglingSelectorForReview()
+{
+    const auto analysis = analyzeChannelTrack({
+        channelEvent(4, 0xB0, 0x1E, 0x09),
+    });
+
+    QCOMPARE(analysis.xcmds.size(), qsizetype{1});
+    QCOMPARE(analysis.xcmds[0].label, QStringLiteral("Echo length"));
+    QCOMPARE(analysis.xcmds[0].count, uint32_t{1});
+    QCOMPARE(analysis.xcmds[0].support, ImportSupport::NeedsReview);
+    for (const ImportXcmdUsage &usage : analysis.xcmds)
+        QVERIFY(usage.support != ImportSupport::Supported);
+}
+
+// Payload bytes before any selector cannot resolve against the converter's
+// latched register, so they are reported for review rather than dropped
+// silently.
+void MidiSmfTest::importReportFlagsStrayPayloadForReview()
+{
+    const auto analysis = analyzeChannelTrack({
+        channelEvent(0, 0xB0, 0x1D, 0x40),
+    });
+
+    QCOMPARE(analysis.xcmds.size(), qsizetype{1});
+    QCOMPARE(analysis.xcmds[0].label, QStringLiteral("XCMD payload without a selector"));
+    QCOMPARE(analysis.xcmds[0].count, uint32_t{1});
+    QCOMPARE(analysis.xcmds[0].support, ImportSupport::NeedsReview);
+}
+
+// Advanced-presentation CCs still export when PrintControllerOp has a branch
+// for them (MODT/TUNE/LFODL); anything outside the switch keeps a not-exported
+// verdict. None of this ordinary traffic produces XCMD rows.
+void MidiSmfTest::importReportVerdictsOrdinaryControllers()
+{
+    const auto analysis = analyzeChannelTrack({
+        channelEvent(0, 0xB0, 0x16, 3),
+        channelEvent(0, 0xB0, 0x18, 20),
+        channelEvent(0, 0xB0, 0x1A, 5),
+        channelEvent(0, 0xB0, 0x4B, 40),
+    });
+
+    QCOMPARE(analysis.ccs.size(), qsizetype{4});
+    QCOMPARE(analysis.xcmds.size(), qsizetype{0});
+
+    const auto *modt = ccRow(analysis, 0x16);
+    QVERIFY(modt);
+    QCOMPARE(modt->count, 1);
+    QCOMPARE(modt->label, QStringLiteral("MODT — LFO type"));
+    QCOMPARE(modt->support, ImportSupport::Supported);
+    const auto *tune = ccRow(analysis, 0x18);
+    QVERIFY(tune);
+    QCOMPARE(tune->support, ImportSupport::Supported);
+    const auto *lfodl = ccRow(analysis, 0x1A);
+    QVERIFY(lfodl);
+    QCOMPARE(lfodl->support, ImportSupport::Supported);
+    const auto *unmapped = ccRow(analysis, 0x4B);
+    QVERIFY(unmapped);
+    QCOMPARE(unmapped->label, QStringLiteral("CC — Controller"));
+    QCOMPARE(unmapped->support, ImportSupport::NotExported);
+    QVERIFY(xcmdRow(analysis, QStringLiteral("Echo volume")) == nullptr);
 }
 
 int runSmfCheck(const QStringList &qtArguments)

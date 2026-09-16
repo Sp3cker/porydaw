@@ -62,6 +62,74 @@ M4aCcInfo m4aClassifyCc(uint8_t cc)
     }
 }
 
+M4aExportSupport m4aExportSupport(uint8_t cc)
+{
+    // Every row audited against the bundled converter. midi.cpp turns each
+    // SMF controller (0xB0) into EventType::Controller with param1 = CC and
+    // param2 = value, unfiltered; PrintAgbTrack routes those straight into
+    // PrintControllerOp's switch on event.param1, so the CC number alone
+    // picks the branch cited below.
+    switch (cc) {
+    // PrintOp branches -> real game command bytes. MODT/TUNE/LFODL and the
+    // PRIO pair present as Advanced (m4aClassifyCc) but still export.
+    case 0x01: // PrintControllerOp -> PrintOp "MOD   "
+    case 0x07: // PrintControllerOp -> PrintOp "VOL   "
+    case 0x0A: // PrintControllerOp -> PrintOp "PAN   "
+    case 0x14: // PrintControllerOp -> PrintOp "BENDR "
+    case 0x15: // PrintControllerOp -> PrintOp "LFOS  "
+    case 0x16: // PrintControllerOp -> PrintOp "MODT  "
+    case 0x18: // PrintControllerOp -> PrintOp "TUNE  "
+    case 0x1A: // PrintControllerOp -> PrintOp "LFODL "
+    case 0x21: // PrintControllerOp -> PrintByte "PRIO  , " + PrintWait
+    case 0x27:
+        return M4aExportSupport::Supported;
+
+    // No case in PrintControllerOp -> default branch -> PrintWait only:
+    // PORTAMENTO/PWMC/PWMS never reach the byte stream. Same fate for any
+    // unmapped CC.
+    case 0x05:
+    case 0x17:
+    case 0x19:
+        return M4aExportSupport::NotExported;
+
+    // MEMACC execute: PrintControllerOp routes 0x0C/0x10 to PrintMemAcc,
+    // which emits "MEMACC, mem_*" only for the stored op 0x00-0x05; ops
+    // 0x06+ are "// TODO: everything else" stubs, so the verdict depends on
+    // incomplete protocol traffic.
+    case 0x0C:
+    case 0x10:
+        return M4aExportSupport::NeedsReview;
+
+    // MEMACC op/params: PrintControllerOp stores s_memaccOp/Param1/Param2
+    // and PrintWait — a bare CC byte produces no game bytes. The coupled
+    // execution verdict lives at 0x0C/0x10 above.
+    case 0x0D:
+    case 0x0E:
+    case 0x0F:
+        return M4aExportSupport::NotExported;
+
+    // Loop-label protocol: PrintControllerOp writes an asm label, PrintWait,
+    // and ResetTrackVars, but the MEMACC jump ops that consume labels are
+    // TODO stubs in PrintMemAcc -> incomplete protocol traffic.
+    case 0x11:
+        return M4aExportSupport::NeedsReview;
+
+    // XCMD plumbing: PrintControllerOp routes 0x1D/0x1F to PrintExtendedOp,
+    // which emits xIECV/xIECL only when the selector stored by 0x1E is
+    // 0x08/0x09, else PrintWait; 0x1E stores s_extendedCommand with no
+    // output at all. Coupled traffic — the logical echo verdict belongs to
+    // the xcmd phase, not to a bare CC number.
+    case 0x1D:
+    case 0x1E:
+    case 0x1F:
+        return M4aExportSupport::NeedsReview;
+
+    // PrintControllerOp default branch: PrintWait only, nothing exported.
+    default:
+        return M4aExportSupport::NotExported;
+    }
+}
+
 M4aLane m4aLaneForXcmdSelector(uint8_t selector)
 {
     switch (selector) {

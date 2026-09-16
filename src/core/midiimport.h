@@ -24,11 +24,36 @@ struct ImportTrackInfo {
     bool notesBeforeProgram = false; // notes sound before the first VOICE
 };
 
+// Export compatibility of one import-analysis row through the bundled
+// mid2agb converter: does the traffic compile into the intended game
+// command? One vocabulary over both verdict sources — m4aExportSupport for
+// bare CCs, xcmd::ExportClass for XCMD logical commands. Never a
+// presentation judgement: lane-vs-strip placement stays with the m4a labels.
+enum class ImportSupport {
+    Supported,   // converter emits the intended game command
+    NotExported, // converter drops the traffic without emitting a command
+    NeedsReview, // incomplete or unresolved coupled-protocol traffic
+};
+
 struct ImportCcUsage {
     uint8_t cc = 0;
     int count = 0;
-    QString label;        // m4a meaning ("VOL — Volume") or "CC n (ignored by mid2agb)"
-    bool audible = false; // rendered by the engine (vs. kept-but-inert)
+    QString label; // m4a meaning ("VOL — Volume") or "CC n (ignored by mid2agb)"
+    // Export verdict for this CC alone. The report answers export
+    // compatibility, never lane visibility. The XCMD plumbing CCs
+    // (0x1D/0x1E/0x1F) never get rows here — a CC-number count of
+    // coupled-protocol bytes is meaningless; their verdict lives in
+    // ImportXcmdUsage.
+    ImportSupport support = ImportSupport::Supported;
+};
+
+// One XCMD logical command summarized from the mapped tracks' coupled
+// 0x1D/0x1E/0x1F plumbing. Counts are logical — completed points, payload
+// bytes, or dangling epochs — never raw CC events.
+struct ImportXcmdUsage {
+    QString label;      // descriptor displayName, or "Unknown XCMD selector 0x2A"
+    uint32_t count = 0; // logical points for lanes; payload bytes/epochs otherwise
+    ImportSupport support = ImportSupport::Supported;
 };
 
 struct ImportAnalysis {
@@ -40,7 +65,8 @@ struct ImportAnalysis {
     int peakConcurrentNotes = 0;
     int sampleNoteLimit = 0;
     std::vector<ImportTrackInfo> tracks; // one per mapped engine track
-    std::vector<ImportCcUsage> ccs;      // by CC number, ascending
+    std::vector<ImportCcUsage> ccs;      // ordinary CCs by number, ascending
+    std::vector<ImportXcmdUsage> xcmds;  // XCMD logical commands; plumbing never a CC row
     QStringList warnings;                // human-readable mapping-pass flags
 };
 
@@ -84,7 +110,7 @@ bool rescaleDivision(SmfFile *smf, uint16_t newDivision, QString *error);
 // place. Exporters commonly emit a channel-init block several times over
 // (duplicate tick-0 program/volume/pan/bend), and since both mid2agb's output
 // and the engine apply a tick's events in order, only the last of a same-slot
-// run is ever audible — the rest just shadow it from every editing surface.
+// run ever plays — the rest just shadow it from every editing surface.
 // Events where every occurrence acts (notes, text/marker metas, and the
 // coupled-protocol CCs: MEMACC plumbing, XCMD, the loop Label) are never
 // touched. Returns the number of events removed.

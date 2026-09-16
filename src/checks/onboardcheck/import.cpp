@@ -47,14 +47,16 @@ void OnboardingTest::importAnalysis()
     QCOMPARE(budgetCategory, budget == 1);
     QCOMPARE(analysis.tracks.size(), qsizetype{2});
     QCOMPARE(analysis.tracks[1].programs.size(), qsizetype{2});
-    bool modAudible = false;
-    bool reverbInert = false;
+    bool modExported = false;
+    bool reverbDropped = false;
     for (const ImportCcUsage &usage : analysis.ccs) {
-        modAudible = modAudible || (usage.cc == 1 && usage.audible);
-        reverbInert = reverbInert || (usage.cc == 91 && !usage.audible);
+        if (usage.cc == 1)
+            modExported = usage.support == ImportSupport::Supported;
+        if (usage.cc == 91)
+            reverbDropped = usage.support == ImportSupport::NotExported;
     }
-    QVERIFY(modAudible);
-    QVERIFY(reverbInert);
+    QVERIFY(modExported);
+    QVERIFY(reverbDropped);
 }
 
 void OnboardingTest::importRescale()
