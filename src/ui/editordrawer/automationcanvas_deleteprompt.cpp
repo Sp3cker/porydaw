@@ -20,11 +20,8 @@
 // popup session instead of a native modal: one QML form (CcDeleteConfirm.qml)
 // bound to this canvas as its bridge. The open path publishes the guarded
 // snapshot before openForm, so the QML getters read a complete prompt during
-// component creation, and never carries a lane pointer: acceptance
-// revalidates document, revision, lane handle, and exact row id through the
-// snapshot identity before running the same replaceSpan event deletion the
-// legacy modal ran, so a stale prompt deletes nothing. The parameter label
-// itself always survives; only its written events go.
+// component creation. Acceptance resolves its adapter only after validating
+// the captured epoch. The parameter survives; only its written events go.
 
 QString AutomationCanvas::ccDeletePromptTitle() const
 {
@@ -48,7 +45,6 @@ QVariantMap AutomationCanvas::ccDeletePromptAppearance() const
 
 bool AutomationCanvas::openCcDeletePrompt(LaneHandle handle, std::size_t writtenEventCount)
 {
-    SongDocument &document = m_page.document();
     songview::QuickPopupSession *const session = m_menuSession.data();
     const auto *slot = resolveSlot(handle);
     if (!session || !session->window() || !slot || !slot->lane)
@@ -65,8 +61,7 @@ bool AutomationCanvas::openCcDeletePrompt(LaneHandle handle, std::size_t written
     // a displaced session's cleanup callbacks can re-enter document state,
     // so no raw document or slot pointer is held or dereferenced across it.
     PendingCcDeletePrompt pending;
-    pending.document = &document;
-    pending.documentRevision = document.revision();
+    pending.epoch = targetEpoch();
     pending.lane = handle;
     pending.rowId = slot->id;
     pending.laneTitle = slot->lane->title();
@@ -75,29 +70,41 @@ bool AutomationCanvas::openCcDeletePrompt(LaneHandle handle, std::size_t written
     // Replacement ends the active shared-popup session before this bridge
     // publishes a new guarded target: its cancellation callbacks cannot
     // observe or affect the new prompt.
+    QPointer<AutomationCanvas> self(this);
+    const QPointer<songview::QuickPopupSession> boundSession = session;
     session->cancel(/*restoreFocus=*/false);
+    if (!self)
+        return false;
     cancelCcDeletePromptWithoutFocus();
 
-    // That cancellation was a re-entry point: revalidate the snapshot against
-    // live state before anything is published. Nothing was emitted yet, so a
-    // stale target simply refuses to open.
-    SongDocument &current = m_page.document();
-    const auto *settled = resolveSlot(handle);
-    if (&current != pending.document || current.revision() != pending.documentRevision ||
-        !settled || !settled->lane || settled->id != pending.rowId)
+    if (!self)
+        return false;
+    if (!boundSession || boundSession != m_menuSession || targetEpoch() != pending.epoch)
         return false;
 
+    const TargetEpoch epoch = pending.epoch;
     m_pendingCcDeletePrompt = std::move(pending);
     // Publish before openForm: the QML form's property getters run while the
     // component is created, before the call returns.
     emit ccDeletePromptChanged();
+    if (!self)
+        return false;
+    if (!boundSession || boundSession != m_menuSession || targetEpoch() != epoch)
+        return false;
     QObject::disconnect(m_ccDeletePromptCancellation);
     m_ccDeletePromptCancellation =
         connect(session, &songview::QuickPopupSession::cancelled, this,
                 [this](bool restoreFocus) { clearCcDeletePrompt(restoreFocus); });
-    if (!session->openForm(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/CcDeleteConfirm.qml")),
-                           this)) {
+    const bool opened =
+        session->openForm(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/CcDeleteConfirm.qml")), this);
+    if (!self)
+        return false;
+    if (!opened) {
         clearCcDeletePrompt(/*restoreFocus=*/true);
+        return false;
+    }
+    if (targetEpoch() != epoch) {
+        cancelCcDeletePromptWithoutFocus();
         return false;
     }
     return true;
@@ -109,27 +116,36 @@ void AutomationCanvas::acceptCcDeletePrompt()
         std::exchange(m_pendingCcDeletePrompt, std::nullopt);
     if (!pending)
         return;
+    QPointer<AutomationCanvas> self(this);
     // Never expose a pending target while mutating the document.
     QObject::disconnect(m_ccDeletePromptCancellation);
     m_ccDeletePromptCancellation = {};
     emit ccDeletePromptChanged();
+    if (!self)
+        return;
     // Close only the form this canvas still owns; a foreign popup survives.
     if (songview::QuickPopupSession *const session = m_menuSession.data();
         session && session->owns(this)) {
         session->close();
     }
 
-    SongDocument &document = m_page.document();
+    if (!self)
+        return;
+    if (targetEpoch() != pending->epoch)
+        return;
     const auto *slot = resolveSlot(pending->lane);
-    if (&document != pending->document || document.revision() != pending->documentRevision ||
-        !slot || !slot->lane || slot->id != pending->rowId)
-        return; // Stale request: document, lane, or row changed since open.
+    if (!slot || !slot->lane)
+        return;
 
     // replaceSpan's documentChanged fan-out rebuilds m_nodeStack
     // synchronously, so nothing below may touch slot or lane state again —
     // the snapshot identity is the only surviving target description.
     slot->lane->replaceSpan(0, CoreTimeDefaults::kNoTick, {});
+    if (!self)
+        return;
     m_page.requestRefresh();
+    if (!self)
+        return;
 
     // Band focus returns only when no popup owns the session now: a popup
     // opened meanwhile keeps focus.

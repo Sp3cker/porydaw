@@ -214,6 +214,50 @@ void AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched()
     QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()));
 }
 
+void AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch()
+{
+    SongTab &songTab = tab();
+    const quick_popup::PromptGuard guard(songTab.view());
+    QCOMPARE(songTab.document().addTrack(0), 1);
+    songTab.document().addLanePoint(1, kController, kPointTick, kPointValue);
+    QCoreApplication::processEvents();
+    const EditorAutomationRowId trackA{EditorAutomationRowKind::ControlChange, 0, kController};
+    const EditorAutomationRowId trackB{EditorAutomationRowKind::ControlChange, 1, kController};
+    QVERIFY(activateParameter(trackA));
+    const NodePointMenu menu = openNodePointMenu(findRow(trackA), kPointTick, kPointValue,
+                                                 QStringLiteral("the CC point menu did not open"));
+    QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic));
+    QVERIFY(quick_popup::clickMenuRow(*menu.session, menu.setValueRow));
+    DrawerChrome &chrome = songTab.view().editorDrawer()->chrome();
+    QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
+    QVERIFY(automation_valueprompt::focusedTextInput(quickWindow()));
+
+    // The full serialization includes both tracks' points, not only the
+    // originally selected lane. A consumed prompt must write neither.
+    const QByteArray before = songTab.document().smf().write();
+    const uint64_t revision = songTab.document().revision();
+    const int undoIndex = songTab.document().undoStack()->index();
+    AutomationCanvas *const canvas = page().canvas();
+    bool switched = false;
+    const QMetaObject::Connection connection =
+        connect(canvas, &AutomationCanvas::valuePromptChanged, canvas, [&] {
+            if (switched || canvas->valuePromptVisible())
+                return;
+            switched = true;
+            songTab.view().selectTrack(1);
+        });
+    QTest::keyClick(&quickWindow(), Qt::Key_0);
+    QTest::keyClick(&quickWindow(), Qt::Key_Return);
+    QObject::disconnect(connection);
+    QVERIFY(switched);
+    QVERIFY(findRow(trackB).valid());
+    QVERIFY(!findRow(trackA).valid());
+    QVERIFY(!canvas->valuePromptVisible());
+    QCOMPARE(songTab.document().smf().write(), before);
+    QCOMPARE(songTab.document().revision(), revision);
+    QCOMPARE(songTab.document().undoStack()->index(), undoIndex);
+}
+
 void AutomationEditingTest::outsideRightClickDismissesPointMenu()
 {
     SongTab &songTab = tab();

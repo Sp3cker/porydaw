@@ -115,6 +115,7 @@ class AutomationEditingTest final : public QObject
     void pointMenuDeleteCommitsEdit();
     void pointMenuValuePromptUpdatesOneDuplicateOccurrence();
     void pointMenuValuePromptEscapeLeavesDocumentUntouched();
+    void consumedValuePromptCannotFollowTrackSwitch();
     void outsideRightClickDismissesPointMenu();
     void pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes();
     void pointMenuStaleDocumentCannotDeleteTarget();

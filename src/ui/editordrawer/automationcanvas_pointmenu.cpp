@@ -94,8 +94,7 @@ bool AutomationCanvas::showNodeMenuNear(LaneHandle handle, const QPointF &positi
     // cancellation of a displaced session can all re-enter this canvas
     // synchronously, so nothing below trusts state re-read after them.
     PendingNodeMenu target;
-    target.document = &document;
-    target.documentRevision = document.revision();
+    target.epoch = targetEpoch();
     target.lane = handle;
     target.rowId = slot->id;
     target.point = point;
@@ -153,16 +152,7 @@ bool AutomationCanvas::showNodeMenuNear(LaneHandle handle, const QPointF &positi
         return true;
     if (!m_nodeMenuHost->isOpen())
         return true;
-    // Revalidate the snapshot across the open's synchronous callbacks (grab
-    // release, displaced-owner cleanup, owner destruction — the QPointer
-    // target and this re-read follow the CC-delete-prompt pattern): document
-    // identity, revision, and the handle's row must all still hold before
-    // anything is published. A stale open ends only a menu this canvas still
-    // owns, never a foreign popup.
-    SongDocument &settled = m_page.document();
-    const auto *settledSlot = resolveSlot(handle);
-    if (&settled != target.document || settled.revision() != target.documentRevision ||
-        !settledSlot || settledSlot->id != target.rowId) {
+    if (targetEpoch() != target.epoch) {
         cancelNodeMenuWithoutFocus();
         return true;
     }
@@ -209,15 +199,10 @@ void AutomationCanvas::handleNodeMenuAction(int actionId)
     }
     if (!self)
         return; // The focus swap tore this canvas down.
-    SongDocument &document = m_page.document();
-    if (&document != pending.document || document.revision() != pending.documentRevision)
-        return; // Stale document: no mutation.
-    // Re-resolve the captured handle and require the same row: a rebuild
-    // remap landing between open and dispatch cannot mutate a different lane.
-    // The full NodePoint is the occurrence identity — duplicate-tick points
-    // differ by value — so re-find this exact point before any mutation.
+    if (targetEpoch() != pending.epoch)
+        return;
     const auto *slot = resolveSlot(pending.lane);
-    if (!slot || !slot->lane || slot->id != pending.rowId)
+    if (!slot || !slot->lane)
         return;
     NodeLane *lane = slot->lane;
     const std::vector<NodePoint> points = lane->points();
@@ -238,7 +223,9 @@ void AutomationCanvas::handleNodeMenuAction(int actionId)
         // guard above proves the document has not changed since.
         const NodeDrag drag{pending.lane, pending.point, pending.point, lane->minimumValue(),
                             lane->maximumValue()};
-        commitNodePointDeletes(pending.documentRevision, {drag});
+        commitNodePointDeletes(pending.epoch.documentRevision, {drag});
+        if (!self)
+            return;
         m_page.requestRefresh();
     }
 }

@@ -281,8 +281,14 @@ const QCursor &AutomationCanvas::pencilCursor()
     return m_pencilCursor;
 }
 
+AutomationCanvas::TargetEpoch AutomationCanvas::targetEpoch() const
+{
+    return {m_page.document().revision(), m_rowGeneration};
+}
+
 void AutomationCanvas::rebuildRows()
 {
+    ++m_rowGeneration;
     cancelInteraction();
     // A structural rebuild remaps every LaneHandle in m_nodeStack, so a menu
     // opened earlier would mutate a different lane: end it synchronously,
@@ -513,29 +519,28 @@ void AutomationCanvas::cancelNodeGestures()
 
 bool AutomationCanvas::openValuePromptForNode(LaneHandle handle, const NodePoint &point)
 {
-    SongDocument &document = m_page.document();
     const NodeLaneSlot *slot = resolveSlot(handle);
     if (!slot || !slot->lane)
         return false;
-    m_pendingValuePrompt = PendingValuePrompt{handle, point, document.revision(),
-                                              slot->lane->valuePrompt(point.value), true};
+    const TargetEpoch epoch = targetEpoch();
+    m_pendingValuePrompt =
+        PendingValuePrompt{handle, point, epoch, slot->lane->valuePrompt(point.value), true};
+    QPointer<AutomationCanvas> self(this);
     emit valuePromptChanged();
-    return true;
+    return self && targetEpoch() == epoch && m_pendingValuePrompt.has_value();
 }
 
 bool AutomationCanvas::openValuePromptForInsertion(LaneHandle handle, Tick tick, int storedValue)
 {
-    SongDocument &document = m_page.document();
     const NodeLaneSlot *slot = resolveSlot(handle);
     if (!slot || !slot->lane)
         return false;
-    m_pendingValuePrompt = PendingValuePrompt{handle,
-                                              {tick, storedValue},
-                                              document.revision(),
-                                              slot->lane->valuePrompt(storedValue),
-                                              false};
+    const TargetEpoch epoch = targetEpoch();
+    m_pendingValuePrompt = PendingValuePrompt{
+        handle, {tick, storedValue}, epoch, slot->lane->valuePrompt(storedValue), false};
+    QPointer<AutomationCanvas> self(this);
     emit valuePromptChanged();
-    return true;
+    return self && targetEpoch() == epoch && m_pendingValuePrompt.has_value();
 }
 
 void AutomationCanvas::acceptNodeValuePrompt(int displayedValue)
@@ -544,17 +549,19 @@ void AutomationCanvas::acceptNodeValuePrompt(int displayedValue)
         std::exchange(m_pendingValuePrompt, std::nullopt);
     if (!pending)
         return;
+    QPointer<AutomationCanvas> self(this);
     emit valuePromptChanged();
-    SongDocument &document = m_page.document();
-    const NodeLaneSlot *slot = resolveSlot(pending->lane);
-    NodeLane *lane = slot ? slot->lane : nullptr;
-    if (!lane || document.revision() != pending->expectedRevision) {
-        // Stale prompt — replacement, lane removal, or a document change
-        // since it opened. No edit, no undo entry, only the focus return.
+    if (!self)
+        return;
+    if (targetEpoch() != pending->epoch) {
         if (m_inputHost)
             m_inputHost->requestFocus(Qt::PopupFocusReason);
         return;
     }
+    const NodeLaneSlot *slot = resolveSlot(pending->lane);
+    NodeLane *lane = slot ? slot->lane : nullptr;
+    if (!lane)
+        return;
     const int stored = std::clamp(displayedValue + pending->prompt.storedOffset,
                                   lane->minimumValue(), lane->maximumValue());
     if (pending->forExistingNode) {
@@ -564,7 +571,9 @@ void AutomationCanvas::acceptNodeValuePrompt(int displayedValue)
                                 {pending->anchor.tick, stored},
                                 lane->minimumValue(),
                                 lane->maximumValue()};
-            commitNodePointMoves(pending->expectedRevision, {drag});
+            commitNodePointMoves(pending->epoch.documentRevision, {drag});
+            if (!self)
+                return;
             m_page.requestRefresh();
         }
     } else {
@@ -576,10 +585,12 @@ void AutomationCanvas::acceptNodeValuePrompt(int displayedValue)
         if (!duplicate) {
             lane->replaceSpan(pending->anchor.tick, pending->anchor.tick,
                               {{pending->anchor.tick, stored}});
+            if (!self)
+                return;
             m_page.requestRefresh();
         }
     }
-    if (m_inputHost)
+    if (self && m_inputHost)
         m_inputHost->requestFocus(Qt::PopupFocusReason);
 }
 

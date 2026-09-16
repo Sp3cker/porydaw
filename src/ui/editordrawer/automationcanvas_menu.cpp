@@ -162,7 +162,6 @@ void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
 
 void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPointF &scenePosition)
 {
-    SongDocument &document = m_page.document();
     songview::QuickPopupSession *const session = m_menuSession.data();
     if (!session || !session->window())
         return;
@@ -219,7 +218,19 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPointF &scenePo
             rows.push_back(std::move(ranges));
         }
     }
+    PendingMenu target;
+    target.epoch = targetEpoch();
+    target.lane = handle;
+    target.rowId = slot->id;
+    QPointer<AutomationCanvas> self(this);
+    const QPointer<songview::QuickPopupSession> boundSession = session;
+    songview::TimelineInputHost *const boundHost = m_inputHost;
     m_menuModel->setItems(std::move(rows));
+    if (!self)
+        return;
+    if (!boundSession || boundSession != m_menuSession || boundHost != m_inputHost ||
+        targetEpoch() != target.epoch)
+        return;
     // Submenu rows activate through the lazily created child model, not the
     // root: bind this open's child before the panel can traverse into it.
     // setItems() destroyed the previous child models, so the connection is
@@ -231,24 +242,27 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPointF &scenePo
                     &AutomationCanvas::handleMenuAction);
     }
 
-    // Snapshot the guarded open-time target first, but publish it only after
-    // open()'s implicit cancellation of a displaced session has completed: no
-    // callback can observe a half-published target, and an open failure
-    // publishes nothing. Cancellation clears it.
-    PendingMenu target;
-    target.document = &document;
-    target.documentRevision = document.revision();
-    target.lane = handle;
-    target.rowId = slot->id;
-
     // End the press's implicit grab before the menu publishes: the panel must
     // receive the following clicks, and the synchronous PointerUngrabbed
     // cancellation lands while no pending target exists yet.
     if (m_inputHost)
         m_inputHost->releasePointerGrab();
+    if (!self)
+        return;
+    if (!boundSession || boundSession != m_menuSession || boundHost != m_inputHost ||
+        targetEpoch() != target.epoch)
+        return;
+    if (m_menuSession->isOpen() && !m_menuSession->owns(m_menuHost))
+        return;
     m_menuHost->open(m_menuModel, scenePosition);
+    if (!self)
+        return;
     if (!m_menuHost->isOpen())
         return;
+    if (targetEpoch() != target.epoch) {
+        cancelLaneMenuWithoutFocus();
+        return;
+    }
     m_pendingMenu = std::move(target);
 }
 
@@ -272,15 +286,11 @@ void AutomationCanvas::handleMenuAction(int actionId)
     }
     if (!self)
         return; // The focus swap tore this canvas down.
+    if (targetEpoch() != pending.epoch)
+        return;
     SongDocument &document = m_page.document();
-    if (&document != pending.document || document.revision() != pending.documentRevision)
-        return; // Stale document: no mutation, no announcement.
-
-    // Lane-menu commands re-resolve the captured handle and require the same
-    // row: a remap landing between open and dispatch cannot mutate a
-    // different lane.
     const auto *slot = resolveSlot(pending.lane);
-    if (!slot || !slot->lane || slot->id != pending.rowId)
+    if (!slot || !slot->lane)
         return;
     NodeLane *lane = slot->lane;
     const Tick maxTick = CoreTimeDefaults::kNoTick;
@@ -294,11 +304,13 @@ void AutomationCanvas::handleMenuAction(int actionId)
         for (const auto &point : m_clipboard)
             replacement.push_back({point.tick, std::clamp(point.value, minimum, maximum)});
         lane->replaceSpan(0, maxTick, replacement);
+        if (!self)
+            return;
         m_page.requestRefresh();
     } else if (actionId == int(Action::Clear)) {
         lane->replaceSpan(0, maxTick, {});
-        // Read the snapshot row from here on: replaceSpan's documentChanged
-        // fan-out rebuilds m_nodeStack, invalidating slot pointers.
+        if (!self)
+            return;
         m_page.requestRefresh();
     } else if (actionId == int(Action::RemoveLane)) {
         // Delete automation events is the only destructive lane-menu command:
@@ -309,14 +321,7 @@ void AutomationCanvas::handleMenuAction(int actionId)
         const std::size_t writtenEventCount =
             document.lanePoints(int(slot->id.track), slot->id.controller).size();
         if (writtenEventCount != 0) {
-            // The QML confirmation opens on the shared canvas popup session;
-            // activateRow has already closed the menu before this dispatch,
-            // and openCcDeletePrompt pre-cancels any displaced session before
-            // it publishes its guarded open-time snapshot (document,
-            // revision, lane handle, exact row id, displayed title and event
-            // count). Acceptance revalidates the whole guard through
-            // immutable identity, so a rebuild landing meanwhile deletes
-            // nothing.
+            // The confirmation captures its own epoch before opening.
             openCcDeletePrompt(pending.lane, writtenEventCount);
         }
     } else if (actionId == int(Action::RangeAuto)) {

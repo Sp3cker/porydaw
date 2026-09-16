@@ -107,7 +107,6 @@ std::optional<VoiceChangeArea::PendingVoiceMenu> VoiceChangeArea::captureTargetA
     if (m_engineTrack < 0)
         return std::nullopt;
     PendingVoiceMenu target;
-    target.document = &document;
     target.revision = document.revision();
     target.track = m_engineTrack;
     DocLanePoint markerPoint;
@@ -169,8 +168,8 @@ void VoiceChangeArea::showContextMenu(qreal plotX, const QPointF &globalPosition
     if (!self)
         return;
     SongDocument &settled = m_owner.document();
-    if (&settled != captured->document || settled.revision() != captured->revision ||
-        primaryTrack() != captured->track || !m_inputHost)
+    if (settled.revision() != captured->revision || primaryTrack() != captured->track ||
+        !m_inputHost)
         return;
     m_menuModel->setItems(std::move(rows));
     if (!self)
@@ -197,15 +196,15 @@ void VoiceChangeArea::showContextMenu(qreal plotX, const QPointF &globalPosition
     // Revalidate across the open's remaining synchronous callbacks: the
     // session must still be the one this menu opened on and still owned by
     // this band's host, so a displaced publication is never overwritten by
-    // this continuation. Document identity, revision, the document-facing
+    // this continuation. Revision, the document-facing
     // track, and the attached host must all still hold before anything is
     // published. A stale open ends only a menu this band still owns, never
     // a foreign popup.
     if (!m_menuSession || m_menuSession != session || !m_menuSession->owns(m_menuHost))
         return;
     SongDocument &live = m_owner.document();
-    if (&live != captured->document || live.revision() != captured->revision ||
-        primaryTrack() != captured->track || !m_inputHost) {
+    if (live.revision() != captured->revision || primaryTrack() != captured->track ||
+        !m_inputHost) {
         cancelMenuWithoutFocus();
         return;
     }
@@ -221,8 +220,7 @@ void VoiceChangeArea::openPickerForTarget(const PendingVoiceMenu &target)
     // acceptance guard, so the callback below re-judges the post-focus
     // document state.
     SongDocument &live = m_owner.document();
-    if (&live != target.document || primaryTrack() != target.track ||
-        live.revision() != target.revision)
+    if (primaryTrack() != target.track || live.revision() != target.revision)
         return;
     // Serial snapshot taken before the signal-producing open: acceptance is
     // only live while nothing hard-cancelled this band's handed-off picker.
@@ -237,8 +235,7 @@ void VoiceChangeArea::openPickerForTarget(const PendingVoiceMenu &target)
             if (!self)
                 return;
             SongDocument &document = m_owner.document();
-            if (&document != target.document || primaryTrack() != target.track ||
-                document.revision() != target.revision)
+            if (primaryTrack() != target.track || document.revision() != target.revision)
                 return;
             // Irreversible surface fence: the serial advanced at every hard
             // cancellation boundary (hidden, window deactivated, detached,
@@ -286,8 +283,7 @@ void VoiceChangeArea::handleMenuAction(int actionId)
     if (!self)
         return; // The focus swap tore this band down.
     SongDocument &document = m_owner.document();
-    if (&document != pending.document || primaryTrack() != pending.track ||
-        document.revision() != pending.revision)
+    if (primaryTrack() != pending.track || document.revision() != pending.revision)
         return; // Stale target: no mutation, no picker.
 
     switch (static_cast<VoiceMenuAction>(actionId)) {

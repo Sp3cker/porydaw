@@ -153,7 +153,6 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     // open-time target, typed menu rows, dispatch, and the shared
     // captured-target picker path behind both the double-click and the menu.
     struct PendingVoiceMenu {
-        QPointer<SongDocument> document;
         uint64_t revision = 0;
         int track = -1;
         Tick tick = 0;

@@ -94,14 +94,17 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     const AutomationViewModel &viewModel() const noexcept { return m_viewModel; }
     void rebuildRows();
     void cancelInteraction() override;
-    // Shared inline value prompt behind the Set Value menu action. Opening
-    // snapshots the document revision and never writes; acceptance
-    // revalidates lane identity and revision before taking the normal commit
-    // path, so a stale prompt edits nothing.
+    // Document identity is fixed for this canvas. Revision plus row generation
+    // proves a captured command target; layout-only rebuilds preserve handles.
+    struct TargetEpoch {
+        uint64_t documentRevision = 0;
+        uint64_t rowGeneration = 0;
+        bool operator==(const TargetEpoch &) const = default;
+    };
     struct PendingValuePrompt {
         LaneHandle lane;
         NodePoint anchor; // existing node (Set Value) or insertion tick/value
-        uint64_t expectedRevision = 0;
+        TargetEpoch epoch;
         NodeValuePrompt prompt;
         bool forExistingNode = false;
     };
@@ -120,15 +123,10 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     // QML bridge for CcDeleteConfirm.qml, the shared-session confirmation
     // behind the lane menu's Delete CC lane action on a lane that still
     // carries events. The prompt lives on this canvas — never a DrawerChrome
-    // pass-through — and its guarded target is the snapshot below: document
-    // identity plus revision reject any document change since the open, and
-    // the lane handle plus exact row id reject a rebuild remap. No lane
-    // pointer crosses the prompt; the displayed title and event count are
-    // captured with it, because acceptance runs after the menu's close and
-    // the getters run during QML component creation.
+    // pass-through. No lane pointer crosses the prompt; its displayed title
+    // and event count are captured for QML component creation.
     struct PendingCcDeletePrompt {
-        QPointer<SongDocument> document;
-        uint64_t documentRevision = 0;
+        TargetEpoch epoch;
         LaneHandle lane;
         EditorAutomationRowId rowId = {};
         QString laneTitle;
@@ -285,33 +283,22 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
         std::vector<NodePointMove> moves;
         std::vector<Tick> deleteTicks;
     };
-    // The guarded open-time target for one automation canvas menu. Document
-    // identity plus revision reject any document change since the open; the
-    // lane menu additionally re-resolves the handle and requires the same
-    // row id, so a rebuild landing after the open cannot retarget a
-    // different lane. No lane pointer and no point vector crosses the popup:
-    // commands re-read live state at dispatch. `track` carries the captured
-    // add-menu track.
+    // Commands re-resolve live adapters after validating the captured epoch.
     struct PendingMenu {
-        QPointer<SongDocument> document;
-        uint64_t documentRevision = 0;
+        TargetEpoch epoch;
         LaneHandle lane;
         EditorAutomationRowId rowId = {};
         int track = -1;
     };
-    // The guarded open-time target for the node point menu. Document identity
-    // plus revision reject any document change since the open; the lane
-    // handle plus exact row id reject a rebuild remap, and the full NodePoint
-    // (tick and value) is the occurrence identity — lanes can carry several
-    // points at one tick, so dispatch re-finds this exact point before any
-    // mutation. No lane pointer crosses the popup.
+    // The full NodePoint identifies the occurrence, including duplicate ticks.
     struct PendingNodeMenu {
-        QPointer<SongDocument> document;
-        uint64_t documentRevision = 0;
+        TargetEpoch epoch;
         LaneHandle lane;
         EditorAutomationRowId rowId = {};
         NodePoint point = {};
     };
+    TargetEpoch targetEpoch() const;
+    uint64_t m_rowGeneration = 0;
     void viewportResized();
     void relayoutContent();
     void contentGeometryChanged();
@@ -466,11 +453,8 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     std::vector<uint8_t> m_ghostControllers;
     bool m_ghostTempo = false;
     // Tap-tempo draft state: pure session state plus the idle commit plumbing.
-    // m_tapDocument and m_tapRevision pin the document the first tap saw; a
-    // mismatch (switched song, rebuild, or another edit) aborts the commit.
     TapTempoSession m_tapTempo;
     QTimer m_tapIdleCommit;
     QElapsedTimer m_tapClock;
-    QPointer<SongDocument> m_tapDocument;
-    uint64_t m_tapRevision = 0;
+    TargetEpoch m_tapEpoch;
 };
