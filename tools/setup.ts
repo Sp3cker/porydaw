@@ -15,6 +15,13 @@ import {
   setupVirtualEnvironment,
   setupVirtualEnvironmentPython,
 } from "./local_build_environment.ts";
+import {
+  ensureNativeBuildTools,
+  inspectNativeBuildTools,
+  type NativeBuildPython,
+  nativeBuildToolsDryRunOutcome,
+  NativeBuildToolsError,
+} from "./native_build_tools.ts";
 import { poryaaaaConfiguration } from "./poryaaaa_source.ts";
 import { SetupProgress } from "./setup_reporter.ts";
 
@@ -23,16 +30,9 @@ const buildDirectory = "build";
 const cacheDirectory = setupCacheDirectory(root);
 const virtualEnvironment = setupVirtualEnvironment(root);
 const toolsetMarker = setupToolsetMarker(root);
-const toolsetVersion = `aqtinstall=${aqtInstall}\nclang-format=22\n`;
-const decoder = new TextDecoder();
 
 type Options = {
   dryRun: boolean;
-};
-
-type Python = {
-  executable: string;
-  prefixArgs: string[];
 };
 
 type Toolset = {
@@ -49,13 +49,12 @@ type Platform = {
   label: string;
   qt: QtInstallation;
   launchCommand: string;
-  installTools: () => Promise<void>;
 };
 
 function usage(message?: string): never {
   if (message) console.error(`setup: ${message}`);
   console.error(`usage: deno task setup [--dry-run]
-  --dry-run  print the selected platform setup without changing the machine
+  --dry-run  check installed native tools and print setup without provisioning
   --help     show this help`);
   Deno.exit(2);
 }
@@ -81,43 +80,6 @@ async function exists(path: string): Promise<boolean> {
     return true;
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) return false;
-    throw error;
-  }
-}
-
-async function commandAvailable(
-  executable: string,
-  args = ["--version"],
-): Promise<boolean> {
-  try {
-    return (await new Deno.Command(executable, {
-      args,
-      stdout: "null",
-      stderr: "null",
-    }).output()).success;
-  } catch (error) {
-    if (error instanceof Deno.errors.NotFound) return false;
-    throw error;
-  }
-}
-
-async function capture(executable: string, args: string[]): Promise<string> {
-  try {
-    const result = await new Deno.Command(executable, {
-      args,
-      cwd: root,
-      stdout: "piped",
-      stderr: "piped",
-    }).output();
-    if (!result.success) {
-      const detail = decoder.decode(result.stderr).trim();
-      throw new Error(detail || `${executable} ${args.join(" ")} failed`);
-    }
-    return decoder.decode(result.stdout).trim();
-  } catch (error) {
-    if (error instanceof Deno.errors.NotFound) {
-      throw new Error(`${executable} is not installed`);
-    }
     throw error;
   }
 }
@@ -156,21 +118,18 @@ function platform(): Platform {
         label: "macOS",
         qt,
         launchCommand: "open build/porydaw.app",
-        installTools: installMacosTools,
       };
     case "linux":
       return {
         label: qt.host === "linux_arm64" ? "Linux arm64" : "Linux x86_64",
         qt,
         launchCommand: "./build/porydaw",
-        installTools: installLinuxTools,
       };
     case "windows":
       return {
         label: "Windows x86_64",
         qt,
         launchCommand: ".\\build\\Release\\porydaw.exe",
-        installTools: installWindowsTools,
       };
     default:
       throw new Error(`unsupported platform ${Deno.build.os}`);
@@ -192,168 +151,23 @@ async function requireProjectRoot(): Promise<void> {
   }
 }
 
-async function installMacosTools(): Promise<void> {
-  if (!(await commandAvailable("brew"))) {
-    throw new Error("Homebrew is required on macOS: https://brew.sh/");
-  }
-  if (!(await commandAvailable("xcode-select", ["-p"]))) {
-    await run(
-      "requesting Xcode Command Line Tools",
-      "xcode-select",
-      ["--install"],
-    );
-    throw new Error(
-      "finish the Xcode Command Line Tools installation, then rerun setup",
-    );
-  }
-  await run(
-    "installing macOS build tools",
-    "brew",
-    ["install", "cmake", "ninja", "python"],
-  );
-}
-
-async function installLinuxTools(): Promise<void> {
-  if (await commandAvailable("apt-get")) {
-    await run("refreshing APT metadata", "sudo", ["apt-get", "update"]);
-    await run("installing Debian/Ubuntu build tools", "sudo", [
-      "apt-get",
-      "install",
-      "-y",
-      "--no-install-recommends",
-      "build-essential",
-      "cmake",
-      "ninja-build",
-      "python3",
-      "python3-venv",
-    ]);
-    return;
-  }
-  if (await commandAvailable("pacman")) {
-    await run("installing Arch build tools", "sudo", [
-      "pacman",
-      "-S",
-      "--needed",
-      "base-devel",
-      "cmake",
-      "ninja",
-      "python",
-    ]);
-    return;
-  }
-  if (await commandAvailable("dnf")) {
-    await run("installing Fedora build tools", "sudo", [
-      "dnf",
-      "install",
-      "-y",
-      "gcc-c++",
-      "cmake",
-      "ninja-build",
-      "python3",
-      "python3-pip",
-    ]);
-    return;
-  }
-  throw new Error(
-    "unsupported Linux package manager; supported: apt-get, pacman, dnf",
-  );
-}
-
-async function installWindowsTools(): Promise<void> {
-  if (!(await commandAvailable("winget"))) {
-    throw new Error(
-      "WinGet is required on Windows; install App Installer and rerun setup",
-    );
-  }
-  const agreements = [
-    "--accept-source-agreements",
-    "--accept-package-agreements",
-  ];
-  await run("installing CMake", "winget", [
-    "install",
-    "--exact",
-    "--id",
-    "Kitware.CMake",
-    ...agreements,
-  ]);
-  await run("installing Python", "winget", [
-    "install",
-    "--exact",
-    "--id",
-    "Python.Python.3.12",
-    ...agreements,
-  ]);
-  await run("installing Visual Studio Build Tools", "winget", [
-    "install",
-    "--exact",
-    "--id",
-    "Microsoft.VisualStudio.2022.BuildTools",
-    "--override",
-    "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended",
-    ...agreements,
-  ]);
-}
-
-async function firstPython(candidates: Python[]): Promise<Python | undefined> {
-  for (const candidate of candidates) {
-    if (
-      await commandAvailable(candidate.executable, [
-        ...candidate.prefixArgs,
-        "--version",
-      ])
-    ) {
-      return candidate;
-    }
-  }
-  return undefined;
-}
-
-async function windowsPython(): Promise<Python | undefined> {
-  const localAppData = Deno.env.get("LOCALAPPDATA");
-  if (!localAppData) return undefined;
-  const installations = join(localAppData, "Programs", "Python");
-  let entries: Deno.DirEntry[] = [];
-  try {
-    for await (const entry of Deno.readDir(installations)) entries.push(entry);
-  } catch (error) {
-    if (error instanceof Deno.errors.NotFound) return undefined;
-    throw error;
-  }
-  entries = entries.filter((entry) => entry.isDirectory).sort((left, right) =>
-    right.name.localeCompare(left.name, undefined, { numeric: true })
-  );
-  for (const entry of entries) {
-    const executable = join(installations, entry.name, "python.exe");
-    if (await exists(executable)) return { executable, prefixArgs: [] };
-  }
-  return undefined;
-}
-
-async function resolvePython(): Promise<Python> {
-  const direct = await firstPython(
-    Deno.build.os === "windows"
-      ? [
-        { executable: "python", prefixArgs: [] },
-        { executable: "py", prefixArgs: ["-3"] },
-      ]
-      : [{ executable: "python3", prefixArgs: [] }],
-  );
-  if (direct) return direct;
-  if (Deno.build.os === "windows") {
-    const discovered = await windowsPython();
-    if (discovered) return discovered;
-  }
-  throw new Error(
-    "Python was installed but is not available; restart the terminal and rerun setup",
-  );
-}
-
-async function ensureToolset(): Promise<Toolset> {
+async function ensureToolset(python: NativeBuildPython): Promise<Toolset> {
   await Deno.mkdir(cacheDirectory, { recursive: true });
-  const python = await resolvePython();
   const environmentPython = setupVirtualEnvironmentPython(root);
+  const expectedToolsetVersion =
+    `aqtinstall=${aqtInstall}\nclang-format=22\npython=${python.version}\n`;
   const environmentExists = await exists(environmentPython);
-  if (!environmentExists) {
+  let currentMarker = "";
+  try {
+    currentMarker = await Deno.readTextFile(toolsetMarker);
+  } catch (error) {
+    if (!(error instanceof Deno.errors.NotFound)) throw error;
+  }
+  const reused = environmentExists && currentMarker === expectedToolsetVersion;
+  if (!reused) {
+    if (await exists(virtualEnvironment)) {
+      await Deno.remove(virtualEnvironment, { recursive: true });
+    }
     await run(
       "creating the checkout-local Python environment",
       python.executable,
@@ -364,15 +178,6 @@ async function ensureToolset(): Promise<Toolset> {
         virtualEnvironment,
       ],
     );
-  }
-  let currentMarker = "";
-  try {
-    currentMarker = await Deno.readTextFile(toolsetMarker);
-  } catch (error) {
-    if (!(error instanceof Deno.errors.NotFound)) throw error;
-  }
-  const toolsCurrent = currentMarker === toolsetVersion;
-  if (!toolsCurrent) {
     await run("installing Qt and formatter setup tools", environmentPython, [
       "-m",
       "pip",
@@ -382,12 +187,9 @@ async function ensureToolset(): Promise<Toolset> {
       aqtInstall,
       "clang-format==22.*",
     ]);
-    await Deno.writeTextFile(toolsetMarker, toolsetVersion);
+    await Deno.writeTextFile(toolsetMarker, expectedToolsetVersion);
   }
-  return {
-    environmentPython,
-    reused: environmentExists && toolsCurrent,
-  };
+  return { environmentPython, reused };
 }
 
 async function ensureQt(
@@ -415,38 +217,10 @@ async function ensureQt(
   return { prefix, reused: false };
 }
 
-async function cmakeExecutable(): Promise<string> {
-  const candidates = ["cmake"];
-  if (Deno.build.os === "windows") {
-    const programFiles = Deno.env.get("ProgramFiles");
-    if (programFiles) {
-      candidates.push(join(programFiles, "CMake", "bin", "cmake.exe"));
-    }
-  }
-  for (const candidate of candidates) {
-    if (await commandAvailable(candidate)) return candidate;
-  }
-  throw new Error(
-    "CMake was installed but is not available; restart the terminal and rerun setup",
-  );
-}
-
-async function requireCmake24(cmake: string): Promise<void> {
-  const version = await capture(cmake, ["--version"]);
-  const match = /cmake version (\d+)\.(\d+)/.exec(version);
-  if (!match) {
-    throw new Error(`could not determine the CMake version: ${version}`);
-  }
-  const major = Number(match[1]);
-  const minor = Number(match[2]);
-  if (major < 3 || (major === 3 && minor < 24)) {
-    throw new Error(`CMake 3.24 or newer is required; found ${match[0]}`);
-  }
-}
-
-async function configurePorydaw(qtPrefix: string): Promise<string> {
-  const cmake = await cmakeExecutable();
-  await requireCmake24(cmake);
+async function configurePorydaw(
+  cmake: string,
+  qtPrefix: string,
+): Promise<void> {
   const poryaaaa = await poryaaaaConfiguration(buildDirectory, root);
   const configureArgs = await cmakeConfigureArgs({
     buildDirectory,
@@ -455,7 +229,6 @@ async function configurePorydaw(qtPrefix: string): Promise<string> {
     buildChecks: true,
   });
   await run("configuring Porydaw", cmake, configureArgs);
-  return cmake;
 }
 
 async function buildPorydaw(cmake: string): Promise<void> {
@@ -477,8 +250,22 @@ try {
   await requireProjectRoot();
   const target = platform();
   if (parsed.dryRun) {
-    progress.printDryRun(target.label);
+    const nativeTools = await inspectNativeBuildTools(buildDirectory);
+    progress.printDryRun(target.label, {
+      "native-tools": nativeBuildToolsDryRunOutcome(nativeTools),
+    });
+    if (nativeTools.incompatibilities.length > 0) {
+      throw new NativeBuildToolsError(nativeTools.incompatibilities);
+    }
   } else {
+    const nativeTools = await progress.run(
+      "native-tools",
+      () => ensureNativeBuildTools(buildDirectory),
+      ({ reused, installed }) =>
+        reused
+          ? "compatible installed tools"
+          : `installed ${installed.join(", ")}`,
+    );
     await progress.run("submodule", () =>
       run("initializing poryaaaa", "git", [
         "submodule",
@@ -486,10 +273,9 @@ try {
         "--init",
         "--recursive",
       ]));
-    await progress.run("native-tools", () => target.installTools());
     const toolset = await progress.run(
       "python-tools",
-      ensureToolset,
+      () => ensureToolset(nativeTools.python),
       ({ reused }) => reused ? "reused .cache/setup-venv" : "done",
     );
     const qt = await progress.run(
@@ -497,14 +283,17 @@ try {
       () => ensureQt(toolset.environmentPython, target),
       ({ reused }) => reused ? "reused .cache/setup/qt" : "downloaded",
     );
-    const cmake = await progress.run(
+    await progress.run(
       "configure",
-      () => configurePorydaw(qt.prefix),
+      () => configurePorydaw(nativeTools.cmake, qt.prefix),
     );
-    await progress.run("build", () => buildPorydaw(cmake));
+    await progress.run("build", () => buildPorydaw(nativeTools.cmake));
     progress.complete(target.launchCommand);
   }
 } catch (error) {
-  progress.fail(error);
+  progress.fail(
+    error,
+    error instanceof NativeBuildToolsError ? "native-tools" : undefined,
+  );
   Deno.exit(1);
 }

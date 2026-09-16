@@ -116,6 +116,18 @@ function defaultGeneratorArguments(): string[] {
     : ["-G", "Ninja"];
 }
 
+export async function cmakeBuildUsesNinja(
+  buildDirectory: string,
+): Promise<boolean> {
+  const cache = join(buildDirectory, "CMakeCache.txt");
+  if (!(await exists(cache))) {
+    return currentQtInstallation().host !== "windows";
+  }
+  const content = await Deno.readTextFile(cache);
+  const generator = /^CMAKE_GENERATOR:INTERNAL=(.+)$/m.exec(content)?.[1];
+  return generator?.startsWith("Ninja") ?? false;
+}
+
 export async function cmakeConfigureArgs({
   buildDirectory,
   poryaaaaArgument,

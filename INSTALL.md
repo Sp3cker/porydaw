@@ -13,7 +13,7 @@ Installation is not required to use Porydaw. You can download the latest release
 
 ## Build from source
 
-Porydaw uses one cross-platform Deno setup command. It initializes `poryaaaa`, installs the native build prerequisites, creates checkout-local Qt and formatter tooling, configures the complete check-enabled build, and builds the application.
+Porydaw uses one cross-platform Deno setup command. It checks installed host build tools before making changes, provisions only missing prerequisites, initializes `poryaaaa`, creates checkout-local Qt and formatter tooling, configures the complete check-enabled build, and builds the application.
 
 Install Deno 2 first. The setup command cannot install Deno because Deno runs the command.
 
@@ -33,13 +33,15 @@ deno task setup --dry-run
 deno task setup
 ```
 
-`deno task setup` needs an internet connection and permission to install native packages. It uses:
+`deno task setup` needs an internet connection when a prerequisite is missing. Before invoking a package manager, it checks CMake, the selected generator, a C and C++20 toolchain, and Python. Compatible installed tools are left unchanged. If an installed tool is incompatible, setup stops before provisioning it and reports the required and detected versions.
 
-- Homebrew plus Xcode Command Line Tools on macOS;
+When it must provision a missing host prerequisite, it uses:
+
+- Homebrew for CMake, Ninja, and Python, plus Xcode Command Line Tools for the macOS compiler;
 - WinGet plus Visual Studio 2022 Build Tools on Windows;
 - `apt-get` (Debian/Ubuntu), `pacman` (Arch), or `dnf` (Fedora) on Linux.
 
-The command installs CMake 3.24 or newer, a C++20 compiler, Python, and the appropriate generator. It installs Qt 6.11 and the CI-matched `clang-format` 22 into this checkout:
+The required host tools are CMake 3.24 or newer, a C++20 compiler, Python 3.10 or newer that can create a virtual environment with pip, and the generator selected for the build. Qt 6.11 and the CI-matched `clang-format` 22 are installed only into this checkout:
 
 ```text
 .cache/setup/qt/
@@ -48,7 +50,7 @@ The command installs CMake 3.24 or newer, a C++20 compiler, Python, and the appr
 
 The cache is reusable and ignored by Git. Delete `.cache/setup/` and `.cache/setup-venv/` to download fresh local Qt and Python tooling. The setup command preserves an existing CMake build generator rather than replacing it.
 
-`deno task setup` reports six numbered stages, marks reusable local tooling, and shows elapsed time while Qt or the application builds in an interactive terminal. If prerequisite provisioning fails, it prints relevant official manual-install links; rerunning the command reuses completed local work.
+`deno task setup --dry-run` checks the installed native toolchain and reports whether it is compatible, incompatible, or missing tools that setup would install; it never invokes a package manager. The normal command reports six numbered stages, marks reusable local tooling, and shows elapsed time while Qt or the application builds in an interactive terminal. If prerequisite provisioning fails, it prints relevant official manual-install links; rerunning the command reuses completed local work.
 
 After setup, use the repository tasks:
 

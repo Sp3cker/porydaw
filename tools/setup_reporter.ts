@@ -4,13 +4,13 @@ const encoder = new TextEncoder();
 
 const stages = [
   {
-    id: "submodule",
-    label: "initializing poryaaaa submodule",
+    id: "native-tools",
+    label: "checking native build tools",
     heartbeat: false,
   },
   {
-    id: "native-tools",
-    label: "installing native build tools",
+    id: "submodule",
+    label: "initializing poryaaaa submodule",
     heartbeat: false,
   },
   {
@@ -110,10 +110,15 @@ export class SetupProgress {
   #ranStage = false;
   #failedStage: SetupStage | undefined;
 
-  printDryRun(platform: string): void {
+  printDryRun(
+    platform: string,
+    outcomes: Partial<Record<SetupStage, string>> = {},
+  ): void {
     console.log(`setup: dry run for ${platform}`);
     for (const stage of stages) {
-      console.log(`${stagePrefix(stage)} - would run`);
+      console.log(
+        `${stagePrefix(stage)} - ${outcomes[stage.id] ?? "would run"}`,
+      );
     }
   }
 
@@ -148,11 +153,11 @@ export class SetupProgress {
     );
   }
 
-  fail(error: unknown): void {
+  fail(error: unknown, failedStage = this.#failedStage): void {
     console.error(
       `setup: ${error instanceof Error ? error.message : String(error)}`,
     );
-    const hints = manualInstallHints(this.#failedStage);
+    const hints = manualInstallHints(failedStage);
     if (hints.length > 0) {
       console.error("setup: manual installation options:");
       for (const hint of hints) console.error(`setup: ${hint}`);
