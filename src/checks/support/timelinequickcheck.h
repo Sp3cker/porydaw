@@ -9,8 +9,8 @@
 
 #include <QAnyStringView>
 #include <QColor>
-
 #include <QPointF>
+#include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QRect>
@@ -19,6 +19,7 @@
 #include <QSize>
 #include <QString>
 #include <QVariant>
+#include <QtTest>
 
 #include <algorithm>
 #include <optional>
@@ -87,6 +88,42 @@ inline void scrollTabIntoView(QQuickItem *scroller, const QQuickItem &tab)
                           QVariant::fromValue(std::clamp(topInContent, 0.0, maximumContentY)));
 }
 
+// One reveal-and-click policy for the automation parameter selector tabs:
+// the tab must exist, be visible, enabled, and carry geometry; the gutter
+// Flickable then reveals it (overflowed tabs are clipped otherwise) and the
+// click only dispatches once the tab's center lands inside both the
+// scroller's clipped viewport and the window's content item. Callers keep
+// their own post-click wait.
+inline bool clickVisibleTab(QQuickItem *root, const QString &tabName,
+                            Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+{
+    QPointer<QQuickItem> tab;
+    if (!root || !QTest::qWaitFor([&tab, root, &tabName] {
+            tab = visualDescendant(root, tabName);
+            return tab && tab->isVisible() && tab->isEnabled() && tab->width() > 0.0 &&
+                   tab->height() > 0.0 && tab->window();
+        })) {
+        return false;
+    }
+    QQuickItem *const scroller = automationTabsScroller(root);
+    if (!scroller)
+        return false;
+    scrollTabIntoView(scroller, *tab);
+    if (!QTest::qWaitFor([&tab] { return tab && tab->isVisible() && tab->isEnabled(); }))
+        return false;
+    QQuickWindow *const window = tab->window();
+    QQuickItem *const content = window ? window->contentItem() : nullptr;
+    if (!content)
+        return false;
+    const QPointF sceneCenter = tab->mapToScene(QPointF(tab->width() / 2.0, tab->height() / 2.0));
+    if (!scroller->mapRectToScene(scroller->boundingRect()).contains(sceneCenter))
+        return false;
+    const QPointF point = content->mapFromScene(sceneCenter);
+    if (!content->boundingRect().contains(point))
+        return false;
+    QTest::mouseClick(window, Qt::LeftButton, modifiers, point.toPoint());
+    return true;
+}
 inline bool rectInside(const QRectF &inner, const QRectF &outer)
 {
     const qreal epsilon = layout::singlePixel();

@@ -1,11 +1,8 @@
-// Compact parameter selector for the automation gutter: the 11-CC catalog
-// identities as native Basic TabButtons in two columns, one related pair per
-// row in catalog order (mix, pitch, echo), with the Fine-tune singleton on its
-// own row before the 2-column Tempo row and song-global Tempo plumbing; the
-// canvas owns parameter identity, the parameter menu and shared-selection
-// semantics. The grid scrolls inside the gutter: a
-// Flickable owns the vertical overflow, so the tab stack may be taller than
-// the drawer's body floor allows without clipping or fighting the drawer.
+// Compact parameter selector for the automation gutter: catalog identities
+// as native Basic TabButtons in two columns, followed by a full-width Tempo
+// row. The canvas owns parameter identity, the parameter menu and shared
+// selection semantics. A Flickable owns vertical overflow, so the catalog
+// can grow without increasing the drawer's minimum height.
 import QtQuick
 import QtQuick.Controls.Basic as Controls
 import QtQuick.Layouts

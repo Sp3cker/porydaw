@@ -87,7 +87,7 @@ struct DocLanePoint {
     int smfTrack = -1;
     size_t index = 0;
     Tick tick = 0;
-    int value = 0; // CoreTimeDefaults::laneValueMinimum/Maximum
+    int value = 0; // Stored value; edits use CoreTimeDefaults::laneDomain bounds.
 };
 
 // Tempo-only mutation. Mixed time/range commands apply a typed Tempo payload

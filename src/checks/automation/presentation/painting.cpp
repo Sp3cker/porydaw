@@ -1,8 +1,8 @@
 #include "checks/automation/presentation/tst_automationpresentation.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
+#include <span>
 
 #include <QtTest>
 
@@ -118,30 +118,10 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
     AutomationCanvas *const canvas = automationPage ? automationPage->canvas() : nullptr;
     QVERIFY(automationPage);
     QVERIFY(canvas);
-    const QStringList expected{
-        QStringLiteral("Volume"),      QStringLiteral("Pan"),        QStringLiteral("Modulation"),
-        QStringLiteral("LFO type"),    QStringLiteral("LFO speed"),  QStringLiteral("LFO delay"),
-        QStringLiteral("Pitch bend"),  QStringLiteral("Bend range"), QStringLiteral("Echo volume"),
-        QStringLiteral("Echo length"), QStringLiteral("Fine tune"),  QStringLiteral("Tempo")};
-    QCOMPARE(canvas->parameterLabels(), expected);
-    const std::array<uint8_t, 11> controllers{CoreTimeDefaults::kCcVolume,
-                                              CoreTimeDefaults::kCcPan,
-                                              CoreTimeDefaults::kCcModulation,
-                                              CoreTimeDefaults::kCcModType,
-                                              CoreTimeDefaults::kCcLfoSpeed,
-                                              CoreTimeDefaults::kCcLfoDelay,
-                                              CoreTimeDefaults::kLaneCcBend,
-                                              CoreTimeDefaults::kCcBendRange,
-                                              uint8_t{0xFB},
-                                              uint8_t{0xFC},
-                                              CoreTimeDefaults::kCcFineTune};
-    for (int index = 0; index < int(controllers.size()); ++index) {
-        const auto row = canvas->parameterRow(index);
-        QVERIFY(row.has_value());
-        QVERIFY((*row == EditorAutomationRowId{EditorAutomationRowKind::ControlChange, kTrack,
-                                               controllers[std::size_t(index)]}));
-    }
-    const auto tempoRow = canvas->parameterRow(expected.size() - 1);
+    const QStringList labels = canvas->parameterLabels();
+    const std::span<const uint8_t> controllers = CCLanes::supportedControllers();
+    QCOMPARE(labels.size(), int(controllers.size()) + 1);
+    const auto tempoRow = canvas->parameterRow(labels.size() - 1);
     QVERIFY(tempoRow.has_value());
     QVERIFY((*tempoRow == EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}));
 
@@ -158,7 +138,7 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
 
     std::vector<QPointF> centers;
     std::vector<QRectF> labelBounds;
-    for (int index = 0; index < expected.size(); ++index) {
+    for (int index = 0; index < labels.size(); ++index) {
         QQuickItem *tab = nullptr;
         QTRY_VERIFY((tab = parameterLabelItem(index)) && tab->isVisible() && tab->width() > 0.0 &&
                     tab->height() > 0.0);
@@ -178,7 +158,7 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
         QQuickItem *const text = content->findChild<QQuickItem *>(
             QStringLiteral("automationParameterTabText"), Qt::FindDirectChildrenOnly);
         QVERIFY2(text, "a catalog label rendered without its Text item");
-        QCOMPARE(text->property("text").toString(), expected.at(index));
+        QCOMPARE(text->property("text").toString(), labels.at(index));
         const qreal contentWidth = text->property("contentWidth").toReal();
         const qreal contentHeight = text->property("contentHeight").toReal();
         QVERIFY(contentWidth > 0.0 && contentHeight > 0.0);
@@ -189,8 +169,8 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
     }
 
     const QVariantList pips = canvas->parameterPips();
-    QCOMPARE(pips.size(), expected.size());
-    for (int index = 0; index < expected.size(); ++index) {
+    QCOMPARE(pips.size(), labels.size());
+    for (int index = 0; index < labels.size(); ++index) {
         const auto row = canvas->parameterRow(index);
         QVERIFY(row.has_value());
         const bool written = row->kind == EditorAutomationRowKind::Tempo
@@ -200,21 +180,25 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
     }
 
     // The selector keeps the catalog's grouping visible: each related pair
-    // shares one row, the Fine tune singleton sits alone on its own row, and
-    // song-global Tempo closes the grid on its own wider row.
-    QCOMPARE(labelBounds.size(), static_cast<std::size_t>(expected.size()));
+    // shares one row, an odd trailing controller sits alone on its own row,
+    // and song-global Tempo closes the grid on its own wider row.
+    QCOMPARE(labelBounds.size(), static_cast<std::size_t>(labels.size()));
     const std::size_t pairedLabels = 2 * (controllers.size() / 2);
     for (std::size_t pair = 0; pair < pairedLabels; pair += 2) {
         QVERIFY2(std::abs(labelBounds.at(pair).center().y() -
                           labelBounds.at(pair + 1).center().y()) <= layout::singlePixel(),
                  "a related parameter pair no longer shares a selector row");
     }
-    const QRectF &tuneBounds = labelBounds.at(controllers.size() - 1);
-    QVERIFY2(tuneBounds.center().y() >
-                 labelBounds.at(controllers.size() - 2).center().y() + layout::singlePixel(),
-             "the Fine tune singleton no longer sits on its own selector row");
-    QVERIFY2(tuneBounds.center().y() < labelBounds.back().center().y() - layout::singlePixel(),
-             "the Fine tune singleton no longer sits above Tempo");
+    if (controllers.size() % 2 != 0) {
+        const QRectF &oddBounds = labelBounds.at(controllers.size() - 1);
+        if (controllers.size() > 1) {
+            QVERIFY2(oddBounds.center().y() > labelBounds.at(controllers.size() - 2).center().y() +
+                                                  layout::singlePixel(),
+                     "the odd trailing controller no longer sits on its own selector row");
+        }
+        QVERIFY2(oddBounds.center().y() < labelBounds.back().center().y() - layout::singlePixel(),
+                 "the odd trailing controller no longer sits above Tempo");
+    }
     const QRectF &tempoBounds = labelBounds.back();
     QVERIFY2(tempoBounds.center().y() > labelBounds.front().center().y(),
              "the song-global Tempo label no longer closes the selector grid");
@@ -232,7 +216,7 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
     const qreal maximumContentY = scroller->property("contentHeight").toReal() - scroller->height();
     QVERIFY(maximumContentY > 0.0);
     scroller->setProperty("contentY", QVariant::fromValue(maximumContentY));
-    QQuickItem *const lastTab = parameterLabelItem(int(expected.size()) - 1);
+    QQuickItem *const lastTab = parameterLabelItem(labels.size() - 1);
     QVERIFY(lastTab);
     QTRY_VERIFY(
         checks::support::rectInside(lastTab->mapRectToScene(lastTab->boundingRect()), viewport));

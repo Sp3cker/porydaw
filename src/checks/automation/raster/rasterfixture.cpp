@@ -278,28 +278,12 @@ bool AutomationRasterFixture::activateParameter(const EditorAutomationRowId &row
     // The catalog position comes from the production mapping only; clicking
     // the real selector label is the same activation path a user takes.
     const int index = checks::support::automationParameterIndex(canvas(), row);
-    if (index < 0)
-        return false;
     QQuickItem *const root = m_view ? m_view->quickView()->rootObject() : nullptr;
-    if (!root)
+    if (index < 0 || !root ||
+        !checks::support::clickVisibleTab(root,
+                                          QStringLiteral("automationParameterTab%1").arg(index))) {
         return false;
-    QQuickItem *label = nullptr;
-    if (!QTest::qWaitFor([&root, &label, index] {
-            label = checks::support::visualDescendant(
-                root, QStringLiteral("automationParameterTab%1").arg(index));
-            return label && label->isVisible() && label->isEnabled() && label->width() > 0.0 &&
-                   label->height() > 0.0 && label->window();
-        }))
-        return false;
-    QQuickWindow *const window = label->window();
-    QQuickItem *const content = window ? window->contentItem() : nullptr;
-    if (!content)
-        return false;
-    const QPointF point = content->mapFromScene(
-        label->mapToScene(QPointF(label->width() / 2.0, label->height() / 2.0)));
-    if (!content->boundingRect().contains(point))
-        return false;
-    QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, point.toPoint());
+    }
     pump();
     return canvas().activeParameter() == index;
 }

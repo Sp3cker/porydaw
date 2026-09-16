@@ -86,8 +86,8 @@ std::pair<int, int> valueRange(const AutomationPage &page, LaneHandle lane)
         return {0, 127};
 
     const uint8_t controller = rows[std::size_t(row)].id.controller;
-    return {CoreTimeDefaults::laneValueMinimum(controller),
-            CoreTimeDefaults::laneValueMaximum(controller)};
+    const auto domain = CoreTimeDefaults::laneDomain(controller);
+    return {domain.minimum, domain.maximum};
 }
 
 } // namespace
@@ -621,29 +621,12 @@ bool AutomationEditingTest::clickParameterTab(const EditorAutomationRowId &row,
                                               Qt::KeyboardModifiers modifiers)
 {
     const int index = checks::support::automationParameterIndex(*page().canvas(), row);
-    if (index < 0 || !m_quickWindow)
-        return false;
     auto *quick = tab().view().quickView();
     QQuickItem *root = quick ? quick->rootObject() : nullptr;
-    if (!root)
+    if (index < 0 || !root)
         return false;
-    const QPointer<QQuickItem> item = checks::support::visualDescendant(
-        root, QStringLiteral("automationParameterTab%1").arg(index));
-    if (!item || !item->isVisible() || !item->isEnabled())
-        return false;
-    // Plot exposure can precede the GridLayout assigning tab widths.
-    // Choose the single click position only after the target has geometry.
-    if (!QTest::qWaitFor([item] {
-            return !item || !item->isVisible() || !item->isEnabled() ||
-                   !item->boundingRect().isEmpty();
-        }) ||
-        !item || !item->isVisible() || !item->isEnabled() || !m_quickWindow) {
-        return false;
-    }
-    const QPoint where =
-        item->mapToScene(QPointF(item->width() / 2.0, item->height() / 2.0)).toPoint();
-    QTest::mouseClick(m_quickWindow, Qt::LeftButton, modifiers, where);
-    return true;
+    return checks::support::clickVisibleTab(
+        root, QStringLiteral("automationParameterTab%1").arg(index), modifiers);
 }
 
 void AutomationEditingTest::arrangeCcLane()

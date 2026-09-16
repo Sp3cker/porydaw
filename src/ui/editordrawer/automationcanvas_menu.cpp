@@ -193,7 +193,7 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPointF &scenePo
         // wrote (the adapter projects a synthetic tick-0 engine node for
         // Volume and Pan, which is not a written event).
         rows.push_back(menuRow(int(Action::RemoveLane), tr("Delete automation events")));
-        if (CCLanes::rangeZoomable(controller)) {
+        if (CoreTimeDefaults::laneDomain(controller).zoomable) {
             const auto range = m_page.m_viewState.laneRanges.find(slot->id);
             const uint8_t current = range == m_page.m_viewState.laneRanges.cend()
                                         ? CCLanes::defaultRange(controller)

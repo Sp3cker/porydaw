@@ -39,7 +39,6 @@ class CCLanes final
     // Canonical lane title for any controller — bend, descriptor-backed XCMD
     // lanes, and plain M4A CCs. Single source of truth for lane labels.
     static QString laneLabel(uint8_t controller);
-    static bool rangeZoomable(uint8_t controller) noexcept;
     static uint8_t defaultRange(uint8_t controller) noexcept;
     static int autoRange(int maximum) noexcept;
 };

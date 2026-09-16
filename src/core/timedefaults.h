@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <utility>
 
 // Canonical musical position. A position is always a Tick — content streams
 // (DocNote, TempoPoint, timeline events), SMF storage, and viewer fields all
@@ -95,26 +96,36 @@ inline constexpr int kMaxBendValue = 8191;
 inline constexpr uint8_t kLaneCcBend = 0xFF;  // pitch-bend events (0xE)
 inline constexpr uint8_t kLaneCcVoice = 0xFD; // program changes (0xC)
 
-constexpr int laneValueMinimum(uint8_t cc)
-{
-    return cc == kLaneCcBend ? kMinBendValue : kMinCcValue;
-}
+struct LaneDomain {
+    int minimum;
+    int maximum;
+    bool centered;
+    bool zoomable;
+};
 
-constexpr int laneValueMaximum(uint8_t cc)
+// Editing bounds and presentation policy, not an import filter: stored MIDI
+// bytes are preserved even when they lie outside a lane's editable domain.
+constexpr LaneDomain laneDomain(uint8_t cc)
 {
-    if (cc == kLaneCcBend)
-        return kMaxBendValue;
-    // m4a_track.c branches the modulation axis only on 0 (vibrato), 1
-    // (tremolo), and 2 (autopan); the engine stores any byte but values >=3
-    // are inert, so the lane clamps to the meaningful domain.
-    if (cc == kCcModType)
-        return 2;
-    return kMaxCcValue;
+    constexpr std::pair<uint8_t, LaneDomain> domains[] = {
+        {kLaneCcBend, {kMinBendValue, kMaxBendValue, true, false}},
+        {kCcPan, {kMinCcValue, kMaxCcValue, true, false}},
+        {kCcFineTune, {kMinCcValue, kMaxCcValue, true, false}},
+        // m4a_track.c selects vibrato/tremolo/autopan only for MODT 0/1/2.
+        // Higher values store unchanged on import but modulate no axis.
+        {kCcModType, {0, 2, false, false}},
+    };
+    for (const auto &[controller, domain] : domains) {
+        if (controller == cc)
+            return domain;
+    }
+    return {kMinCcValue, kMaxCcValue, false, true};
 }
 
 constexpr int clampLaneValue(uint8_t cc, int value)
 {
-    return std::clamp(value, laneValueMinimum(cc), laneValueMaximum(cc));
+    const auto domain = laneDomain(cc);
+    return std::clamp(value, domain.minimum, domain.maximum);
 }
 
 // --- Automation-surface lane policies ---------------------------------------

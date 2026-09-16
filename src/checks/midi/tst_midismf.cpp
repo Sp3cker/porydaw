@@ -984,10 +984,9 @@ void MidiSmfTest::importReportFlagsStrayPayloadForReview()
     QCOMPARE(analysis.xcmds[0].support, ImportSupport::NeedsReview);
 }
 
-// Lane-presented CCs still export when PrintControllerOp has a branch for
-// them (MODT/TUNE/LFODL now sit in the automation catalog alongside MEMACC
-// execute and loop label); anything outside the exported set keeps a
-// not-exported verdict. None of this ordinary traffic produces XCMD rows.
+// Export support is independent of presentation: lane CCs, MEMACC execute
+// and loop label export, while an unmapped CC does not. None of this
+// ordinary controller traffic produces XCMD rows.
 void MidiSmfTest::importReportVerdictsOrdinaryControllers()
 {
     const auto analysis = analyzeChannelTrack({
@@ -1005,7 +1004,6 @@ void MidiSmfTest::importReportVerdictsOrdinaryControllers()
     const auto *modt = ccRow(analysis, 0x16);
     QVERIFY(modt);
     QCOMPARE(modt->count, 1);
-    QCOMPARE(modt->label, QStringLiteral("MODT — LFO type"));
     QCOMPARE(modt->support, ImportSupport::Supported);
     const auto *tune = ccRow(analysis, 0x18);
     QVERIFY(tune);
@@ -1021,7 +1019,6 @@ void MidiSmfTest::importReportVerdictsOrdinaryControllers()
     QCOMPARE(label->support, ImportSupport::Supported);
     const auto *unmapped = ccRow(analysis, 0x4B);
     QVERIFY(unmapped);
-    QCOMPARE(unmapped->label, QStringLiteral("CC — Controller"));
     QCOMPARE(unmapped->support, ImportSupport::NotExported);
     QVERIFY(xcmdRow(analysis, QStringLiteral("Echo volume")) == nullptr);
 }

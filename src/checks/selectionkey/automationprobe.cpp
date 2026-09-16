@@ -120,26 +120,16 @@ bool AutomationProbe::activateParameter(QString *diagnostics) const
     const EditorAutomationRowId row{EditorAutomationRowKind::ControlChange,
                                     static_cast<uint8_t>(m_track), m_controller};
     const int index = checks::support::automationParameterIndex(*m_canvas, row);
-    QPointer<QQuickWindow> window(m_input->window());
-    QPointer<QQuickItem> label;
-    if (index < 0 || !window || !QTest::qWaitFor([&] {
-            if (!m_view || !m_canvas || !m_input || !window)
-                return false;
-            auto *const quick = m_view->quickView();
-            label = checks::support::visualDescendant(
-                quick ? quick->rootObject() : nullptr,
-                QStringLiteral("automationParameterTab%1").arg(index));
-            return label && label->window() == window && label->isVisible() && label->isEnabled() &&
-                   label->width() > 0 && label->height() > 0;
-        })) {
+    auto *const quick = m_view->quickView();
+    QQuickItem *const root = quick ? quick->rootObject() : nullptr;
+    if (index < 0 || !root ||
+        !checks::support::clickVisibleTab(root,
+                                          QStringLiteral("automationParameterTab%1").arg(index))) {
         if (diagnostics)
             *diagnostics =
                 QStringLiteral("CC parameter label is unavailable; parameter-index=%1").arg(index);
         return false;
     }
-    const QPoint where =
-        label->mapToScene(QPointF(label->width() / 2.0, label->height() / 2.0)).toPoint();
-    QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, where);
     const bool activated = QTest::qWaitFor(
         [&] { return m_canvas && m_canvas->parameterRow(m_canvas->activeParameter()) == row; });
     if (diagnostics)

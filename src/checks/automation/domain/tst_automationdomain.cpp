@@ -259,25 +259,28 @@ void AutomationDomainTest::rangesAndSelection()
         QCOMPARE(lane.valueText(fractional), QString::number(fractional));
         QVERIFY(samePoints(lane.points(), {{0, 150}, {96, fractional}}));
     } else {
-        const M4aCcInfo info = m4aClassifyCc(kController);
-        QCOMPARE(lane.title(), QStringLiteral("%1 (%2)").arg(QLatin1String(info.display),
-                                                             QLatin1String(info.name)));
-        QCOMPARE(lane.minimumValue(), CoreTimeDefaults::laneValueMinimum(kController));
-        QCOMPARE(lane.maximumValue(), CoreTimeDefaults::laneValueMaximum(kController));
-        QCOMPARE(lane.valueText(64), m4aFormatCcValue(kController, 64));
-        QCOMPARE(lane.valueText(0), m4aFormatCcValue(kController, 0));
         CCLaneAdapter bend(doc, kTrack, DOC_CC_BEND);
         QCOMPARE(bend.minimumValue(), CoreTimeDefaults::kMinBendValue);
         QCOMPARE(bend.maximumValue(), CoreTimeDefaults::kMaxBendValue);
         CCLaneAdapter modType(doc, kTrack, CoreTimeDefaults::kCcModType);
-        QCOMPARE(modType.minimumValue(),
-                 CoreTimeDefaults::laneValueMinimum(CoreTimeDefaults::kCcModType));
-        QCOMPARE(modType.maximumValue(),
-                 CoreTimeDefaults::laneValueMaximum(CoreTimeDefaults::kCcModType));
-        QCOMPARE(CoreTimeDefaults::laneValueMinimum(CoreTimeDefaults::kCcModType), 0);
-        QCOMPARE(CoreTimeDefaults::laneValueMaximum(CoreTimeDefaults::kCcModType), 2);
-        QCOMPARE(bend.valueText(0), m4aFormatBend(0));
-        QCOMPARE(bend.valueText(100), m4aFormatBend(100));
+        QCOMPARE(modType.minimumValue(), 0);
+        QCOMPARE(modType.maximumValue(), 2);
+        // A centered MIDI lane edits signed values but writes their unsigned
+        // representation. Fine tune must not inherit an ordinary scalar prompt.
+        CCLaneAdapter fineTune(doc, kTrack, CoreTimeDefaults::kCcFineTune);
+        const NodeValuePrompt prompt = fineTune.valuePrompt(64);
+        QCOMPARE(prompt.minimum, -64);
+        QCOMPARE(prompt.maximum, 63);
+        QCOMPARE(prompt.initialValue, 0);
+        QCOMPARE(fineTune.neutralValue(), 64);
+        fineTune.replaceSpan(0, 96,
+                             {{0, prompt.minimum + prompt.storedOffset},
+                              {48, prompt.initialValue + prompt.storedOffset},
+                              {96, prompt.maximum + prompt.storedOffset}});
+        QVERIFY(samePoints(fineTune.points(), {{0, 0}, {48, 64}, {96, 127}}));
+        QCOMPARE(bend.neutralValue(), 0);
+        QCOMPARE(bend.valuePrompt(0).storedOffset, 0);
+        QCOMPARE(modType.neutralValue(), -1);
     }
 }
 

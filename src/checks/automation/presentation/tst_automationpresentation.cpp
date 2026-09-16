@@ -291,25 +291,12 @@ bool AutomationPresentationTest::activateParameter(const EditorAutomationRowId &
     AutomationPage *const automationPage = page();
     AutomationCanvas *const canvas = automationPage ? automationPage->canvas() : nullptr;
     const int index = canvas ? checks::support::automationParameterIndex(*canvas, row) : -1;
-    if (!canvas || index < 0 || !m_quickWindow)
-        return false;
-    QQuickItem *label = nullptr;
-    if (!QTest::qWaitFor([this, index, &label] {
-            label = parameterLabelItem(index);
-            return label && label->isVisible() && label->isEnabled() && label->width() > 0.0 &&
-                   label->height() > 0.0 && label->window();
-        })) {
+    songview::TimelineQuickView *const quick = m_rig ? m_rig->view().quickView() : nullptr;
+    if (!canvas || index < 0 || !quick ||
+        !checks::support::clickVisibleTab(quick->rootObject(),
+                                          QStringLiteral("automationParameterTab%1").arg(index))) {
         return false;
     }
-    QQuickWindow *const window = label->window();
-    QQuickItem *const content = window ? window->contentItem() : nullptr;
-    if (!content)
-        return false;
-    const QPointF point = content->mapFromScene(
-        label->mapToScene(QPointF(label->width() / 2.0, label->height() / 2.0)));
-    if (!content->boundingRect().contains(point))
-        return false;
-    QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, point.toPoint());
     return QTest::qWaitFor([canvas, index] { return canvas->activeParameter() == index; });
 }
 

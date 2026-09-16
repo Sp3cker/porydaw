@@ -53,13 +53,6 @@ std::span<const uint8_t> CCLanes::supportedControllers() noexcept
     return controllers;
 }
 
-bool CCLanes::rangeZoomable(uint8_t controller) noexcept
-{
-    return controller != bendController() && controller != CoreTimeDefaults::kCcPan &&
-           controller != CoreTimeDefaults::kCcFineTune &&
-           controller != CoreTimeDefaults::kCcModType;
-}
-
 uint8_t CCLanes::defaultRange(uint8_t controller) noexcept
 {
     return controller == CoreTimeDefaults::kCcModulation ? 0 : 127;
@@ -104,12 +97,12 @@ std::vector<NodePoint> CCLaneAdapter::points() const
 
 int CCLaneAdapter::minimumValue() const
 {
-    return CoreTimeDefaults::laneValueMinimum(m_controller);
+    return CoreTimeDefaults::laneDomain(m_controller).minimum;
 }
 
 int CCLaneAdapter::maximumValue() const
 {
-    return CoreTimeDefaults::laneValueMaximum(m_controller);
+    return CoreTimeDefaults::laneDomain(m_controller).maximum;
 }
 
 QString CCLaneAdapter::valueText(int value) const
@@ -123,34 +116,27 @@ QString CCLaneAdapter::valueText(int value) const
 
 NodeValuePrompt CCLaneAdapter::valuePrompt(int storedValue) const
 {
+    const auto domain = CoreTimeDefaults::laneDomain(m_controller);
     NodeValuePrompt prompt;
     prompt.title = title();
     prompt.label = QCoreApplication::translate("AutomationCanvas", "Value:");
-    prompt.minimum = CoreTimeDefaults::laneValueMinimum(m_controller);
-    prompt.maximum = CoreTimeDefaults::laneValueMaximum(m_controller);
-    prompt.initialValue = storedValue;
-    if (m_controller == CCLanes::bendController()) {
-        prompt.label = QCoreApplication::translate("AutomationCanvas", "Bend (0 = none):");
-    } else if (m_controller == CoreTimeDefaults::kCcPan ||
-               m_controller == CoreTimeDefaults::kCcFineTune) {
-        // Pan-style controllers present a centered range and store the
-        // displayed value shifted by 64.
-        prompt.minimum = -64;
-        prompt.maximum = 63;
-        prompt.initialValue = storedValue - 64;
-        prompt.storedOffset = 64;
-        prompt.label = QCoreApplication::translate("AutomationCanvas", "c_v value (0 = center):");
+    prompt.storedOffset = domain.centered ? (domain.minimum + domain.maximum + 1) / 2 : 0;
+    prompt.minimum = domain.minimum - prompt.storedOffset;
+    prompt.maximum = domain.maximum - prompt.storedOffset;
+    prompt.initialValue = storedValue - prompt.storedOffset;
+    if (domain.centered) {
+        prompt.label =
+            prompt.storedOffset == 0
+                ? QCoreApplication::translate("AutomationCanvas", "Bend (0 = none):")
+                : QCoreApplication::translate("AutomationCanvas", "c_v value (0 = center):");
     }
     return prompt;
 }
 
 int CCLaneAdapter::neutralValue() const
 {
-    if (m_controller == CCLanes::bendController())
-        return 0;
-    if (m_controller == CoreTimeDefaults::kCcPan || m_controller == CoreTimeDefaults::kCcFineTune)
-        return 64;
-    return -1;
+    const auto domain = CoreTimeDefaults::laneDomain(m_controller);
+    return domain.centered ? (domain.minimum + domain.maximum + 1) / 2 : -1;
 }
 
 std::optional<NodePoint> CCLaneAdapter::leadIn() const

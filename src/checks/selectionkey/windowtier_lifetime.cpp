@@ -33,21 +33,11 @@ bool clickParameter(SongView &view, const EditorAutomationRowId &row)
     auto *const canvas = automationCanvas(view);
     auto *const quick = selectionkey::quickCanvas(view);
     const int index = checks::support::automationParameterIndex(*canvas, row);
-    QPointer<QQuickItem> label;
-    if (index < 0 || !quick || !QTest::qWaitFor([&] {
-            label = checks::support::visualDescendant(
-                quick->rootObject(), QStringLiteral("automationParameterTab%1").arg(index));
-            return label && label->window() && label->width() > 0 && label->height() > 0;
-        }))
+    if (index < 0 || !quick ||
+        !checks::support::clickVisibleTab(quick->rootObject(),
+                                          QStringLiteral("automationParameterTab%1").arg(index))) {
         return false;
-    // The twelve-tab catalog overflows the gutter Flickable: reveal the tab
-    // before clicking, or the press lands outside the viewport.
-    checks::support::scrollTabIntoView(checks::support::automationTabsScroller(quick->rootObject()),
-                                       *label);
-    if (!QTest::qWaitFor([&] { return label && label->isVisible() && label->isEnabled(); }))
-        return false;
-    QTest::mouseClick(label->window(), Qt::LeftButton, Qt::NoModifier,
-                      label->mapToScene(label->boundingRect().center()).toPoint());
+    }
     return QTest::qWaitFor([&] { return canvas->parameterRow(canvas->activeParameter()) == row; });
 }
 

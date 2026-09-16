@@ -398,9 +398,9 @@ void AutomationHoverTest::targetAndToolProfilesUpdate()
     QVERIFY(!body.isEmpty());
     m_fixture->rig->view().setEditorHorizontalScroll(geometry.pointHitRadius + 8.0);
     QCoreApplication::processEvents();
-    const qreal phantomY = AutomationProjection::valueY(
-        body, geometry, CoreTimeDefaults::laneValueMinimum(kPanController),
-        CoreTimeDefaults::laneValueMaximum(kPanController), lane->heldValue);
+    const auto domain = CoreTimeDefaults::laneDomain(kPanController);
+    const qreal phantomY = AutomationProjection::valueY(body, geometry, domain.minimum,
+                                                        domain.maximum, lane->heldValue);
     moveCursorTo(*m_fixture,
                  automation_hover::windowPoint(*m_fixture, {qreal(body.left()), phantomY}));
     QTRY_VERIFY(hints.currentSource() == plot);
@@ -478,8 +478,9 @@ void AutomationHoverTest::liveModifierGesturesCommitAndUndo()
     const QString sweepText = hints.currentText();
 
     const QPointF pressViewport = lane->pointerViewport;
-    const int laneMinimum = CoreTimeDefaults::laneValueMinimum(kPanController);
-    const int laneMaximum = CoreTimeDefaults::laneValueMaximum(kPanController);
+    const auto domain = CoreTimeDefaults::laneDomain(kPanController);
+    const int laneMinimum = domain.minimum;
+    const int laneMaximum = domain.maximum;
 
     // Live Alt: the sweep endpoint lands on the fine grid while the retained
     // hint keeps the sweep profile for the whole gesture.
