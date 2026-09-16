@@ -243,6 +243,46 @@ void AutomationEditingTest::middleMousePanSurvivesRefresh()
     view.setEditorHorizontalScroll(0.0);
 }
 
+void AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan_data()
+{
+    QTest::addColumn<bool>("directSelectionTransition");
+    QTest::newRow("production-route") << false;
+}
+
+void AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan()
+{
+    SongView &view = m_tab->view();
+    QCOMPARE(m_tab->document().addTrack(0), 1);
+    m_tab->document().addLanePoint(1, kPanController, 48, 80);
+    const EditorAutomationRowId oldPan{EditorAutomationRowKind::ControlChange, 0, kPanController};
+    const EditorAutomationRowId newPan{EditorAutomationRowKind::ControlChange, 1, kPanController};
+    QVERIFY(activateParameter(oldPan));
+    const QRect body = laneBody(findRow(oldPan));
+    QVERIFY(!body.isEmpty());
+    const FrozenDocumentState frozen = frozenDocumentState();
+    const QPointF start(160.0, body.center().y());
+    const QPointF moved = start - QPointF(24.0, 0.0);
+
+    mousePress(*m_automationInput, Qt::MiddleButton, start);
+    mouseMove(*m_automationInput, moved);
+    QCOMPARE(m_automationInput->cursor().shape(), Qt::ClosedHandCursor);
+
+    // Direct applyPrimaryTrackTransition mid-gesture trips the selection model's
+    // reentrancy assert (editorselectionmodel.cpp:72), so the arm-contract path
+    // is untestable by design. The arm track check remains unverified
+    // defense-in-depth behind pre-cancelling selectTrack/trackHeaderClicked routes.
+    view.selectTrack(1);
+    QTRY_VERIFY(findRow(newPan).valid());
+    QVERIFY(!findRow(oldPan).valid());
+    QVERIFY(!laneBody(findRow(newPan)).isEmpty());
+    QVERIFY(frozenDocumentState() == frozen);
+
+    mouseRelease(*m_automationInput, Qt::MiddleButton, moved);
+    QVERIFY(findRow(newPan).valid());
+    QVERIFY(!findRow(oldPan).valid());
+    QVERIFY(frozenDocumentState() == frozen);
+}
+
 void AutomationEditingTest::emptyParameterSwitchPreservesGridResolution()
 {
     SongView &view = m_tab->view();

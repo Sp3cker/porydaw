@@ -54,6 +54,7 @@ void VelocityArea::beginFrozenGesture(const std::vector<DocNote> &notes, Interac
     m_previousPosition = position;
     m_interaction = interaction;
     m_interactionRevision = m_owner.document().revision();
+    m_interactionTrack = m_owner.selectionModel().primaryTrack();
     m_relativeActivated = false;
     pauseFollowScroll(true);
 }
@@ -72,6 +73,7 @@ void VelocityArea::beginVelocityPaint(const QPointF &position, bool detentUnlock
     m_previousPosition = position;
     m_interaction = Interaction::Paint;
     m_interactionRevision = m_owner.document().revision();
+    m_interactionTrack = m_owner.selectionModel().primaryTrack();
     m_relativeActivated = false;
     pauseFollowScroll(true);
 }
@@ -246,6 +248,7 @@ bool VelocityArea::pointerPress(const songview::TimelinePointerInput &input)
     if (input.button == Qt::MiddleButton) {
         m_interaction = Interaction::Pan;
         m_interactionRevision = m_owner.document().revision();
+        m_interactionTrack = m_owner.selectionModel().primaryTrack();
         pauseFollowScroll(true);
         return true;
     }
@@ -254,6 +257,7 @@ bool VelocityArea::pointerPress(const songview::TimelinePointerInput &input)
             m_pressedNote = hit->noteId;
         m_interaction = Interaction::PendingBand;
         m_interactionRevision = m_owner.document().revision();
+        m_interactionTrack = m_owner.selectionModel().primaryTrack();
         m_controlPress = input.modifiers.testFlag(Qt::ControlModifier);
         if (m_pressedNote && !m_controlPress && !contains(m_selectionBeforePress, *m_pressedNote))
             setSelection({*m_pressedNote});

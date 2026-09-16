@@ -34,6 +34,8 @@ class VelocityEditingTest final : public QObject
     void escapeCancelsDrag();
     void releaseWithoutMoveIsNoop();
     void pointerUngrabCancelsProvisionalSelection();
+    void primaryTrackSwitchCancelsDrag_data();
+    void primaryTrackSwitchCancelsDrag();
     void bandSelectionExpandsAndContracts();
     void bandUngrabRestoresSelection();
     void selectedCircleWinsOverStem();

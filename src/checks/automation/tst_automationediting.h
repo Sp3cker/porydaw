@@ -158,6 +158,8 @@ class AutomationEditingTest final : public QObject
     void sectionResizeKeepsLabelsClickableWithoutScrollbarStrip();
     void layoutAlignsPlotGutterAndRollGrid();
     void middleMousePanSurvivesRefresh();
+    void primaryTrackSwitchRebuildsRowsDuringPan_data();
+    void primaryTrackSwitchRebuildsRowsDuringPan();
     void emptyParameterSwitchPreservesGridResolution();
     void viewStateSwitchPreservesAutomationState();
     void wheelZoomAndSectionResizePreserveDrawerState();

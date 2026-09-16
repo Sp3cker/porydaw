@@ -112,7 +112,8 @@ void VelocityArea::refresh(DrawerScopes scopes)
     if (scopes.testFlag(DrawerScope::Content) || scopes.testFlag(DrawerScope::Selection) ||
         scopes.testFlag(DrawerScope::Zoom)) {
         if (m_interaction != Interaction::None &&
-            m_interactionRevision == m_owner.document().revision()) {
+            m_interactionRevision == m_owner.document().revision() &&
+            m_interactionTrack == m_owner.selectionModel().primaryTrack()) {
             if (!m_lastPresentedPlayheadTick ||
                 *m_lastPresentedPlayheadTick != m_owner.playheadTick())
                 presentPlayhead(m_owner.playheadTick());

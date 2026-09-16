@@ -7,6 +7,53 @@
 #include <QQuickItem>
 #include <QtTest>
 
+#include "ui/songview.h"
+
+void VelocityEditingTest::primaryTrackSwitchCancelsDrag_data()
+{
+    QTest::addColumn<bool>("directSelectionTransition");
+    QTest::newRow("production-route") << false;
+}
+
+void VelocityEditingTest::primaryTrackSwitchCancelsDrag()
+{
+    SongView &view = m_tab->view();
+    QCOMPARE(m_tab->document().addTrack(2), 1);
+    QTRY_COMPARE(view.currentProgram(1), 2);
+    selectDragPair();
+
+    const uint64_t revisionBefore = m_tab->document().revision();
+    const int undoDepthBefore = m_tab->document().undoStack()->count();
+    const QPoint press = windowPoint(nodePoint(20, m_quietStacked.tick));
+    const QPoint moved = windowPoint(nodePoint(48, m_quietStacked.tick));
+    mousePress(Qt::LeftButton, press);
+    mouseMove(moved);
+    QVERIFY(view.previewVelocity(m_quietStacked.noteId).has_value());
+    QVERIFY(view.previewVelocity(m_later.noteId).has_value());
+    QVERIFY(m_area->gestureActive());
+
+    // Direct applyPrimaryTrackTransition mid-gesture trips the selection model's
+    // reentrancy assert (editorselectionmodel.cpp:72), so the arm-contract path
+    // is untestable by design. The arm track check remains unverified
+    // defense-in-depth behind pre-cancelling selectTrack/trackHeaderClicked routes.
+    view.selectTrack(1);
+    QCOMPARE(m_tab->document().revision(), revisionBefore);
+    QTRY_VERIFY(!m_area->gestureActive());
+    QVERIFY(!view.previewVelocity(m_quietStacked.noteId).has_value());
+    QVERIFY(!view.previewVelocity(m_later.noteId).has_value());
+    QTRY_VERIFY(m_area->axis().mode() == VelocityAxis::Mode::Intrinsic);
+    QCOMPARE(m_area->axis().graduationCount(), 5);
+
+    mouseRelease(Qt::LeftButton, moved);
+    QCOMPARE(m_tab->document().revision(), revisionBefore);
+    QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore);
+    QCOMPARE(documentVelocity(m_quietStacked.noteId), 20);
+    QCOMPARE(documentVelocity(m_loudStacked.noteId), 70);
+    QCOMPARE(documentVelocity(m_later.noteId), 70);
+    QVERIFY(!view.previewVelocity(m_quietStacked.noteId).has_value());
+    QVERIFY(!view.previewVelocity(m_later.noteId).has_value());
+}
+
 void VelocityEditingTest::pointerUngrabCancelsProvisionalSelection()
 {
     m_tab->view().selectionModel().setNoteSelection({m_quietStacked.noteId});

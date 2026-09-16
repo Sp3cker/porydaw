@@ -187,6 +187,9 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
     // Document revision captured when a gesture/pan begins; the preserve arms
     // compare it against the live revision instead of a stored snapshot.
     uint64_t m_interactionRevision = 0;
+    // Primary track captured beside the revision; a track switch does not bump
+    // the document revision, so the preserve arms compare both.
+    int m_interactionTrack = -1;
     bool m_relativeActivated = false;
     VelocityAreaDiagnostics m_diagnostics;
     std::optional<double> m_lastPresentedPlayheadTick;

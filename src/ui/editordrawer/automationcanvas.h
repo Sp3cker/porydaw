@@ -153,6 +153,9 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     // Document revision captured when the active pan began; the page compares
     // it against the live revision instead of a stored snapshot.
     uint64_t panStartRevision() const noexcept { return m_pan.startRevision; }
+    // Primary track captured beside the revision; a track switch does not bump
+    // the document revision, so the page compares both.
+    int panStartTrack() const noexcept { return m_pan.startTrack; }
     bool bandPreviewContainsLane(LaneHandle handle) const noexcept;
     QRect laneBody(LaneHandle handle) const;
     // The view-local parameter selector for the shared gutter: nine clickable
@@ -430,6 +433,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
         QPointF pos;
         double startHScroll = 0;
         uint64_t startRevision = 0;
+        int startTrack = -1;
     } m_pan;
     BandGesture m_band;
     struct SelectedNodeMultiplicityCache {

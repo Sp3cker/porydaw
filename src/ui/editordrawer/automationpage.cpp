@@ -104,6 +104,7 @@ void AutomationPage::refresh(DrawerScopes scopes)
     if (scopes.testFlag(DrawerScope::Document) || scopes.testFlag(DrawerScope::Content) ||
         scopes.testFlag(DrawerScope::Zoom) || viewStateChanged) {
         if (m_canvas->isPanning() && m_canvas->panStartRevision() == document().revision() &&
+            m_canvas->panStartTrack() == m_owner.selectionModel().primaryTrack() &&
             !viewStateChanged) {
             m_canvas->requestFullQuickUpdate();
         } else {
