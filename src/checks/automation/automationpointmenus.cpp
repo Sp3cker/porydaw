@@ -428,7 +428,7 @@ void AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePr
     const int volumeIndex = checks::support::automationParameterIndex(
         *page().canvas(), {EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume});
     QVERIFY(volumeIndex >= 0);
-    QCOMPARE(page().canvas()->parameterPips().size(), 9);
+    QCOMPARE(page().canvas()->parameterPips().size(), page().canvas()->parameterLabels().size());
     QVERIFY(!page().canvas()->parameterPips().at(volumeIndex).toBool());
 
     const QByteArray before = songTab.document().smf().write();

@@ -54,7 +54,7 @@ void verifyActivePlot(SongView &view, AutomationPage &page, const QRect &body)
     QCOMPARE(automation->plotRect.left(), view.timelineSplitX());
     QCOMPARE(roll->plotRect.left(), view.timelineSplitX());
     const QRectF gutterRect(automation->gutterRect());
-    for (int index = 0; index < 9; ++index) {
+    for (int index = 0; index < page.canvas()->parameterLabels().size(); ++index) {
         QQuickItem *const label = checks::support::visualDescendant(
             view.quickView()->rootObject(), QStringLiteral("automationParameterTab%1").arg(index));
         QVERIFY(label);
@@ -143,7 +143,7 @@ void AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStr
 
         // The Flickable owns visibility: reveal each overflowed tab before the
         // real rendered-label click.
-        for (int index = 0; index < 9; ++index) {
+        for (int index = 0; index < canvas->parameterLabels().size(); ++index) {
             const auto row = canvas->parameterRow(index);
             QVERIFY(row.has_value());
             QQuickItem *const label = checks::support::visualDescendant(
@@ -204,7 +204,7 @@ void AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid()
     QCOMPARE(qRound(gutter->height()), automation->rect.height());
 
     AutomationCanvas *const canvas = m_page->canvas();
-    for (int index = 0; index < 9; ++index) {
+    for (int index = 0; index < canvas->parameterLabels().size(); ++index) {
         const auto row = canvas->parameterRow(index);
         QVERIFY(row.has_value());
         QVERIFY(activateParameter(*row));

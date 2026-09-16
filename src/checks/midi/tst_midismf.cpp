@@ -984,10 +984,10 @@ void MidiSmfTest::importReportFlagsStrayPayloadForReview()
     QCOMPARE(analysis.xcmds[0].support, ImportSupport::NeedsReview);
 }
 
-// Advanced-presentation CCs still export when PrintControllerOp has a branch
-// for them (MODT/TUNE/LFODL, MEMACC execute, loop label); anything outside
-// the exported set keeps a not-exported verdict. None of this ordinary
-// traffic produces XCMD rows.
+// Lane-presented CCs still export when PrintControllerOp has a branch for
+// them (MODT/TUNE/LFODL now sit in the automation catalog alongside MEMACC
+// execute and loop label); anything outside the exported set keeps a
+// not-exported verdict. None of this ordinary traffic produces XCMD rows.
 void MidiSmfTest::importReportVerdictsOrdinaryControllers()
 {
     const auto analysis = analyzeChannelTrack({

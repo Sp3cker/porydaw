@@ -128,9 +128,9 @@ mapping (from `tools/mid2agb/agb.cpp`):
 | CC 7 / CC 10 | `VOL` / `PAN` | Volume / Pan lanes |
 | CC 12–17, 33, 39 | `MEMACC` ops, loop label, `PRIO` | Advanced view only |
 | CC 23 / 25 | `PWMC` / `PWMS` (ext) | Pulse-width lanes (gated on engine profile) |
-| CC 24 | `TUNE` | Fine-tune lane |
+| CC 24 | `TUNE` | "Fine tune" lane |
 | CC 20 | `BENDR` | Bend-range lane |
-| CC 21 / 22 / 26 | `LFOS` / `MODT` / `LFODL` | LFO speed / type / delay lanes |
+| CC 21 / 22 / 26 | `LFOS` / `MODT` / `LFODL` | LFO speed / "LFO type" / "LFO delay" lanes |
 | CC 29 / 30 / 31 | `XCMD` (pseudo-echo vol/len) | Pseudo-echo lanes |
 | Pitch bend | `BEND c_v±` | Pitch-bend lane |
 | Tempo meta | `TEMPO` | Tempo track |
@@ -138,10 +138,11 @@ mapping (from `tools/mid2agb/agb.cpp`):
 
 Dedicated automation lanes are offered only for parameters the embedded poryaaaa
 engine actually renders — porydaw targets the engine as it exists, not the full m4a
-command set. CCs the engine currently treats as no-ops (e.g. `TUNE`, `MODT`,
-`LFODL`) and pseudo-echo `XCMD`s get no audible lane; they are still preserved
-byte-for-byte on round-trip and visible in the advanced/"other events" view. If
-poryaaaa gains support for one later, porydaw simply enables its lane.
+command set. CCs the engine currently treats as no-ops (e.g. `PORTAMENTO`, `PWMC`,
+`PWMS` — gated on the detected engine profile — and `PRIO`) and pseudo-echo `XCMD`s
+get no audible lane; they are still preserved byte-for-byte on round-trip and
+visible in the advanced/"other events" view. If poryaaaa gains support for one
+later, porydaw simply enables its lane.
 
 ### 4.3 WYHIWYG: simulating mid2agb on playback
 

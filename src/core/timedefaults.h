@@ -59,8 +59,11 @@ inline constexpr uint8_t kCcVolume = 0x07;     // VOL
 inline constexpr uint8_t kCcPan = 0x0A;        // PAN
 inline constexpr uint8_t kCcBendRange = 0x14;  // BENDR
 inline constexpr uint8_t kCcLfoSpeed = 0x15;   // LFOS
+inline constexpr uint8_t kCcModType = 0x16;    // MODT
 inline constexpr uint8_t kCcPwmCycle = 0x17;   // PWMC
+inline constexpr uint8_t kCcFineTune = 0x18;   // TUNE
 inline constexpr uint8_t kCcPwmWidth = 0x19;   // PWMS
+inline constexpr uint8_t kCcLfoDelay = 0x1A;   // LFODL
 
 inline constexpr ControllerDefault kControllerDefaults[] = {
     {kCcModulation, 0}, // MOD
@@ -69,8 +72,11 @@ inline constexpr ControllerDefault kControllerDefaults[] = {
     {kCcPan, 64},       // PAN
     {kCcBendRange, 2},  // BENDR
     {kCcLfoSpeed, 22},  // LFOS
+    {kCcModType, 0},    // MODT
     {kCcPwmCycle, 0},   // PWMC
+    {kCcFineTune, 64},  // TUNE
     {kCcPwmWidth, 0},   // PWMS
+    {kCcLfoDelay, 0},   // LFODL
 };
 
 constexpr int controllerDefault(uint8_t cc)
@@ -96,7 +102,14 @@ constexpr int laneValueMinimum(uint8_t cc)
 
 constexpr int laneValueMaximum(uint8_t cc)
 {
-    return cc == kLaneCcBend ? kMaxBendValue : kMaxCcValue;
+    if (cc == kLaneCcBend)
+        return kMaxBendValue;
+    // m4a_track.c branches the modulation axis only on 0 (vibrato), 1
+    // (tremolo), and 2 (autopan); the engine stores any byte but values >=3
+    // are inert, so the lane clamps to the meaningful domain.
+    if (cc == kCcModType)
+        return 2;
+    return kMaxCcValue;
 }
 
 constexpr int clampLaneValue(uint8_t cc, int value)

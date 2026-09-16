@@ -16,6 +16,9 @@ enum class M4aLane {
     Pan,        // CC 10 -> PAN
     BendRange,  // CC 20 -> BENDR
     LfoSpeed,   // CC 21 -> LFOS
+    LfoType,    // CC 22 -> MODT
+    FineTune,   // CC 24 -> TUNE
+    LfoDelay,   // CC 26 -> LFODL
     PitchBend,  // pitch-bend events -> BEND
     EchoVolume, // XCMD xIECV -> pseudo-echo volume
     EchoLength, // XCMD xIECL -> pseudo-echo length
@@ -46,8 +49,8 @@ M4aCcInfo m4aClassifyCc(uint8_t cc);
 // converter (external/poryaaaa/packages/ccomidi/mid2agb/agb.cpp): does the
 // traffic compile into the intended game command? Independent of
 // M4aEventClass presentation, which only decides lane vs strip placement:
-// MODT/TUNE/LFODL/PRIO sit in the Advanced strip yet export real commands,
-// while PORT/PWMC/PWMS present as Advanced and export nothing. Coupled
+// PRIO sits in the Advanced strip yet exports a real command, while
+// PORT/PWMC/PWMS present as Advanced and export nothing. Coupled
 // traffic (XCMD selector/payload bytes) has no standalone verdict — its
 // logical echo assessment belongs to xcmd::assessTraffic.
 enum class M4aExportSupport {

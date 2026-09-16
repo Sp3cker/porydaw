@@ -156,8 +156,8 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     int panStartTrack() const noexcept { return m_pan.startTrack; }
     bool bandPreviewContainsLane(LaneHandle handle) const noexcept;
     QRect laneBody(LaneHandle handle) const;
-    // The view-local parameter selector for the shared gutter: nine clickable
-    // identities — the eight supported CCs plus song-global Tempo, all
+    // The view-local parameter selector for the shared gutter: twelve clickable
+    // identities — the eleven supported CCs plus song-global Tempo, all
     // available without written events. `index` is a catalog position
     // (parameterRow), never a LaneHandle; a null m_activeController selects
     // Tempo. The active parameter is view-local (default Volume), retained by

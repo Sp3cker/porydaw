@@ -37,9 +37,14 @@ bool clickParameter(SongView &view, const EditorAutomationRowId &row)
     if (index < 0 || !quick || !QTest::qWaitFor([&] {
             label = checks::support::visualDescendant(
                 quick->rootObject(), QStringLiteral("automationParameterTab%1").arg(index));
-            return label && label->window() && label->isVisible() && label->isEnabled() &&
-                   label->width() > 0 && label->height() > 0;
+            return label && label->window() && label->width() > 0 && label->height() > 0;
         }))
+        return false;
+    // The twelve-tab catalog overflows the gutter Flickable: reveal the tab
+    // before clicking, or the press lands outside the viewport.
+    checks::support::scrollTabIntoView(checks::support::automationTabsScroller(quick->rootObject()),
+                                       *label);
+    if (!QTest::qWaitFor([&] { return label && label->isVisible() && label->isEnabled(); }))
         return false;
     QTest::mouseClick(label->window(), Qt::LeftButton, Qt::NoModifier,
                       label->mapToScene(label->boundingRect().center()).toPoint());

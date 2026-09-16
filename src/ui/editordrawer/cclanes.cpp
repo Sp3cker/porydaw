@@ -31,19 +31,23 @@ std::span<const uint8_t> CCLanes::supportedControllers() noexcept
 {
     // Selector display order, deliberately not ascending controller number:
     // related identities are adjacent so the parameter grid reads as groups —
-    // mix (Volume, Pan), pitch (Modulation, Pitch bend, LFO speed, Bend range),
-    // then the two XCMD echo lanes.
+    // mix (Volume, Pan), modulation (Modulation, LFO type, LFO speed, LFO
+    // delay), pitch (Pitch bend, Bend range), then the XCMD echo lanes and
+    // the Fine tune singleton.
     static constexpr auto controllers = [] {
-        std::array<uint8_t, 6 + xcmd::kLaneDescriptors.size()> result{};
+        std::array<uint8_t, 9 + xcmd::kLaneDescriptors.size()> result{};
         result[0] = CoreTimeDefaults::kCcVolume;
         result[1] = CoreTimeDefaults::kCcPan;
         result[2] = CoreTimeDefaults::kCcModulation;
-        result[3] = CoreTimeDefaults::kLaneCcBend;
+        result[3] = CoreTimeDefaults::kCcModType;
         result[4] = CoreTimeDefaults::kCcLfoSpeed;
-        result[5] = CoreTimeDefaults::kCcBendRange;
-        std::size_t next = 6;
+        result[5] = CoreTimeDefaults::kCcLfoDelay;
+        result[6] = CoreTimeDefaults::kLaneCcBend;
+        result[7] = CoreTimeDefaults::kCcBendRange;
+        std::size_t next = 8;
         for (const auto &descriptor : xcmd::kLaneDescriptors)
             result[next++] = descriptor.laneController;
+        result[next] = CoreTimeDefaults::kCcFineTune;
         return result;
     }();
     return controllers;
@@ -52,7 +56,8 @@ std::span<const uint8_t> CCLanes::supportedControllers() noexcept
 bool CCLanes::rangeZoomable(uint8_t controller) noexcept
 {
     return controller != bendController() && controller != CoreTimeDefaults::kCcPan &&
-           controller != 24;
+           controller != CoreTimeDefaults::kCcFineTune &&
+           controller != CoreTimeDefaults::kCcModType;
 }
 
 uint8_t CCLanes::defaultRange(uint8_t controller) noexcept
@@ -126,7 +131,8 @@ NodeValuePrompt CCLaneAdapter::valuePrompt(int storedValue) const
     prompt.initialValue = storedValue;
     if (m_controller == CCLanes::bendController()) {
         prompt.label = QCoreApplication::translate("AutomationCanvas", "Bend (0 = none):");
-    } else if (m_controller == 10 || m_controller == 24) {
+    } else if (m_controller == CoreTimeDefaults::kCcPan ||
+               m_controller == CoreTimeDefaults::kCcFineTune) {
         // Pan-style controllers present a centered range and store the
         // displayed value shifted by 64.
         prompt.minimum = -64;
@@ -142,7 +148,7 @@ int CCLaneAdapter::neutralValue() const
 {
     if (m_controller == CCLanes::bendController())
         return 0;
-    if (m_controller == 10 || m_controller == 24)
+    if (m_controller == CoreTimeDefaults::kCcPan || m_controller == CoreTimeDefaults::kCcFineTune)
         return 64;
     return -1;
 }

@@ -119,18 +119,22 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
     QVERIFY(automationPage);
     QVERIFY(canvas);
     const QStringList expected{
-        QStringLiteral("Volume"),      QStringLiteral("Pan"),         QStringLiteral("Modulation"),
-        QStringLiteral("Pitch bend"),  QStringLiteral("LFO speed"),   QStringLiteral("Bend range"),
-        QStringLiteral("Echo volume"), QStringLiteral("Echo length"), QStringLiteral("Tempo")};
+        QStringLiteral("Volume"),      QStringLiteral("Pan"),        QStringLiteral("Modulation"),
+        QStringLiteral("LFO type"),    QStringLiteral("LFO speed"),  QStringLiteral("LFO delay"),
+        QStringLiteral("Pitch bend"),  QStringLiteral("Bend range"), QStringLiteral("Echo volume"),
+        QStringLiteral("Echo length"), QStringLiteral("Fine tune"),  QStringLiteral("Tempo")};
     QCOMPARE(canvas->parameterLabels(), expected);
-    const std::array<uint8_t, 8> controllers{CoreTimeDefaults::kCcVolume,
-                                             CoreTimeDefaults::kCcPan,
-                                             CoreTimeDefaults::kCcModulation,
-                                             CoreTimeDefaults::kLaneCcBend,
-                                             CoreTimeDefaults::kCcLfoSpeed,
-                                             CoreTimeDefaults::kCcBendRange,
-                                             uint8_t{0xFB},
-                                             uint8_t{0xFC}};
+    const std::array<uint8_t, 11> controllers{CoreTimeDefaults::kCcVolume,
+                                              CoreTimeDefaults::kCcPan,
+                                              CoreTimeDefaults::kCcModulation,
+                                              CoreTimeDefaults::kCcModType,
+                                              CoreTimeDefaults::kCcLfoSpeed,
+                                              CoreTimeDefaults::kCcLfoDelay,
+                                              CoreTimeDefaults::kLaneCcBend,
+                                              CoreTimeDefaults::kCcBendRange,
+                                              uint8_t{0xFB},
+                                              uint8_t{0xFC},
+                                              CoreTimeDefaults::kCcFineTune};
     for (int index = 0; index < int(controllers.size()); ++index) {
         const auto row = canvas->parameterRow(index);
         QVERIFY(row.has_value());
@@ -196,15 +200,21 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
     }
 
     // The selector keeps the catalog's grouping visible: each related pair
-    // shares one row, and song-global Tempo closes the grid on its own wider
-    // row instead of joining a pair.
+    // shares one row, the Fine tune singleton sits alone on its own row, and
+    // song-global Tempo closes the grid on its own wider row.
     QCOMPARE(labelBounds.size(), static_cast<std::size_t>(expected.size()));
-    const std::size_t pairedLabels = labelBounds.size() - 1;
+    const std::size_t pairedLabels = 2 * (controllers.size() / 2);
     for (std::size_t pair = 0; pair < pairedLabels; pair += 2) {
         QVERIFY2(std::abs(labelBounds.at(pair).center().y() -
                           labelBounds.at(pair + 1).center().y()) <= layout::singlePixel(),
                  "a related parameter pair no longer shares a selector row");
     }
+    const QRectF &tuneBounds = labelBounds.at(controllers.size() - 1);
+    QVERIFY2(tuneBounds.center().y() >
+                 labelBounds.at(controllers.size() - 2).center().y() + layout::singlePixel(),
+             "the Fine tune singleton no longer sits on its own selector row");
+    QVERIFY2(tuneBounds.center().y() < labelBounds.back().center().y() - layout::singlePixel(),
+             "the Fine tune singleton no longer sits above Tempo");
     const QRectF &tempoBounds = labelBounds.back();
     QVERIFY2(tempoBounds.center().y() > labelBounds.front().center().y(),
              "the song-global Tempo label no longer closes the selector grid");

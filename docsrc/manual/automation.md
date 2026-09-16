@@ -18,9 +18,10 @@ always available at the top level. -->
 <!-- TODO: Friendly table of the m4a-meaningful controls with plain-language
 descriptions and typical ranges:
 - Volume, Pan
-- MOD (vibrato depth) / MODT (vibrato type)
+- MOD (vibrato depth) / MODT (vibrato type: 0=vibrato, 1=tremolo, 2=autopan; values >=3 are stored but inert)
+- TUNE (fine tune, bipolar — 64 is center/no detune)
 - BEND (pitch bend) / BENDR (bend range)
-- LFOS / LFODL (vibrato speed / delay)
+- LFOS / LFODL (vibrato speed / delay; LFODL takes effect from the next note-on)
 - Tempo (top-level lane)
 Flag which ones quantize on GBA hardware. -->
 

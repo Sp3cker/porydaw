@@ -15,7 +15,7 @@
 #include "ui/layout.h"
 #include "ui/theme/themeruntime.h"
 
-// Nine identities: the supported CC catalog plus song-global Tempo.
+// The catalog identities: the supported CC catalog plus song-global Tempo.
 int AutomationCanvas::parameterCount() noexcept
 {
     return int(CCLanes::supportedControllers().size()) + 1;
@@ -78,7 +78,7 @@ LaneHandle AutomationCanvas::activeLane() const noexcept
     return {int(slot - m_nodeStack.cbegin())};
 }
 
-// Selection-scope inclusion over the nine catalog identities: a row counts
+// Selection-scope inclusion over the catalog identities: a row counts
 // only when the selection covers it AND its lane carries at least one written
 // event inside the selected tick range — scope coverage alone is not enough.
 QList<int> AutomationCanvas::selectedParameters() const

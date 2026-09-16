@@ -269,6 +269,13 @@ void AutomationDomainTest::rangesAndSelection()
         CCLaneAdapter bend(doc, kTrack, DOC_CC_BEND);
         QCOMPARE(bend.minimumValue(), CoreTimeDefaults::kMinBendValue);
         QCOMPARE(bend.maximumValue(), CoreTimeDefaults::kMaxBendValue);
+        CCLaneAdapter modType(doc, kTrack, CoreTimeDefaults::kCcModType);
+        QCOMPARE(modType.minimumValue(),
+                 CoreTimeDefaults::laneValueMinimum(CoreTimeDefaults::kCcModType));
+        QCOMPARE(modType.maximumValue(),
+                 CoreTimeDefaults::laneValueMaximum(CoreTimeDefaults::kCcModType));
+        QCOMPARE(CoreTimeDefaults::laneValueMinimum(CoreTimeDefaults::kCcModType), 0);
+        QCOMPARE(CoreTimeDefaults::laneValueMaximum(CoreTimeDefaults::kCcModType), 2);
         QCOMPARE(bend.valueText(0), m4aFormatBend(0));
         QCOMPARE(bend.valueText(100), m4aFormatBend(100));
     }
@@ -481,6 +488,23 @@ void AutomationDomainTest::defaultNodePromotion()
     QVERIFY(bend.points().empty());
     const std::optional<NodePoint> bendLeadIn = bend.leadIn();
     QVERIFY(bendLeadIn && bendLeadIn->tick == 0 && bendLeadIn->value == 0);
+
+    // The new lanes' synthetic tick-zero lead-ins carry their engine
+    // defaults: Fine tune centers at 64, LFO type and LFO delay at 0.
+    CCLaneAdapter fineTune(doc, kTrack, CoreTimeDefaults::kCcFineTune);
+    const std::optional<NodePoint> fineTuneLeadIn = fineTune.leadIn();
+    QVERIFY(fineTuneLeadIn && fineTuneLeadIn->tick == 0 && fineTuneLeadIn->value == 64);
+    CCLaneAdapter modType(doc, kTrack, CoreTimeDefaults::kCcModType);
+    const std::optional<NodePoint> modTypeLeadIn = modType.leadIn();
+    QVERIFY(modTypeLeadIn && modTypeLeadIn->tick == 0 && modTypeLeadIn->value == 0);
+    CCLaneAdapter lfoDelay(doc, kTrack, CoreTimeDefaults::kCcLfoDelay);
+    const std::optional<NodePoint> lfoDelayLeadIn = lfoDelay.leadIn();
+    QVERIFY(lfoDelayLeadIn && lfoDelayLeadIn->tick == 0 && lfoDelayLeadIn->value == 0);
+
+    // MODT's engine domain is 0..2 (vibrato/tremolo/autopan): a written 7
+    // must clamp to the stored maximum through makeLaneEvent.
+    setLane(doc, kTrack, CoreTimeDefaults::kCcModType, {{0, 7}});
+    QVERIFY(rawValuesAt(doc, kTrack, CoreTimeDefaults::kCcModType, 0) == (std::vector<int>{2}));
 
     const Snapshot volumeBefore = snapshot();
     const auto volumeResolved = nodelane::resolveCcMoves(doc, kTrack, 7, {{0, {96, 100}}});
