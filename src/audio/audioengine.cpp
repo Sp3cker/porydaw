@@ -265,8 +265,8 @@ void AudioEngine::loadSong(std::shared_ptr<const MidiTimeline> timeline,
     resetPreviewEngine();
     clearTimedPreviews();
 
-    m_transport.store(static_cast<int>(Transport::Stopped));
-    m_appliedTransport = static_cast<int>(Transport::Stopped);
+    m_transport.store(Transport::Stopped);
+    m_appliedTransport = Transport::Stopped;
     m_muteMask.store(0);
     m_soloMask.store(0);
     m_appliedMute = 0;
@@ -434,8 +434,8 @@ void AudioEngine::unloadSong()
     m4a_engine_set_voicegroup(m_engine.get(), nullptr);
     resetPreviewEngine();
     clearTimedPreviews();
-    m_transport.store(static_cast<int>(Transport::Stopped));
-    m_appliedTransport = static_cast<int>(Transport::Stopped);
+    m_transport.store(Transport::Stopped);
+    m_appliedTransport = Transport::Stopped;
     m_player.reset();
     m_playhead.store(0);
     m_activePcm.store(0);
@@ -449,13 +449,13 @@ void AudioEngine::unloadSong()
 void AudioEngine::play()
 {
     if (songLoaded())
-        m_transport.store(static_cast<int>(Transport::Playing));
+        m_transport.store(Transport::Playing);
 }
 
 void AudioEngine::pause()
 {
     if (transport() == Transport::Playing)
-        m_transport.store(static_cast<int>(Transport::Paused));
+        m_transport.store(Transport::Paused);
 }
 
 void AudioEngine::stop()
@@ -463,7 +463,7 @@ void AudioEngine::stop()
     // Cancel before publishing the transport change: once the callback can
     // see Stopped, no stale seek may survive to move the rewound playhead.
     m_pendingSeek.store(kNoPendingSeek, std::memory_order_release);
-    m_transport.store(static_cast<int>(Transport::Stopped));
+    m_transport.store(Transport::Stopped);
 }
 
 uint64_t AudioEngine::polyLostTotal() const
@@ -544,7 +544,7 @@ uint32_t AudioEngine::effectiveMuteMask() const
 
 void AudioEngine::applyTransportTransition()
 {
-    const int requested = m_transport.load();
+    const Transport requested = m_transport.load();
     if (m_cutFadeActive) {
         // The applied transport remains unchanged until the zero sample. A
         // request change during fade-down only retargets that pending cut;
@@ -574,7 +574,7 @@ void AudioEngine::resetOutputCut()
 // Audio-thread: starts a transport cut-fade. The output gain ramps from its
 // current value down to 0, both engines are cut at zero, and the pending
 // transport is applied before the settle hold and return ramp.
-void AudioEngine::beginOutputCut(int transport)
+void AudioEngine::beginOutputCut(Transport transport)
 {
     if (m_cutFadeActive) {
         if (!m_cutFadeRising)
@@ -613,17 +613,16 @@ void AudioEngine::finishOutputCut()
     m_previewVoiceKey = -1;
     m_audition.reset();
 
-    const int prior = m_appliedTransport;
-    const int target = m_cutFadeTargetTransport;
+    const Transport prior = m_appliedTransport;
+    const Transport target = m_cutFadeTargetTransport;
     // Park the sequencer on the prior state for every non-Playing → Playing
     // transition: the player neither advances nor renders a note while the
     // gain is zero, and the hold-end completion in process() switches to
     // Playing at unity m_cutFadeGain. A cut retargeted onto already-applied
     // Playing keeps the normal return ramp, so the completion's applied
     // != target guard can never stall it.
-    const bool deferredPlayingStart = target == static_cast<int>(Transport::Playing) &&
-                                      prior != static_cast<int>(Transport::Playing);
-    switch (static_cast<Transport>(target)) {
+    const bool deferredPlayingStart = target == Transport::Playing && prior != Transport::Playing;
+    switch (target) {
     case Transport::Stopped:
         m_player.reset();
         break;
@@ -632,7 +631,7 @@ void AudioEngine::finishOutputCut()
     case Transport::Playing:
         // Preserve the cursor for every non-Stopped transition. Starting
         // from Stopped only clears the accumulated overflow diagnostics.
-        if (prior == static_cast<int>(Transport::Stopped))
+        if (prior == Transport::Stopped)
             m4a_engine_reset_poly_stats(m_engine.get());
         break;
     }
@@ -833,8 +832,7 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
     while (done < frameCount) {
         const uint32_t n = std::min(frameCount - done, m_bufCapacity);
         const MidiTimeline *tl = m_timelineHandoff.active();
-        const bool playing =
-            m_appliedTransport == static_cast<int>(Transport::Playing) && tl != nullptr;
+        const bool playing = m_appliedTransport == Transport::Playing && tl != nullptr;
 
         if (playing) {
             const bool looping = m_loopEnabled.load();
@@ -844,7 +842,7 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
             // Auto-stop a non-looping song after the tail rings out.
             if (!(looping && tl->hasLoop()) &&
                 m_player.position() > tl->lengthSamples + uint64_t(kTailSeconds * m_sampleRate)) {
-                m_transport.store(static_cast<int>(Transport::Stopped));
+                m_transport.store(Transport::Stopped);
                 applyTransportTransition();
             }
         } else {
@@ -877,8 +875,7 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
                 if (m_cutFadeHold > 0) {
                     --m_cutFadeHold;
                     m_cutFadeGain = 0.0f;
-                    if (m_cutFadeHold == 0 &&
-                        m_cutFadeTargetTransport == static_cast<int>(Transport::Stopped)) {
+                    if (m_cutFadeHold == 0 && m_cutFadeTargetTransport == Transport::Stopped) {
                         // The upstream driver/frontend queues are now drained.
                         // Reset only Stop's suppressor history, then discard
                         // the rest of this already-suppressed render chunk so
@@ -890,7 +887,7 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
                         }
                     }
                     if (m_cutFadeHold == 0 && m_cutFadeRemaining == 0 &&
-                        m_cutFadeTargetTransport == static_cast<int>(Transport::Playing) &&
+                        m_cutFadeTargetTransport == Transport::Playing &&
                         m_appliedTransport != m_cutFadeTargetTransport) {
                         m_cutFadeActive = false;
                         m_cutFadeRising = false;

@@ -50,7 +50,7 @@ double TransportTest::deepestResonanceGain(AudioEngine &engine) const
 
 // Renders one frame at a time until the audio thread applied the requested
 // transport, bounded by one second of rendering.
-bool TransportTest::renderUntilApplied(AudioEngine &engine, int transport)
+bool TransportTest::renderUntilApplied(AudioEngine &engine, Transport transport)
 {
     uint32_t frames = 0;
     while (engine.m_appliedTransport != transport && frames < uint32_t(engine.sampleRate())) {
@@ -75,7 +75,7 @@ bool TransportTest::engageSuppressorWithNoteSong(AudioEngine &engine)
     }
     engine.loadSong(timeline, borrowVoicegroupLease(&m_bank->vg), SongSettings{});
     engine.play();
-    if (!renderUntilApplied(engine, static_cast<int>(Transport::Playing))) {
+    if (!renderUntilApplied(engine, Transport::Playing)) {
         QTest::qFail("initial play was not applied", __FILE__, __LINE__);
         return false;
     }
@@ -98,7 +98,7 @@ void TransportTest::songStartEntersAtUnityGain()
     engine().loadSong(timeline, borrowVoicegroupLease(&m_bank->vg), SongSettings{});
 
     engine().play();
-    if (!renderUntilApplied(engine(), static_cast<int>(Transport::Playing))) {
+    if (!renderUntilApplied(engine(), Transport::Playing)) {
         QTest::qFail("initial play was not applied", __FILE__, __LINE__);
         return;
     }
@@ -119,7 +119,7 @@ void TransportTest::pausePreservesSuppressorAdaptation()
         return;
     engine().pause();
     renderParked(engine(), engine().m_outputGainRampSamples + 512);
-    QVERIFY2(engine().m_appliedTransport == static_cast<int>(Transport::Paused),
+    QVERIFY2(engine().m_appliedTransport == Transport::Paused,
              "pause was not applied during active suppressor check");
     QVERIFY2(deepestResonanceGain(engine()) < -0.1, "pause reset active suppressor gain state");
 
@@ -129,7 +129,7 @@ void TransportTest::pausePreservesSuppressorAdaptation()
         pauseDrainFrames += 512;
     }
     engine().play();
-    QVERIFY2(renderUntilApplied(engine(), static_cast<int>(Transport::Playing)),
+    QVERIFY2(renderUntilApplied(engine(), Transport::Playing),
              "resume was not applied during active suppressor check");
     QVERIFY2(deepestResonanceGain(engine()) < -0.1,
              "resume re-primed active suppressor gain state");
@@ -143,7 +143,7 @@ void TransportTest::stopLeaksNoDelayedSuppressorAudio()
         return;
     renderParked(engine(), uint32_t(0.5 * engine().sampleRate()));
     engine().stop();
-    if (!renderUntilApplied(engine(), static_cast<int>(Transport::Stopped))) {
+    if (!renderUntilApplied(engine(), Transport::Stopped)) {
         QTest::qFail("stop was not applied during active suppressor check", __FILE__, __LINE__);
         return;
     }
@@ -194,12 +194,12 @@ void TransportTest::restartProducesAudioWithSuppression()
     if (!engageSuppressorWithNoteSong(engine()))
         return;
     engine().stop();
-    if (!renderUntilApplied(engine(), static_cast<int>(Transport::Stopped))) {
+    if (!renderUntilApplied(engine(), Transport::Stopped)) {
         QTest::qFail("stop was not applied before the restart check", __FILE__, __LINE__);
         return;
     }
     engine().play();
-    if (!renderUntilApplied(engine(), static_cast<int>(Transport::Playing))) {
+    if (!renderUntilApplied(engine(), Transport::Playing)) {
         QTest::qFail("restart was not applied during active suppressor check", __FILE__, __LINE__);
         return;
     }
@@ -217,8 +217,7 @@ void TransportTest::secondSongStartDoesNotReuseResumeFade()
         return;
     engine().pause();
     auto secondPauseFrames = uint32_t{0};
-    while ((engine().m_appliedTransport != static_cast<int>(Transport::Paused) ||
-            engine().m_cutFadeActive) &&
+    while ((engine().m_appliedTransport != Transport::Paused || engine().m_cutFadeActive) &&
            secondPauseFrames < uint32_t(engine().sampleRate())) {
         renderParked(engine(), 512);
         secondPauseFrames += 512;
@@ -226,7 +225,7 @@ void TransportTest::secondSongStartDoesNotReuseResumeFade()
     engine().seek(0);
     renderParked(engine(), 1);
     engine().play();
-    if (!renderUntilApplied(engine(), static_cast<int>(Transport::Playing))) {
+    if (!renderUntilApplied(engine(), Transport::Playing)) {
         QTest::qFail("second song-start play was not applied", __FILE__, __LINE__);
         return;
     }
@@ -249,14 +248,12 @@ void TransportTest::resumeParksSequencerThroughSettle()
     renderParked(engine(), uint32_t(0.25 * engine().sampleRate()));
     engine().pause();
     auto resumePauseFrames = uint32_t{0};
-    while ((engine().m_appliedTransport != static_cast<int>(Transport::Paused) ||
-            engine().m_cutFadeActive) &&
+    while ((engine().m_appliedTransport != Transport::Paused || engine().m_cutFadeActive) &&
            resumePauseFrames < uint32_t(engine().sampleRate())) {
         renderParked(engine(), 1);
         ++resumePauseFrames;
     }
-    QVERIFY2(engine().m_appliedTransport == static_cast<int>(Transport::Paused) &&
-                 !engine().m_cutFadeActive,
+    QVERIFY2(engine().m_appliedTransport == Transport::Paused && !engine().m_cutFadeActive,
              "pause did not settle before the resume regression");
     QVERIFY2(engine().m_player.position() != 0, "resume regression needs a nonzero cursor");
 
@@ -264,13 +261,13 @@ void TransportTest::resumeParksSequencerThroughSettle()
     engine().play();
     auto resumeSettleFrames = uint32_t{0};
     auto advancedDuringSettle = false;
-    while (engine().m_appliedTransport != static_cast<int>(Transport::Playing) &&
+    while (engine().m_appliedTransport != Transport::Playing &&
            resumeSettleFrames < uint32_t(engine().sampleRate())) {
         renderParked(engine(), 1);
         ++resumeSettleFrames;
         advancedDuringSettle |= engine().m_player.position() != resumeCursorPosition;
     }
-    QVERIFY2(engine().m_appliedTransport == static_cast<int>(Transport::Playing),
+    QVERIFY2(engine().m_appliedTransport == Transport::Playing,
              "resume was not applied for the resume regression");
     QVERIFY2(!advancedDuringSettle, "resume advanced the player during the zero-gain settle");
     QVERIFY2(engine().m_cutFadeGain >= 0.999f, "resume entered Playing below unity cut-fade gain");
@@ -301,7 +298,7 @@ void TransportTest::pendingCutRetargetsOntoPlaying()
         ++retargetFrames;
     }
     QVERIFY2(!engine().m_cutFadeActive, "retargeted cut never completed");
-    QVERIFY2(engine().m_appliedTransport == static_cast<int>(Transport::Playing),
+    QVERIFY2(engine().m_appliedTransport == Transport::Playing,
              "retargeted cut lost the playing state");
     QVERIFY2(engine().m_cutFadeGain >= 0.999f, "retargeted cut ended below unity output gain");
 }
@@ -315,7 +312,7 @@ void TransportTest::coldReplacementLeaksNoPriorSongAudio()
     QVERIFY2(noteTimeline, "note song built wrong");
     engine().loadSong(noteTimeline, borrowVoicegroupLease(&m_bank->vg), SongSettings{});
     engine().play();
-    if (!renderUntilApplied(engine(), static_cast<int>(Transport::Playing))) {
+    if (!renderUntilApplied(engine(), Transport::Playing)) {
         QTest::qFail("play was not applied before the cold replacement", __FILE__, __LINE__);
         return;
     }

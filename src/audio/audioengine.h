@@ -161,7 +161,7 @@ class AudioEngine
     void play();
     void pause();
     void stop();
-    Transport transport() const { return static_cast<Transport>(m_transport.load()); }
+    Transport transport() const { return m_transport.load(); }
     void setLoopEnabled(bool enabled) { m_loopEnabled.store(enabled); }
     bool loopEnabled() const { return m_loopEnabled.load(); }
     void setMuteMask(uint32_t mask) { m_muteMask.store(mask); }
@@ -236,7 +236,7 @@ class AudioEngine
     // Transport cut-fade: the requested state is normally applied at the
     // exact zero-gain sample. A start at song position zero is deferred until
     // the settle hold ends so its first note begins at full output gain.
-    void beginOutputCut(int transport);
+    void beginOutputCut(Transport transport);
     // Cold: clears interrupted transport cut-fade state while the device is
     // stopped. Scalar-only; safe for cold init/load/unload boundaries.
     void resetOutputCut();
@@ -275,7 +275,8 @@ class AudioEngine
     AuditionSlots m_audition;
 
     // Hot control state (UI writes, audio thread reads)
-    std::atomic<int> m_transport{static_cast<int>(Transport::Stopped)};
+    std::atomic<Transport> m_transport{Transport::Stopped};
+    static_assert(std::atomic<Transport>::is_always_lock_free);
     std::atomic<bool> m_loopEnabled{true};
     std::atomic<uint32_t> m_muteMask{0};
     std::atomic<uint32_t> m_soloMask{0};
@@ -339,14 +340,14 @@ class AudioEngine
     uint32_t m_cutFadeSettleSamples = 1;
     bool m_cutFadeActive = false;
     bool m_cutFadeRising = false;
-    int m_cutFadeTargetTransport = static_cast<int>(Transport::Stopped);
+    Transport m_cutFadeTargetTransport = Transport::Stopped;
     float m_cutFadeGain = 1.0f;
     float m_cutFadeStep = 0.0f;
     uint32_t m_cutFadeRemaining = 0;
     uint32_t m_cutFadeHold = 0;
 
     // Audio-thread-only sequencer state
-    int m_appliedTransport = static_cast<int>(Transport::Stopped);
+    Transport m_appliedTransport = Transport::Stopped;
     uint32_t m_appliedMute = 0;
     uint32_t m_appliedPreview = 0;
     int m_previewTrack = -1; // sounding preview note, -1 when none

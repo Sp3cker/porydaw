@@ -104,7 +104,7 @@ bool ClickTest::spinUntilApplied(AudioEngine &engine, Transport target, Capture 
 {
     const auto bound = uint64_t(engine.sampleRate());
     for (uint64_t i = 0; i < bound; ++i) {
-        if (engine.m_appliedTransport == static_cast<int>(target)) {
+        if (engine.m_appliedTransport == target) {
             if (onset)
                 *onset = capture.frames();
             return true;
@@ -113,7 +113,7 @@ bool ClickTest::spinUntilApplied(AudioEngine &engine, Transport target, Capture 
     }
     if (onset)
         *onset = capture.frames();
-    return engine.m_appliedTransport == static_cast<int>(target);
+    return engine.m_appliedTransport == target;
 }
 
 bool ClickTest::sounding(const AudioEngine &engine, uint8_t midiKey) const
@@ -299,7 +299,7 @@ void ClickTest::songStartReachesFullGain()
                                            "(level %1)")
                                 .arg(level, 0, 'f', 4)));
     QVERIFY2(sustaining(rig.engine, 60), "first sequenced note did not sustain after Playing");
-    QCOMPARE(rig.engine.m_appliedTransport, static_cast<int>(Transport::Playing));
+    QCOMPARE(rig.engine.m_appliedTransport, Transport::Playing);
     QVERIFY2(!rig.engine.m_cutFadeActive && rig.engine.m_cutFadeGain >= 0.99f,
              "Playing transition left stale transport/fade state");
 }
@@ -318,10 +318,10 @@ void ClickTest::rapidRetargetKeepsNewestTransport()
     rig.engine.pause();
     rig.engine.play();
     QVERIFY2(rig.engine.m_cutFadeActive, "rapid retarget did not keep a cut in flight");
-    QCOMPARE(rig.engine.m_cutFadeTargetTransport, static_cast<int>(Transport::Playing));
+    QCOMPARE(rig.engine.m_cutFadeTargetTransport, Transport::Playing);
 
     render(rig.engine, 3 * std::size_t(ramp) + std::size_t(settle) + 2 * kRenderChunk64, capture);
-    QCOMPARE(rig.engine.m_appliedTransport, static_cast<int>(Transport::Playing));
+    QCOMPARE(rig.engine.m_appliedTransport, Transport::Playing);
     QVERIFY2(!rig.engine.m_cutFadeActive && rig.engine.m_cutFadeGain >= 0.99f,
              "rapid retarget left stale transport/fade state");
     QVERIFY2(sustaining(rig.engine, 60), "rapid retarget lost the sequenced note");

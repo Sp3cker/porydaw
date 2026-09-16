@@ -10,6 +10,8 @@ class AudioEngine;
 class MidiTimeline;
 struct SmfFile;
 
+enum class Transport : int;
+
 namespace checks {
 struct AuditionVoicegroup;
 
@@ -89,7 +91,7 @@ class TransportTest final : public QObject
 
     // Parked-device deterministic support (settle.cpp).
     bool parkSuppressed(AudioEngine &engine);
-    bool renderUntilApplied(AudioEngine &engine, int transport);
+    bool renderUntilApplied(AudioEngine &engine, Transport transport);
     bool engageSuppressorWithNoteSong(AudioEngine &engine);
     std::vector<float> renderParked(AudioEngine &engine, uint32_t frames);
     static float peak(const std::vector<float> &audio);
