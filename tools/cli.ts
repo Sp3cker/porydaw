@@ -7,6 +7,10 @@
 // deno task format [--check] [files...]
 
 import { join } from "node:path";
+import {
+  cmakeConfigureArgs,
+  localQtPrefix,
+} from "./local_build_environment.ts";
 import { poryaaaaConfiguration } from "./poryaaaa_source.ts";
 import { unsupportedSources, unsupportedSourcesError } from "./format.ts";
 import { parseCheckOptions, VERIFY_HELP } from "./checks_options.ts";
@@ -93,21 +97,41 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-async function ensureConfigured(release: boolean): Promise<void> {
-  const poryaaaa = await poryaaaaConfiguration(BUILD_DIR);
+async function hasBuildSystem(): Promise<boolean> {
   const ninjaFile = join(BUILD_DIR, "build.ninja");
   const makefile = join(BUILD_DIR, "Makefile");
-  const hasBuildSystem = (await exists(ninjaFile)) || (await exists(makefile));
-  if (!release && hasBuildSystem && poryaaaa.cacheMatches) return;
+  if ((await exists(ninjaFile)) || (await exists(makefile))) return true;
+  try {
+    for await (const entry of Deno.readDir(BUILD_DIR)) {
+      if (entry.isFile && entry.name.endsWith(".sln")) return true;
+    }
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) return false;
+    throw error;
+  }
+  return false;
+}
+
+async function usesMultiConfigBuild(): Promise<boolean> {
+  try {
+    const cache = await Deno.readTextFile(join(BUILD_DIR, "CMakeCache.txt"));
+    return /^CMAKE_CONFIGURATION_TYPES:[^=]*=.+$/m.test(cache);
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) return false;
+    throw error;
+  }
+}
+
+async function ensureConfigured(release: boolean): Promise<void> {
+  const poryaaaa = await poryaaaaConfiguration(BUILD_DIR);
+  if (!release && (await hasBuildSystem()) && poryaaaa.cacheMatches) return;
+  const localQt = await localQtPrefix();
   const result = await new Deno.Command("cmake", {
-    args: [
-      "-S",
-      ".",
-      "-B",
-      BUILD_DIR,
-      "-DCMAKE_BUILD_TYPE=Release",
-      poryaaaa.cmakeArgument,
-    ],
+    args: await cmakeConfigureArgs({
+      buildDirectory: BUILD_DIR,
+      poryaaaaArgument: poryaaaa.cmakeArgument,
+      qtPrefix: localQt,
+    }),
     stdout: "piped",
     stderr: "piped",
   }).output();
@@ -129,7 +153,9 @@ async function runBuild(
   await ensureConfigured(release);
   const nproc = String(navigator.hardwareConcurrency);
   const args = ["--build", BUILD_DIR, "-j", nproc];
-  if (release) args.push("--config", "Release");
+  if (release || (await usesMultiConfigBuild())) {
+    args.push("--config", "Release");
+  }
   if (targets.length > 0) {
     args.push("--target", ...targets);
   }

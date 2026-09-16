@@ -1,10 +1,13 @@
+import { fileURLToPath } from "node:url";
+import { setupClangFormat } from "./local_build_environment.ts";
+
 // Format porydaw's tracked C/C++ sources with the repo .clang-format,
 // or verify they are already formatted.
 //
 // Usage: deno run -P=format tools/format.ts [--check] [files...]
 //   no files: formats all tracked src/*.cpp, src/*.h, tools/*.cpp, tools/*.h
 //   files:    formats only those paths (useful for `deno task format file.cc`)
-// Env: CLANG_FORMAT overrides the clang-format executable.
+// Env: CLANG_FORMAT overrides the checkout-local setup tool and PATH.
 //
 // Explicit files must be C/C++ sources. Anything else (QML, TypeScript, ...)
 // is rejected before clang-format runs, so a mixed file list can never
@@ -43,6 +46,19 @@ export function unsupportedSourcesError(bad: readonly string[]): string {
 
 const root = new URL("../", import.meta.url);
 const decoder = new TextDecoder();
+
+async function clangFormatExecutable(): Promise<string> {
+  const override = Deno.env.get("CLANG_FORMAT");
+  if (override) return override;
+  const executable = setupClangFormat(fileURLToPath(root));
+  try {
+    await Deno.stat(executable);
+    return executable;
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) return "clang-format";
+    throw error;
+  }
+}
 
 async function capture(bin: string, args: string[]): Promise<string> {
   try {
@@ -98,7 +114,7 @@ async function main(): Promise<void> {
       }
     }
 
-    const clangFormat = Deno.env.get("CLANG_FORMAT") || "clang-format";
+    const clangFormat = await clangFormatExecutable();
     const version = await capture(clangFormat, ["--version"]);
     const major = version.match(/\d+/)?.[0];
     if (major !== "22") {
