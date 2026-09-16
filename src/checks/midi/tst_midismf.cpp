@@ -985,18 +985,21 @@ void MidiSmfTest::importReportFlagsStrayPayloadForReview()
 }
 
 // Advanced-presentation CCs still export when PrintControllerOp has a branch
-// for them (MODT/TUNE/LFODL); anything outside the switch keeps a not-exported
-// verdict. None of this ordinary traffic produces XCMD rows.
+// for them (MODT/TUNE/LFODL, MEMACC execute, loop label); anything outside
+// the exported set keeps a not-exported verdict. None of this ordinary
+// traffic produces XCMD rows.
 void MidiSmfTest::importReportVerdictsOrdinaryControllers()
 {
     const auto analysis = analyzeChannelTrack({
         channelEvent(0, 0xB0, 0x16, 3),
         channelEvent(0, 0xB0, 0x18, 20),
         channelEvent(0, 0xB0, 0x1A, 5),
+        channelEvent(0, 0xB0, 0x0C, 7),
+        channelEvent(0, 0xB0, 0x11, 2),
         channelEvent(0, 0xB0, 0x4B, 40),
     });
 
-    QCOMPARE(analysis.ccs.size(), qsizetype{4});
+    QCOMPARE(analysis.ccs.size(), qsizetype{6});
     QCOMPARE(analysis.xcmds.size(), qsizetype{0});
 
     const auto *modt = ccRow(analysis, 0x16);
@@ -1010,6 +1013,12 @@ void MidiSmfTest::importReportVerdictsOrdinaryControllers()
     const auto *lfodl = ccRow(analysis, 0x1A);
     QVERIFY(lfodl);
     QCOMPARE(lfodl->support, ImportSupport::Supported);
+    const auto *memacc = ccRow(analysis, 0x0C);
+    QVERIFY(memacc);
+    QCOMPARE(memacc->support, ImportSupport::Supported);
+    const auto *label = ccRow(analysis, 0x11);
+    QVERIFY(label);
+    QCOMPARE(label->support, ImportSupport::Supported);
     const auto *unmapped = ccRow(analysis, 0x4B);
     QVERIFY(unmapped);
     QCOMPARE(unmapped->label, QStringLiteral("CC — Controller"));

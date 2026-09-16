@@ -511,14 +511,10 @@ class AnalysisPage : public QWizardPage
                         [](const ImportXcmdUsage &xcmd) {
                             return xcmd.support == ImportSupport::NotExported;
                         });
-        const bool hasNeedsReview =
-            std::any_of(
-                m_analysis.ccs.cbegin(), m_analysis.ccs.cend(),
-                [](const ImportCcUsage &cc) { return cc.support == ImportSupport::NeedsReview; }) ||
-            std::any_of(m_analysis.xcmds.cbegin(), m_analysis.xcmds.cend(),
-                        [](const ImportXcmdUsage &xcmd) {
-                            return xcmd.support == ImportSupport::NeedsReview;
-                        });
+        // Bare CC verdicts are binary; only XCMD logical rows need review.
+        const bool hasNeedsReview = std::any_of(
+            m_analysis.xcmds.cbegin(), m_analysis.xcmds.cend(),
+            [](const ImportXcmdUsage &xcmd) { return xcmd.support == ImportSupport::NeedsReview; });
         QStringList controllerNotices;
         if (hasNotExported)
             controllerNotices.append(

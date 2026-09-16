@@ -14,18 +14,12 @@ namespace {
 
 constexpr int kDefaultPcmBudget = 5; // pokeemerald m4aSoundInit maxChans
 
-// The report's single verdict vocabulary, mapped from both verdict sources.
+// The report's single verdict vocabulary over both verdict sources. The bare
+// CC source is binary; only XCMD logical commands can need review.
 ImportSupport importSupport(M4aExportSupport support)
 {
-    switch (support) {
-    case M4aExportSupport::Supported:
-        return ImportSupport::Supported;
-    case M4aExportSupport::NotExported:
-        return ImportSupport::NotExported;
-    case M4aExportSupport::NeedsReview:
-        return ImportSupport::NeedsReview;
-    }
-    return ImportSupport::NeedsReview;
+    return support == M4aExportSupport::Supported ? ImportSupport::Supported
+                                                  : ImportSupport::NotExported;
 }
 
 ImportSupport importSupport(xcmd::ExportClass exportClass)

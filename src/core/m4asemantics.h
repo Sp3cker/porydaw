@@ -42,23 +42,22 @@ struct M4aCcInfo {
 // Never fails: unmapped CCs come back as Advanced with a generic name.
 M4aCcInfo m4aClassifyCc(uint8_t cc);
 
-// Export compatibility of a bare MIDI CC through the bundled mid2agb
+// Binary export verdict for one bare MIDI CC through the bundled mid2agb
 // converter (external/poryaaaa/packages/ccomidi/mid2agb/agb.cpp): does the
 // traffic compile into the intended game command? Independent of
 // M4aEventClass presentation, which only decides lane vs strip placement:
 // MODT/TUNE/LFODL/PRIO sit in the Advanced strip yet export real commands,
-// while PORT/PWMC/PWMS present as Advanced and export nothing.
+// while PORT/PWMC/PWMS present as Advanced and export nothing. Coupled
+// traffic (XCMD selector/payload bytes) has no standalone verdict — its
+// logical echo assessment belongs to xcmd::assessTraffic.
 enum class M4aExportSupport {
     Supported,   // converter emits the intended game command.
     NotExported, // converter drops the CC: PrintWait only, no command bytes.
-    NeedsReview, // coupled-protocol plumbing; a standalone CC verdict would
-                 // mislead, so assessment is deferred.
 };
 
-// Tri-state export verdict for one bare CC number, audited branch by branch
-// against PrintControllerOp (per-row converter citations live in the switch
-// in m4asemantics.cpp). Covers every CC m4aClassifyCc classifies plus the
-// unmapped default. Never a presentation judgement; that is m4aClassifyCc.
+// Binary export verdict for one bare CC number, audited against
+// PrintControllerOp (per-group converter citations live beside the table in
+// m4asemantics.cpp). Never a presentation judgement; that is m4aClassifyCc.
 M4aExportSupport m4aExportSupport(uint8_t cc);
 
 // Descriptor-driven lane identity for the XCMD pseudo-lanes. The core
