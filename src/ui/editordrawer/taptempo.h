@@ -13,14 +13,19 @@
 
 #include "core/timedefaults.h"
 
-// A tap becomes tap one after this idle gap; the idle commit fires after the
-// same span without another tap. One distance keeps the semantics symmetric:
-// you cannot commit a draft whose newest tap would already read as a fresh
-// session start.
+// A tap becomes tap one after this idle gap; that distance only decides
+// session boundaries. The idle commit that lands a draft fires sooner,
+// scaled to the tapped tempo: idleCommitMs() returns ~1.5 beats' worth of
+// silence, clamped to [kTapCommitMinMs, kTapCommitMaxMs]. The commit must
+// stay at or under the gap distance — otherwise a slow next tap would read
+// as a fresh session start and silently drop the pending draft.
 constexpr int kTapGapMs = 2000;
-constexpr int kTapCommitMs = 2000;
-static_assert(kTapGapMs == kTapCommitMs,
-              "the tap gap and the idle commit window share one distance");
+constexpr int kTapCommitMinMs = 600;
+constexpr int kTapCommitMaxMs = kTapGapMs;
+// The commit lands after this many tapped beats' worth of silence.
+inline constexpr double kTapCommitBeats = 1.5;
+static_assert(kTapCommitMinMs <= kTapCommitMaxMs,
+              "a draft must land before a slow next tap can start a fresh session");
 
 // Rounded mean over the newest intervals kept in the ring; the earliest gap
 // never enters the mean, and the ring holds the window bounded by kTapWindow.
@@ -61,6 +66,19 @@ class TapTempoSession
     unsigned tapCount() const noexcept { return m_tapCount; }
     int draftBpm() const noexcept { return m_draftBpm; }
     bool readyToCommit() const noexcept { return m_tapCount >= kTapMinTaps; }
+
+    // Idle silence that lands the current draft: ~1.5 tapped beats' worth of
+    // time, so the commit stays clear of the cadence itself while landing
+    // soon after the last tap. A draft-less session (a lone stray tap) stays
+    // alive for exactly the gap distance: any next tap that could still join
+    // the session must find it running.
+    int idleCommitMs() const noexcept
+    {
+        if (m_draftBpm <= 0)
+            return kTapGapMs;
+        return std::clamp(qRound(kTapCommitBeats * 60'000.0 / m_draftBpm), kTapCommitMinMs,
+                          kTapCommitMaxMs);
+    }
 
     static int bpmForMeanIntervalNs(qint64 meanIntervalNs)
     {

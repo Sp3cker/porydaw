@@ -29,6 +29,7 @@ void AutomationCanvas::tapTempo()
     // One emission per tap: the draft Text also keys on tapCount > 0, so the
     // first tap (draft still 0) must notify too.
     emit tapTempoDraftChanged();
+    m_tapIdleCommit.setInterval(m_tapTempo.idleCommitMs());
     m_tapIdleCommit.start();
 }
 

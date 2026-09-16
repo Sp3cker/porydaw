@@ -28,8 +28,9 @@
 
 namespace {
 
-// The idle distance of the shared gap/commit window: only a real idle
-// wait reaches a commit, so it is the assertion's only wall-clock cost.
+// The slowest idle-commit window (the gap distance, used by draft-less
+// sessions): waiting it out is a conservative upper bound for any commit,
+// so it stays the assertion's only wall-clock cost.
 constexpr int kTapIdleMs = 2000;
 // Real taps cannot land on exact cadences, so draft bands keep the
 // kinematics honest at ±15% around the cadence's nominal BPM.

@@ -33,12 +33,10 @@ AutomationCanvas::AutomationCanvas(AutomationPage &page)
     , m_hoverState(QGuiApplication::font())
 {
     refreshGeometry();
-    // The tap-tempo draft commits from an idle window sized to the
-    // session's own tap gap: the same silence starts a new session and then
-    // commits the previous one. Timer pattern follows
-    // QuickMenuHost::m_typeAheadReset (quickmenuhost.cpp).
+    // The tap-tempo draft commits from an idle window scaled to the tapped
+    // tempo (TapTempoSession::idleCommitMs); tapTempo arms it per tap. Timer
+    // pattern follows QuickMenuHost::m_typeAheadReset (quickmenuhost.cpp).
     m_tapIdleCommit.setSingleShot(true);
-    m_tapIdleCommit.setInterval(kTapCommitMs);
     connect(&m_tapIdleCommit, &QTimer::timeout, this, &AutomationCanvas::commitTapTempo);
     // The lane menus are typed adapters over the shared canvas popup session;
     // the session itself is assigned later by the Quick host view. The host
