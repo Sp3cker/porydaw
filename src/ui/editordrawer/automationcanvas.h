@@ -150,6 +150,9 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void setPencilMode(bool enabled);
     bool pencilMode() const noexcept { return m_pencilMode; }
     bool isPanning() const noexcept;
+    // Document revision captured when the active pan began; the page compares
+    // it against the live revision instead of a stored snapshot.
+    uint64_t panStartRevision() const noexcept { return m_pan.startRevision; }
     bool bandPreviewContainsLane(LaneHandle handle) const noexcept;
     QRect laneBody(LaneHandle handle) const;
     // The view-local parameter selector for the shared gutter: nine clickable
@@ -426,6 +429,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
         bool active = false;
         QPointF pos;
         double startHScroll = 0;
+        uint64_t startRevision = 0;
     } m_pan;
     BandGesture m_band;
     struct SelectedNodeMultiplicityCache {

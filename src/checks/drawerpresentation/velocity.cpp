@@ -323,7 +323,8 @@ void VelocityPageTest::psgRenderingAndDetentToggle()
     const qreal outsiderY = fixture.area->axis().levelToY(9);
     const QRectF selectedProbe(QPointF(nodeX, selectedY) - QPointF(4, 4), QSizeF(8, 8));
     const QRectF outsiderProbe(QPointF(nodeX, outsiderY) - QPointF(4, 4), QSizeF(8, 8));
-    const QColor stemColor = songview::mixTowardOklab(Qt::cyan, Qt::black, 1.0 / 3.0);
+    const QColor trackFill = SongView::trackColor(view.selectionModel().primaryTrack());
+    const QColor stemColor = songview::mixTowardOklab(trackFill, Qt::black, 1.0 / 3.0);
     const auto &nodes =
         fixture.rig->quickScene()->layer(songview::TimelineQuickLayer::VelocityNodes);
     const auto &stems =
@@ -337,7 +338,7 @@ void VelocityPageTest::psgRenderingAndDetentToggle()
     QVERIFY(checks::support::layerHasColorIn(nodes, selectedProbe,
                                              fixture.inputItem->palette().highlight().color()));
     QVERIFY(checks::support::layerHasColorIn(nodes, outsiderProbe, Qt::black));
-    QVERIFY(checks::support::layerHasColorIn(nodes, outsiderProbe, Qt::cyan));
+    QVERIFY(checks::support::layerHasColorIn(nodes, outsiderProbe, trackFill));
     view.selectionModel().setNoteSelection({fixture.notes[0].noteId, fixture.notes[2].noteId});
     fixture.refresh();
     const auto &dimmedNodes =
@@ -416,11 +417,8 @@ void VelocityPageTest::editCursorAndContextRounding()
     for (const ToneData &voice : voices) {
         setVoice(fixture, voice);
         for (int index = 0; index < 4; ++index) {
-            DrawerPageLiveState live;
-            live.documentRevision = fixture.document.revision();
-            live.playback.playing = true;
-            live.playback.playheadTick = inputs[index];
-            fixture.area->refreshLiveState(live);
+            fixture.area->presentPlayhead(inputs[index]);
+            fixture.area->refresh(DrawerScope::Content);
             QCOMPARE(view.voiceContext(expected[index]).voice, &fixture.voicegroup.voices[0]);
         }
     }
@@ -613,11 +611,15 @@ void VelocityPageTest::textRetentionAndPlayheadPerformance()
     fixture.refresh();
     QCOMPARE(text->rowCount(), rows);
     fixture.refresh(true, -1.0);
+    // Tick(-1) wraps to kNoTick (src/core/timedefaults.h:12), scrolling follow to the end.
+    // Absorb the follow reel-back at tick 0 (src/ui/songview.cpp:1077-1082) before measuring:
+    // pan sync increments contentBuildCount unconditionally (src/ui/songview/quick/velocityquick.cpp:282).
+    fixture.refresh(true, 0.0);
     const VelocityAreaDiagnostics warm = fixture.area->diagnostics();
-    for (int tick = 0; tick < 120; ++tick)
+    for (int tick = 1; tick <= 120; ++tick)
         fixture.refresh(true, double(tick));
     QCOMPARE(fixture.area->diagnostics().contentBuildCount, warm.contentBuildCount);
-    QCOMPARE(fixture.area->diagnostics().presentedPlayheadTick, 119.0);
+    QCOMPARE(fixture.area->diagnostics().presentedPlayheadTick, 120.0);
     QCOMPARE(fixture.area->diagnostics().playheadPresentationCount,
              warm.playheadPresentationCount + 120);
 }

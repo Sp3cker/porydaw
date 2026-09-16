@@ -48,9 +48,6 @@ class AutomationPage final : public QObject
     const SongViewModel &model() const noexcept;
 
     void songChanged();
-    void refreshLiveState(const DrawerPageLiveState &liveState);
-    // Scope-aware entry point; the snapshot forwarder is scaffolding until
-    // the per-scope handler lands and ignores `scopes` for now.
     void refresh(DrawerScopes scopes);
     void cancelInteraction();
     void documentChanged();
@@ -65,8 +62,7 @@ class AutomationPage final : public QObject
     friend class AutomationProjection;
 
     bool ready() const noexcept;
-    // The snapshot serves row/model decisions and refresh routing; x-mapping reads the camera live.
-    const DrawerPageLiveState &liveState() const noexcept { return m_liveState; }
+    // x-mapping reads the camera live; row/model decisions follow the refresh scopes.
     const MidiTimeline *timeline() const noexcept;
     SongDocument &document() const noexcept;
     const LoadedVoiceGroup *voicegroup() const noexcept;
@@ -96,7 +92,6 @@ class AutomationPage final : public QObject
     SongView &m_owner;
     const songview::Grid &m_grid;
     const songview::TimeCamera &m_camera;
-    DrawerPageLiveState m_liveState;
     EditorViewState m_viewState;
     AutomationCanvas *m_canvas = nullptr;
     QSize m_viewportSize;

@@ -617,7 +617,6 @@ class SongView : public QObject
     void setEditorTimeZoom(double pxPerBeat);
     void setFollowScrollPaused(bool paused);
     void showDrawerPageTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequest &request);
-    DrawerPageLiveState drawerPageLiveState() const;
     void cancelActiveInteractions();
     // Public observation of live pointer ownership. Follow-scroll state and
     // popup focus deliberately remain separate from command ownership.

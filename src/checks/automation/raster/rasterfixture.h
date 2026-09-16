@@ -99,7 +99,6 @@ class AutomationRasterFixture final
     void refreshPage();
     void waitForTimers(int milliseconds);
 
-    DrawerPageLiveState m_live;
     std::unique_ptr<checks::LoadedSong> m_song;
     std::unique_ptr<LoadedVoiceGroup> m_voicegroup;
     std::unique_ptr<MidiTimeline> m_timeline;

@@ -171,6 +171,7 @@ bool AutomationCanvas::pointerPress(const songview::TimelinePointerInput &input)
         m_pan.active = true;
         m_pan.pos = position;
         m_pan.startHScroll = m_page.scrollX();
+        m_pan.startRevision = m_page.document().revision();
         if (host)
             host->setCursor(QCursor(Qt::ClosedHandCursor));
         if (m_inputHost)

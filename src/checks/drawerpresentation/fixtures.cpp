@@ -1,6 +1,7 @@
 #include "checks/drawerpresentation/fixtures.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <optional>
 
@@ -684,14 +685,15 @@ double VelocityFixture::xForTick(double tick) const
 
 void VelocityFixture::refresh(bool playing, double playheadTick)
 {
-    DrawerPageLiveState live;
-    live.documentRevision = document.revision();
-    live.timeZoom = rig->view().camera().pxPerBeat();
-    live.horizontalScroll = rig->view().camera().scrollX();
-    live.trackColor = Qt::cyan;
-    live.playback.playing = playing;
-    live.playback.playheadTick = playheadTick;
-    area->refreshLiveState(live);
+    if (rig->view().timeline()) {
+        rig->view().setPlayheadSample(
+            rig->timeline().sampleForTick(Tick(std::llround(playheadTick))), playing);
+    } else {
+        // No bound timeline: present the playhead directly and rebuild through
+        // the Content arm. The playing flag has no production path here.
+        area->presentPlayhead(playheadTick);
+        area->refresh(DrawerScope::Content);
+    }
     pump();
 }
 

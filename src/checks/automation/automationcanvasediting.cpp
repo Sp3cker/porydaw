@@ -216,10 +216,11 @@ void AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor()
     VelocityArea *const velocity = drawer->velocityArea();
     QVERIFY(velocity);
 
-    DrawerPageLiveState negativePlayback;
-    negativePlayback.documentRevision = tab().document().revision();
-    negativePlayback.playback = {-3.0, true};
-    velocity->refreshLiveState(negativePlayback);
+    // A negative playhead must not corrupt the axis map: present it through the
+    // public entry point, then rebuild through the Content arm (the Playhead
+    // arm never rebuilds the axis, so Content is what reaches the oracle).
+    velocity->presentPlayhead(-3.0);
+    velocity->refresh(DrawerScope::Content);
     QVERIFY(velocity->axis().map() == VelocityMap::resolve(&m_bank.voices[0], std::nullopt));
 
     struct PlaybackBoundary {

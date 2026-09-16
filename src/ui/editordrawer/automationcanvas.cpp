@@ -141,7 +141,7 @@ NodeLaneHoverTarget AutomationCanvas::hoverTarget() const
     NodeLaneHoverTarget target;
     target.widgetBounds = contentBounds();
     target.devicePixelRatio = m_inputHost ? m_inputHost->devicePixelRatio() : 1.0;
-    target.documentRevision = m_page.liveState().documentRevision;
+    target.documentRevision = m_page.document().revision();
     target.ready = m_page.ready();
     return target;
 }
@@ -155,7 +155,7 @@ bool AutomationCanvas::hasMultipleSelectedNodes(
 {
     if (!selectedTickRange)
         return false;
-    const uint64_t documentRevision = m_page.liveState().documentRevision;
+    const uint64_t documentRevision = m_page.document().revision();
     if (m_selectedNodeMultiplicity.valid &&
         m_selectedNodeMultiplicity.documentRevision == documentRevision) {
         return m_selectedNodeMultiplicity.multiple;

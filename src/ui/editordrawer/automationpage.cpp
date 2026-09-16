@@ -11,17 +11,6 @@
 #include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/timecamera.h"
-namespace {
-
-bool sameLiveState(const DrawerPageLiveState &a, const DrawerPageLiveState &b)
-{
-    return a.documentRevision == b.documentRevision && a.timeZoom == b.timeZoom &&
-           a.horizontalScroll == b.horizontalScroll && a.editCursorTick == b.editCursorTick &&
-           a.trackColor == b.trackColor && a.playback.playheadTick == b.playback.playheadTick &&
-           a.playback.playing == b.playback.playing;
-}
-
-} // namespace
 
 QSize AutomationPage::automationViewportSize() const noexcept
 {
@@ -106,40 +95,32 @@ void AutomationPage::songChanged()
     rebuildModel();
 }
 
-void AutomationPage::refreshLiveState(const DrawerPageLiveState &liveState)
+void AutomationPage::refresh(DrawerScopes scopes)
 {
     const EditorViewState viewState = m_owner.editorViewState();
-    const bool liveChanged = !sameLiveState(m_liveState, liveState);
     const bool viewStateChanged = m_viewState != viewState;
-    const bool scrollOnly = !viewStateChanged &&
-                            m_liveState.horizontalScroll != liveState.horizontalScroll &&
-                            m_liveState.documentRevision == liveState.documentRevision &&
-                            m_liveState.timeZoom == liveState.timeZoom &&
-                            m_liveState.editCursorTick == liveState.editCursorTick &&
-                            m_liveState.trackColor == liveState.trackColor &&
-                            m_liveState.playback.playheadTick == liveState.playback.playheadTick &&
-                            m_liveState.playback.playing == liveState.playback.playing;
-    const bool preservePan = m_canvas->isPanning() &&
-                             m_liveState.documentRevision == liveState.documentRevision &&
-                             !viewStateChanged;
-    m_liveState = liveState;
     m_viewState = viewState;
-    // The shared camera tail requests moving content and live overlays.
-    if (scrollOnly)
+    // Arms evaluate in fixed priority order: structural > geometry > transient.
+    if (scopes.testFlag(DrawerScope::Document) || scopes.testFlag(DrawerScope::Content) ||
+        scopes.testFlag(DrawerScope::Zoom) || viewStateChanged) {
+        if (m_canvas->isPanning() && m_canvas->panStartRevision() == document().revision() &&
+            !viewStateChanged) {
+            m_canvas->requestFullQuickUpdate();
+        } else {
+            m_canvas->rebuildRows();
+        }
         return;
-    if (!liveChanged && !viewStateChanged) {
+    }
+    if (scopes.testFlag(DrawerScope::Selection)) {
         m_canvas->rebuildViewModel();
         m_canvas->requestSelectionQuickUpdate();
-    } else if (preservePan) {
-        m_canvas->requestFullQuickUpdate();
-    } else {
-        m_canvas->rebuildRows();
+        return;
     }
-}
-
-void AutomationPage::refresh(DrawerScopes)
-{
-    refreshLiveState(m_owner.drawerPageLiveState());
+    if (scopes.testFlag(DrawerScope::HorizontalScroll)) {
+        // The Quick HorizontalPan layer shifts presentation; no rebuild.
+        return;
+    }
+    // Playhead: the canvas presents no playhead overlay.
 }
 
 void AutomationPage::cancelInteraction()

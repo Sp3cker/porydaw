@@ -5,7 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include <QColor>
 #include <QFlags>
 
 #include <QPointF>
@@ -21,22 +20,6 @@ extern "C" {
 struct DrawerPageGridState {
     uint32_t gridTicks = 0;
     uint32_t snapTicks = 0;
-};
-
-struct DrawerPagePlaybackState {
-    double playheadTick = 0.0;
-    bool playing = false;
-};
-
-// Live values shared by concrete drawer surfaces. The document revision lets
-// an interaction discard a frozen edit when the model changes underneath it.
-struct DrawerPageLiveState {
-    uint64_t documentRevision = 0;
-    double timeZoom = 1.0;
-    double horizontalScroll = 0.0;
-    Tick editCursorTick = 0;
-    QColor trackColor;
-    DrawerPagePlaybackState playback;
 };
 
 struct DrawerPageVoiceContext {

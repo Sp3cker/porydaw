@@ -147,9 +147,6 @@ void AutomationRasterFixture::configurePainting()
     m_view->setEditorTimeZoom(96.0);
     m_view->setEditorHorizontalScroll(0.0);
     m_view->setEditCursorTick(24);
-    m_live.editCursorTick = 24;
-    m_live.timeZoom = m_view->camera().pxPerBeat();
-    m_live.horizontalScroll = m_view->camera().scrollX();
     documentChanged();
 }
 
@@ -163,9 +160,6 @@ void AutomationRasterFixture::configureInteraction()
     m_view->setEditorTimeZoom(96.0);
     m_view->setEditorHorizontalScroll(0.0);
     m_view->setEditCursorTick(24);
-    m_live.editCursorTick = 24;
-    m_live.timeZoom = m_view->camera().pxPerBeat();
-    m_live.horizontalScroll = m_view->camera().scrollX();
     setPersistentPencil(false);
     refreshPage();
     pump();
@@ -313,8 +307,6 @@ bool AutomationRasterFixture::activateParameter(const EditorAutomationRowId &row
 void AutomationRasterFixture::setAutomationZoom(double zoom)
 {
     m_view->setEditorTimeZoom(zoom);
-    m_live.timeZoom = m_view->camera().pxPerBeat();
-    m_live.horizontalScroll = m_view->camera().scrollX();
     refreshPage();
     pump();
 }
@@ -322,7 +314,6 @@ void AutomationRasterFixture::setAutomationZoom(double zoom)
 void AutomationRasterFixture::setAutomationScroll(double scroll)
 {
     m_view->setEditorHorizontalScroll(scroll);
-    m_live.horizontalScroll = m_view->camera().scrollX();
     refreshPage();
     pump();
 }
@@ -485,20 +476,14 @@ bool AutomationRasterFixture::initialize(QString &error)
     m_page->canvas()->attachInputHost(*m_inputHost);
     m_page->canvas()->hostAppearanceChanged();
     m_page->songChanged();
-    m_live.documentRevision = songDocument.revision();
-    m_live.editCursorTick = 24;
-    m_view->setEditorTimeZoom(96.0);
-    m_live.timeZoom = m_view->camera().pxPerBeat();
-    m_live.horizontalScroll = m_view->camera().scrollX();
-    m_page->refreshLiveState(m_live);
+    refreshPage();
     pump();
     return true;
 }
 
 void AutomationRasterFixture::refreshPage()
 {
-    m_live.documentRevision = document().revision();
-    m_page->refreshLiveState(m_live);
+    m_page->refresh(DrawerScope::Content);
 }
 
 void AutomationRasterFixture::waitForTimers(int milliseconds)

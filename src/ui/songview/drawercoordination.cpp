@@ -119,18 +119,6 @@ void SongView::showDrawerPageTimeSelectionMenu(const DrawerPageTimeSelectionMenu
     openTimeSelectionMenu(request.scenePosition);
 }
 
-DrawerPageLiveState SongView::drawerPageLiveState() const
-{
-    return {
-        m_document.revision(),
-        pxPerBeat(),
-        m_camera.scrollX(),
-        m_editCursorTick,
-        trackColor(m_selectionModel.primaryTrack()),
-        {m_playheadTick, m_playing},
-    };
-}
-
 void SongView::cancelActiveInteractions()
 {
     // The converted Quick scene is the sole pointer-cancellation traversal.
