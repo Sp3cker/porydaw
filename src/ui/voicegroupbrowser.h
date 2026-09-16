@@ -138,6 +138,20 @@ class VoicegroupBrowser : public QWidget
     void populateEditor();
     void commitEdit();
     void updateRow(int slot);
+    // Column 1 renders the voice type as a themed icon instead of text;
+    // rebuildTypeIcons() regenerates the cache on theme changes.
+    void rebuildTypeIcons();
+    // Column 1's whole state lives behind these two: setTypeCell inks the
+    // type icon plus its tooltip/accessible name, clearTypeCell empties all
+    // four (icon, text, tooltip, AccessibleTextRole) so no branch can leave
+    // stale type state behind.
+    void setTypeCell(QTreeWidgetItem *item, const QIcon &icon, const QString &displayName);
+    void clearTypeCell(QTreeWidgetItem *item);
+    // Both populated updateRow branches funnel through paintTypeCell: the
+    // display name, column-0 text, icon lookup, and column-1 inking for one
+    // (type byte, synth) pair, composed exactly once.
+    void paintTypeCell(QTreeWidgetItem *item, int slot, const QString &name, uint8_t typeByte,
+                       bool synth);
     // Read-model accessors over the published bank view. slotIsBlank is a
     // None-kind slot: no source line covers it, and the editor materializes
     // a template there. ReadOnlyVoice and Broken slots never yield a draft.
@@ -177,6 +191,10 @@ class VoicegroupBrowser : public QWidget
     // selector's arg changes (a different voicegroup was bound; projects tear
     // down to a null view first, so the arg identifies the voicegroup).
     QHash<int, QHash<int, VgAdsr>> m_adsrHistory;
+    // Type-column icon cache keyed by voicetypeicons::iconKey (see
+    // ui/voicetypeicons.h); rebuilt by rebuildTypeIcons() at the tree's icon
+    // size and dpr.
+    QHash<int, QIcon> m_typeIcons;
     bool m_updating = false;
     bool m_loading = false; // setLoading: placeholder rows shown, controls inert
 

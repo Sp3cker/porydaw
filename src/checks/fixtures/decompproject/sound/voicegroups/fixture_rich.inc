@@ -12,3 +12,4 @@ voice_group fixture_rich
 	voice_keysplit fixture_bass, keysplit_fixture_bass
 	voice_keysplit_all fixture_drums_a
 	voice_keysplit_all fixture_drums_b
+	cry DirectSoundWaveData_fixture_loop

@@ -212,7 +212,7 @@ const std::vector<CheckDefinition> &catalog()
                              voicegroupEditorFiles},
             {.name = "vgsavecheck",
              // voicegroup editor save pipeline: undo/redo save byte round trip, unsaved-edit carry,
-             // picker audition and commit
+             // picker audition and commit, type-column icon/tooltip per voice family
              .argv = strings({"--vgsavecheck", "{scratch}", "mus_route101"}),
              .handler = qtWithThreeArguments<runVoicegroupSaveCheck>,
              .scratchKind = ScratchKind::ExistingDirectory,

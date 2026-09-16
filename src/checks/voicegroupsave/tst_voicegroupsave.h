@@ -59,6 +59,7 @@ class VoicegroupSaveTest final : public QObject
     void synthDefinitionsStayMemoryOnlyUntilSave();
     void revealsTrackProgramsAndUsedMarks();
     void quickHeaderPressSurvivesVoicegroupRebuild();
+    void typeColumnMapsEveryFamily();
     void samplePickerAuditionsAndCommits();
     void samplePickerKeysplitAuditions();
     void samplePickerWaveModeAuditionsAndCommits();

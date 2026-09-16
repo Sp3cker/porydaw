@@ -4,8 +4,10 @@
 #include <QCoreApplication>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QDir>
 #include <QFile>
 #include <QFormLayout>
+#include <QImage>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPointer>
@@ -15,6 +17,7 @@
 #include <QtTest>
 
 #include <algorithm>
+#include <array>
 
 #include "checks/support/eventsynth.h"
 #include "checks/support/songfixture.h"
@@ -250,6 +253,160 @@ void VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably()
                  return bank && bank->loadName == m_loadName;
              }),
              "New Voicegroup undo did not restore the original loaded bank");
+}
+
+void VoicegroupSaveTest::typeColumnMapsEveryFamily()
+{
+    // The Type column is icon-only: every family publishes its name through
+    // the column-1 tooltip and accessible text, and its glyph through the
+    // icon. fixture_rich covers the plain families plus keysplit, drumkit,
+    // and a read-only cry line; the alt chips live in fixture_alt.
+    const LoadedBankView *const home = m_browser->selectedBankView();
+    QVERIFY(home);
+    const struct {
+        int slot;
+        const char *type;
+    } expected[] = {{0, "Sample"},
+                    {1, "Sample"},
+                    {2, "Sample (fixed pitch)"},
+                    {3, "Sample (reverse)"},
+                    {4, "Square 1"},
+                    {5, "Square 2"},
+                    {6, "Wave"},
+                    {7, "Noise"},
+                    {8, "Keysplit"},
+                    {9, "Keysplit"},
+                    {10, "Drumkit"},
+                    {11, "Drumkit"},
+                    {12, "Sample"}}; // cry renders as a sample
+    for (const auto &row : expected) {
+        QCOMPARE(m_browser->slotRowType(row.slot), QLatin1String(row.type));
+        QCOMPARE(m_browser->slotRowAccessibleType(row.slot), QLatin1String(row.type));
+        QVERIFY2(m_browser->hasTypeIcon(row.slot),
+                 qPrintable(QStringLiteral("slot %1 lost its type icon").arg(row.slot)));
+        const QStringList text = m_browser->slotRowText(row.slot);
+        QCOMPARE(text.size(), 3);
+        QVERIFY2(
+            text.at(1).isEmpty(),
+            qPrintable(QStringLiteral("slot %1 leaked text into the icon column").arg(row.slot)));
+    }
+    const int blank = firstBlankSlot();
+    QVERIFY2(blank >= 0, "fixture must provide a blank slot for the no-type contract");
+    QVERIFY(!m_browser->hasTypeIcon(blank));
+    QVERIFY(m_browser->slotRowType(blank).isEmpty());
+    QVERIFY(m_browser->slotRowAccessibleType(blank).isEmpty());
+
+    // Distinct families carry distinct glyphs; cry shares the plain sample
+    // waveform, and the reverse sample is the same waveform rotated 180°.
+    const std::array<int, 8> glyphSlots = {0, 3, 4, 5, 6, 7, 8, 10};
+    for (size_t i = 0; i < glyphSlots.size(); ++i) {
+        const QImage a = m_browser->slotTypeIcon(glyphSlots.at(i));
+        QVERIFY(!a.isNull());
+        for (size_t j = i + 1; j < glyphSlots.size(); ++j)
+            QVERIFY2(a != m_browser->slotTypeIcon(glyphSlots.at(j)),
+                     qPrintable(QStringLiteral("slots %1 and %2 share a type glyph")
+                                    .arg(glyphSlots.at(i))
+                                    .arg(glyphSlots.at(j))));
+    }
+    QCOMPARE(m_browser->slotTypeIcon(12), m_browser->slotTypeIcon(0));
+
+    // A synth voice is memory-only until save: mint the definition the way
+    // synthDefinitionsStayMemoryOnlyUntilSave does, then adopt the type.
+    const QString synthPath =
+        m_project->root() + QStringLiteral("/sound/direct_sound_synth_data.inc");
+    const QString macroDir = m_project->root() + QStringLiteral("/asm/macros");
+    QVERIFY(QDir().mkpath(macroDir));
+    {
+        QFile macros(macroDir + QStringLiteral("/vgtypecheck_synth.inc"));
+        QVERIFY(macros.open(QIODevice::WriteOnly));
+        QCOMPARE(macros.write("\t.macro set_synth_pulse base_duty=0x80, duty_step=0x00, "
+                              "mod_depth=0x00, duty_phase=0x00\n\t.endm\n") > 0,
+                 true);
+    }
+    {
+        QFile data(synthPath);
+        QVERIFY(data.open(QIODevice::WriteOnly | QIODevice::Append));
+        QCOMPARE(data.write("\n\t.align 2\nVgTypeCheckPulse::\n\tset_synth_pulse\n") > 0, true);
+    }
+    QVERIFY2(refreshCatalog(), "synth catalog refresh did not settle");
+    QVERIFY2(settle([this] {
+                 return m_window->m_workspace->projectState().catalog.synths.find(
+                            QStringLiteral("VgTypeCheckPulse")) != nullptr;
+             }),
+             "synth definition did not reach the published catalog");
+    const int synthSlot = firstSynthableSlot();
+    QVERIFY2(synthSlot >= 0, "fixture must provide a non-synth DirectSound voice");
+    const QString originalSymbol =
+        m_browser->selectedBankView()->slotViews.at(synthSlot).voice->symbol;
+    m_browser->selectSlot(synthSlot);
+    QVERIFY(m_browser->hasSynthEditorControls());
+    QVERIFY(m_browser->activateSynthType());
+    QVERIFY2(settle([this, synthSlot, &originalSymbol] {
+                 const LoadedBankView *const bank = m_browser->selectedBankView();
+                 return bank && bank->slotViews.at(synthSlot).voice &&
+                        bank->slotViews.at(synthSlot).voice->symbol != originalSymbol;
+             }),
+             "synth type did not create a memory-only tone");
+    QVERIFY(m_browser->activateSynthWave(0));
+    QVERIFY2(settle([this, synthSlot] {
+                 const LoadedBankView *const bank = m_browser->selectedBankView();
+                 return bank && bank->slotViews.at(synthSlot).voice &&
+                        m_browser->slotRowType(synthSlot) == QStringLiteral("Synth (Golden Sun)");
+             }),
+             "synth adoption did not publish the Synth (Golden Sun) type");
+    QCOMPARE(m_browser->slotRowAccessibleType(synthSlot), QStringLiteral("Synth (Golden Sun)"));
+    QVERIFY(m_browser->hasTypeIcon(synthSlot));
+    QCOMPARE(m_browser->slotTypeIcon(synthSlot), m_browser->slotTypeIcon(0));
+
+    // The alt-chip families live in fixture_alt: same family names, grey-chip
+    // glyphs that must differ from the plain chip of the same family.
+    QString altArg;
+    for (const QString &arg : m_window->m_workspace->projectState().catalog.groupArgs) {
+        if (arg == m_homeArg)
+            continue;
+        const VoicegroupId previous = *m_tab->voicegroupId();
+        SongCfg cfg = m_document->cfg();
+        cfg.voicegroupArg = arg;
+        m_document->setCfg(cfg);
+        if (!settle([this, &previous] {
+                return m_tab->voicegroupId() && *m_tab->voicegroupId() != previous;
+            }))
+            continue;
+        if (m_tab->voicegroupId()->sourceRelativePath().endsWith(
+                QStringLiteral("fixture_alt.inc"))) {
+            altArg = arg;
+            break;
+        }
+    }
+    QVERIFY2(!altArg.isEmpty(),
+             "catalog must offer the fixture_alt voicegroup for alt-chip coverage");
+    QVERIFY2(settle([this] {
+                 const LoadedBankView *const bank = m_browser->selectedBankView();
+                 return bank && bank->slotViews.at(2).voice &&
+                        bank->slotViews.at(2).voice->macro == VgMacro::Square1Alt;
+             }),
+             "fixture_alt bank view did not publish its alt voices");
+    const struct {
+        int slot;
+        const char *type;
+        int plainSlot;
+    } altExpected[] = {{2, "Square 1 (Alt)", 4},
+                       {3, "Square 2 (Alt)", 5},
+                       {4, "Wave (Alt)", 6},
+                       {5, "Noise (Alt)", 7}};
+    for (const auto &row : altExpected) {
+        QCOMPARE(m_browser->slotRowType(row.slot), QLatin1String(row.type));
+        QCOMPARE(m_browser->slotRowAccessibleType(row.slot), QLatin1String(row.type));
+        QVERIFY2(m_browser->hasTypeIcon(row.slot),
+                 qPrintable(QStringLiteral("alt slot %1 lost its type icon").arg(row.slot)));
+        QVERIFY2(m_browser->slotTypeIcon(row.slot) != m_browser->slotTypeIcon(row.plainSlot),
+                 qPrintable(QStringLiteral("slot %1 lost its alt chip").arg(row.slot)));
+    }
+    const int altBlank = firstBlankSlot();
+    QVERIFY2(altBlank >= 0, "fixture_alt must provide a blank slot");
+    QVERIFY(!m_browser->hasTypeIcon(altBlank));
+    QVERIFY(m_browser->slotRowType(altBlank).isEmpty());
+    QVERIFY(m_browser->slotRowAccessibleType(altBlank).isEmpty());
 }
 
 } // namespace checks

@@ -5,10 +5,13 @@
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QIcon>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPainter>
+#include <QPixmap>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QToolButton>
@@ -18,6 +21,7 @@
 
 #include "ui/dragspinbox.h"
 #include "ui/layout.h"
+#include "ui/voicetypeicons.h"
 
 #include "core/m4asemantics.h"
 
@@ -69,6 +73,41 @@ bool macroIsDsFamily(VgMacro m)
 bool toneIsSynth(const ToneData &td)
 {
     return (td.type & ~0x18) == 0 && td.wav && td.wav->size == 0 && td.wav->data;
+}
+
+// The Type column's glyph enum, byte mapping, and tint pipeline live in
+// ui/voicetypeicons.h — the single canonical home for voice-type icons.
+namespace vgi = voicetypeicons;
+
+// The Type column's display name for a voice-type byte: synth voices (a
+// Golden Sun zero-size wav descriptor, or a voice whose symbol resolves to
+// one) and keysplits keep their real names where m4aVoiceTypeName would
+// collapse them to "Sample".
+QString typeDisplayName(uint8_t type, bool synth)
+{
+    if (synth)
+        return QObject::tr("Synth (Golden Sun)");
+    if (type == VOICE_KEYSPLIT)
+        return QObject::tr("Keysplit");
+    const QString name = m4aVoiceTypeName(type);
+    return vgi::isAltChip(type) ? QStringLiteral("%1 (Alt)").arg(name) : name;
+}
+// Column 0 renders "NNN  <name>": sample symbols shed the DirectSoundWave
+// prefix so the instrument reads first; symbol-less voices fall back to the
+// type name, which already carries the (Alt) marker for alt voices.
+QString voiceColumnText(int slot, const QString &symbol, const QString &type)
+{
+    static const QLatin1String kSamplePrefix("DirectSoundWave");
+    static const QLatin1String kDataInfix("Data_");
+    QString shown = symbol;
+    if (shown.startsWith(kSamplePrefix)) {
+        shown = shown.mid(kSamplePrefix.size());
+        if (shown.startsWith(kDataInfix))
+            shown = shown.mid(kDataInfix.size());
+    }
+    if (shown.isEmpty())
+        shown = type;
+    return QStringLiteral("%1  %2").arg(slot, 3, 10, QLatin1Char('0')).arg(shown);
 }
 
 bool macroIsDrumkit(VgMacro m)
@@ -231,6 +270,13 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
     m_tree->setAllColumnsShowFocus(true);
     m_tree->header()->setStretchLastSection(false);
     m_tree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+    // The Type column is icon-only: one glyph per row at text height, with
+    // the same horizontal padding the item stylesheet applies.
+    const int typeIconPx = ::layout::fontPx(1.0);
+    m_tree->setIconSize(QSize(typeIconPx, typeIconPx));
+    m_tree->header()->setSectionResizeMode(1, QHeaderView::Fixed);
+    m_tree->header()->resizeSection(1, typeIconPx + 2 * columnPadding);
+    rebuildTypeIcons();
     m_tree->setToolTip(tr("Click and hold to audition (middle C)."));
     layout->addWidget(m_tree, 1);
 
@@ -495,7 +541,7 @@ void VoicegroupBrowser::setLoading(bool loading)
             item->setText(
                 0,
                 QStringLiteral("%1  %2").arg(slot, 3, 10, QLatin1Char('0')).arg(tr("Loading...")));
-            item->setText(1, QString());
+            clearTypeCell(item);
             item->setText(2, QString());
         }
         m_updating = true;
@@ -553,6 +599,11 @@ void VoicegroupBrowser::changeEvent(QEvent *event)
             QTreeWidgetItem *item = m_tree->topLevelItem(i);
             markUsedRow(item, item->data(0, kUsedRole).toBool());
         }
+        // The Type icons are tinted from theme roles: rebuild the cache and
+        // re-apply every row so they follow the new palette.
+        rebuildTypeIcons();
+        for (int i = 0; i < m_tree->topLevelItemCount(); i++)
+            updateRow(i);
     }
 }
 
@@ -1109,6 +1160,20 @@ void VoicegroupBrowser::commitEdit()
     emit voiceEditRequested(slot, v, structural);
 }
 
+void VoicegroupBrowser::rebuildTypeIcons()
+{
+    // Regenerate the cache at the tree's icon size and dpr; called once from
+    // the constructor and again on PaletteChange so the tints follow the
+    // theme. Mixed SVG viewBoxes scale aspect-preserved into the square size.
+    const qreal dpr = m_tree->devicePixelRatioF();
+    const QSize size = m_tree->iconSize();
+    for (const vgi::IconSpec &spec : vgi::kIconSpecs) {
+        m_typeIcons[vgi::iconKey(spec.glyph, spec.altChip)] =
+            vgi::tinted(QStringLiteral(":/icons/%1").arg(QLatin1String(spec.svg)), size, dpr,
+                        spec.altChip, spec.rotate180);
+    }
+}
+
 void VoicegroupBrowser::voiceChanged(int slot)
 {
     if (m_loading)
@@ -1116,6 +1181,20 @@ void VoicegroupBrowser::voiceChanged(int slot)
     updateRow(slot);
     if (slot == currentSlot())
         populateEditor();
+}
+
+// Both populated updateRow branches funnel through here: the display name,
+// column-0 text, icon lookup, and column-1 inking for one (type byte, synth)
+// pair, composed exactly once.
+void VoicegroupBrowser::paintTypeCell(QTreeWidgetItem *item, int slot, const QString &name,
+                                      uint8_t typeByte, bool synth)
+{
+    const QString type = typeDisplayName(typeByte, synth);
+    item->setText(0, voiceColumnText(slot, name, type));
+    setTypeCell(item,
+                m_typeIcons.value(
+                    vgi::iconKey(vgi::forTypeByte(typeByte, synth), vgi::isAltChip(typeByte))),
+                type);
 }
 
 void VoicegroupBrowser::updateRow(int slot)
@@ -1128,7 +1207,7 @@ void VoicegroupBrowser::updateRow(int slot)
     if (slotIsBlank(slot)) {
         item->setText(
             0, QStringLiteral("%1  %2").arg(slot, 3, 10, QLatin1Char('0')).arg(tr("[Blank]")));
-        item->setText(1, QString());
+        clearTypeCell(item);
         item->setText(2, QString());
         return;
     }
@@ -1137,26 +1216,18 @@ void VoicegroupBrowser::updateRow(int slot)
     // immutable loaded bank's tone — cry voices, unparseable lines.
     if (const VgVoice *voice = voiceAt(slot)) {
         VgSynthDesc desc;
-        const QString type = synthDescFor(*voice, slot, &desc)
-                                 ? tr("Synth (Golden Sun)")
-                                 : m4aVoiceTypeName(vgMacroVoiceType(voice->macro));
+        const bool synth = synthDescFor(*voice, slot, &desc);
+        const uint8_t typeByte = vgMacroVoiceType(voice->macro);
         const QString name = vgMacroHasSymbol(voice->macro) ? voice->symbol : QString();
-        item->setText(0, QStringLiteral("%1  %2")
-                             .arg(slot, 3, 10, QLatin1Char('0'))
-                             .arg(name.isEmpty() ? type : name));
-        item->setText(1, type);
+        paintTypeCell(item, slot, name, typeByte, synth);
         item->setText(2, adsrText(*voice));
         return;
     }
     if (const LoadedVoiceGroup *bank = loadedBank()) {
         const ToneData &tone = bank->voices[slot];
         const QString name = QString::fromUtf8(bank->voiceNames[slot]).trimmed();
-        const QString type =
-            toneIsSynth(tone) ? tr("Synth (Golden Sun)") : m4aVoiceTypeName(tone.type);
-        item->setText(0, QStringLiteral("%1  %2")
-                             .arg(slot, 3, 10, QLatin1Char('0'))
-                             .arg(name.isEmpty() ? type : name));
-        item->setText(1, type);
+        const bool synth = toneIsSynth(tone);
+        paintTypeCell(item, slot, name, tone.type, synth);
         // Keysplit and drumkit tones carry no scalar envelope.
         item->setText(2, tone.type != VOICE_KEYSPLIT && tone.type != VOICE_KEYSPLIT_ALL
                              ? QStringLiteral("%1 %2 %3 %4")
@@ -1168,6 +1239,28 @@ void VoicegroupBrowser::updateRow(int slot)
         return;
     }
     item->setText(0, QStringLiteral("%1").arg(slot, 3, 10, QLatin1Char('0')));
-    item->setText(1, QString());
+    clearTypeCell(item);
     item->setText(2, QString());
+}
+
+// Column 1 renders the voice type as an icon with the type name as its
+// tooltip and accessible text; the cell's text stays empty so the icon
+// stands alone.
+void VoicegroupBrowser::setTypeCell(QTreeWidgetItem *item, const QIcon &icon,
+                                    const QString &displayName)
+{
+    item->setIcon(1, icon);
+    item->setText(1, QString());
+    item->setToolTip(1, displayName);
+    item->setData(1, Qt::AccessibleTextRole, displayName);
+}
+
+// Every branch that clears a row must leave no stale type state behind:
+// icon, text, tooltip, and accessible text all go empty together.
+void VoicegroupBrowser::clearTypeCell(QTreeWidgetItem *item)
+{
+    item->setIcon(1, QIcon());
+    item->setText(1, QString());
+    item->setToolTip(1, QString());
+    item->setData(1, Qt::AccessibleTextRole, QVariant());
 }

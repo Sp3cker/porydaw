@@ -409,6 +409,13 @@ qt_add_resources(porydaw_checks "checks_app_icon"
         ${PROJECT_SOURCE_DIR}/resources/velocity.svg
         ${PROJECT_SOURCE_DIR}/resources/velocity_labels.svg
         ${PROJECT_SOURCE_DIR}/resources/automation.svg
+        ${PROJECT_SOURCE_DIR}/resources/drum.svg
+        ${PROJECT_SOURCE_DIR}/resources/piano-keyboard.svg
+        ${PROJECT_SOURCE_DIR}/resources/wave-sine.svg
+        ${PROJECT_SOURCE_DIR}/resources/wave-square.svg
+        ${PROJECT_SOURCE_DIR}/resources/wave-triangle.svg
+        ${PROJECT_SOURCE_DIR}/resources/waveform-path.svg
+        ${PROJECT_SOURCE_DIR}/resources/waveform.svg
 )
 qt_add_resources(porydaw_checks "checks_cursor_images"
     PREFIX "/cursors"

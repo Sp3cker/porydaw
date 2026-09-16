@@ -192,7 +192,8 @@ int VoicegroupSaveTest::firstBlankSlot() const
     if (!view)
         return -1;
     for (int slot = 0; slot < VOICEGROUP_SIZE; ++slot) {
-        if (!view->slotViews.at(slot).voice)
+        const VoicegroupSlotView &slotView = view->slotViews.at(slot);
+        if (!slotView.voice && slotView.kind == VgLineKind::None)
             return slot;
     }
     return -1;

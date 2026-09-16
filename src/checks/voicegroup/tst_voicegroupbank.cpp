@@ -15,7 +15,7 @@ namespace {
 
 constexpr auto kSharedSong = "mus_oldale";
 constexpr int kDirectSoundSlot = 0;
-constexpr int kBlankSlot = 12;
+constexpr int kBlankSlot = 13;
 
 bool sameKindsExcept(const LoadedBankView &before, const LoadedBankView &after, int except = -1)
 {

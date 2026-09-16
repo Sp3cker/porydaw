@@ -281,6 +281,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/samplepicker.h
     src/ui/voicegroupbrowser.cpp
     src/ui/voicegroupbrowser.h
+    src/ui/voicetypeicons.cpp
     src/ui/keymap.cpp
     src/ui/keymap.h
     src/ui/enginesettingsdialog.cpp
@@ -587,6 +588,13 @@ qt_add_resources(porydaw "app_icon"
         resources/velocity.svg
         resources/velocity_labels.svg
         resources/automation.svg
+        resources/drum.svg
+        resources/piano-keyboard.svg
+        resources/wave-sine.svg
+        resources/wave-square.svg
+        resources/wave-triangle.svg
+        resources/waveform-path.svg
+        resources/waveform.svg
 )
 qt_add_resources(porydaw "cursor_images"
     PREFIX "/cursors"

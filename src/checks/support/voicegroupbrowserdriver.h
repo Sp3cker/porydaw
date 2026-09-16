@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QImage>
 #include <QRect>
 #include <QSize>
 #include <QString>
@@ -49,6 +50,13 @@ class VoicegroupBrowserDriver final
     void selectSlot(int slot) const;
     void revealSlot(int slot) const;
     bool slotIsMarkedUsed(int slot) const;
+    // Column-1 type observability: the icon-only Type column publishes its
+    // family name through the tooltip and the accessible text (both must
+    // agree) and its glyph through the icon. Blank rows publish none of it.
+    QString slotRowType(int slot) const;
+    QString slotRowAccessibleType(int slot) const;
+    bool hasTypeIcon(int slot) const;
+    QImage slotTypeIcon(int slot) const;
 
     QComboBox *voicegroupSelector() const;
     DragSpinBox *releaseSpinBox() const;

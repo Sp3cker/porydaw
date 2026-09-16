@@ -1,8 +1,8 @@
 #include "checks/support/voicegroupbrowserdriver.h"
 
 #include <QComboBox>
-#include <QCoreApplication>
 #include <QDockWidget>
+#include <QIcon>
 #include <QImage>
 #include <QLabel>
 #include <QLineEdit>
@@ -85,6 +85,37 @@ QStringList VoicegroupBrowserDriver::slotRowText(int slot) const
     QTreeWidget *const tree = slotTree();
     QTreeWidgetItem *const item = tree ? tree->topLevelItem(slot) : nullptr;
     return item ? QStringList{item->text(0), item->text(1), item->text(2)} : QStringList();
+}
+
+QString VoicegroupBrowserDriver::slotRowType(int slot) const
+{
+    QTreeWidget *const tree = slotTree();
+    QTreeWidgetItem *const item = tree ? tree->topLevelItem(slot) : nullptr;
+    return item ? item->toolTip(1) : QString();
+}
+
+QString VoicegroupBrowserDriver::slotRowAccessibleType(int slot) const
+{
+    QTreeWidget *const tree = slotTree();
+    QTreeWidgetItem *const item = tree ? tree->topLevelItem(slot) : nullptr;
+    return item ? item->data(1, Qt::AccessibleTextRole).toString() : QString();
+}
+
+bool VoicegroupBrowserDriver::hasTypeIcon(int slot) const
+{
+    QTreeWidget *const tree = slotTree();
+    QTreeWidgetItem *const item = tree ? tree->topLevelItem(slot) : nullptr;
+    return item && !item->icon(1).isNull();
+}
+
+QImage VoicegroupBrowserDriver::slotTypeIcon(int slot) const
+{
+    QTreeWidget *const tree = slotTree();
+    QTreeWidgetItem *const item = tree ? tree->topLevelItem(slot) : nullptr;
+    if (!item)
+        return QImage();
+    const QIcon icon = item->icon(1);
+    return icon.isNull() ? QImage() : icon.pixmap(tree->iconSize()).toImage();
 }
 
 bool VoicegroupBrowserDriver::slotIsMarkedUsed(int slot) const
