@@ -722,6 +722,10 @@ void AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge()
     const qreal maxY = nodelane::valueY(panLane, body, geometry, 127);
     const qreal neutralY = nodelane::valueY(panLane, body, geometry, 64);
     const qreal minY = nodelane::valueY(panLane, body, geometry, 0);
+    // The count yields to the scale labels, so the minimum label stays at
+    // its curve-true height even with the count present.
+    QVERIFY2(std::abs(minLabel->center().y() - minY) <= minLabel->height() / 2.0,
+             "the minimum scale label moved off its curve height when the event count appeared");
     const qreal tickLength = 3.0 * layout::space(layout::Space::Half);
     const auto edgeTickYs = [&scene, &viewport, tickLength] {
         std::vector<qreal> ys;

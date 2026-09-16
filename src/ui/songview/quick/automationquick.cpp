@@ -118,14 +118,14 @@ struct LaneScaleLabelSpec {
 
 // Active-lane scale labels in emission order max, min, neutral (only when the
 // lane has one). Each spec pairs its role with its value so the text-record
-// key stays semantic instead of depending on a loop-index cast. A label whose
-// rect would intersect an already-kept label is dropped, which covers
-// neutral==max/min degeneracies and viewports too short to separate max from
-// min.
+// key stays semantic instead of depending on a loop-index cast. Positions are
+// a pure function of lane, body, geometry, and viewport so event-count edits
+// never move them. A label whose rect would intersect an already-kept label
+// is dropped, which covers neutral==max/min degeneracies and viewports too
+// short to separate max from min.
 LaneScaleLabels laneScaleLabels(const NodeLane &lane, const QRect &body,
                                 const AutomationGeometry &geometry, const QFontMetricsF &metrics,
-                                const QRectF &viewport, qreal left,
-                                const std::optional<QRectF> &countRect)
+                                const QRectF &viewport, qreal left)
 {
     const int neutral = lane.neutralValue();
     const LaneScaleLabelSpec specs[] = {{ScaleLabelRole::Maximum, lane.maximumValue()},
@@ -142,10 +142,6 @@ LaneScaleLabels laneScaleLabels(const NodeLane &lane, const QRect &body,
         const qreal y = nodelane::valueY(lane, body, geometry, spec.value);
         QRectF rect = clampedToViewport(
             QRectF(left, y - height / 2.0, metrics.horizontalAdvance(text), height), viewport);
-        while (countRect && rect.intersects(*countRect) && rect.top() - height >= viewport.top())
-            rect.moveTop(rect.top() - height);
-        if (countRect && rect.intersects(*countRect))
-            continue;
         const auto end = result.labels.begin() + result.count;
         if (std::any_of(result.labels.begin(), end, [&rect](const LaneScaleLabel &prior) {
                 return prior.rect.intersects(rect);
@@ -330,10 +326,11 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     std::vector<TimelineQuickTextModel::Record> laneTextRecords;
     std::vector<QRectF> placedGhostLabels;
     // Written-event counts are document-written events only — the adapter's
-    // synthetic tick-0 engine node is not an event. The active lane's count
-    // sits at the plot's bottom-left corner; a ghost's count rides inline
-    // with its right-edge name label instead, so the corner never duplicates
-    // ghost information.
+    // synthetic tick-0 engine node is not an event. Scale labels own the
+    // left edge at curve-true heights; the active lane's count sits at the
+    // plot's bottom-left corner and yields to them. A ghost's count rides
+    // inline with its right-edge name label instead, so the corner never
+    // duplicates ghost information.
     const auto laneCountText = [this](int parameterIndex) {
         const std::optional<EditorAutomationRowId> row = parameterRow(parameterIndex);
         const std::size_t eventCount = row ? parameterEventCount(*row) : std::size_t{0};
@@ -342,39 +339,40 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         return eventCount == 1 ? SongView::tr("1 Event")
                                : SongView::tr("%1 Events").arg(qulonglong(eventCount));
     };
-    qreal countBottom = viewport.bottom() - labelInset;
-    std::optional<QRectF> activeCountRect;
-    const auto appendLaneCount = [this, &viewport, &captionMetrics, labelInset, &countBottom,
-                                  &activeCountRect, &laneTextRecords,
-                                  &laneCountText](int parameterIndex) {
+    const auto appendLaneCount = [this, &viewport, &captionMetrics, labelInset, &placedGhostLabels,
+                                  &laneTextRecords, &laneCountText](int parameterIndex) {
         const QString text = laneCountText(parameterIndex);
         if (text.isEmpty())
             return;
         const qreal width = captionMetrics.horizontalAdvance(text);
         const qreal height = captionMetrics.height();
-        const QRectF rect(viewport.left() + labelInset, countBottom - height, width, height);
-        if (rect.top() < viewport.top())
+        QRectF rect =
+            clampedToViewport(QRectF(viewport.left() + labelInset,
+                                     viewport.bottom() - labelInset - height, width, height),
+                              viewport);
+        while (std::any_of(placedGhostLabels.begin(), placedGhostLabels.end(),
+                           [&rect](const QRectF &placed) { return placed.intersects(rect); }) &&
+               rect.top() - height >= viewport.top())
+            rect.moveTop(rect.top() - height);
+        rect = clampedToViewport(rect, viewport);
+        if (std::any_of(placedGhostLabels.begin(), placedGhostLabels.end(),
+                        [&rect](const QRectF &placed) { return placed.intersects(rect); }))
             return;
-        countBottom = rect.top();
-        activeCountRect = rect;
         appendText(laneTextRecords, TimelineQuickTextKeyKind::AutomationLaneCount,
                    quint64(parameterIndex), rect, text,
                    themes::color(themes::Role::song_view_secondary_text), m_laneCaptionFont,
                    Qt::AlignLeft, viewport);
     };
-    if (active)
-        appendLaneCount(activeParameter());
     if (active) {
         // Left-edge scale labels (max, min, neutral when the lane has one)
         // ride the lane-text pipeline; their rects seed placedGhostLabels,
-        // and short ticks mark each value's exact curve height. The active
-        // count owns the bottom-left corner, so a colliding scale label
-        // shifts up above it; ticks are content-gated: the grid layer is not
-        // reset on hover/transient passes, so appends there would accumulate.
+        // and short ticks mark each value's exact curve height. Ticks are
+        // content-gated: the grid layer is not reset on hover/transient
+        // passes, so appends there would accumulate.
         const qreal tickLength = 3.0 * layout::space(layout::Space::Half);
         const auto scaleLabels =
             laneScaleLabels(*active->slot->lane, active->body, m_geometry, captionMetrics, viewport,
-                            viewport.left() + labelInset + tickLength, activeCountRect);
+                            viewport.left() + labelInset + tickLength);
         for (std::size_t i = 0; i < scaleLabels.count; ++i) {
             const LaneScaleLabel &label = scaleLabels.labels[i];
             const QRectF &rect = label.rect;
@@ -389,6 +387,8 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                                   themes::color(themes::Role::song_view_secondary_text), viewport);
         }
     }
+    if (active)
+        appendLaneCount(activeParameter());
     const auto basePaintContext = [this, &scene, &viewport, &projection, dpr, bandFirst,
                                    bandLast](NodeLane &lane, std::span<const NodePoint> points,
                                              const QRect &body, LaneHandle handle,
