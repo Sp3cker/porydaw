@@ -25,14 +25,15 @@ bool metaIsLoopMarker(const SmfEvent &ev, char marker)
 
 bool TrackRemap::isIdentity() const
 {
-    if (smfTrackMap.size() != static_cast<size_t>(newSmfTrackCount) ||
-        engineTrackMap.size() != static_cast<size_t>(newEngineTrackCount))
+    const int smfCount = track_limits::checkedTrackInt(smfTrackMap.size());
+    const int engineCount = track_limits::checkedTrackInt(engineTrackMap.size());
+    if (smfCount != newSmfTrackCount || engineCount != newEngineTrackCount)
         return false;
-    for (int i = 0; i < int(smfTrackMap.size()); i++) {
+    for (int i = 0; i < smfCount; i++) {
         if (smfTrackMap[i] != i)
             return false;
     }
-    for (int i = 0; i < int(engineTrackMap.size()); i++) {
+    for (int i = 0; i < engineCount; i++) {
         if (engineTrackMap[i] != i)
             return false;
     }
@@ -42,16 +43,20 @@ bool TrackRemap::isIdentity() const
 TrackRemap TrackRemap::inverse() const
 {
     TrackRemap inverse;
-    inverse.smfTrackMap.assign(size_t(newSmfTrackCount), -1);
-    inverse.engineTrackMap.assign(size_t(newEngineTrackCount), -1);
-    inverse.newSmfTrackCount = int(smfTrackMap.size());
-    inverse.newEngineTrackCount = int(engineTrackMap.size());
-    for (int old = 0; old < int(smfTrackMap.size()); old++) {
+    inverse.smfTrackMap.assign(static_cast<std::size_t>(newSmfTrackCount),
+                               -1); // vector API wants size_t
+    inverse.engineTrackMap.assign(static_cast<std::size_t>(newEngineTrackCount),
+                                  -1); // vector API wants size_t
+    inverse.newSmfTrackCount = track_limits::checkedTrackInt(smfTrackMap.size());
+    inverse.newEngineTrackCount = track_limits::checkedTrackInt(engineTrackMap.size());
+    const int smfSize = inverse.newSmfTrackCount;
+    const int engineSize = inverse.newEngineTrackCount;
+    for (int old = 0; old < smfSize; old++) {
         const int current = smfTrackMap[old];
         if (current >= 0)
             inverse.smfTrackMap[current] = old;
     }
-    for (int old = 0; old < int(engineTrackMap.size()); old++) {
+    for (int old = 0; old < engineSize; old++) {
         const int current = engineTrackMap[old];
         if (current >= 0)
             inverse.engineTrackMap[current] = old;
@@ -502,9 +507,10 @@ bool SongDocument::adoptSmf(SmfFile smf, const SongInfo &song, QString *error)
     mintUnassignedNoteIds();
     rebuildTrackMap();
     TrackRemap remap;
-    remap.smfTrackMap.assign(size_t(before.smfTrackCount), -1);
-    remap.engineTrackMap.assign(size_t(before.engineToSmf.size()), -1);
-    remap.newSmfTrackCount = int(m_smf.tracks.size());
+    remap.smfTrackMap.assign(static_cast<std::size_t>(before.smfTrackCount),
+                             -1); // vector API wants size_t
+    remap.engineTrackMap.assign(before.engineToSmf.size(), -1);
+    remap.newSmfTrackCount = track_limits::checkedTrackInt(m_smf.tracks.size());
     remap.newEngineTrackCount = engineTrackCount();
     publishMutation(remap);
     return true;
@@ -581,17 +587,18 @@ void SongDocument::rebuildTrackMap()
 
 SongDocument::TrackMapState SongDocument::trackMapState() const
 {
-    return {int(m_smf.tracks.size()), m_engineToSmf};
+    return {track_limits::checkedTrackInt(m_smf.tracks.size()), m_engineToSmf};
 }
 
 TrackRemap SongDocument::currentTrackRemap() const
 {
     TrackRemap remap;
     remap.smfTrackMap.resize(m_smf.tracks.size());
-    remap.engineTrackMap.resize(size_t(engineTrackCount()));
+    remap.engineTrackMap.resize(
+        static_cast<std::size_t>(engineTrackCount())); // vector API wants size_t
     std::iota(remap.smfTrackMap.begin(), remap.smfTrackMap.end(), 0);
     std::iota(remap.engineTrackMap.begin(), remap.engineTrackMap.end(), 0);
-    remap.newSmfTrackCount = int(m_smf.tracks.size());
+    remap.newSmfTrackCount = track_limits::checkedTrackInt(m_smf.tracks.size());
     remap.newEngineTrackCount = engineTrackCount();
     return remap;
 }
@@ -599,7 +606,8 @@ TrackRemap SongDocument::currentTrackRemap() const
 TrackRemap SongDocument::trackRemap(const TrackMapState &before,
                                     const std::vector<EditOp> &ops) const
 {
-    std::vector<int> chunkOrigins(size_t(before.smfTrackCount));
+    std::vector<int> chunkOrigins(
+        static_cast<std::size_t>(before.smfTrackCount)); // vector API wants size_t
     std::iota(chunkOrigins.begin(), chunkOrigins.end(), 0);
     for (const EditOp &op : ops) {
         if (op.type == EditOp::InsertTrack) {
@@ -619,16 +627,19 @@ TrackRemap SongDocument::trackRemap(const TrackMapState &before,
         }
     }
     TrackRemap remap;
-    remap.smfTrackMap.assign(static_cast<std::size_t>(before.smfTrackCount), -1);
-    remap.engineTrackMap.assign(static_cast<std::size_t>(before.engineToSmf.size()), -1);
-    remap.newSmfTrackCount = int(m_smf.tracks.size());
+    remap.smfTrackMap.assign(static_cast<std::size_t>(before.smfTrackCount),
+                             -1); // vector API wants size_t
+    remap.engineTrackMap.assign(before.engineToSmf.size(), -1);
+    remap.newSmfTrackCount = track_limits::checkedTrackInt(m_smf.tracks.size());
     remap.newEngineTrackCount = engineTrackCount();
-    for (int current = 0; current < int(chunkOrigins.size()); current++) {
+    const int chunkCount = track_limits::checkedTrackInt(chunkOrigins.size());
+    const int engineBefore = track_limits::checkedTrackInt(before.engineToSmf.size());
+    for (int current = 0; current < chunkCount; current++) {
         const int old = chunkOrigins[size_t(current)];
         if (old >= 0)
             remap.smfTrackMap[old] = current;
     }
-    for (int oldEngine = 0; oldEngine < int(before.engineToSmf.size()); oldEngine++) {
+    for (int oldEngine = 0; oldEngine < engineBefore; oldEngine++) {
         const int oldChunk = before.engineToSmf[size_t(oldEngine)];
         const int newChunk = remap.smfTrackMap[oldChunk];
         for (int newEngine = 0; newEngine < engineTrackCount(); newEngine++) {
