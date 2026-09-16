@@ -6,6 +6,7 @@
 #include <algorithm>
 
 #include "core/miditimeline.h"
+#include "core/velocitymodel.h"
 #include "project/songregistry.h"
 
 namespace song_document_tempo {
@@ -1486,7 +1487,7 @@ void SongDocument::setNotesVelocity(const std::vector<DocNote> &notes, uint8_t v
 {
     if (notes.empty())
         return;
-    const uint8_t target = std::clamp<uint8_t>(velocity, 1, 127);
+    const uint8_t target = clampVelocity(velocity);
     std::vector<EditOp> ops;
     for (const DocNote &note : notes) {
         if (note.velocity == target)
@@ -1528,7 +1529,7 @@ SongDocument::setNotesVelocities(uint64_t expectedRevision,
     }
     std::vector<EditOp> ops;
     for (const ResolvedVelocity &item : resolved) {
-        const uint8_t target = uint8_t(std::clamp(item.velocity, 1, 127));
+        const uint8_t target = clampVelocity(item.velocity);
         if (item.note.velocity == target)
             continue;
         SmfEvent event = m_smf.tracks[size_t(item.note.smfTrack)].events[item.note.onIndex];
@@ -1551,7 +1552,7 @@ void SongDocument::nudgeNotesVelocity(const std::vector<DocNote> &notes, int del
     if (notes.empty() || delta == 0)
         return;
     const auto velocityFor = [delta](const DocNote &note) {
-        return uint8_t(std::clamp(int(note.velocity) + delta, 1, 127));
+        return clampVelocity(int(note.velocity) + delta);
     };
     std::vector<EditOp> ops;
     for (const DocNote &note : notes) {

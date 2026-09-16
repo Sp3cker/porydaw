@@ -191,7 +191,7 @@ std::unique_ptr<checks::nativegraphics::Rig> macRig(const QString &projectRoot,
 
 } // namespace
 
-void RenderingPlayheadTest::nativeLayerLifecycle()
+void RenderingPlayheadNativeTest::nativeLayerLifecycle()
 {
     QVERIFY([NSThread isMainThread]);
     std::unique_ptr<checks::nativegraphics::Rig> rig = macRig(m_projectRoot, m_songLabel);

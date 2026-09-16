@@ -91,6 +91,10 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel,
                           const QStringList &qtArguments);
 int runRenderingPlayheadCheck(const QString &scratchProject, const QString &songLabel,
                               const QString &screenshotPath, const QStringList &qtArguments);
+#ifdef __APPLE__
+int runRenderingPlayheadNativeCheck(const QString &projectRoot, const QString &songLabel,
+                                    const QStringList &qtArguments);
+#endif
 int runPlayheadGuidesCheck(const QString &projectRoot, const QString &songLabel,
                            const QStringList &qtArguments);
 

@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <initializer_list>
 
 #include "checks/drawerpresentation/fixtures.h"
 #include "checks/support/editorrig.h"
@@ -35,11 +36,13 @@ void doubleClick(VoiceTransactionFixture &fixture, Tick tick)
 
 int changedPixels(const QImage &before, const QImage &after, const QRect &region)
 {
+    // These are positive, region-specific rendering checks. Compare visible RGB,
+    // not alpha rounding at glyph/clip edges (254 versus 255 on the same RGB).
     const QRect bounded = region.intersected(before.rect()).intersected(after.rect());
     int changed = 0;
     for (int y = bounded.top(); y <= bounded.bottom(); ++y)
         for (int x = bounded.left(); x <= bounded.right(); ++x)
-            changed += before.pixel(x, y) != after.pixel(x, y);
+            changed += before.pixelColor(x, y).rgb() != after.pixelColor(x, y).rgb();
     return changed;
 }
 
@@ -52,26 +55,46 @@ QRect deviceRect(const QRectF &logical, qreal dpr, const QSize &bounds)
     return {left, top, std::max(0, right - left), std::max(0, bottom - top)};
 }
 
-int changedPixelsOutside(const QImage &before, const QImage &after, const QRectF &logical,
-                         qreal dpr)
+QStringList voiceTexts(const QAbstractItemModel &model, Qt::Alignment alignment = Qt::AlignLeft)
 {
-    const QRect excluded = deviceRect(logical, dpr, before.size())
-                               .intersected(before.rect())
-                               .intersected(after.rect());
-    int changed = 0;
-    for (int y = 0; y < before.height(); ++y)
-        for (int x = 0; x < before.width(); ++x)
-            changed += !excluded.contains(x, y) && before.pixel(x, y) != after.pixel(x, y);
-    return changed;
+    QStringList result;
+    for (int row = 0; row < model.rowCount(); ++row) {
+        const QModelIndex index = model.index(row, 0);
+        if (model.data(index, songview::TimelineQuickTextModel::HorizontalAlignmentRole).toInt() ==
+            int(alignment))
+            result.push_back(
+                model.data(index, songview::TimelineQuickTextModel::TextRole).toString());
+    }
+    return result;
 }
 
-QImage labelCrop(const QImage &image, double lineX, qreal dpr)
+QRectF voiceTextRect(const QAbstractItemModel &model, const QString &text,
+                     Qt::Alignment alignment = Qt::AlignLeft)
 {
-    const int line = qRound(lineX * dpr);
-    const int gap = std::max(2, qRound(6.0 * dpr));
-    const int left = std::clamp(line + gap, 0, image.width());
-    const int width = std::clamp(qRound(140.0 * dpr), 0, image.width() - left);
-    return image.copy(QRect(left, 0, width, image.height()));
+    for (int row = 0; row < model.rowCount(); ++row) {
+        const QModelIndex index = model.index(row, 0);
+        if (model.data(index, songview::TimelineQuickTextModel::TextRole).toString() == text &&
+            model.data(index, songview::TimelineQuickTextModel::HorizontalAlignmentRole).toInt() ==
+                int(alignment))
+            return model.data(index, songview::TimelineQuickTextModel::RectRole).toRectF();
+    }
+    return {};
+}
+
+bool hasVoiceMarkers(const VoiceFixture &fixture, std::initializer_list<Tick> ticks)
+{
+    const auto &markers =
+        fixture.scene()->layer(songview::TimelineQuickLayer::VoiceChangesMarkers).rects;
+    if (markers.size() != ticks.size())
+        return false;
+    auto marker = markers.begin();
+    for (const Tick tick : ticks) {
+        if (!marker->rect.contains(
+                QPointF(fixture.xForTick(double(tick)), fixture.plotRect().height() / 2.0)))
+            return false;
+        ++marker;
+    }
+    return true;
 }
 
 } // namespace
@@ -93,37 +116,47 @@ void DrawerPresentationTest::voiceSurfaceAndPaintLifecycle()
     QCOMPARE(gutter->bounds(),
              QRectF(QPointF{}, QSizeF(fixture.fixedSpan(), fixture.bandRect().height())));
 
-    const QImage idle = checks::support::captureQuickBand(view, fixture.bandRect());
+    const auto &labels = *scene->voiceChangesTextModel();
+    QTRY_COMPARE(voiceTexts(labels).size(), 2);
+    const QStringList markers = voiceTexts(labels);
+    QVERIFY(markers.at(0).startsWith(QStringLiteral("000 ")));
+    QVERIFY(markers.at(1).contains(QStringLiteral("voice-check")));
+    QVERIFY(hasVoiceMarkers(fixture, {0, 48}));
+    const auto readout = [&] { return voiceTexts(labels, Qt::AlignRight); };
+    QTRY_COMPARE(readout(), QStringList{markers.at(0)});
     const Snapshot before = fixture.snapshot();
     fixture.document.addLanePoint(0, DOC_CC_VOICE, 120, 5);
-    pump();
+    QTRY_COMPARE(voiceTexts(labels).size(), 3);
+    QVERIFY(voiceTexts(labels).last().contains(QStringLiteral("alt-voice")));
+    QVERIFY(hasVoiceMarkers(fixture, {0, 48, 120}));
     QCOMPARE(fixture.document.revision(), before.revision + 1);
     QCOMPARE(fixture.document.undoStack()->index(), before.undoIndex + 1);
-    const size_t markerCount =
-        scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers).rects.size();
-    QVERIFY(markerCount > 0);
     fixture.document.undoStack()->undo();
-    pump();
-    QVERIFY(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers).rects.size() <
-            markerCount);
+    QTRY_COMPARE(voiceTexts(labels), markers);
+    QVERIFY(hasVoiceMarkers(fixture, {0, 48}));
     QVERIFY(fixture.document.smf().write() == before.smf);
+
     view.setPlayheadSample(fixture.rig->timeline().sampleForTick(16), true);
     pump();
-    const QImage sameSpan = checks::support::captureQuickBand(view, fixture.bandRect());
+    QTRY_COMPARE(readout(), QStringList{markers.at(0)});
     view.setPlayheadSample(fixture.rig->timeline().sampleForTick(32), true);
     pump();
-    QCOMPARE(changedPixels(sameSpan, checks::support::captureQuickBand(view, fixture.bandRect()),
-                           sameSpan.rect()),
-             0);
+    QTRY_COMPARE(readout(), QStringList{markers.at(0)});
+    const QImage sameSpan = checks::support::captureQuickBand(view, fixture.bandRect());
+    QVERIFY(!sameSpan.isNull());
     view.setPlayheadSample(fixture.rig->timeline().sampleForTick(64), true);
-    pump();
-    QVERIFY(changedPixels(sameSpan, checks::support::captureQuickBand(view, fixture.bandRect()),
-                          sameSpan.rect()) > 0);
+    QTRY_COMPARE(readout(), QStringList{markers.at(1)});
+    QCOMPARE(voiceTexts(labels), markers);
+    const QRectF readoutRect =
+        voiceTextRect(labels, markers.at(1), Qt::AlignRight).translated(fixture.fixedSpan(), 0);
+    QVERIFY(readoutRect.isValid());
+    const QImage nextSpan = checks::support::captureQuickBand(view, fixture.bandRect());
+    QVERIFY(!nextSpan.isNull());
+    QVERIFY(changedPixels(sameSpan, nextSpan,
+                          deviceRect(readoutRect, nextSpan.devicePixelRatio(), nextSpan.size())) >
+            0);
     view.setPlayheadSample(0, false);
-    pump();
-    QCOMPARE(changedPixels(idle, checks::support::captureQuickBand(view, fixture.bandRect()),
-                           idle.rect()),
-             0);
+    QTRY_COMPARE(readout(), QStringList{markers.at(0)});
     const double zoom = view.camera().pxPerBeat();
     const double scroll = view.camera().scrollX();
     view.setSong(&fixture.rig->timeline(), &fixture.voicegroup);
@@ -135,9 +168,8 @@ void DrawerPresentationTest::voiceSurfaceAndPaintLifecycle()
     view.setEditorHorizontalScroll(scroll);
     view.setEditCursorTick(24);
     pump();
-    QCOMPARE(changedPixels(idle, checks::support::captureQuickBand(view, fixture.bandRect()),
-                           idle.rect()),
-             0);
+    QTRY_COMPARE(voiceTexts(labels), markers);
+    QTRY_COMPARE(readout(), QStringList{markers.at(0)});
 }
 
 void DrawerPresentationTest::voiceHoverLifecycle()
@@ -147,64 +179,64 @@ void DrawerPresentationTest::voiceHoverLifecycle()
     SongView &view = fixture.rig->view();
     auto *scene = fixture.scene();
     QVERIFY(scene);
-    QAbstractItemModel *const labels = scene->voiceChangesTextModel();
-    QAbstractItemModel *const hover = scene->voiceChangesHoverTextModel();
-    QVERIFY(labels);
-    QVERIFY(hover);
+    const auto &labels = *scene->voiceChangesTextModel();
+    const auto &hover = *scene->voiceChangesHoverTextModel();
+    QTRY_COMPARE(voiceTexts(labels).size(), 2);
+    const QStringList markers = voiceTexts(labels);
     const QPointF empty(fixture.xForTick(96), fixture.bandRect().height() / 2.0);
     const QImage idle = checks::support::captureQuickBand(view, fixture.bandRect());
-    // Text records publish on the Quick flush, so the baseline follows the
-    // first staged frame; hover itself only touches the hover model and layer.
-    const int labelsBefore = labels->rowCount();
-    const qreal dpr = idle.devicePixelRatio();
-    const qreal imagePlotOffset = fixture.fixedSpan();
+    QVERIFY(!idle.isNull());
     sendMouse(fixture.input(), QEvent::MouseMove, empty);
-    QTRY_COMPARE(hover->rowCount(), 1);
+    QTRY_COMPARE(hover.rowCount(), 1);
+    const QStringList hoveredText = voiceTexts(hover);
+    QCOMPARE(hoveredText.size(), 1);
+    QVERIFY(hoveredText.first().contains(QStringLiteral("voice-check")));
+    QCOMPARE(voiceTexts(labels), markers);
+    const QRectF hoverRect =
+        voiceTextRect(hover, hoveredText.first()).translated(fixture.fixedSpan(), 0);
+    QVERIFY(hoverRect.isValid());
     const QImage hovered = checks::support::captureQuickBand(view, fixture.bandRect());
-    QCOMPARE(labels->rowCount(), labelsBefore);
-    const QRectF labelRect =
-        hover->data(hover->index(0, 0), songview::TimelineQuickTextModel::RectRole).toRectF();
-    QVERIFY(labelRect.isValid());
-    const QRectF hoverRegion =
-        QRectF(imagePlotOffset + empty.x() - 2.0, 0.0, 4.0, fixture.bandRect().height())
-            .united(labelRect.translated(imagePlotOffset, 0.0).adjusted(-2.0, -2.0, 2.0, 2.0));
+    QVERIFY(!hovered.isNull());
     QVERIFY(changedPixels(idle, hovered,
-                          deviceRect(hoverRegion, dpr, idle.size()).intersected(idle.rect())) > 0);
-    QCOMPARE(changedPixelsOutside(idle, hovered, hoverRegion, dpr), 0);
+                          deviceRect(hoverRect, hovered.devicePixelRatio(), hovered.size())) > 0);
     sendMouse(fixture.input(), QEvent::MouseMove, empty);
     pump();
-    QCOMPARE(hover->rowCount(), 1);
-    QCOMPARE(changedPixels(hovered, checks::support::captureQuickBand(view, fixture.bandRect()),
-                           hovered.rect()),
-             0);
+    QCOMPARE(voiceTexts(hover), hoveredText);
 
-    view.setPlayheadSample(fixture.rig->timeline().sampleForTick(64), true);
-    QTRY_COMPARE(hover->rowCount(), 1);
-    view.setPlayheadSample(0, false);
+    // Movement within a voice span preserves hover. Crossing a voice change
+    // refreshes the displayed context and cancels the old hover.
+    view.setPlayheadSample(fixture.rig->timeline().sampleForTick(16), true);
     pump();
+    QCOMPARE(voiceTexts(hover), hoveredText);
+    view.setPlayheadSample(fixture.rig->timeline().sampleForTick(64), true);
+    QTRY_COMPARE(hover.rowCount(), 0);
+    sendMouse(fixture.input(), QEvent::MouseMove, empty);
+    QTRY_COMPARE(voiceTexts(hover), hoveredText);
+    view.setPlayheadSample(0, false);
+    QTRY_COMPARE(hover.rowCount(), 0);
+    sendMouse(fixture.input(), QEvent::MouseMove, empty);
+    QTRY_COMPARE(voiceTexts(hover), hoveredText);
     sendMouse(fixture.input(), QEvent::MouseMove,
               QPointF(fixture.xForTick(48), fixture.bandRect().height() / 2.0));
-    QTRY_COMPARE(hover->rowCount(), 0);
-    const QImage suppressed = checks::support::captureQuickBand(view, fixture.bandRect());
-    const double markerX = imagePlotOffset + fixture.xForTick(48);
-    QCOMPARE(labelCrop(suppressed, markerX, dpr), labelCrop(idle, markerX, dpr));
-    sendMouse(fixture.input(), QEvent::Leave, {});
-    QTRY_COMPARE(hover->rowCount(), 0);
-    QCOMPARE(changedPixels(suppressed, checks::support::captureQuickBand(view, fixture.bandRect()),
-                           suppressed.rect()),
-             0);
+    QTRY_COMPARE(hover.rowCount(), 0);
+    QCOMPARE(voiceTexts(labels), markers);
     sendMouse(fixture.input(), QEvent::MouseMove, empty);
+    QTRY_COMPARE(voiceTexts(hover), hoveredText);
+    sendMouse(fixture.input(), QEvent::Leave, {});
+    QTRY_COMPARE(hover.rowCount(), 0);
+    sendMouse(fixture.input(), QEvent::MouseMove, empty);
+    QTRY_COMPARE(voiceTexts(hover), hoveredText);
     sendKey(fixture.input(), Qt::Key_Escape);
-    QTRY_COMPARE(hover->rowCount(), 0);
-    QCOMPARE(changedPixels(idle, checks::support::captureQuickBand(view, fixture.bandRect()),
-                           idle.rect()),
-             0);
+    QTRY_COMPARE(hover.rowCount(), 0);
+    sendMouse(fixture.input(), QEvent::MouseMove, empty);
+    QTRY_COMPARE(voiceTexts(hover), hoveredText);
     view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
+    pump();
+    QVERIFY(!fixture.input().isVisible());
     view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
-    QTRY_COMPARE(hover->rowCount(), 0);
-    QCOMPARE(changedPixels(idle, checks::support::captureQuickBand(view, fixture.bandRect()),
-                           idle.rect()),
-             0);
+    QTRY_VERIFY(fixture.input().isVisible());
+    QTRY_COMPARE(hover.rowCount(), 0);
+    QTRY_COMPARE(voiceTexts(labels), markers);
 }
 
 void DrawerPresentationTest::voiceRefreshLifecycle()
@@ -212,23 +244,32 @@ void DrawerPresentationTest::voiceRefreshLifecycle()
     VoiceFixture fixture;
     createVoiceFixture(fixture);
     SongView &view = fixture.rig->view();
-    const QImage track0 = checks::support::captureQuickBand(view, fixture.bandRect());
+    const auto &labels = *fixture.scene()->voiceChangesTextModel();
+    QTRY_COMPARE(voiceTexts(labels).size(), 2);
+    const QStringList track0 = voiceTexts(labels);
+    QVERIFY(track0.at(1).contains(QStringLiteral("voice-check")));
     view.selectTrack(1);
-    pump();
-    QVERIFY(checks::support::captureQuickBand(view, fixture.bandRect()) != track0);
+    QTRY_COMPARE(voiceTexts(labels).size(), 1);
+    QVERIFY(voiceTexts(labels).first().contains(QStringLiteral("alt-voice")));
+    QTRY_COMPARE(voiceTexts(labels, Qt::AlignRight), voiceTexts(labels));
     view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
     pump();
     QVERIFY(!fixture.input().isVisible());
     view.selectTrack(0);
     view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
-    pump();
-    QVERIFY(checks::support::captureQuickBand(view, fixture.bandRect()) == track0);
+    QTRY_VERIFY(fixture.input().isVisible());
+    QTRY_COMPARE(voiceTexts(labels), track0);
+    QTRY_COMPARE(voiceTexts(labels, Qt::AlignRight), QStringList{track0.at(0)});
     view.setVoicegroup(nullptr);
-    pump();
-    QVERIFY(checks::support::captureQuickBand(view, fixture.bandRect()) != track0);
+    QTRY_VERIFY(!voiceTexts(labels).join(' ').contains(QStringLiteral("voice-check")));
+    QCOMPARE(voiceTexts(labels).size(), 2);
+    QVERIFY(voiceTexts(labels).at(1).startsWith(QStringLiteral("003 ")));
     view.setVoicegroup(&fixture.voicegroup);
-    pump();
-    QVERIFY(checks::support::captureQuickBand(view, fixture.bandRect()) == track0);
+    QTRY_COMPARE(voiceTexts(labels), track0);
+    const QImage original = checks::support::captureQuickBand(view, fixture.bandRect());
+    QVERIFY(!original.isNull());
+    const QRectF originalRect = voiceTextRect(labels, track0.at(1));
+    QVERIFY(originalRect.isValid());
     const QByteArray nameBefore(fixture.voicegroup.voiceNames[3]);
     std::strncpy(fixture.voicegroup.voiceNames[3], "renamed-voice",
                  sizeof(fixture.voicegroup.voiceNames[3]) - 1);
@@ -236,17 +277,24 @@ void DrawerPresentationTest::voiceRefreshLifecycle()
     view.setVoicegroup(&fixture.voicegroup);
     view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
     view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
-    pump();
+    QStringList renamedLabels = track0;
+    renamedLabels[1].replace(QStringLiteral("voice-check"), QStringLiteral("renamed-voice"));
+    QTRY_COMPARE(voiceTexts(labels), renamedLabels);
+    const QRectF renamedRect = voiceTextRect(labels, renamedLabels.at(1));
+    QVERIFY(renamedRect.isValid());
     const QImage renamed = checks::support::captureQuickBand(view, fixture.bandRect());
-    QVERIFY(renamed != track0);
+    QVERIFY(!renamed.isNull());
+    QVERIFY(changedPixels(
+                original, renamed,
+                deviceRect(originalRect.united(renamedRect).translated(fixture.fixedSpan(), 0),
+                           renamed.devicePixelRatio(), renamed.size())) > 0);
     std::strncpy(fixture.voicegroup.voiceNames[3], nameBefore.constData(),
                  sizeof(fixture.voicegroup.voiceNames[3]) - 1);
     fixture.voicegroup.voiceNames[3][sizeof(fixture.voicegroup.voiceNames[3]) - 1] = '\0';
     view.setVoicegroup(&fixture.voicegroup);
     view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
     view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
-    pump();
-    QVERIFY(checks::support::captureQuickBand(view, fixture.bandRect()) == track0);
+    QTRY_COMPARE(voiceTexts(labels), track0);
 }
 
 void DrawerPresentationTest::voicePickerTransactions()

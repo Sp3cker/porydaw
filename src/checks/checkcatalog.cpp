@@ -307,14 +307,13 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureFiles = route101Files,
              .windowing = Windowing::WindowSystem},
             {.name = "trackheaderquickcheck",
-             // track header Quick surface: publish/render, voice routing, mute/solo cancels, header
-             // menus, scroll clamp
+             // offscreen track header Quick surface: publish/render, voice routing, mute/solo
+             // cancels, header menus, scroll clamp
              .argv = strings({"--trackheaderquickcheck", "{scratch}", "mus_route101"}),
              .handler = qtWithTwoArguments<runTrackHeaderQuickCheck>,
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
-             .fixtureFiles = route101Files,
-             .windowing = Windowing::WindowSystem},
+             .fixtureFiles = route101Files},
             {.name = "trackheader-model",
              // track header model: reorder insertion slots with undo restore, reconciliation
              // unchanged and structural paths
@@ -688,26 +687,24 @@ const std::vector<CheckDefinition> &catalog()
             },
             {
                 .name = "selectionkey-window",
-                // window-tier key routing: Copy/Solo fire once from band focus, chrome grip keys
-                // stay local, resize safety
+                // offscreen window-tier key routing: Copy/Solo fire once from band focus, chrome
+                // grip keys stay local, resize safety; real Qt shortcut dispatch
                 .argv = strings(
                     {"--selectionkey-window", "{scratch}", "mus_route101", "mus_petalburg"}),
                 .handler = qtWithThreeArguments<runSelectionKeyWindowCheck>,
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = twoSongRichFiles,
-                .windowing = Windowing::WindowSystem,
             },
             {
                 .name = "selectionkey-local-input",
-                // local input ownership: rename, search, numeric, velocity, and pitch-bend editors
-                // consume their keys
+                // offscreen local input ownership: rename, search, numeric, velocity, and
+                // pitch-bend editors consume their keys
                 .argv = strings({"--selectionkey-local-input", "{scratch}", "mus_route101"}),
                 .handler = qtWithTwoArguments<runSelectionKeyLocalInputCheck>,
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = route101RichFiles,
-                .windowing = Windowing::WindowSystem,
             },
             {.name = "playhead-guides",
              // playhead guides: device-pixel rect, guide resize/scroll/ownership, follow-scroll
@@ -719,15 +716,26 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureFiles = route101Files},
             {
                 .name = "rendering-playhead",
-                // playhead rendering: Quick polarity and edges, position-only updates without
-                // rebuilds, native layer lifecycle
+                // offscreen playhead rendering: Quick polarity and edges, automation hover
+                // decoration, position-only updates without rebuilds, plot geometry and lifecycle
                 .argv = strings({"--check-rendering-playhead", "{scratch}", "mus_route101"}),
                 .handler = qtWithThreeArguments<runRenderingPlayheadCheck>,
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = route101Files,
+            },
+#ifdef __APPLE__
+            {
+                .name = "rendering-playhead-native",
+                // Cocoa playhead layer lifecycle: native ownership, clipping, and surface teardown
+                .argv = strings({"--check-rendering-playhead-native", "{scratch}", "mus_route101"}),
+                .handler = qtWithTwoArguments<runRenderingPlayheadNativeCheck>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101Files,
                 .windowing = Windowing::WindowSystem,
             },
+#endif
             {
                 .name = "host-integration",
                 // host integration: two-tab ready sessions, velocity edit commit/undo, automation

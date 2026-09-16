@@ -16,11 +16,6 @@ double nonNegative(double value)
     return std::max(0.0, value);
 }
 
-uint8_t clampVelocity(int velocity)
-{
-    return uint8_t(std::clamp(velocity, kMinimumVelocity, kMaximumVelocity));
-}
-
 } // namespace
 
 std::string_view VelocityAxisLabel::labelText() const

@@ -17,11 +17,26 @@ class RenderingPlayheadTest final : public QObject
     void automationHoverDecor();
     void positionOnlyDoesNotRebuild();
     void plotGeometryAndLifecycle();
-#ifdef __APPLE__
-    void nativeLayerLifecycle();
-#endif
 
   private:
     QString m_projectRoot;
     QString m_songLabel;
 };
+
+#ifdef __APPLE__
+class RenderingPlayheadNativeTest final : public QObject
+{
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(RenderingPlayheadNativeTest)
+
+  public:
+    RenderingPlayheadNativeTest(QString projectRoot, QString songLabel);
+
+  private slots:
+    void nativeLayerLifecycle();
+
+  private:
+    QString m_projectRoot;
+    QString m_songLabel;
+};
+#endif

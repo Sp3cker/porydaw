@@ -17,11 +17,6 @@ constexpr std::array<VelocityLevelRange, 5> kWaveRanges = {
     VelocityLevelRange{81, 112}, VelocityLevelRange{113, 127},
 };
 
-uint8_t clampVelocity(int velocity)
-{
-    return uint8_t(std::clamp(velocity, kMinimumVelocity, kMaximumVelocity));
-}
-
 bool isDirectSoundVoiceType(uint8_t voiceType)
 {
     return voiceType == VOICE_DIRECTSOUND || voiceType == VOICE_DIRECTSOUND_NO_RESAMPLE ||
@@ -77,6 +72,11 @@ const ToneData *resolveVoice(const ToneData *tone, std::optional<uint8_t> key,
 }
 
 } // namespace
+
+uint8_t clampVelocity(int velocity)
+{
+    return uint8_t(std::clamp(velocity, kMinimumVelocity, kMaximumVelocity));
+}
 
 VelocityMap VelocityMap::resolve(const ToneData *tone, std::optional<uint8_t> key)
 {

@@ -4,7 +4,6 @@
 #include "checks/voicepickerdriver.h"
 
 #include <QCoreApplication>
-#include <QGuiApplication>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QScopeGuard>
@@ -52,10 +51,8 @@ std::vector<int> modelTracks(const songview::TrackHeaderModel &model)
 
 void commitRename(TrackHeadersFixture &fixture, int track)
 {
-    QVERIFY2(fixture.view().focusTimelineBand(songview::TimelineBand::TrackHeaders,
-                                              Qt::OtherFocusReason),
-             "the Quick track-header band could not take focus");
-    QTRY_VERIFY(fixture.input().hasActiveFocus());
+    QString focusError;
+    QVERIFY2(fixture.focusInput(focusError), qPrintable(focusError));
 
     const std::optional<int> row = fixture.rowForTrack(track);
     QVERIFY2(row, "the rename target has no header row");
@@ -249,19 +246,10 @@ void TrackHeadersTest::reorderCommitsAndRebuildsHeader()
 void TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader()
 {
     TrackHeadersFixture &fx = fixture();
-    // The voice picker search field keys off live window activation: stage
-    // real header-band focus (focusTimelineBand plus focusWindow/focusObject
-    // convergence), not just item-local focus.
-    QVERIFY2(
-        fx.view().focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason),
-        "the Quick track-header band could not take focus");
-    QCoreApplication::sendPostedEvents();
-    QCoreApplication::processEvents();
-    QCoreApplication::sendPostedEvents();
-    QCoreApplication::processEvents();
-    QTRY_VERIFY2(QGuiApplication::focusWindow() == &fx.window() &&
-                     QGuiApplication::focusObject() == &fx.input() && fx.input().hasActiveFocus(),
-                 "the Quick track-header band could not take focus");
+    QString error;
+    // Activate the offscreen Quick window and focus its header input without
+    // depending on desktop foreground ownership.
+    QVERIFY2(fx.focusInput(error), qPrintable(error));
     songview::TrackHeaderModel &headers = fx.headers();
     headers.setScrollY(headers.maximumScrollY());
     const std::optional<int> row = fx.addTrackRow();
@@ -378,7 +366,6 @@ void TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader()
     QCOMPARE(fx.tab().document().revision(), revision + 1);
     QCOMPARE(fx.tab().document().undoStack()->index(), undoIndex + 1);
     QTRY_COMPARE(fx.view().currentProgram(fx.view().selectionModel().primaryTrack()), 127);
-    QString error;
     QVERIFY2(fx.rebuild(error), qPrintable(error));
     const std::vector<int> after = modelTracks(headers);
     const std::optional<int> afterRow = fx.addTrackRow();

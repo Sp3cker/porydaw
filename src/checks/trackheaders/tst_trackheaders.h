@@ -40,7 +40,7 @@ class TrackHeadersFixture final
     TrackHeadersFixture &operator=(const TrackHeadersFixture &) = delete;
 
     bool create(QString &error);
-    bool acquireInputFocus(QString &error);
+    bool focusInput(QString &error);
     void close();
 
     SongTab &tab() noexcept;

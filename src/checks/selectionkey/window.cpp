@@ -77,7 +77,37 @@ bool SelectionWindowTierTest::notePairUnchanged(SongDocument &document, const No
 
 bool SelectionWindowTierTest::focusAutomationBand(SongView &view) const
 {
-    return view.focusTimelineBand(songview::TimelineBand::Automation, Qt::MouseFocusReason);
+    songview::TimelineQuickView *const quick = selectionkey::quickCanvas(view);
+    MainWindow *const shell = m_session.window.get();
+    if (!quick || !shell)
+        return false;
+
+    // WindowShortcut arbitration consults QApplication's active QWidget.
+    // On the registered offscreen platform activateWindow() updates Qt's
+    // toolkit-local state without requiring desktop foreground ownership.
+    const QPointer<MainWindow> liveShell(shell);
+    shell->activateWindow();
+    if (checks::async_wait::waitUntil(
+            [liveShell] { return liveShell; },
+            [liveShell] { return QApplication::activeWindow() == liveShell.data(); }, 5000,
+            10) != checks::async_wait::Result::Ready) {
+        return false;
+    }
+    if (!view.focusTimelineBand(songview::TimelineBand::Automation, Qt::MouseFocusReason))
+        return false;
+
+    const QPointer<songview::TimelineQuickView> liveQuick(quick);
+
+    return checks::async_wait::waitUntil(
+               [liveQuick, liveShell] { return liveQuick && liveShell; },
+               [liveQuick, liveShell] {
+                   QQuickWindow *const window = liveQuick->quickWindow();
+                   QQuickItem *const activeItem = window ? window->activeFocusItem() : nullptr;
+                   return QApplication::activeWindow() == liveShell.data() &&
+                          liveQuick->focusedBand() == songview::TimelineBand::Automation &&
+                          activeItem && activeItem->hasActiveFocus();
+               },
+               5000, 10) == checks::async_wait::Result::Ready;
 }
 
 void SelectionWindowTierTest::trackPointer(const QPoint &windowPos)
@@ -109,21 +139,16 @@ void SelectionWindowTierTest::init()
     QVERIFY2(selectionkey::observeWindowActions(*m_session.window, m_counts),
              "the production shell is missing the window actions");
 
-    // Qt::WindowShortcut actions match only while the shell is QApplication's
-    // active window (the qWidgetShortcutContextMatcher prerequisite
-    // RoutingRuntimeRepair measured), and a gated background process can have
-    // macOS deny activation outright. Activate before any band focus —
-    // activating after focusing a Quick band clears the scene's
-    // activeFocusItem — then observe the prerequisite honestly so a denial is
-    // its own attributed failure instead of shortcut assertions masquerading
-    // as routing regressions.
-    m_session.window->activateWindow();
-    QVERIFY2(
-        checks::async_wait::waitUntil(
-            [] { return true; },
-            [this] { return QApplication::activeWindow() == m_session.window.get(); }, 2000,
-            10) == checks::async_wait::Result::Ready,
-        "the production shell never became the active window, so window shortcuts cannot fire");
+    // Qt::WindowShortcut matching consults QApplication's active QWidget.
+    // The registered offscreen platform resolves activateWindow() entirely
+    // within Qt; wait for that toolkit state before routing shortcut input.
+    const QPointer<MainWindow> liveShell(m_session.window.get());
+    liveShell->activateWindow();
+    QVERIFY2(checks::async_wait::waitUntil(
+                 [liveShell] { return liveShell; },
+                 [liveShell] { return QApplication::activeWindow() == liveShell.data(); }, 5000,
+                 10) == checks::async_wait::Result::Ready,
+             "the production shell did not become Qt's active window for shortcut matching");
 
     songview::TimelineQuickView *const quick = selectionkey::quickCanvas(view());
     QVERIFY2(quick, "the tab Quick surface is missing");

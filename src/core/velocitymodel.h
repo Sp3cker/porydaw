@@ -45,3 +45,5 @@ class VelocityMap
 
     VelocityVoice m_voice = VelocityVoice::Unresolved;
 };
+
+uint8_t clampVelocity(int velocity);

@@ -3,7 +3,6 @@
 #include <QtTest>
 
 #include <QCoreApplication>
-#include <QGuiApplication>
 #include <QQuickItem>
 #include <QQuickWindow>
 
@@ -189,17 +188,24 @@ bool TrackHeadersFixture::create(QString &error)
     return true;
 }
 
-bool TrackHeadersFixture::acquireInputFocus(QString &error)
+bool TrackHeadersFixture::focusInput(QString &error)
 {
-    if (!view().focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason)) {
-        error = QStringLiteral("TrackHeaders Quick input could not request focus");
+    if (!m_window || !m_input || m_input->window() != m_window) {
+        error = QStringLiteral("TrackHeaders Quick input is not attached to its window");
         return false;
     }
+
+    // TimelineInputItem::requestFocus pairs Quick item focus with toolkit-local
+    // QWindow activation. On the offscreen platform this establishes the real
+    // window-dispatched key and popup-focus routes without desktop foreground
+    // ownership.
+    m_input->requestFocus(Qt::OtherFocusReason);
+    checks::support::pumpQuick();
     if (!QTest::qWaitFor([this] {
-            return m_window && m_input && QGuiApplication::focusWindow() == m_window &&
-                   QGuiApplication::focusObject() == m_input && m_input->hasActiveFocus();
+            return m_window && m_input && m_window->isActive() &&
+                   m_window->activeFocusItem() == m_input && m_input->hasActiveFocus();
         })) {
-        error = QStringLiteral("TrackHeaders Quick input did not receive native window focus");
+        error = QStringLiteral("TrackHeaders Quick input did not receive toolkit-local focus");
         return false;
     }
     return true;

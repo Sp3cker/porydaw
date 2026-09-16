@@ -26,35 +26,26 @@ namespace {
 constexpr int kTrack = 0;
 constexpr int kGestureTick = 2400;
 
-// Bounded wait for both layers of Quick focus to finish: the requested band
-// must own the scene's active item, and Qt's native focus object/window must
-// have caught up with that internal selection. focusBand() can satisfy only
-// the first condition while QWindowContainer's FocusIn is still pending.
-bool automationBandHasCompletedNativeFocus(songview::TimelineQuickView *quick)
+// The fixture has already established QApplication's active shell for
+// WindowShortcut arbitration. Gesture delivery additionally requires the
+// requested band to remain the Quick scene's active-focus owner; this is
+// toolkit state and does not depend on a native foreground window.
+bool automationBandHasActiveFocus(songview::TimelineQuickView *quick)
 {
     QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
     QQuickItem *const activeItem = window ? window->activeFocusItem() : nullptr;
     return quick && quick->focusedBand() == songview::TimelineBand::Automation && activeItem &&
-           QGuiApplication::focusObject() == activeItem && QGuiApplication::focusWindow() == window;
-}
-
-bool automationBandOwnsFocus(songview::TimelineQuickView *quick)
-{
-    return checks::async_wait::waitUntil(
-               [] { return true; },
-               [quick] { return automationBandHasCompletedNativeFocus(quick); }, 5000,
-               10) == checks::async_wait::Result::Ready;
+           activeItem->hasActiveFocus();
 }
 
 QString quickFocusState(songview::TimelineQuickView *quick)
 {
     QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
     QQuickItem *const activeItem = window ? window->activeFocusItem() : nullptr;
-    return QStringLiteral("active=%1 QWidget=%2 QGui-object=%3 QGui-window=%4 quick-window=%5")
+    return QStringLiteral("active=%1 QWidget=%2 QApplication-window=%3 quick-window=%4")
         .arg(selectionkey::focusObjectIdentity(activeItem))
         .arg(selectionkey::focusObjectIdentity(QApplication::focusWidget()))
-        .arg(selectionkey::focusObjectIdentity(QGuiApplication::focusObject()))
-        .arg(selectionkey::focusObjectIdentity(QGuiApplication::focusWindow()))
+        .arg(selectionkey::focusObjectIdentity(QApplication::activeWindow()))
         .arg(selectionkey::focusObjectIdentity(window));
 }
 
@@ -149,10 +140,8 @@ void SelectionWindowTierTest::resizeDragProtectsSelectedNotes()
                                       2000, 10) == checks::async_wait::Result::Ready;
     QVERIFY2(gripReady,
              "the automation resize grip input is missing or never mapped into the window");
-    QVERIFY2(focusAutomationBand(view), "could not focus the automation band");
-    QVERIFY2(automationBandOwnsFocus(quick),
-             qPrintable(QStringLiteral("the automation band never completed native focus "
-                                       "before the gesture (%1)")
+    QVERIFY2(focusAutomationBand(view),
+             qPrintable(QStringLiteral("could not give the automation band toolkit focus (%1)")
                             .arg(quickFocusState(quick))));
     view.selectionModel().setNoteSelection(selected);
     const std::optional<DocNote> secondBeforeGrip = selectionkey::noteById(document, pair->ids[1]);
@@ -181,8 +170,8 @@ void SelectionWindowTierTest::resizeDragProtectsSelectedNotes()
     QVERIFY2(pressAndDrag(quickWindow, *grip, gripPoint, dragPoint),
              "could not deliver the press and drag onto the automation resize grip");
     trackPointer(dragPoint.toPoint());
-    QVERIFY2(automationBandHasCompletedNativeFocus(quick),
-             qPrintable(QStringLiteral("the grip press disturbed completed native Quick focus (%1)")
+    QVERIFY2(automationBandHasActiveFocus(quick),
+             qPrintable(QStringLiteral("the grip press disturbed active Quick focus (%1)")
                             .arg(quickFocusState(quick))));
     const bool resizeGestureActive = quick->gestureActive();
     const bool resizeLive =

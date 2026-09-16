@@ -13,11 +13,6 @@
 using velocityarea::detail::contains;
 
 namespace {
-
-uint8_t exactVelocity(int proposed)
-{
-    return uint8_t(std::clamp(proposed, 1, 127));
-}
 // One absolute pointer position -> one velocity for `note`. The unlock
 // modifier and the axis context decide between exact MIDI, canonicalized
 // continuous, and categorical PSG level resolution.
@@ -25,7 +20,7 @@ uint8_t resolvedVelocity(const VelocityAxis &axis, const VelocityMap &noteMap, b
                          double y)
 {
     if (detentUnlock)
-        return exactVelocity(axis.yToVelocity(y));
+        return clampVelocity(axis.yToVelocity(y));
     if (axis.mode() == VelocityAxis::Mode::Continuous)
         return noteMap.canonicalize(axis.yToVelocity(y));
     return noteMap.representative(axis.yToLevel(y));
@@ -169,7 +164,7 @@ void VelocityArea::updateRelativePreview(const QPointF &position)
         for (const FrozenNote &note : m_frozen) {
             const int proposal = int(note.velocity) + delta;
             const uint8_t velocity =
-                m_detentUnlock ? exactVelocity(proposal) : note.map.canonicalize(proposal);
+                m_detentUnlock ? clampVelocity(proposal) : note.map.canonicalize(proposal);
             updates.push_back({note.noteId, int(velocity)});
         }
     } else {
@@ -228,7 +223,7 @@ bool VelocityArea::pointerPress(const songview::TimelinePointerInput &input)
         if (input.button != Qt::LeftButton || !inRuler(position))
             return false;
         const bool detentUnlock = detentsUnlocked(input.modifiers, false);
-        const int velocity = detentUnlock ? exactVelocity(m_axis.yToVelocity(position.y()))
+        const int velocity = detentUnlock ? clampVelocity(m_axis.yToVelocity(position.y()))
                                           : rulerVelocityAt(position);
         if (velocity >= 1) {
             const std::vector<DocNote> notes = selectedNotes();

@@ -1,8 +1,8 @@
 #pragma once
 
 // Qt Test suite for selection keyboard routing at the full production window
-// tier. Each case runs on its own shown MainWindow shell (fresh per-case
-// lifecycle in init/cleanup) and preserves the selectionkeywindow plan
+// tier. Each case runs on its own shown offscreen MainWindow shell, with a
+// fresh per-case lifecycle in init/cleanup, and preserves the plan
 // contracts:
 //
 // * window Copy with timeline/automation focus executes exactly once, Copy
@@ -20,9 +20,10 @@
 //   plus reopening a song tab leave routing bound to the live view, with no
 //   stale callback mutating a background document (plan 10).
 //
-// Asserted keys are QTest deliveries into the real shown Quick window; pointer
-// gestures send Qt mouse events through the same window. Programmatic staging
-// (band focus, selection, document inserts, drawer geometry) is setup, never a
+// Asserted keys are QTest deliveries into the real shown offscreen Quick
+// window; pointer gestures send Qt mouse events through the same window.
+// Programmatic staging (band focus, selection, document inserts, drawer
+// geometry) is setup, never a
 // substitute for delivered input. Reserved note ticks per song: 960 (Copy),
 // 2400 (chrome and gesture), 3840 (reselected first tab), track-1 960
 // (primary-track change) — distinct so scenario rollbacks can never collide.

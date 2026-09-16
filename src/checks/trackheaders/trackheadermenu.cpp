@@ -11,7 +11,6 @@
 #include "checks/voicepickerdriver.h"
 
 #include <QCoreApplication>
-#include <QGuiApplication>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
@@ -115,11 +114,9 @@ void TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite()
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     const quick_popup::PromptGuard guard(fx.view());
+    QString focusError;
     // Establish the pre-menu focus the session restores on dismissal.
-    QVERIFY2(
-        fx.view().focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason),
-        "the Quick track-header band could not take focus");
-    QTRY_VERIFY(fx.input().hasActiveFocus());
+    QVERIFY2(fx.focusInput(focusError), qPrintable(focusError));
 
     const HeaderMenu opened = openHeaderMenu(fx, *row);
     QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
@@ -191,11 +188,9 @@ void TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses()
     const uint64_t revision = doc.revision();
     const int undo = doc.undoStack()->index();
     const quick_popup::PromptGuard guard(fx.view());
+    QString focusError;
     // Establish the pre-menu focus the session restores on dismissal.
-    QVERIFY2(
-        fx.view().focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason),
-        "the Quick track-header band could not take focus");
-    QTRY_VERIFY(fx.input().hasActiveFocus());
+    QVERIFY2(fx.focusInput(focusError), qPrintable(focusError));
 
     const HeaderMenu opened = openHeaderMenu(fx, *row);
     QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
@@ -238,11 +233,9 @@ void TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor()
     const uint64_t revision = doc.revision();
     const int undo = doc.undoStack()->index();
     const quick_popup::PromptGuard guard(fx.view());
+    QString focusError;
     // Establish the pre-menu focus the session restores on dismissal.
-    QVERIFY2(
-        fx.view().focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason),
-        "the Quick track-header band could not take focus");
-    QTRY_VERIFY(fx.input().hasActiveFocus());
+    QVERIFY2(fx.focusInput(focusError), qPrintable(focusError));
 
     const HeaderMenu opened = openHeaderMenu(fx, *row);
     QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
@@ -365,19 +358,10 @@ void TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite()
     const std::optional<int> voiceRow = fx.rowForTrack(fx.voiceTrack());
     QVERIFY(voiceRow);
     const quick_popup::PromptGuard guard(fx.view());
-    // Establish the pre-menu focus the session restores on dismissal, with
-    // live window activation (focusTimelineBand plus focusWindow/focusObject
-    // convergence), not just item-local focus.
-    QVERIFY2(
-        fx.view().focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason),
-        "the Quick track-header band could not take focus");
-    QCoreApplication::sendPostedEvents();
-    QCoreApplication::processEvents();
-    QCoreApplication::sendPostedEvents();
-    QCoreApplication::processEvents();
-    QTRY_VERIFY2(QGuiApplication::focusWindow() == &fx.window() &&
-                     QGuiApplication::focusObject() == &fx.input() && fx.input().hasActiveFocus(),
-                 "the Quick track-header band could not take focus");
+    QString focusError;
+    // The popup session restores the toolkit-local Quick focus item after
+    // cancellation; no desktop foreground window is part of this contract.
+    QVERIFY2(fx.focusInput(focusError), qPrintable(focusError));
 
     // A structural remap after the open cancels the menu synchronously
     // through the model's transient-state teardown: no focus theft into the
@@ -527,11 +511,9 @@ void TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough()
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     const quick_popup::PromptGuard guard(fx.view());
+    QString focusError;
     // Establish the pre-menu focus the session restores on dismissal.
-    QVERIFY2(
-        fx.view().focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason),
-        "the Quick track-header band could not take focus");
-    QTRY_VERIFY(fx.input().hasActiveFocus());
+    QVERIFY2(fx.focusInput(focusError), qPrintable(focusError));
 
     const HeaderMenu opened = openHeaderMenu(fx, *row);
     QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));

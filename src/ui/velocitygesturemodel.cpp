@@ -1,5 +1,7 @@
 #include "ui/velocitygesturemodel.h"
 
+#include "core/velocitymodel.h"
+
 #include <algorithm>
 #include <utility>
 
@@ -51,7 +53,7 @@ bool VelocityGestureModel::update(const std::vector<NoteVelocity> &updates)
     bool changed = false;
     for (const NoteVelocity &update : updates) {
         const auto targetIndex = this->targetIndex(update.noteId);
-        const int velocity = std::clamp(update.velocity, 1, 127);
+        const int velocity = clampVelocity(update.velocity);
         changed |= m_session->targets[targetIndex].velocity != velocity;
         m_session->targets[targetIndex].velocity = velocity;
     }

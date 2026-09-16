@@ -3,6 +3,7 @@
 #include "ui/songview/pianoroll.h"
 
 #include "core/mid2agbtables.h"
+#include "core/velocitymodel.h"
 #include "porydaw_scale.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/pianorollquick.h"
@@ -71,7 +72,7 @@ void PianoRoll::updateVelocityDrag(const TimelinePointerInput &input)
     const int dv = m_pressPos.toPoint().y() - input.position.toPoint().y(); // up = louder
     if (dv != m_dVel) {
         m_dVel = dv;
-        const int vel = std::clamp(int(m_velAnchor.velocity) + m_dVel, 1, 127);
+        const int vel = clampVelocity(int(m_velAnchor.velocity) + m_dVel);
         const int eff = mid2agbEffectiveVelocity(vel);
         if (eff != m_velAudEff) { // audition only on effective-velocity step
             m_velAudEff = eff;
@@ -283,7 +284,7 @@ void PianoRoll::commitVelocityDrag(SongView::VelocityCommitResult result, int de
     const bool velocityCommitted = result == SongView::VelocityCommitResult::Committed ||
                                    result == SongView::VelocityCommitResult::Unchanged;
     if (delta != 0 && velocityCommitted)
-        m_lastVelocity = uint8_t(std::clamp(int(anchorVelocity) + delta, 1, 127));
+        m_lastVelocity = clampVelocity(int(anchorVelocity) + delta);
 }
 
 void PianoRoll::commitDrag()

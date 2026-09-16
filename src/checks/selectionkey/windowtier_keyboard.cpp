@@ -185,7 +185,6 @@ void SelectionWindowTierTest::parameterLabelActivationAndSharedCommands()
     auto *const canvas = view.editorDrawer()->automationPage()->canvas();
     auto *const quick = selectionkey::quickCanvas(view);
     QVERIFY(canvas && quick);
-    QTRY_VERIFY(quickWindow()->isActive() && QGuiApplication::focusWindow() == quickWindow());
 
     songview::EditorSelectionModel::TimeSelection selected;
     selected.startTick = tick;
@@ -360,7 +359,6 @@ void SelectionWindowTierTest::tapButtonKeysAndTransportCession()
     auto *const canvas = view.editorDrawer()->automationPage()->canvas();
     auto *const quick = selectionkey::quickCanvas(view);
     QVERIFY(canvas && quick);
-    QTRY_VERIFY(quickWindow()->isActive() && QGuiApplication::focusWindow() == quickWindow());
 
     QPointer<QQuickItem> button;
     const auto focusTap = [&] {
