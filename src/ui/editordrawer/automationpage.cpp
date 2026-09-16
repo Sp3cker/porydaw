@@ -1,17 +1,16 @@
 #include "ui/editordrawer/automationpage.h"
 
 #include <algorithm>
-#include <cmath>
 
 #include <QAction>
 #include <QWindow>
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationcanvas.h"
-#include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinput.h"
+#include "ui/songview/timecamera.h"
 namespace {
 
 bool sameLiveState(const DrawerPageLiveState &a, const DrawerPageLiveState &b)
@@ -23,10 +22,6 @@ bool sameLiveState(const DrawerPageLiveState &a, const DrawerPageLiveState &b)
 }
 
 } // namespace
-AutomationPage::Geometry AutomationPage::Geometry::resolve()
-{
-    return {layout::fontPx(8.0 / 3.0)};
-}
 
 QSize AutomationPage::automationViewportSize() const noexcept
 {
@@ -43,9 +38,9 @@ void AutomationPage::synchronizeAutomationViewport(QSize viewportSize)
 
 AutomationPage::AutomationPage(SongView &owner, QObject *parent)
     : QObject(parent)
-    , m_geometry(Geometry::resolve())
     , m_owner(owner)
     , m_grid(owner.grid())
+    , m_camera(owner.camera())
 {
     m_canvas = new AutomationCanvas(*this);
 }
@@ -173,26 +168,22 @@ Tick AutomationPage::nextGridTick(Tick tick, bool fineMode, Tick limit) const no
 
 double AutomationPage::tickAtContentX(double x) const noexcept
 {
-    const auto *songTimeline = timeline();
-    const double ticksPerBeat =
-        songTimeline ? double(std::max(1u, songTimeline->ticksPerBeat)) : 1.0;
-    return (x + m_liveState.horizontalScroll) * ticksPerBeat / pxPerBeat();
+    return m_camera.tickAtContentX(x);
 }
 
 qreal AutomationPage::displayX(double tick, qreal origin, qreal dpr) const noexcept
 {
-    const auto *songTimeline = timeline();
-    const double ticksPerBeat =
-        songTimeline ? double(std::max(1u, songTimeline->ticksPerBeat)) : 1.0;
-    const qreal x =
-        origin + qreal(tick * pxPerBeat() / ticksPerBeat - m_liveState.horizontalScroll);
-    return std::round(x * dpr) / dpr;
+    return m_camera.displayX(tick, origin, dpr);
 }
 
 double AutomationPage::pxPerBeat() const noexcept
 {
-    return std::max(1.0, m_liveState.timeZoom > 1.0 ? m_liveState.timeZoom
-                                                    : m_geometry.defaultPixelsPerBeat);
+    return m_camera.pxPerBeat();
+}
+
+double AutomationPage::scrollX() const noexcept
+{
+    return m_camera.scrollX();
 }
 
 void AutomationPage::requestHorizontalScroll(double value) const

@@ -41,9 +41,9 @@ bool AutomationCanvas::wheel(const songview::TimelineWheelInput &input)
         return false;
 
     if (input.modifiers & Qt::ShiftModifier) {
-        m_page.requestHorizontalScroll(m_page.liveState().horizontalScroll - vertical);
+        m_page.requestHorizontalScroll(m_page.scrollX() - vertical);
     } else if (delta.x() != 0 && delta.y() == 0) {
-        m_page.requestHorizontalScroll(m_page.liveState().horizontalScroll - delta.x());
+        m_page.requestHorizontalScroll(m_page.scrollX() - delta.x());
     } else if (vertical != 0) {
         m_page.requestTimeZoom(input, input.position.x());
     }
@@ -170,7 +170,7 @@ bool AutomationCanvas::pointerPress(const songview::TimelinePointerInput &input)
     if (input.button == Qt::MiddleButton) {
         m_pan.active = true;
         m_pan.pos = position;
-        m_pan.startHScroll = m_page.liveState().horizontalScroll;
+        m_pan.startHScroll = m_page.scrollX();
         if (host)
             host->setCursor(QCursor(Qt::ClosedHandCursor));
         if (m_inputHost)

@@ -21,6 +21,7 @@ class QWindow;
 
 namespace songview {
 class Grid;
+class TimeCamera;
 struct TimelineWheelInput;
 } // namespace songview
 
@@ -59,13 +60,9 @@ class AutomationPage final : public QObject
     // Read-only access to the timeline mapping queries (tickAtContentX,
     // displayX, visible grid cells).
     friend class AutomationProjection;
-    struct Geometry {
-        int defaultPixelsPerBeat = 0;
-
-        static Geometry resolve();
-    };
 
     bool ready() const noexcept;
+    // The snapshot serves row/model decisions and refresh routing; x-mapping reads the camera live.
     const DrawerPageLiveState &liveState() const noexcept { return m_liveState; }
     const MidiTimeline *timeline() const noexcept;
     SongDocument &document() const noexcept;
@@ -76,6 +73,7 @@ class AutomationPage final : public QObject
     double tickAtContentX(double x) const noexcept;
     qreal displayX(double tick, qreal origin, qreal dpr) const noexcept;
     double pxPerBeat() const noexcept;
+    double scrollX() const noexcept;
     void requestHorizontalScroll(double value) const;
     void requestTimeZoom(const songview::TimelineWheelInput &input, qreal anchorContentX) const;
     void setFollowScrollPaused(bool paused) const;
@@ -92,9 +90,9 @@ class AutomationPage final : public QObject
 
     QMetaObject::Connection m_inputWindowDeactivationConnection;
 
-    Geometry m_geometry;
     SongView &m_owner;
     const songview::Grid &m_grid;
+    const songview::TimeCamera &m_camera;
     DrawerPageLiveState m_liveState;
     EditorViewState m_viewState;
     AutomationCanvas *m_canvas = nullptr;
