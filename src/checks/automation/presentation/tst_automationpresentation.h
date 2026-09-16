@@ -48,7 +48,7 @@ class AutomationPresentationTest final : public QObject
     void drawerGrowthMovesValueAxisKeepsGridAlignment();
     void selectedInactiveParametersKeepScopeIndicators();
     void ghostLabelNamesCurveAndFollowsHover();
-    void laneEventCountsRenderAtLeftEdge();
+    void laneEventCountsFollowActiveGutterRow();
     void laneScaleLabelsRenderAtLeftEdge();
 
     void pencilCursorUsesPlotGutterBoundary();

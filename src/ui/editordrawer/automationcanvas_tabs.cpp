@@ -255,13 +255,13 @@ QVariantMap AutomationCanvas::parameterAppearance() const
     return appearance;
 }
 
-QVariantList AutomationCanvas::parameterPips() const
+QVariantList AutomationCanvas::parameterEventCounts() const
 {
-    QVariantList pips;
-    pips.reserve(parameterCount());
+    QVariantList counts;
+    counts.reserve(parameterCount());
     for (int index = 0; index < parameterCount(); ++index) {
         const std::optional<EditorAutomationRowId> row = parameterRow(index);
-        pips.append(row && parameterHasEvents(*row));
+        counts.append(QVariant::fromValue(qulonglong(row ? parameterEventCount(*row) : 0)));
     }
-    return pips;
+    return counts;
 }

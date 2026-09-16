@@ -40,7 +40,6 @@ enum class TimelineQuickTextKeyKind : quint8 {
     AutomationGhostHover,
     AutomationHover,
     AutomationTransient,
-    AutomationLaneCount,
     AutomationScaleLabel,
 };
 

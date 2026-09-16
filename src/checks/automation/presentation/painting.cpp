@@ -168,15 +168,16 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
                  "the rendered fitted Text exceeds its label height");
     }
 
-    const QVariantList pips = canvas->parameterPips();
-    QCOMPARE(pips.size(), labels.size());
+    const QVariantList counts = canvas->parameterEventCounts();
+    QCOMPARE(counts.size(), labels.size());
     for (int index = 0; index < labels.size(); ++index) {
         const auto row = canvas->parameterRow(index);
         QVERIFY(row.has_value());
-        const bool written = row->kind == EditorAutomationRowKind::Tempo
-                                 ? !m_document->tempoPoints().empty()
-                                 : !m_document->lanePoints(row->track, row->controller).empty();
-        QCOMPARE(pips.at(index).toBool(), written);
+        const qulonglong written =
+            row->kind == EditorAutomationRowKind::Tempo
+                ? qulonglong(m_document->tempoPoints().size())
+                : qulonglong(m_document->lanePoints(row->track, row->controller).size());
+        QCOMPARE(counts.at(index).toULongLong(), written);
     }
 
     // The selector keeps the catalog's grouping visible: each related pair
@@ -611,45 +612,46 @@ void AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover()
              .has_value());
 }
 
-void AutomationPresentationTest::laneEventCountsRenderAtLeftEdge()
+void AutomationPresentationTest::laneEventCountsFollowActiveGutterRow()
 {
-    AutomationPage *const automationPage = page();
-    songview::TimelineQuickScene *const scene = quickScene();
-    AutomationCanvas *const canvas = automationPage ? automationPage->canvas() : nullptr;
-    QVERIFY(automationPage);
-    QVERIFY(scene);
-    QVERIFY(canvas);
-    const QRectF viewport(QPointF{}, QSizeF(automationPage->automationViewportSize()));
-
+    AutomationCanvas *const canvas = page()->canvas();
     const EditorAutomationRowId pan{EditorAutomationRowKind::ControlChange, kTrack,
                                     CoreTimeDefaults::kCcPan};
     QVERIFY(activateParameter(pan));
     refreshDocumentPresentation();
-    const QAbstractItemModel *const laneTextModel = scene->automationLaneTextModel();
-    QVERIFY(laneTextModel);
-    std::optional<QRectF> count;
+    QQuickItem *const tab = parameterLabelItem(canvas->activeParameter());
+    QVERIFY(tab);
+    QQuickItem *const content = tab->property("contentItem").value<QQuickItem *>();
+    QVERIFY(content);
+    QQuickItem *const count = content->findChild<QQuickItem *>(
+        QStringLiteral("automationParameterEventCount"), Qt::FindDirectChildrenOnly);
+    QQuickItem *const name = content->findChild<QQuickItem *>(
+        QStringLiteral("automationParameterTabText"), Qt::FindDirectChildrenOnly);
+    QVERIFY(count);
+    QVERIFY(name);
+    QTRY_VERIFY(count->isVisible() && count->opacity() > 0.0);
+    QTRY_VERIFY(count->property("text").toString().startsWith(QString::number(2)));
     QTRY_VERIFY(
-        (count = findTextRecord(laneTextModel, QStringLiteral("2 Events"), viewport)).has_value());
-    QVERIFY2(count->left() < viewport.left() + viewport.width() / 4.0,
-             "the lane event count no longer hugs the viewport's left edge");
-    QVERIFY2(count->bottom() > viewport.top() + viewport.height() * 3.0 / 4.0,
-             "the lane event count no longer hugs the viewport's bottom edge");
+        content->boundingRect().contains(count->mapRectToItem(content, count->boundingRect())));
+    QVERIFY(name->x() + name->width() <= count->x());
+    const qreal height = tab->height();
+    const qreal nameX = name->x();
+
+    m_document->writeLanePoints(kTrack, CoreTimeDefaults::kCcPan, 0, CoreTimeDefaults::kNoTick,
+                                {{48, 32}});
+    refreshDocumentPresentation();
+    QTRY_VERIFY(count->property("text").toString().startsWith(QString::number(1)));
     const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, kTrack,
                                        CoreTimeDefaults::kCcVolume};
-    const int volumeIndex = checks::support::automationParameterIndex(*canvas, volume);
-    QVERIFY(volumeIndex >= 0);
-    canvas->activateParameter(volumeIndex);
+    QVERIFY(activateParameter(volume));
+    QTRY_COMPARE(count->opacity(), 0.0);
+    QCOMPARE(tab->height(), height);
+    QCOMPARE(name->x(), nameX);
+    QVERIFY(activateParameter(pan));
+    QTRY_VERIFY(count->opacity() > 0.0);
+    m_document->writeLanePoints(kTrack, CoreTimeDefaults::kCcPan, 0, CoreTimeDefaults::kNoTick, {});
     refreshDocumentPresentation();
-    QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("1 Event"), viewport).has_value());
-
-    const EditorAutomationRowId modulation{EditorAutomationRowKind::ControlChange, kTrack,
-                                           CoreTimeDefaults::kCcModulation};
-    const int modulationIndex = checks::support::automationParameterIndex(*canvas, modulation);
-    QVERIFY(modulationIndex >= 0);
-    canvas->activateParameter(modulationIndex);
-    refreshDocumentPresentation();
-    QTRY_VERIFY(!findTextRecord(laneTextModel, QStringLiteral("0 Events"), viewport).has_value());
-    QTRY_VERIFY(!findTextRecord(laneTextModel, QStringLiteral("2 Events"), viewport).has_value());
+    QTRY_COMPARE(count->opacity(), 0.0);
 }
 
 void AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge()
@@ -698,11 +700,6 @@ void AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge()
     QVERIFY(!maxLabel->intersects(*minLabel));
     QVERIFY(!maxLabel->intersects(*neutralLabel));
     QVERIFY(!minLabel->intersects(*neutralLabel));
-    std::optional<QRectF> count;
-    QTRY_VERIFY(
-        (count = findTextRecord(laneTextModel, QStringLiteral("2 Events"), viewport)).has_value());
-    QVERIFY2(!count->intersects(*minLabel),
-             "the lane event count collides with the minimum scale label");
 
     // Ticks: short left-edge horizontals in the grid layer at each label's
     // curve-true Y, emitted only on content passes so hover passes never
@@ -716,10 +713,8 @@ void AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge()
     const qreal maxY = nodelane::valueY(panLane, body, geometry, 127);
     const qreal neutralY = nodelane::valueY(panLane, body, geometry, 64);
     const qreal minY = nodelane::valueY(panLane, body, geometry, 0);
-    // The count yields to the scale labels, so the minimum label stays at
-    // its curve-true height even with the count present.
     QVERIFY2(std::abs(minLabel->center().y() - minY) <= minLabel->height() / 2.0,
-             "the minimum scale label moved off its curve height when the event count appeared");
+             "the minimum scale label moved off its curve height");
     const qreal tickLength = 3.0 * layout::space(layout::Space::Half);
     const auto edgeTickYs = [&scene, &viewport, tickLength] {
         std::vector<qreal> ys;

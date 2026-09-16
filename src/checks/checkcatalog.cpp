@@ -597,8 +597,8 @@ const std::vector<CheckDefinition> &catalog()
             },
             {
                 .name = "automation-presentation",
-                // automation presentation: gutter labels, plot switching, left-edge lane event
-                // counts, tempo ghost painting, scope indicators, pencil cursors, right-edge
+                // automation presentation: gutter labels and active-row event counts, plot
+                // switching, tempo ghost painting, scope indicators, pencil cursors,
                 // lane scale labels (min/max/neutral), scale ticks, ghost label dodge
                 .argv = strings({"--automation-presentation"}),
                 .handler = qtOnly<runAutomationPresentationCheck>,

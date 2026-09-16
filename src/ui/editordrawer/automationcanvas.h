@@ -174,14 +174,14 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
                    parameterPresentationChanged FINAL)
     Q_PROPERTY(
         bool parametersEnabled READ parametersEnabled NOTIFY parameterPresentationChanged FINAL)
-    Q_PROPERTY(
-        QVariantList parameterPips READ parameterPips NOTIFY parameterPresentationChanged FINAL)
+    Q_PROPERTY(QVariantList parameterEventCounts READ parameterEventCounts NOTIFY
+                   parameterPresentationChanged FINAL)
     QStringList parameterLabels() const;
     int activeParameter() const noexcept;
     QList<int> selectedParameters() const;
     QList<int> ghostParameters() const;
     QVariantMap parameterAppearance() const;
-    QVariantList parameterPips() const;
+    QVariantList parameterEventCounts() const;
     bool parametersEnabled() const noexcept;
     std::optional<EditorAutomationRowId> parameterRow(int index) const;
     Q_INVOKABLE void activateParameter(int index);

@@ -21,7 +21,7 @@ Item {
     // instead of one per-tab copy.
     readonly property var selectedParams: root.canvas.selectedParameters
 
-    readonly property var pips: root.canvas.parameterPips
+    readonly property var eventCounts: root.canvas.parameterEventCounts
 
     readonly property var ghostParams: root.canvas.ghostParameters
 
@@ -64,7 +64,8 @@ Item {
                         root.ghostParams.includes(tab.index)
                     readonly property bool inclusionMarked:
                         tab.selectionIncluded && !tab.checked
-                    readonly property bool hasEvents: root.pips[tab.index] === true
+                    readonly property var eventCount: root.eventCounts[tab.index] ?? 0
+                    readonly property bool hasEvents: tab.eventCount > 0
 
                     objectName: "automationParameterTab" + index
                     text: modelData
@@ -306,6 +307,19 @@ Item {
                             Accessible.ignored: true
                         }
 
+                        Text {
+                            objectName: "automationParameterEventCount"
+                            // Reserve the same space while switching parameters.
+                            opacity: tab.checked && tab.hasEvents ? 0.7 : 0.0
+                            text: tab.eventCount === 1 ? qsTr("1 event")
+                                                      : qsTr("%1 events").arg(tab.eventCount)
+                            font: root.appearance.minimumFont
+                            color: tabLabel.color
+                            horizontalAlignment: Text.AlignRight
+                            verticalAlignment: Text.AlignVCenter
+                            Accessible.ignored: true
+                        }
+
                         // Live tap-tempo draft readout: appears only once
                         // the canvas accumulator is listening, and stays
                         // out of the accessible tree — the Tap button
@@ -376,6 +390,8 @@ Item {
                            ? qsTr("; included in shared selection")
                            : qsTr("; not in shared selection"))
                         + (tab.ghostShown ? qsTr("; shown as ghost nodes") : "")
+                        + (tab.checked && tab.hasEvents
+                           ? qsTr("; %1 events").arg(tab.eventCount) : "")
                 }
             }
         }
