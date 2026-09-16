@@ -571,7 +571,7 @@ bool VoiceChangeArea::wheel(const songview::TimelineWheelInput &input)
                             input.angleDelta.x() != 0 || input.pixelDelta.x() != 0;
     if (horizontal) {
         const int delta = input.pixelDelta.x() != 0 ? input.pixelDelta.x() : input.angleDelta.y();
-        m_owner.setEditorHorizontalScroll(m_live.horizontalScroll - double(delta));
+        m_owner.setEditorHorizontalScroll(m_camera.scrollX() - double(delta));
         return true;
     }
     m_owner.zoomTimelineAtWheel(input, input.position.x());
