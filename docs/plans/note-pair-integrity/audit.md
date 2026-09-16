@@ -20,6 +20,10 @@ The requested `plan` agent proposed a boolean representability gate in `resolveN
 
 Delete Time was independently added during the audit: `TimeEditor::remove` leaves earlier-starting notes intact while shifting later notes left. The stored policy uses existing edited-note-wins trimming, with the `[0,100)` / `[110,120)` example and undo/redo proof. A new imported-MIDI cleanup feature remains out of scope.
 
+## User correction: grouped extension
+
+The user replaced rejection for grouped right-edge extension: the earlier selected note must stop at the next selected note's start. The spec and both briefs now require independent end caps, actual capped event emission, and realized-duration-aware undo merging. The concrete +20 example accepts `[0,20)` and `[20,50)`. Later notes continue extending; shortening acts on the visible result without hidden extension debt. Other collision operations are unchanged. This supersedes the initial blanket-rejection policy, not the underlying first-following-release interpretation.
+
 ## Structural inventory
 
 Executed:
@@ -32,8 +36,8 @@ Tool output: two listed tasks and two briefs; no missing/extra briefs or link-na
 
 ## Residual risks and controller load
 
-- **Policy tradeoff:** conflicting selected-note batches reject wholesale instead of auto-trimming/dropping selected notes. Keyboard no-op and drag snap-back are intentional. The spec is explicit; no hidden tie-break winner.
-- **Undo risk:** merged replanning must preserve both state and command records on failure. Focused regression plus full editcheck is required; compilation alone does not prove this.
+- **Policy:** grouped right-edge extension caps earlier selected notes at the next selected start. Other unrepresentable selected-note collisions still reject; no equal-start winner or note deletion is invented.
+- **Undo risk:** capped durations invalidate the old original-plus-delta merge predicate. Realized output matching and candidate-versus-applied geometry equivalence are required; incompatible merges preserve separate valid commands. Focused regression plus full editcheck is required.
 - **Native proof:** shown rollcheck and new-song smoke require desktop access. Tests that skip the native path do not satisfy the brief.
 - **Scope:** no guarantee is made for arbitrary malformed raw/imported streams, and this plan does not delete existing orphan releases.
 - **Controller load:** two serial packages, disjoint writes, no parallel-ready pair or shared-file locks, no large fan-in. One final accepted-work checkpoint suffices. Task 1's larger write set is the necessary closure of one private contract and its tests; Task 2 consumes only public mutation outcomes.

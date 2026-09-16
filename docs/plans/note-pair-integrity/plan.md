@@ -4,7 +4,7 @@ Status: audited implementation plan; not implemented. Findings are source-derive
 
 ## Task list
 
-1. [Preserve note-pair integrity in document edits](task-1-brief.md) — SDD-track / sdd-implementer: optional planning results, atomic admission, undo merging and ripple semantics require judgment across one document-editing surface.
+1. [Preserve note-pair integrity in document edits](task-1-brief.md) — SDD-track / sdd-implementer: independently capped grouped extension, optional planning results, realized-output undo merging and ripple semantics require judgment across one document-editing surface.
 2. [Keep rejected edits truthful in the UI](task-2-brief.md) — SDD-track / qt-cpp-reviewer: consumes Task 1's rejection contract; selection/cursor effects and shown Quick interactions require UI verification.
 
 Both belong to the single workstream **ordinary-edit note integrity**. Task 1 owns document mutation and its regressions. Task 2 owns consumer-side acceptance handling and user documentation. Execute 1 → 2; the dependency is the mutation/rejection contract, not implementation detail.
