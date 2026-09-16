@@ -183,6 +183,11 @@ void VoiceChangeArea::refreshLiveState(const DrawerPageLiveState &liveState)
     presentPlayhead(liveState.playback.playheadTick);
 }
 
+void VoiceChangeArea::refresh(DrawerScopes)
+{
+    refreshLiveState(m_owner.drawerPageLiveState());
+}
+
 void VoiceChangeArea::cancelInteraction()
 {
     const bool wasPanning = m_interaction == Interaction::Pan;
@@ -551,7 +556,7 @@ bool VoiceChangeArea::pointerRelease(const songview::TimelinePointerInput &input
             document.revision() == completed.revision) {
             document.moveLanePoints({{completed.engineTrack, DOC_CC_VOICE, completed.point,
                                       completed.previewTick, completed.point.value}});
-            m_owner.refreshAllDrawerPages();
+            m_owner.refreshAllDrawerPages(DrawerScope::Content);
         }
         return true;
     }

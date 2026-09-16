@@ -201,7 +201,7 @@ void SongView::setFollowPlayhead(bool on)
         return;
     m_followPlayhead = on;
     m_events->setFollowPlayhead(on);
-    refreshDrawerPages();
+    refreshDrawerPages(DrawerScope::Content);
 }
 void SongView::setLaneDisplayRange(int track, uint8_t cc, int maxValue)
 {
@@ -229,7 +229,7 @@ void SongView::applyEditorViewStateToWidgets(bool drawerChanged)
 {
     if (drawerChanged && m_editorDrawer)
         m_editorDrawer->setViewState(m_editorViewState);
-    refreshAllDrawerPages();
+    refreshAllDrawerPages(DrawerScope::Content);
     // Drawer/view-state replacement can affect any roll domain.
     refreshTimelineViews(PianoRollQuickDirty::All);
 }

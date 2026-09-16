@@ -254,7 +254,7 @@ void SongView::refreshViewportLayout()
 {
     layoutViewport();
     updateScrollbars();
-    refreshDrawerPages();
+    refreshDrawerPages(DrawerScope::HorizontalScroll | DrawerScope::Zoom);
     syncTimelineIndicators();
     synchronizeTimelineBandLayout();
     if (m_quickView)
@@ -806,7 +806,7 @@ void SongView::onDocumentChanged()
     m_editorDrawer->automationPage()->documentChanged();
     m_editorDrawer->velocityArea()->documentChanged();
     m_editorDrawer->voiceChangeArea()->documentChanged();
-    refreshDrawerPages();
+    refreshDrawerPages(DrawerScope::Document);
 }
 
 bool SongView::eventListVisible() const
@@ -904,7 +904,7 @@ void SongView::applyViewState(const ViewState &state)
     if (gridChanged) {
         m_ruler->syncGridControls();
         refreshTimelineViews(PianoRollQuickDirty::GridTime);
-        refreshDrawerPages();
+        refreshDrawerPages(DrawerScope::Content);
     }
     if (state.selectedTrack >= 0 && state.selectedTrack < 16 &&
         m_timeline->tracks[state.selectedTrack].used)
@@ -987,7 +987,7 @@ void SongView::coordinateSelectionChange(
     }
     if (noteSelectionChanged) {
         requestRoll(PianoRollQuickDirty::NoteBordersAndSelection);
-        refreshVelocityPage();
+        refreshVelocityPage(DrawerScope::Selection);
     }
     if (timeSelectionChanged) {
         if (!timelineViewsRefreshed) {
@@ -996,10 +996,10 @@ void SongView::coordinateSelectionChange(
                         PianoRollQuickDirty::Overlay);
             syncTimelineIndicators();
         }
-        refreshAutomationPage();
+        refreshAutomationPage(DrawerScope::Selection);
     }
     if (primaryChanged || trackScopeChanged)
-        refreshDrawerPages();
+        refreshDrawerPages(DrawerScope::Content);
 }
 
 // Application-scoped appearance path (theme apply, palette or application
@@ -1085,9 +1085,9 @@ void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
     if (voiceContextVisible && (contextBefore.voice != contextAfter.voice ||
                                 contextBefore.voiceSlot != contextAfter.voiceSlot)) {
         if (velocityPageVisible)
-            refreshVelocityPage();
+            refreshVelocityPage(DrawerScope::Content);
         if (voiceChangesPageVisible)
-            refreshVoiceChangePage();
+            refreshVoiceChangePage(DrawerScope::Content);
     }
     if (velocityPageVisible)
         m_editorDrawer->velocityArea()->presentPlayhead(m_playheadTick);
@@ -1172,7 +1172,7 @@ void SongView::setEditCursorTick(Tick tick)
     m_editCursorTick = tick;
     m_headers->syncVoices();
     syncTimelineIndicators();
-    refreshDrawerPages();
+    refreshDrawerPages(DrawerScope::Content);
 }
 
 void SongView::commitEditCursor(Tick tick)

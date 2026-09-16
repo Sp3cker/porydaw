@@ -6,6 +6,8 @@
 #include <vector>
 
 #include <QColor>
+#include <QFlags>
+
 #include <QPointF>
 
 #include "core/noteid.h"
@@ -52,3 +54,17 @@ struct DrawerPageTimeSelectionMenuRequest {
     // the shared popup layer is parented to the canvas window).
     QPointF scenePosition;
 };
+
+// Why a drawer page is being refreshed. Call sites on the SongView fan-out
+// name the narrowest set their change justifies; handlers evaluate arms in
+// fixed priority order (structural > geometry > transient).
+enum class DrawerScope : quint8 {
+    Document = 1u << 0,
+    Content = 1u << 1,
+    Selection = 1u << 2,
+    HorizontalScroll = 1u << 3,
+    Zoom = 1u << 4,
+    Playhead = 1u << 5,
+};
+Q_DECLARE_FLAGS(DrawerScopes, DrawerScope)
+Q_DECLARE_OPERATORS_FOR_FLAGS(DrawerScopes)

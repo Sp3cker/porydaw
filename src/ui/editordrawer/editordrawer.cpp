@@ -215,7 +215,7 @@ void EditorDrawer::publishViewState(bool geometryAlreadyArranged)
     finishViewStateTransition(diff, drawerOwnedFocus);
     // Drawer view-state publish can affect any roll domain.
     m_owner.refreshTimelineViews(songview::PianoRollQuickDirty::All);
-    m_owner.refreshDrawerPages();
+    m_owner.refreshDrawerPages(DrawerScope::Content);
 }
 
 void EditorDrawer::cancelVisiblePageInteraction()

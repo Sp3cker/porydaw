@@ -163,48 +163,47 @@ void SongView::notifyDrawerSongChanged()
     m_editorDrawer->automationPage()->songChanged();
     m_editorDrawer->velocityArea()->songChanged();
     m_editorDrawer->voiceChangeArea()->songChanged();
-    refreshDrawerPages();
+    refreshDrawerPages(DrawerScope::Content);
 }
 
-void SongView::refreshDrawerPages()
+void SongView::refreshDrawerPages(DrawerScopes scopes)
 {
     if (!m_editorDrawer)
         return;
     if (m_editorDrawer->pageVisible(EditorDrawerPage::Automations))
-        refreshAutomationPage();
+        refreshAutomationPage(scopes);
     if (m_editorDrawer->pageVisible(EditorDrawerPage::Velocity))
-        refreshVelocityPage();
+        refreshVelocityPage(scopes);
     if (m_editorDrawer->pageVisible(EditorDrawerPage::VoiceChanges))
-        refreshVoiceChangePage();
+        refreshVoiceChangePage(scopes);
 }
 
-void SongView::refreshAutomationPage()
+void SongView::refreshAutomationPage(DrawerScopes scopes)
 {
     if (!m_editorDrawer)
         return;
-    m_editorDrawer->automationPage()->refreshLiveState(drawerPageLiveState());
+    m_editorDrawer->automationPage()->refresh(scopes);
 }
 
-void SongView::refreshVelocityPage()
+void SongView::refreshVelocityPage(DrawerScopes scopes)
 {
     if (!m_editorDrawer)
         return;
-    m_editorDrawer->velocityArea()->refreshLiveState(drawerPageLiveState());
+    m_editorDrawer->velocityArea()->refresh(scopes);
 }
 
-void SongView::refreshVoiceChangePage()
+void SongView::refreshVoiceChangePage(DrawerScopes scopes)
 {
     if (!m_editorDrawer)
         return;
-    m_editorDrawer->voiceChangeArea()->refreshLiveState(drawerPageLiveState());
+    m_editorDrawer->voiceChangeArea()->refresh(scopes);
 }
 
-void SongView::refreshAllDrawerPages()
+void SongView::refreshAllDrawerPages(DrawerScopes scopes)
 {
     if (!m_editorDrawer)
         return;
-    const DrawerPageLiveState liveState = drawerPageLiveState();
-    m_editorDrawer->automationPage()->refreshLiveState(liveState);
-    m_editorDrawer->velocityArea()->refreshLiveState(liveState);
-    m_editorDrawer->voiceChangeArea()->refreshLiveState(liveState);
+    m_editorDrawer->automationPage()->refresh(scopes);
+    m_editorDrawer->velocityArea()->refresh(scopes);
+    m_editorDrawer->voiceChangeArea()->refresh(scopes);
 }

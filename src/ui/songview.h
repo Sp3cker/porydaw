@@ -270,6 +270,7 @@ class SongView : public QObject
     void setProjectionLocked(bool locked);
     void flushProjectionIfDirty();
     double playheadTick() const { return m_playheadTick; }
+    bool playing() const noexcept { return m_playing; }
 
     // Edit cursor (Reaper-style): placed by clicking the ruler or empty
     // roll space (with a document, dragging or double-clicking there draws
@@ -664,7 +665,7 @@ class SongView : public QObject
     // Refresh every concrete drawer page from the current live SongView state.
     // Public refresh seam for the standalone drawer pages after they commit a
     // document edit. This endpoint does not proactively cancel interaction.
-    void refreshAllDrawerPages();
+    void refreshAllDrawerPages(DrawerScopes scopes);
 
   signals:
     void muteMaskChanged(uint32_t mask);
@@ -802,10 +803,10 @@ class SongView : public QObject
     void onDocumentChanged();
     void notifyDrawerSongChanged();
     void notifyVelocityGestureChanged();
-    void refreshDrawerPages();
-    void refreshAutomationPage();
-    void refreshVelocityPage();
-    void refreshVoiceChangePage();
+    void refreshDrawerPages(DrawerScopes scopes);
+    void refreshAutomationPage(DrawerScopes scopes);
+    void refreshVelocityPage(DrawerScopes scopes);
+    void refreshVoiceChangePage(DrawerScopes scopes);
     void applyEditorViewStateToWidgets(bool drawerChanged);
     double minHScroll() const { return m_camera.minHScroll(); }
     double maxHScroll() const { return m_camera.maxHScroll(); }

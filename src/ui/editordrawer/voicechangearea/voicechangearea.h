@@ -66,6 +66,9 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     void setPopupSession(songview::QuickPopupSession *session);
     void songChanged();
     void refreshLiveState(const DrawerPageLiveState &liveState);
+    // Scope-aware entry point; the snapshot forwarder is scaffolding until
+    // the per-scope handler lands and ignores `scopes` for now.
+    void refresh(DrawerScopes scopes);
     void cancelInteraction() override;
     void documentChanged();
     void tracksRemapped(const TrackRemap &remap);

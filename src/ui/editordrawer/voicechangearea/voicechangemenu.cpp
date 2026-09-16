@@ -260,7 +260,7 @@ void VoiceChangeArea::openPickerForTarget(const PendingVoiceMenu &target)
             // down before the refresh runs.
             if (!self)
                 return;
-            m_owner.refreshAllDrawerPages();
+            m_owner.refreshAllDrawerPages(DrawerScope::Content);
         },
         songview::TimelineBand::VoiceChanges);
 }
@@ -314,7 +314,7 @@ void VoiceChangeArea::handleMenuAction(int actionId)
         // down before the refresh runs.
         if (!self)
             return;
-        m_owner.refreshAllDrawerPages();
+        m_owner.refreshAllDrawerPages(DrawerScope::Content);
         return;
     }
     }

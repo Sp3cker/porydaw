@@ -43,6 +43,9 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
 
     void songChanged();
     void refreshLiveState(const DrawerPageLiveState &liveState);
+    // Scope-aware entry point; the snapshot forwarder is scaffolding until
+    // the per-scope handler lands and ignores `scopes` for now.
+    void refresh(DrawerScopes scopes);
     void cancelInteraction() override;
     void documentChanged();
     void tracksRemapped(const TrackRemap &remap);

@@ -49,6 +49,9 @@ class AutomationPage final : public QObject
 
     void songChanged();
     void refreshLiveState(const DrawerPageLiveState &liveState);
+    // Scope-aware entry point; the snapshot forwarder is scaffolding until
+    // the per-scope handler lands and ignores `scopes` for now.
+    void refresh(DrawerScopes scopes);
     void cancelInteraction();
     void documentChanged();
     void setLaneRange(const EditorAutomationRowId &row, uint8_t range);

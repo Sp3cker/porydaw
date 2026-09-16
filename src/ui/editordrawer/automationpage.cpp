@@ -137,6 +137,11 @@ void AutomationPage::refreshLiveState(const DrawerPageLiveState &liveState)
     }
 }
 
+void AutomationPage::refresh(DrawerScopes)
+{
+    refreshLiveState(m_owner.drawerPageLiveState());
+}
+
 void AutomationPage::cancelInteraction()
 {
     if (m_canvas)
@@ -249,7 +254,7 @@ void AutomationPage::showTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequ
 
 void AutomationPage::requestRefresh() const
 {
-    m_owner.refreshAllDrawerPages();
+    m_owner.refreshAllDrawerPages(DrawerScope::Content);
 }
 void AutomationPage::requestQuickUpdate(songview::AutomationRefreshSet dirty) const
 {

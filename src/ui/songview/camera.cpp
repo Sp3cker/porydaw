@@ -39,7 +39,7 @@ void SongView::setEditorTimeZoom(double pxPerBeatValue)
         m_editorDrawer->cancelVisiblePageInteraction();
     updateScrollbars();
     refreshTimelineViews(cHorizontalCameraDirty);
-    refreshDrawerPages();
+    refreshDrawerPages(DrawerScope::Zoom);
 }
 void SongView::zoomTimelineAtWheel(const songview::TimelineWheelInput &wheel, qreal anchorContentX)
 {
@@ -57,7 +57,7 @@ void SongView::zoomAroundContentX(double factor, qreal anchorContentX)
         m_editorDrawer->cancelVisiblePageInteraction();
     updateScrollbars();
     refreshTimelineViews(cHorizontalCameraDirty);
-    refreshDrawerPages();
+    refreshDrawerPages(DrawerScope::Zoom);
 }
 void SongView::zoomKeyHeight(const songview::TimelineWheelInput &input)
 {
@@ -77,7 +77,7 @@ void SongView::zoomKeyHeight(const songview::TimelineWheelInput &input)
     // The camera scale changed even when the cursor anchor keeps its scroll
     // offset numerically unchanged.
     m_roll->requestQuickUpdate(cVerticalCameraDirty);
-    refreshDrawerPages();
+    refreshDrawerPages(DrawerScope::Zoom);
 }
 void SongView::scrollByPx(double dx)
 {
@@ -97,7 +97,7 @@ void SongView::syncHorizontalCamera(bool cameraChanged)
                                      AutomationRefresh::Transient | AutomationRefresh::Hover);
         m_roll->requestQuickUpdate(cHorizontalCameraDirty);
         syncTimelineIndicators();
-        refreshDrawerPages();
+        refreshDrawerPages(DrawerScope::HorizontalScroll);
     }
 }
 void SongView::setHScroll(double px)

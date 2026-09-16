@@ -153,6 +153,11 @@ void VelocityArea::refreshLiveState(const DrawerPageLiveState &liveState)
     presentPlayhead(liveState.playback.playheadTick);
 }
 
+void VelocityArea::refresh(DrawerScopes)
+{
+    refreshLiveState(m_owner.drawerPageLiveState());
+}
+
 void VelocityArea::cancelInteraction()
 {
     if (m_interaction == Interaction::None)

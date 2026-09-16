@@ -382,7 +382,7 @@ void SongView::gridStateChanged(bool changed)
                                TimelineQuickDirty::Velocity | TimelineQuickDirty::VoiceChanges);
     requestAutomationQuickUpdate(songview::AutomationRefresh::All);
     m_roll->requestQuickUpdate(PianoRollQuickDirty::GridTime);
-    refreshDrawerPages();
+    refreshDrawerPages(DrawerScope::Content);
 }
 
 void SongView::setGridFeel(songview::GridFeel feel)
