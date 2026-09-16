@@ -184,9 +184,9 @@ void VelocityArea::rebuildQuickNotes(songview::TimelineQuickScene &scene, const 
     using namespace songview;
     constexpr TimelineQuickLayer stemsLayer = TimelineQuickLayer::VelocityStems;
     constexpr TimelineQuickLayer nodesLayer = TimelineQuickLayer::VelocityNodes;
-    const QColor trackColor = m_live.trackColor.isValid()
-                                  ? m_live.trackColor
-                                  : m_inputHost->palette().highlight().color();
+    const QColor primaryColor = SongView::trackColor(m_owner.selectionModel().primaryTrack());
+    const QColor trackColor =
+        primaryColor.isValid() ? primaryColor : m_inputHost->palette().highlight().color();
     const QColor stemColor = mixTowardOklab(trackColor, Qt::black, 1.0 / 3.0);
     const QColor selectedColor = m_inputHost->palette().highlight().color();
     const std::vector<NoteId> &selection = m_owner.selectionModel().noteSelection();

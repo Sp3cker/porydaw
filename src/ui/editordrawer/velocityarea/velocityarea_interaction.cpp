@@ -53,6 +53,7 @@ void VelocityArea::beginFrozenGesture(const std::vector<DocNote> &notes, Interac
     m_pressPosition = position;
     m_previousPosition = position;
     m_interaction = interaction;
+    m_interactionRevision = m_owner.document().revision();
     m_relativeActivated = false;
     pauseFollowScroll(true);
 }
@@ -70,6 +71,7 @@ void VelocityArea::beginVelocityPaint(const QPointF &position, bool detentUnlock
     m_pressPosition = position;
     m_previousPosition = position;
     m_interaction = Interaction::Paint;
+    m_interactionRevision = m_owner.document().revision();
     m_relativeActivated = false;
     pauseFollowScroll(true);
 }
@@ -243,6 +245,7 @@ bool VelocityArea::pointerPress(const songview::TimelinePointerInput &input)
         return false;
     if (input.button == Qt::MiddleButton) {
         m_interaction = Interaction::Pan;
+        m_interactionRevision = m_owner.document().revision();
         pauseFollowScroll(true);
         return true;
     }
@@ -250,6 +253,7 @@ bool VelocityArea::pointerPress(const songview::TimelinePointerInput &input)
         if (const std::optional<DocNote> hit = notesAt(position, true))
             m_pressedNote = hit->noteId;
         m_interaction = Interaction::PendingBand;
+        m_interactionRevision = m_owner.document().revision();
         m_controlPress = input.modifiers.testFlag(Qt::ControlModifier);
         if (m_pressedNote && !m_controlPress && !contains(m_selectionBeforePress, *m_pressedNote))
             setSelection({*m_pressedNote});
@@ -314,10 +318,8 @@ bool VelocityArea::pointerMove(const songview::TimelinePointerInput &input)
     if (m_interaction == Interaction::Band)
         updateBandPreview(position);
     else if (m_interaction == Interaction::Pan) {
-        const auto requestedScroll =
-            m_live.horizontalScroll - (position.x() - m_previousPosition.x());
+        const auto requestedScroll = m_camera.scrollX() - (position.x() - m_previousPosition.x());
         m_owner.setEditorHorizontalScroll(requestedScroll);
-        m_live.horizontalScroll = m_camera.scrollX();
         requestQuickUpdate();
     }
     m_previousPosition = position;

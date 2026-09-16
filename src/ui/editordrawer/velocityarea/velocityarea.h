@@ -42,9 +42,6 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
     explicit VelocityArea(SongView &owner, QObject *parent = nullptr);
 
     void songChanged();
-    void refreshLiveState(const DrawerPageLiveState &liveState);
-    // Scope-aware entry point; the snapshot forwarder is scaffolding until
-    // the per-scope handler lands and ignores `scopes` for now.
     void refresh(DrawerScopes scopes);
     void cancelInteraction() override;
     void documentChanged();
@@ -168,7 +165,6 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
     SongView &m_owner;
     const songview::TimeCamera &m_camera;
     songview::TimelineInputHost *m_inputHost = nullptr;
-    DrawerPageLiveState m_live;
     VelocityAxis m_axis{VelocityMap::resolve(nullptr, std::nullopt), {}};
     Geometry m_geometry;
     QFont m_captionFont;
@@ -188,7 +184,13 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
     QPointF m_previousPosition;
     QRectF m_bandRect;
     Interaction m_interaction = Interaction::None;
+    // Document revision captured when a gesture/pan begins; the preserve arms
+    // compare it against the live revision instead of a stored snapshot.
+    uint64_t m_interactionRevision = 0;
     bool m_relativeActivated = false;
     VelocityAreaDiagnostics m_diagnostics;
     std::optional<double> m_lastPresentedPlayheadTick;
+    // Last playing flag seen by presentPlayhead; the Playhead arm rebuilds when
+    // it differs from m_owner.playing().
+    std::optional<bool> m_lastPlaying;
 };

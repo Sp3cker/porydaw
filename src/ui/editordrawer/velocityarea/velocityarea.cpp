@@ -93,22 +93,39 @@ void VelocityArea::songChanged()
     cancelInteraction();
     m_hoveredNote.reset();
     m_lastPresentedPlayheadTick.reset();
-    m_live = {};
     if (!m_inputHost)
         m_axis = VelocityAxis(VelocityMap::resolve(nullptr, std::nullopt), {});
     rebuildVisualState();
 }
 
-void VelocityArea::refreshLiveState(const DrawerPageLiveState &liveState)
+void VelocityArea::refresh(DrawerScopes scopes)
 {
-    const bool scrollOnly = m_live.horizontalScroll != liveState.horizontalScroll &&
-                            m_live.documentRevision == liveState.documentRevision &&
-                            m_live.timeZoom == liveState.timeZoom &&
-                            m_live.editCursorTick == liveState.editCursorTick &&
-                            m_live.trackColor == liveState.trackColor &&
-                            m_live.playback.playheadTick == liveState.playback.playheadTick &&
-                            m_live.playback.playing == liveState.playback.playing;
-    if (scrollOnly) {
+    // Arms evaluate in fixed priority order: structural > geometry > transient.
+    if (scopes.testFlag(DrawerScope::Document)) {
+        const bool hadInteraction = m_interaction != Interaction::None;
+        cancelInteraction();
+        if (!hadInteraction)
+            rebuildVisualState();
+        presentPlayhead(m_owner.playheadTick());
+        return;
+    }
+    if (scopes.testFlag(DrawerScope::Content) || scopes.testFlag(DrawerScope::Selection) ||
+        scopes.testFlag(DrawerScope::Zoom)) {
+        if (m_interaction != Interaction::None &&
+            m_interactionRevision == m_owner.document().revision()) {
+            if (!m_lastPresentedPlayheadTick ||
+                *m_lastPresentedPlayheadTick != m_owner.playheadTick())
+                presentPlayhead(m_owner.playheadTick());
+            return;
+        }
+        const bool hadInteraction = m_interaction != Interaction::None;
+        cancelInteraction();
+        if (!hadInteraction)
+            rebuildVisualState();
+        presentPlayhead(m_owner.playheadTick());
+        return;
+    }
+    if (scopes.testFlag(DrawerScope::HorizontalScroll)) {
         // Match rebuildAxis's hover override before retaining its presentation.
         const VelocityMap context = [this] {
             if (m_hoveredNote) {
@@ -120,42 +137,28 @@ void VelocityArea::refreshLiveState(const DrawerPageLiveState &liveState)
             return currentContext();
         }();
         if (context == m_axis.map()) {
-            m_live = liveState;
-            presentPlayhead(liveState.playback.playheadTick);
+            presentPlayhead(m_owner.playheadTick());
             // The shared camera tail requests the moving geometry.
             return;
         }
-    }
-    if (m_interaction != Interaction::None &&
-        m_live.documentRevision == liveState.documentRevision) {
-        if (m_live.playback.playheadTick != liveState.playback.playheadTick)
-            presentPlayhead(liveState.playback.playheadTick);
-        return;
-    }
-    const bool presentationOnly = m_live.documentRevision == liveState.documentRevision &&
-                                  m_live.timeZoom == liveState.timeZoom &&
-                                  m_live.horizontalScroll == liveState.horizontalScroll &&
-                                  m_live.editCursorTick == liveState.editCursorTick &&
-                                  m_live.trackColor == liveState.trackColor &&
-                                  m_live.playback.playing == liveState.playback.playing &&
-                                  m_live.playback.playheadTick != liveState.playback.playheadTick;
-    m_live = liveState;
-    if (presentationOnly) {
-        if (currentContext() != m_axis.map())
+        const bool hadInteraction = m_interaction != Interaction::None;
+        cancelInteraction();
+        if (!hadInteraction)
             rebuildVisualState();
-        presentPlayhead(liveState.playback.playheadTick);
+        presentPlayhead(m_owner.playheadTick());
         return;
     }
-    const bool hadInteraction = m_interaction != Interaction::None;
-    cancelInteraction();
-    if (!hadInteraction)
-        rebuildVisualState();
-    presentPlayhead(liveState.playback.playheadTick);
-}
-
-void VelocityArea::refresh(DrawerScopes)
-{
-    refreshLiveState(m_owner.drawerPageLiveState());
+    if (scopes.testFlag(DrawerScope::Playhead)) {
+        // A playing-flag toggle changes what currentContext resolves, so it
+        // takes the rebuild arm; a plain tick move only presents the playhead.
+        if (m_lastPlaying && *m_lastPlaying != m_owner.playing()) {
+            const bool hadInteraction = m_interaction != Interaction::None;
+            cancelInteraction();
+            if (!hadInteraction)
+                rebuildVisualState();
+        }
+        presentPlayhead(m_owner.playheadTick());
+    }
 }
 
 void VelocityArea::cancelInteraction()
@@ -222,7 +225,7 @@ void VelocityArea::clearTrackHeaderSelection()
 
 void VelocityArea::presentPlayhead(double tick)
 {
-    m_live.playback.playheadTick = tick;
+    m_lastPlaying = m_owner.playing();
     m_diagnostics.presentedPlayheadTick = tick;
     if (m_lastPresentedPlayheadTick && *m_lastPresentedPlayheadTick == tick)
         return;
@@ -324,8 +327,8 @@ VelocityMap VelocityArea::currentContext() const
 {
     const std::vector<DocNote> notes = selectedNotes();
     if (notes.empty()) {
-        const Tick tick = m_live.playback.playing ? drawerContextTick(m_live.playback.playheadTick)
-                                                  : m_live.editCursorTick;
+        const Tick tick = m_owner.playing() ? drawerContextTick(m_owner.playheadTick())
+                                            : m_owner.editCursorTick();
         return VelocityMap::resolve(m_owner.voiceContext(tick).voice, std::nullopt);
     }
     const VelocityMap first = contextForNote(notes.front());

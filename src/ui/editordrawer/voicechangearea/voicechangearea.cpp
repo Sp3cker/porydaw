@@ -127,7 +127,6 @@ void VoiceChangeArea::hostAppearanceChanged()
 void VoiceChangeArea::songChanged()
 {
     cancelInteraction();
-    m_live = {};
     m_lastPresentedPlayheadTick.reset();
     m_changeCount = -1;
     m_secondary.clear();
@@ -137,7 +136,7 @@ void VoiceChangeArea::songChanged()
     rebuildVisualState();
 }
 
-void VoiceChangeArea::refreshLiveState(const DrawerPageLiveState &liveState)
+void VoiceChangeArea::refresh(DrawerScopes scopes)
 {
     // Recapture the primary track first: track transitions end in
     // refreshDrawerPages, and comparing against the captured track is what
@@ -145,47 +144,33 @@ void VoiceChangeArea::refreshLiveState(const DrawerPageLiveState &liveState)
     const int previousTrack = m_engineTrack;
     m_engineTrack = primaryTrack();
     const bool trackChanged = m_engineTrack != previousTrack;
-    const bool scrollOnly = !trackChanged &&
-                            m_live.horizontalScroll != liveState.horizontalScroll &&
-                            m_live.documentRevision == liveState.documentRevision &&
-                            m_live.timeZoom == liveState.timeZoom &&
-                            m_live.editCursorTick == liveState.editCursorTick &&
-                            m_live.trackColor == liveState.trackColor &&
-                            m_live.playback.playheadTick == liveState.playback.playheadTick &&
-                            m_live.playback.playing == liveState.playback.playing;
-    if (scrollOnly) {
-        m_live = liveState;
-        presentPlayhead(liveState.playback.playheadTick);
+    // Arms evaluate in fixed priority order: structural > geometry > transient.
+    if (scopes.testFlag(DrawerScope::Document) || trackChanged) {
+        cancelInteraction();
+        rebuildVisualState();
+        presentPlayhead(m_owner.playheadTick());
+        return;
+    }
+    if (scopes.testFlag(DrawerScope::Content) || scopes.testFlag(DrawerScope::Zoom)) {
+        if (m_interaction == Interaction::Pan &&
+            m_interactionRevision == m_owner.document().revision()) {
+            if (!m_lastPresentedPlayheadTick ||
+                *m_lastPresentedPlayheadTick != m_owner.playheadTick())
+                presentPlayhead(m_owner.playheadTick());
+            return;
+        }
+        cancelInteraction();
+        rebuildVisualState();
+        presentPlayhead(m_owner.playheadTick());
+        return;
+    }
+    if (scopes.testFlag(DrawerScope::HorizontalScroll)) {
+        presentPlayhead(m_owner.playheadTick());
         // The shared camera tail requests the moving geometry.
         return;
     }
-    if (!trackChanged && m_interaction == Interaction::Pan &&
-        m_live.documentRevision == liveState.documentRevision) {
-        if (m_live.playback.playheadTick != liveState.playback.playheadTick)
-            presentPlayhead(liveState.playback.playheadTick);
-        return;
-    }
-    const bool presentationOnly = !trackChanged &&
-                                  m_live.documentRevision == liveState.documentRevision &&
-                                  m_live.timeZoom == liveState.timeZoom &&
-                                  m_live.horizontalScroll == liveState.horizontalScroll &&
-                                  m_live.editCursorTick == liveState.editCursorTick &&
-                                  m_live.trackColor == liveState.trackColor &&
-                                  m_live.playback.playing == liveState.playback.playing &&
-                                  m_live.playback.playheadTick != liveState.playback.playheadTick;
-    m_live = liveState;
-    if (presentationOnly) {
-        presentPlayhead(liveState.playback.playheadTick);
-        return;
-    }
-    cancelInteraction();
-    rebuildVisualState();
-    presentPlayhead(liveState.playback.playheadTick);
-}
-
-void VoiceChangeArea::refresh(DrawerScopes)
-{
-    refreshLiveState(m_owner.drawerPageLiveState());
+    if (scopes.testFlag(DrawerScope::Playhead))
+        presentPlayhead(m_owner.playheadTick());
 }
 
 void VoiceChangeArea::cancelInteraction()
@@ -224,12 +209,10 @@ void VoiceChangeArea::presentPlayhead(double tick)
     // The playhead line itself is painted by SongView's shared Quick chrome; this
     // updates the right-aligned context readout only when the displayed program
     // context changes.
-    if (m_live.playback.playing && m_lastPresentedPlayheadTick &&
-        *m_lastPresentedPlayheadTick != tick &&
+    if (m_owner.playing() && m_lastPresentedPlayheadTick && *m_lastPresentedPlayheadTick != tick &&
         voiceSlotAt(CoreTimeDefaults::tickFromDouble(std::round(*m_lastPresentedPlayheadTick))) !=
             voiceSlotAt(CoreTimeDefaults::tickFromDouble(std::round(tick))))
         requestQuickUpdate();
-    m_live.playback.playheadTick = tick;
     m_lastPresentedPlayheadTick = tick;
 }
 
@@ -444,6 +427,7 @@ bool VoiceChangeArea::pointerPress(const songview::TimelinePointerInput &input)
     if (input.button == Qt::MiddleButton) {
         m_inputHost->requestFocus(Qt::MouseFocusReason);
         m_interaction = Interaction::Pan;
+        m_interactionRevision = m_owner.document().revision();
         clearHover();
         m_owner.setFollowScrollPaused(true);
         return true;
@@ -518,10 +502,8 @@ bool VoiceChangeArea::pointerMove(const songview::TimelinePointerInput &input)
         return true;
     }
     if (m_interaction == Interaction::Pan) {
-        const auto requestedScroll =
-            m_live.horizontalScroll - (position.x() - m_previousPosition.x());
+        const auto requestedScroll = m_camera.scrollX() - (position.x() - m_previousPosition.x());
         m_owner.setEditorHorizontalScroll(requestedScroll);
-        m_live.horizontalScroll = m_camera.scrollX();
         requestQuickUpdate();
     } else if (m_interaction == Interaction::None) {
         if (songview::TimelineInputHost *const host = input.host ? input.host : m_inputHost)

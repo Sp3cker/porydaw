@@ -65,9 +65,6 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     // voicechangemenu.cpp opens on it like every other band's menu.
     void setPopupSession(songview::QuickPopupSession *session);
     void songChanged();
-    void refreshLiveState(const DrawerPageLiveState &liveState);
-    // Scope-aware entry point; the snapshot forwarder is scaffolding until
-    // the per-scope handler lands and ignores `scopes` for now.
     void refresh(DrawerScopes scopes);
     void cancelInteraction() override;
     void documentChanged();
@@ -175,7 +172,6 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     const songview::TimeCamera &m_camera;
     const songview::Grid &m_grid;
     songview::TimelineInputHost *m_inputHost = nullptr;
-    DrawerPageLiveState m_live;
     Geometry m_geometry;
     int m_engineTrack = -1;
     std::vector<DocLanePoint> m_voicePoints;
@@ -184,6 +180,9 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     uint64_t m_voicePointsRevision = 0;
     int m_voicePointsTrack = -1;
     Interaction m_interaction = Interaction::None;
+    // Document revision captured at pan start; the preserve arm compares it
+    // against the live revision instead of a stored snapshot.
+    uint64_t m_interactionRevision = 0;
     std::optional<VoiceDragState> m_voiceDrag;
     std::vector<VoicePaintEntry> m_previewEntries;
     QPointF m_previousPosition;
