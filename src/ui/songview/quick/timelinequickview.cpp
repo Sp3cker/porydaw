@@ -121,7 +121,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
 
     setObjectName(QStringLiteral("timelineQuickCanvas"));
 
-    m_quickView = std::make_unique<QQuickView>();
+    m_quickView = createWindow();
     QSurfaceFormat surfaceFormat = m_quickView->format();
     surfaceFormat.setAlphaBufferSize(8);
     m_quickView->setFormat(surfaceFormat);

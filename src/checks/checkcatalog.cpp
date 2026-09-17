@@ -335,7 +335,7 @@ const std::vector<CheckDefinition> &catalog()
              .environment = {{QStringLiteral("QT_SCALE_FACTOR"), QStringLiteral("1.5")}}},
             {.name = "rollwindowingcheck",
              // quick roll windowing: header selection and voice picker, basis geometry chunks
-             // shrink/clear/reactivate
+             // shrink/clear/reactivate, pre-frame background, grid contrast preview/apply
              .argv = strings({"--rollwindowingcheck", "{scratch}", "mus_route101"}),
              .handler = qtWithTwoArguments<runRollWindowingCheck>,
              .scratchKind = ScratchKind::ExistingDirectory,

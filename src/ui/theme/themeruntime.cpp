@@ -25,7 +25,7 @@ namespace {
 // Qt has one application palette, so runtime theme state is intentionally
 // process-wide and captured before the first application-level override.
 std::optional<QPalette> capturedStartupPalette;
-QSet<QWidget *> gridLineRefreshTargets;
+QSet<QObject *> gridLineRefreshTargets;
 std::optional<Theme> currentTheme;
 
 // QPalette covers colors Qt paints natively; the component QSS fragments below
@@ -592,26 +592,26 @@ void initialize(QApplication &application)
         capturedStartupPalette = application.palette();
 }
 
-void registerGridLineRefreshTarget(QWidget &widget)
+void registerGridLineRefreshTarget(QObject &object)
 {
-    if (gridLineRefreshTargets.contains(&widget))
+    if (gridLineRefreshTargets.contains(&object))
         return;
-    gridLineRefreshTargets.insert(&widget);
+    gridLineRefreshTargets.insert(&object);
 
-    auto *const target = &widget;
-    QObject::connect(&widget, &QObject::destroyed,
+    auto *const target = &object;
+    QObject::connect(&object, &QObject::destroyed,
                      [target] { gridLineRefreshTargets.remove(target); });
 }
 
 void apply(QApplication &application, const Theme &theme)
 {
     initialize(application);
-    // Grid contrast affects only custom-painted timeline widgets. Reinstalling
+    // Grid contrast affects only custom-painted timeline surfaces. Reinstalling
     // the application palette and stylesheet here needlessly restyles native
     // tab bars while the slider is dragged.
     if (currentTheme && onlyGridLineColorChanged(*currentTheme, theme)) {
         currentTheme = theme;
-        QVector<QPointer<QWidget>> targets;
+        QVector<QPointer<QObject>> targets;
         targets.reserve(gridLineRefreshTargets.size());
         for (auto *target : gridLineRefreshTargets)
             targets.append(target);
@@ -620,8 +620,8 @@ void apply(QApplication &application, const Theme &theme)
                 continue;
             QEvent themeChange(QEvent::ThemeChange);
             QCoreApplication::sendEvent(target, &themeChange);
-            if (target)
-                target->update();
+            if (auto *widget = qobject_cast<QWidget *>(target.data()))
+                widget->update();
         }
         return;
     }

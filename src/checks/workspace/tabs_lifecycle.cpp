@@ -7,6 +7,8 @@
 #include <QComboBox>
 #include <QFile>
 #include <QMessageBox>
+#include <QPointer>
+#include <QQuickWindow>
 #include <QSettings>
 #include <QTabWidget>
 #include <QTimer>
@@ -21,6 +23,7 @@
 #include "mainwindow.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/workspaceui.h"
 
 namespace {
@@ -145,8 +148,21 @@ void WorkspaceTabsTest::lifecycle()
     QCOMPARE(window.m_audio.timeline(), first->timeline().get());
     QCOMPARE(workspace->songTabFor(*secondName), nullptr);
 
+    QVERIFY(first->autoFillBackground());
+    QPointer<QQuickWindow> outgoingWindow = first->view().quickView()->quickWindow();
+    bool outgoingAliveAtSelection = false;
+    const auto selectionConnection =
+        connect(workspace, &WorkspaceUi::selectedSongTabChanged, &window, [&](SongTab *tab) {
+            if (tab && tab->name() == *secondName)
+                outgoingAliveAtSelection = !outgoingWindow.isNull();
+        });
+    QSignalSpy selections(workspace, &WorkspaceUi::selectedSongTabChanged);
     SongTab *replacement = open(window, secondLabel);
+    disconnect(selectionConnection);
     QVERIFY(replacement);
+    QVERIFY(outgoingAliveAtSelection);
+    QVERIFY(outgoingWindow.isNull());
+    QCOMPARE(selections.count(), 1); // no empty or unrelated song between replacements
     QCOMPARE(workspace->openTabCount(), qsizetype(1));
     QCOMPARE(replacement->document().label(), secondLabel);
     QCOMPARE(workspace->songTabFor(*firstName), nullptr);

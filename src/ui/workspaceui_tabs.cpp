@@ -402,9 +402,14 @@ void WorkspaceUi::openSongFromList(int songId, bool newTab)
             selectTab(opened); // focused meanwhile
             return;
         }
-        if (!newTab && m_selectedTab && m_selectedTab->isReady())
-            closeTabNow(m_selectedTab); // replacement: the prompt already ran
+        SongTab *const outgoing =
+            !newTab && m_selectedTab && m_selectedTab->isReady() ? m_selectedTab : nullptr;
+        // Keep a live Quick window throughout replacement. Destroying the last
+        // one first tears down shared rendering resources and exposes an empty
+        // page while the next song's window is constructed, including on Linux.
         createLoadTab(name, /*activate=*/true);
+        if (outgoing)
+            closeTabNow(outgoing); // replacement: the prompt already ran
     });
 }
 

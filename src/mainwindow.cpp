@@ -1095,7 +1095,7 @@ void MainWindow::updateTimeLabel()
     const QString text =
         loaded ? QStringLiteral("%1 / %2").arg(formatTime(m_audio.playheadSamples()),
                                                formatTime(m_audio.timeline()->lengthSamples))
-               : QStringLiteral("--:--.- / --:--.-");
+               : QStringLiteral("0:00.0 / 0:00.0");
     m_workspace->setTransportTimeText(text);
 }
 

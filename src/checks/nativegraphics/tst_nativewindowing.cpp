@@ -4,10 +4,16 @@
 
 #include "checks/voicepickerdriver.h"
 
+#include <QApplication>
 #include <QGuiApplication>
 #include <QImage>
+#include <QPushButton>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QSettings>
+#include <QSlider>
+#include <QTabWidget>
+#include <QTemporaryDir>
 
 #include <QScopeGuard>
 
@@ -22,11 +28,22 @@
 #include "checks/support/songfixture.h"
 
 #include "core/songdocument.h"
+#include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/trackheadermodel.h"
+#include "ui/theme/themecontroller.h"
+#include "ui/theme/themedialog.h"
+#include "ui/theme/themeruntime.h"
+
+#ifdef Q_OS_WIN
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 
 namespace {
 
@@ -81,7 +98,11 @@ class NativeWindowingTest final : public QObject
     {}
 
   private slots:
+#ifdef Q_OS_WIN
+    void replacementBackgroundBeforeFirstFrame();
+#endif
     void headerSelectionAndVoicePicker();
+    void gridContrastPreviewAndApply();
     void geometryChunksShrinkClearAndReactivate();
 
   private:
@@ -98,6 +119,57 @@ class NativeWindowingTest final : public QObject
     QString m_projectRoot;
     QString m_songLabel;
 };
+
+#ifdef Q_OS_WIN
+void NativeWindowingTest::replacementBackgroundBeforeFirstFrame()
+{
+    // A native erase can be presented before Quick renders the new song.
+    // Supply a white memory surface so this verifies actual paint, not just
+    // the WM_ERASEBKGND return value (Qt already acknowledges it).
+    HDC dc = CreateCompatibleDC(nullptr);
+    QVERIFY(dc);
+    const auto releaseDc = qScopeGuard([dc] { DeleteDC(dc); });
+    BITMAPINFO info{};
+    info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    info.bmiHeader.biWidth = 8;
+    info.bmiHeader.biHeight = -8;
+    info.bmiHeader.biPlanes = 1;
+    info.bmiHeader.biBitCount = 32;
+    info.bmiHeader.biCompression = BI_RGB;
+    void *pixels = nullptr;
+    HBITMAP bitmap = CreateDIBSection(dc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
+    QVERIFY(bitmap && pixels);
+    const HGDIOBJ previous = SelectObject(dc, bitmap);
+    const auto releaseBitmap = qScopeGuard([=] {
+        SelectObject(dc, previous);
+        DeleteObject(bitmap);
+    });
+
+    QTabWidget tabs;
+    const QColor background = themes::color(themes::Role::window_background);
+    for (int replacement = 0; replacement < 2; ++replacement) {
+        const auto name = SongName::create(QStringLiteral("background_%1").arg(replacement));
+        QVERIFY(name);
+        SongTab tab(*name);
+        tabs.addTab(&tab, name->value());
+        QQuickWindow *const quick = tab.view().quickView()->quickWindow();
+        QVERIFY(quick);
+        quick->resize(kWindowSize);
+        QCOMPARE(quick->color(), background);
+        QVERIFY(!quick->isExposed());
+        for (const QColor &color : {background, background.lighter(150)}) {
+            quick->setColor(color);
+            std::fill_n(static_cast<QRgb *>(pixels), 64, qRgb(255, 255, 255));
+            const auto hwnd = reinterpret_cast<HWND>(quick->winId());
+            QCOMPARE(SendMessage(hwnd, WM_ERASEBKGND, reinterpret_cast<WPARAM>(dc), 0), LRESULT(1));
+            GdiFlush();
+            for (int pixel = 0; pixel < 64; ++pixel)
+                QCOMPARE(QColor::fromRgb(static_cast<QRgb *>(pixels)[pixel]), color);
+        }
+        tabs.removeTab(tabs.indexOf(&tab));
+    }
+}
+#endif
 
 void NativeWindowingTest::headerSelectionAndVoicePicker()
 {
@@ -191,6 +263,49 @@ void NativeWindowingTest::headerSelectionAndVoicePicker()
     const auto *rename =
         quick->rootObject()->findChild<QQuickItem *>(QStringLiteral("timelineTrackHeaderRename"));
     QVERIFY(!rename || !rename->isVisible());
+}
+
+void NativeWindowingTest::gridContrastPreviewAndApply()
+{
+    auto *application = qobject_cast<QApplication *>(QCoreApplication::instance());
+    QVERIFY(application);
+    themes::Theme original;
+    for (std::size_t index = 0; index < themes::roleCount; ++index)
+        original.colors[index] = themes::color(static_cast<themes::Role>(index));
+    const auto restoreTheme = qScopeGuard([&] { themes::apply(*application, original); });
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    QSettings settings(directory.filePath(QStringLiteral("theme.ini")), QSettings::IniFormat);
+    themes::ThemeController controller(*application, settings);
+    controller.restore();
+    auto rig = freshRig();
+    QVERIFY(rig);
+    SongView &view = rig->song->view();
+    const auto &roll = view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+    QVERIFY(roll);
+    themes::ThemeDialog dialog(controller);
+    auto *slider = dialog.findChild<QSlider *>(QStringLiteral("gridLineContrastSlider"));
+    auto *apply = dialog.findChild<QPushButton *>(QStringLiteral("themeApplyButton"));
+    auto *close = dialog.findChild<QPushButton *>(QStringLiteral("themeCloseButton"));
+    QVERIFY(slider && apply && close);
+    QString error;
+    const auto capture = [&] {
+        checks::support::pumpQuick();
+        return checks::support::captureQuickBand(view, roll->plotRect, &error);
+    };
+    slider->setValue(0);
+    const QImage soft = capture();
+    QVERIFY2(!soft.isNull(), qPrintable(error));
+    slider->setValue(100);
+    const QImage strong = capture();
+    QVERIFY2(!strong.isNull(), qPrintable(error));
+    QVERIFY2(strong != soft, "Dragging contrast must repaint the existing Quick grid");
+    apply->click();
+    QCOMPARE(settings.value(QStringLiteral("theme/grid-line-contrast")).toInt(), 100);
+    slider->setValue(0);
+    QCOMPARE(capture(), soft);
+    close->click();
+    QCOMPARE(capture(), strong);
 }
 
 void NativeWindowingTest::geometryChunksShrinkClearAndReactivate()

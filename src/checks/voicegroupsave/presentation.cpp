@@ -7,6 +7,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFormLayout>
+#include <QHeaderView>
 #include <QImage>
 #include <QLabel>
 #include <QLineEdit>
@@ -14,6 +15,7 @@
 #include <QPushButton>
 #include <QQuickItem>
 #include <QTimer>
+#include <QTreeWidget>
 #include <QtTest>
 
 #include <algorithm>
@@ -24,11 +26,13 @@
 #include "checks/support/voicegroupbrowserdriver.h"
 #include "core/songdocument.h"
 #include "mainwindow.h"
+#include "ui/layout.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/trackheadermodel.h"
+#include "ui/voicegroupbrowser.h"
 #include "ui/workspaceui.h"
 
 namespace checks {
@@ -257,6 +261,14 @@ void VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably()
 
 void VoicegroupSaveTest::typeColumnMapsEveryFamily()
 {
+    auto *browser = m_window->findChild<VoicegroupBrowser *>();
+    QVERIFY(browser);
+    auto *tree = browser->findChild<QTreeWidget *>();
+    QVERIFY(tree);
+    QVERIFY(tree->columnWidth(1) >= tree->header()->sectionSizeHint(1));
+    QVERIFY(tree->iconSize().height() >= layout::fontPx(1.5));
+    QVERIFY(tree->columnWidth(1) >=
+            tree->iconSize().width() + 2 * layout::space(layout::Space::Two));
     // The Type column is icon-only: every family publishes its name through
     // the column-1 tooltip and accessible text, and its glyph through the
     // icon. fixture_rich covers the plain families plus keysplit, drumkit,

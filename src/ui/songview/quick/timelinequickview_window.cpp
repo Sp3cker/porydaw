@@ -28,7 +28,52 @@
 #include <QUrl>
 #include <algorithm>
 
+#ifdef Q_OS_WIN
+#include <qt_windows.h>
+#endif
+
 namespace songview {
+
+namespace {
+
+#ifdef Q_OS_WIN
+class TimelineWindow final : public QQuickView
+{
+  protected:
+    bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result) override
+    {
+        const auto *msg = static_cast<MSG *>(message);
+        if (msg->message == WM_ERASEBKGND) {
+            // Qt acknowledges this message without painting. A newly embedded
+            // song window can otherwise expose white before its first Quick frame.
+            RECT rect;
+            if (GetClientRect(msg->hwnd, &rect)) {
+                const QColor background = color();
+                const HBRUSH brush =
+                    CreateSolidBrush(RGB(background.red(), background.green(), background.blue()));
+                const bool painted = FillRect(reinterpret_cast<HDC>(msg->wParam), &rect, brush);
+                DeleteObject(brush);
+                if (painted) {
+                    *result = 1;
+                    return true;
+                }
+            }
+        }
+        return QQuickView::nativeEvent(eventType, message, result);
+    }
+};
+#endif
+
+} // namespace
+
+std::unique_ptr<QQuickView> TimelineQuickView::createWindow()
+{
+#ifdef Q_OS_WIN
+    return std::make_unique<TimelineWindow>();
+#else
+    return std::make_unique<QQuickView>();
+#endif
+}
 
 TimelineQuickView::~TimelineQuickView()
 {

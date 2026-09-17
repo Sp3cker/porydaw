@@ -310,12 +310,12 @@ TransportBar::TransportBar(QWidget *parent) : QToolBar(tr("Transport"), parent)
     addAction(m_resonanceAction);
 
     m_timeLabel =
-        new FastLabel(QStringLiteral("--:--.- / --:--.-"), Qt::AlignLeft | Qt::AlignVCenter,
+        new FastLabel(QStringLiteral("99:59.9 / 99:59.9"), Qt::AlignLeft | Qt::AlignVCenter,
                       QMargins(::layout::space(::layout::Space::Three), 0,
                                ::layout::space(::layout::Space::Three), 0),
                       themes::Role::transport_text, this);
     m_timeLabel->setObjectName(QStringLiteral("transportTimeLabel"));
-    m_timeLabel->setText(QStringLiteral("--:--.- / --:--.-"));
+    m_timeLabel->setText(QStringLiteral("0:00.0 / 0:00.0"));
     addWidget(m_timeLabel);
 
     m_rootCombo = new QComboBox(this);

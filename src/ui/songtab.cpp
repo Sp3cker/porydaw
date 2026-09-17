@@ -83,6 +83,9 @@ SongTab::SongTab(SongName name, QWidget *parent)
     , m_document(this)
     , m_view(new SongView(m_document, this))
 {
+    // The native Quick child may not have presented its first frame yet.
+    // Paint the themed page behind it on every window system.
+    setAutoFillBackground(true);
     auto *pageLayout = new QVBoxLayout(this);
     pageLayout->setContentsMargins(0, 0, 0, 0);
     // One embedding: the host transfers the view's window into a container

@@ -91,6 +91,11 @@ void WorkspaceTabsTest::transportVolumesAndRaster()
         defaultTransport.findChild<QDial *>(QStringLiteral("transportOutputVolume"));
     QVERIFY(time);
     QVERIFY(defaultDial);
+    QCOMPARE(time->text(), QStringLiteral("0:00.0 / 0:00.0"));
+    auto *windowTime = window.findChild<FastLabel *>(QStringLiteral("transportTimeLabel"));
+    QVERIFY(windowTime);
+    window.updateTimeLabel();
+    QCOMPARE(windowTime->text(), QStringLiteral("0:00.0 / 0:00.0"));
     const QSize reservedHint = time->sizeHint();
     QVERIFY(reservedHint.width() > 0);
     QCOMPARE(time->minimumSizeHint(), reservedHint);

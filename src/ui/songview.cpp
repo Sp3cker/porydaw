@@ -20,6 +20,7 @@
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheadermodel.h"
 #include "ui/songview/voicepicker.h"
+#include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 #include <QEvent>
 #include <QFontMetrics>
@@ -338,6 +339,9 @@ SongView::SongView(SongDocument &document, QObject *parent)
     // viewportChanged. Run the layout choreography once now so a
     // pre-framed window publishes its first canonical layout immediately.
     QGuiApplication::instance()->installEventFilter(this);
+    // The application filter also observes targeted events delivered to this
+    // coordinator; contrast previews use that path without restyling widgets.
+    themes::registerGridLineRefreshTarget(*this);
     connect(m_quickView, &TimelineQuickView::viewportChanged, this,
             &SongView::refreshViewportLayout);
     refreshViewportLayout();
@@ -1031,7 +1035,7 @@ bool SongView::eventFilter(QObject *watched, QEvent *event)
         }
     }
 
-    if (watched == QGuiApplication::instance()) {
+    if (watched == this || watched == QGuiApplication::instance()) {
         switch (event->type()) {
         case QEvent::ApplicationPaletteChange:
         case QEvent::PaletteChange:

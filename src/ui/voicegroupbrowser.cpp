@@ -270,12 +270,12 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
     m_tree->setAllColumnsShowFocus(true);
     m_tree->header()->setStretchLastSection(false);
     m_tree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-    // The Type column is icon-only: one glyph per row at text height, with
-    // the same horizontal padding the item stylesheet applies.
-    const int typeIconPx = ::layout::fontPx(1.0);
+    // Leave room for both the larger glyph and the full Type heading.
+    const int typeIconPx = ::layout::fontPx(1.75);
     m_tree->setIconSize(QSize(typeIconPx, typeIconPx));
     m_tree->header()->setSectionResizeMode(1, QHeaderView::Fixed);
-    m_tree->header()->resizeSection(1, typeIconPx + 2 * columnPadding);
+    m_tree->header()->resizeSection(
+        1, std::max(m_tree->header()->sectionSizeHint(1), typeIconPx + 2 * columnPadding));
     rebuildTypeIcons();
     m_tree->setToolTip(tr("Click and hold to audition (middle C)."));
     layout->addWidget(m_tree, 1);

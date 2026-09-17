@@ -311,6 +311,7 @@ class TimelineQuickView final : public QObject
     bool eventFilter(QObject *watched, QEvent *event) override;
 
   private:
+    static std::unique_ptr<QQuickView> createWindow();
     std::optional<qreal>
     guideSongViewContentXAtOrAfterStart(std::optional<qreal> songViewContentX) const noexcept;
     void setHoverChrome(std::optional<qreal> songViewContentX);
