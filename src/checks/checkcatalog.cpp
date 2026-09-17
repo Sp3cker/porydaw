@@ -717,13 +717,15 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureFiles = route101Files},
             {
                 .name = "rendering-playhead",
-                // offscreen playhead rendering: Quick polarity and edges, automation hover
+                // playhead rendering: Quick polarity and edges, automation hover
                 // decoration, position-only updates without rebuilds, plot geometry and lifecycle
                 .argv = strings({"--check-rendering-playhead", "{scratch}", "mus_route101"}),
                 .handler = qtWithThreeArguments<runRenderingPlayheadCheck>,
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = route101Files,
+                // Custom QSGVertexColorMaterial geometry requires the default scenegraph backend.
+                .windowing = Windowing::WindowSystem,
             },
 #ifdef __APPLE__
             {
