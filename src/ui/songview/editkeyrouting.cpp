@@ -100,9 +100,13 @@ void runRemoveLoop(SongDocument &document, const MidiTimeline *timeline)
 {
     if (!timeline)
         return;
-    if (timeline->loopStartTick != CoreTimeDefaults::kNoTick)
+    // Each setLoopTick publishes synchronously and rebuilds the timeline, so
+    // the caller's pointer dangles after the first write. Snapshot both ends.
+    const auto loopStart = timeline->loopStartTick;
+    const auto loopEnd = timeline->loopEndTick;
+    if (loopStart != CoreTimeDefaults::kNoTick)
         document.setLoopTick(false, -1);
-    if (timeline->loopEndTick != CoreTimeDefaults::kNoTick)
+    if (loopEnd != CoreTimeDefaults::kNoTick)
         document.setLoopTick(true, -1);
 }
 
