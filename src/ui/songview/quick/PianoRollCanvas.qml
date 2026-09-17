@@ -131,28 +131,43 @@ Item {
         Repeater {
             model: timelineScene.pianoKeyboardTextModel
 
-            delegate: Text {
+            delegate: Item {
                 required property rect labelRect
                 required property string labelText
                 required property color labelColor
                 required property font labelFont
                 required property int labelHorizontalAlignment
                 required property int labelVerticalAlignment
+                required property color labelBackground
+                required property rect labelBackgroundRect
 
                 x: labelRect.x
                 y: labelRect.y
                 width: labelRect.width
                 height: labelRect.height
-                text: labelText
-                color: labelColor
-                font: labelFont
-                horizontalAlignment: labelHorizontalAlignment
-                verticalAlignment: labelVerticalAlignment
-                textFormat: Text.PlainText
-                renderType: Text.NativeRendering
-                elide: Text.ElideNone
-                maximumLineCount: 1
-                clip: contentWidth > width || contentHeight > height
+
+                Rectangle {
+                    x: labelBackgroundRect.x - labelRect.x
+                    y: labelBackgroundRect.y - labelRect.y
+                    width: labelBackgroundRect.width
+                    height: labelBackgroundRect.height
+                    visible: labelBackgroundRect.width > 0 && labelBackgroundRect.height > 0
+                    color: labelBackground
+                }
+
+                Text {
+                    anchors.fill: parent
+                    text: labelText
+                    color: labelColor
+                    font: labelFont
+                    horizontalAlignment: labelHorizontalAlignment
+                    verticalAlignment: labelVerticalAlignment
+                    textFormat: Text.PlainText
+                    renderType: Text.NativeRendering
+                    elide: Text.ElideNone
+                    maximumLineCount: 1
+                    clip: contentWidth > width || contentHeight > height
+                }
             }
         }
     }

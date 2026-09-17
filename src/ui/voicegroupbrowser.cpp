@@ -271,7 +271,7 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
     m_tree->header()->setStretchLastSection(false);
     m_tree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
     // Leave room for both the larger glyph and the full Type heading.
-    const int typeIconPx = ::layout::fontPx(1.75);
+    const int typeIconPx = ::layout::fontPx(1.25);
     m_tree->setIconSize(QSize(typeIconPx, typeIconPx));
     m_tree->header()->setSectionResizeMode(1, QHeaderView::Fixed);
     m_tree->header()->resizeSection(

@@ -66,6 +66,8 @@ class TimelineQuickTextModel final : public QAbstractListModel
         HorizontalAlignmentRole,
         VerticalAlignmentRole,
         ClipRectRole,
+        BackgroundRole,
+        BackgroundRectRole,
     };
 
     struct Record {
@@ -77,8 +79,11 @@ class TimelineQuickTextModel final : public QAbstractListModel
         Qt::Alignment horizontalAlignment = Qt::AlignLeft;
         Qt::Alignment verticalAlignment = Qt::AlignVCenter;
         QRectF clipRect;
+        // Optional plate behind the text, in the same coordinates as rect.
+        // An empty backgroundRect paints no plate; background is ignored then.
+        QColor background;
+        QRectF backgroundRect;
     };
-
     explicit TimelineQuickTextModel(QObject *parent = nullptr);
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(porydaw VERSION 1.0.2 LANGUAGES C CXX)
+project(porydaw VERSION 1.0.3 LANGUAGES C CXX)
 
 find_package(Git QUIET)
 if(Git_FOUND)

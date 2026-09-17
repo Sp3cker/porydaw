@@ -131,14 +131,30 @@ constexpr TimelineQuickTextKey drawPreviewTextKey{
     TimelineQuickTextKeyKind::PianoDrawPreview, {}, 0};
 constexpr TimelineQuickTextKey loadingTextKey{TimelineQuickTextKeyKind::PianoLoading, {}, 0};
 
+// Content-sized plate behind a right-aligned drum-pad label: text advance
+// plus layout padding, vertically centered on the row. Coordinates match the
+// label's record rect; an empty rect paints no plate.
+QRectF drumLabelPlate(const QFontMetrics &metrics, const QString &label, const QRectF &recordRect,
+                      const QRectF &rowRect)
+{
+    const qreal pad = lyt::space(Space::Half);
+    const qreal plateWidth = qreal(metrics.horizontalAdvance(label)) + 2.0 * pad;
+    const qreal plateHeight = (std::min)(rowRect.height(), qreal(metrics.height()) + pad);
+    const qreal plateX = (std::max)(recordRect.left(), recordRect.right() - plateWidth);
+    return QRectF(plateX, rowRect.top() + (rowRect.height() - plateHeight) / 2.0,
+                  recordRect.right() - plateX, plateHeight);
+}
+
 void appendTextRecord(std::vector<TimelineQuickTextModel::Record> &records,
                       const TimelineQuickTextKey &key, const QRectF &rect, const QString &text,
                       const QFont &font, const QColor &color, Qt::Alignment horizontal,
-                      Qt::Alignment vertical)
+                      Qt::Alignment vertical, const QColor &background = QColor(),
+                      const QRectF &backgroundRect = QRectF())
 {
     if (rect.width() <= 0.0 || rect.height() <= 0.0)
         return;
-    records.push_back({key, rect, text, color, font, horizontal, vertical, QRectF()});
+    records.push_back(
+        {key, rect, text, color, font, horizontal, vertical, QRectF(), background, backgroundRect});
 }
 
 } // namespace
@@ -583,12 +599,13 @@ void TimelineQuickView::synchronizeKeyboardText()
                                               roll.m_sv->selectionModel().primaryTrack());
         const bool drumPads = source.isDrum();
         std::optional<QFontMetrics> labelMetrics;
-        QColor accidentalLabel;
+        QColor drumPlate;
         if (drumPads) {
-            // Drum pad names sit on dark accidental lanes too; reuse the
-            // light natural-key color there so they stay legible.
+            // Drum pad names span dark and light key lanes and the plot grid;
+            // back each with the natural-key surface so one text color reads
+            // everywhere.
             labelMetrics.emplace(*roll.m_keyboardLabelFont);
-            accidentalLabel = themes::color(themes::Role::song_view_piano_keyboard_natural_key);
+            drumPlate = themes::color(themes::Role::song_view_piano_keyboard_natural_key);
         }
         records.reserve(drumPads ? std::size_t(projection.visibleRowCount())
                                  : std::size_t(projection.visibleRowCount() / 12 + 2));
@@ -605,12 +622,13 @@ void TimelineQuickView::synchronizeKeyboardText()
                                                   roll.m_geometry.pianoKeyboardLabelRightInset))
                     : baseWidth;
             const QRectF recordRect(0, rowRect.top(), labelWidth, rowRect.height());
-            const QColor &rowColor = drumPads && isBlackKey(key) ? accidentalLabel : color;
+            const QRectF plate =
+                drumPads ? drumLabelPlate(*labelMetrics, label, recordRect, rowRect) : QRectF();
             appendTextRecord(
                 records,
                 TimelineQuickTextKey{TimelineQuickTextKeyKind::PianoMidiLabel, {}, quint64(key)},
-                recordRect, label, *roll.m_keyboardLabelFont, rowColor, Qt::AlignRight,
-                Qt::AlignVCenter);
+                recordRect, label, *roll.m_keyboardLabelFont, color, Qt::AlignRight,
+                Qt::AlignVCenter, drumPlate, plate);
         }
     }
     m_scene->m_pianoKeyboardTextModel->setRecords(records);
