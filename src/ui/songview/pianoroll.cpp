@@ -28,11 +28,11 @@ namespace songview {
 using namespace songview::detail;
 using namespace songview::pianoroll_detail;
 
-PianoRoll::PianoRoll(SongView *sv)
+PianoRoll::PianoRoll(SongView &sv)
     : m_sv(sv)
-    , m_camera(sv->camera())
-    , m_grid(sv->grid())
-    , m_geometry(PianoRollGeometry::resolve(sv->pianoKeyboardWidth()))
+    , m_camera(sv.camera())
+    , m_grid(sv.grid())
+    , m_geometry(PianoRollGeometry::resolve(sv.pianoKeyboardWidth()))
 {
     setObjectName(QStringLiteral("pianoRoll")); // findChild for tests
     m_fixedNoteNameFont = typography::noteName(QGuiApplication::font());
@@ -60,7 +60,7 @@ PianoRoll::PianoRoll(SongView *sv)
     connect(m_noteMenuHost, &QuickMenuHost::outsideRightPressed, this,
             [this](QPointF scenePos) { retargetNoteMenu(scenePos); });
     connect(m_noteMenuHost, &QuickMenuHost::actionActivated, this, [this](QAction *) {
-        restoreFocusUnlessFormOpen(*m_sv, [this] {
+        restoreFocusUnlessFormOpen(m_sv, [this] {
             if (m_inputHost)
                 m_inputHost->requestFocus(Qt::PopupFocusReason);
         });
@@ -69,8 +69,8 @@ PianoRoll::PianoRoll(SongView *sv)
     // note menu. Its dedicated root identity leaves velocity forms and
     // foreign session content with their own lifetimes; ordinary
     // invalidation restores focus, teardown passes restoreFocus=false.
-    connect(m_sv, &SongView::contextMenusInvalidated, this, [this](bool restoreFocus) {
-        TimelineQuickView *const quick = m_sv->quickView();
+    connect(&m_sv, &SongView::contextMenusInvalidated, this, [this](bool restoreFocus) {
+        TimelineQuickView *const quick = m_sv.quickView();
         retireHostMenu(quick ? quick->popupSession() : nullptr, m_noteMenuHost, m_noteMenuModel,
                        restoreFocus);
     });
@@ -85,7 +85,7 @@ void PianoRoll::requestQuickUpdate(PianoRollQuickDirtySet dirty)
 {
     if (dirty == PianoRollQuickDirty::None)
         return;
-    m_sv->requestPianoRollQuickUpdate(dirty);
+    m_sv.requestPianoRollQuickUpdate(dirty);
 }
 
 QRectF PianoRoll::bounds() const
@@ -255,7 +255,7 @@ void PianoRoll::cancelVelocityInteraction()
         auditionKey(0, 0);
         m_auditioned = false;
     }
-    m_sv->cancelVelocityGesture();
+    m_sv.cancelVelocityGesture();
     requestQuickUpdate(PianoRollQuickDirty::NoteFills | PianoRollQuickDirty::NoteText);
 }
 
@@ -268,15 +268,15 @@ bool PianoRoll::wheel(const TimelineWheelInput &input)
     const QPoint delta = input.pixelDelta.isNull() ? input.angleDelta : input.pixelDelta;
     const int d = delta.y() ? delta.y() : delta.x();
     if (input.modifiers & Qt::ControlModifier) {
-        m_sv->zoomKeyHeight(input);
+        m_sv.zoomKeyHeight(input);
     } else if (input.modifiers & Qt::ShiftModifier) {
-        m_sv->scrollByPx(-d);
+        m_sv.scrollByPx(-d);
     } else if (delta.x() && !delta.y()) {
-        m_sv->scrollByPx(-delta.x());
+        m_sv.scrollByPx(-delta.x());
     } else if (input.surface == TimelineInputSurface::Gutter) {
-        m_sv->scrollRollBy(-delta.y() / 2.0);
+        m_sv.scrollRollBy(-delta.y() / 2.0);
     } else {
-        m_sv->zoomTimelineAtWheel(input, input.position.x());
+        m_sv.zoomTimelineAtWheel(input, input.position.x());
     }
     return true;
 }

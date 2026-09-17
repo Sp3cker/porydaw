@@ -32,14 +32,14 @@ deno task verify --filter xcmdcheck --filter automation-domain --verbose
 
 ### 2. Express required owner links as references — Direct
 
-**Target:** `src/ui/songview/pianoroll.h`, `src/ui/songview/pianoroll.cpp`, and the existing `PianoRoll` construction site.
+**Target:** `src/ui/songview.cpp`, `src/ui/songview/pianoroll.h`, `src/ui/songview/pianoroll.cpp`, `src/ui/songview/pianoroll_commands.cpp`, `src/ui/songview/pianoroll_geometry.cpp`, `src/ui/songview/pianoroll_gestures.cpp`, `src/ui/songview/pianoroll_gestures_active.cpp`, `src/ui/songview/pianoroll_interaction.cpp`, `src/ui/songview/quick/timelinequickview_pianoroll.cpp`.
 
 **Change:** Change the required `SongView` constructor argument and stored owner link from pointer to reference. Preserve ownership and all piano-roll behavior; do not convert detachable QObject borrows in `TimelineQuickView`.
 
 **Acceptance:**
 ```sh
-deno task format --check src/ui/songview/pianoroll.h src/ui/songview/pianoroll.cpp src/ui/songview.cpp
-deno task verify --filter rollcheck --verbose
+deno task format --check src/ui/songview.cpp src/ui/songview/pianoroll.h src/ui/songview/pianoroll.cpp src/ui/songview/pianoroll_commands.cpp src/ui/songview/pianoroll_geometry.cpp src/ui/songview/pianoroll_gestures.cpp src/ui/songview/pianoroll_gestures_active.cpp src/ui/songview/pianoroll_interaction.cpp src/ui/songview/quick/timelinequickview_pianoroll.cpp
+deno task verify --filter rollcheck --filter rollcheck-static --verbose
 ```
 
 ### 3. Snapshot nullable Qt borrows once — Direct

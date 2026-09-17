@@ -282,7 +282,7 @@ SongView::SongView(SongDocument &document, QObject *parent)
 
     m_ruler = std::make_unique<TimeRuler>(*this);
     m_headers = new TrackHeaderModel(*this, this);
-    m_roll = new PianoRoll(this);
+    m_roll = new PianoRoll(*this);
     m_strip = new OtherStrip(*this);
 
     m_editorDrawer = new EditorDrawer(*this, m_editorViewState);

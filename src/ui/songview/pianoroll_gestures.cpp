@@ -65,15 +65,15 @@ void PianoRoll::beginPanGesture(const TimelinePointerInput &input)
 void PianoRoll::beginKbdAudition(const TimelinePointerInput &input)
 {
     m_kbdKey = yToKey(input.position.y());
-    m_sv->selectionModel().setNoteSelection(notesOnKey(m_kbdKey));
+    m_sv.selectionModel().setNoteSelection(notesOnKey(m_kbdKey));
     auditionKey(m_kbdKey, 100);
 }
 
 std::vector<NoteId> PianoRoll::notesOnKey(int key) const
 {
     std::vector<NoteId> ids;
-    for (const ViewNote &note : m_sv->model().notes) {
-        if (note.track == m_sv->selectionModel().primaryTrack() && note.key == key &&
+    for (const ViewNote &note : m_sv.model().notes) {
+        if (note.track == m_sv.selectionModel().primaryTrack() && note.key == key &&
             note.noteId.isAssigned())
             ids.push_back(note.noteId);
     }
@@ -105,15 +105,15 @@ void PianoRoll::beginLeftPress(const TimelinePointerInput &input)
 
 bool PianoRoll::contentPressRejectedByScaleFold(const SongDocument *doc, const ViewNote *hit) const
 {
-    return !hit && doc && m_sv->scaleFold() &&
+    return !hit && doc && m_sv.scaleFold() &&
            (m_pressKey < 0 ||
-            !porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), m_pressKey));
+            !porydaw_scale::isScalePitch(m_sv.scaleId(), m_sv.scaleRoot(), m_pressKey));
 }
 
 void PianoRoll::pressContent(const TimelinePointerInput &input)
 {
     beginLeftPress(input);
-    SongDocument &doc = m_sv->document();
+    SongDocument &doc = m_sv.document();
     const ViewNote *hit = hitNote(input.position);
     if (contentPressRejectedByScaleFold(&doc, hit))
         return;
@@ -151,27 +151,27 @@ void PianoRoll::beginNotePress(const ViewNote &note, const TimelinePointerInput 
 void PianoRoll::applyNotePressSelection(const ViewNote &note, bool onEdge,
                                         Qt::KeyboardModifiers modifiers)
 {
-    const auto &storedSelection = m_sv->selectionModel().noteSelection();
+    const auto &storedSelection = m_sv.selectionModel().noteSelection();
     std::vector<NoteId> ids(storedSelection.begin(), storedSelection.end());
     const NoteId id = note.noteId;
     if ((modifiers & Qt::ControlModifier) && !onEdge) {
         if (std::erase(ids, id) == 0)
             ids.push_back(id);
-        m_sv->selectionModel().setNoteSelection(std::move(ids));
+        m_sv.selectionModel().setNoteSelection(std::move(ids));
     } else if (modifiers & Qt::ControlModifier) {
         if (std::find(ids.begin(), ids.end(), id) == ids.end()) {
             ids.push_back(id);
-            m_sv->selectionModel().setNoteSelection(std::move(ids));
+            m_sv.selectionModel().setNoteSelection(std::move(ids));
         }
     } else if (noteRequiresSelectionUpdate(note)) {
-        m_sv->selectionModel().setNoteSelection({id});
+        m_sv.selectionModel().setNoteSelection({id});
     }
 }
 
 bool PianoRoll::noteRequiresSelectionUpdate(const ViewNote &note) const
 {
-    return note.track != m_sv->selectionModel().primaryTrack() || !note.noteId.isAssigned() ||
-           !m_sv->selectionModel().isNoteSelected(note.noteId);
+    return note.track != m_sv.selectionModel().primaryTrack() || !note.noteId.isAssigned() ||
+           !m_sv.selectionModel().isNoteSelected(note.noteId);
 }
 
 void PianoRoll::armNoteDrag(const ViewNote &note, QPointF position)
@@ -205,7 +205,7 @@ void PianoRoll::beginVelocityPress(const ViewNote &note)
 void PianoRoll::beginPendingDraw()
 {
     m_leftDrag = LeftDrag::PendingDraw; // pending: direct assignment, no activation
-    m_sv->selectionModel().clearNoteSelection();
+    m_sv.selectionModel().clearNoteSelection();
     auditionKey(m_pressKey, m_lastVelocity);
     m_auditioned = true;
 }
@@ -238,7 +238,7 @@ bool PianoRoll::resolveVelocityPress(const TimelinePointerInput &input)
         return false; // consumes the entire event
     applyVelocityDragSelection();
     activateLeftDrag(LeftDrag::Velocity);
-    if (!m_sv->beginVelocityGesture(resolveSelection()))
+    if (!m_sv.beginVelocityGesture(resolveSelection()))
         cancelVelocityInteraction();
     if (m_leftDrag == LeftDrag::Velocity) // re-pin AFTER activation
         setHoverKey(m_velAnchor.key);
@@ -249,12 +249,12 @@ void PianoRoll::applyVelocityDragSelection()
 {
     if (!noteRequiresSelectionUpdate(m_velAnchor))
         return;
-    m_sv->selectionModel().setNoteSelection({m_velAnchor.noteId});
+    m_sv.selectionModel().setNoteSelection({m_velAnchor.noteId});
 }
 
 void PianoRoll::beginDraw()
 {
-    if (m_sv->scaleFold() && (m_pressKey < 0 || !m_sv->isScalePitch(m_pressKey))) {
+    if (m_sv.scaleFold() && (m_pressKey < 0 || !m_sv.isScalePitch(m_pressKey))) {
         return;
     }
     m_drawAnchor = m_grid.snapTickDown(m_pressTick);
@@ -262,7 +262,7 @@ void PianoRoll::beginDraw()
     m_drawDur = int64_t(m_grid.snapTicksAt(m_drawAnchor));
     m_drawKey = m_pressKey;
     activateLeftDrag(LeftDrag::Draw);
-    m_sv->selectionModel().clearNoteSelection();
+    m_sv.selectionModel().clearNoteSelection();
 
     // The empty-space press already sounds this row; don't re-attack it.
     if (m_soundingKey != m_drawKey)
@@ -276,15 +276,14 @@ void PianoRoll::beginDraw()
 void PianoRoll::auditionBandEntrants(const QRectF &band)
 {
     std::vector<ViewNote> inBand;
-    for (const ViewNote &note : m_sv->model().notes) {
-        if (note.track != m_sv->selectionModel().primaryTrack() || !noteRect(note).intersects(band))
+    for (const ViewNote &note : m_sv.model().notes) {
+        if (note.track != m_sv.selectionModel().primaryTrack() || !noteRect(note).intersects(band))
             continue;
         const auto found =
             std::find_if(m_bandAud.begin(), m_bandAud.end(),
                          [&](const ViewNote &old) { return old.noteId == note.noteId; });
         if (found == m_bandAud.end())
-            m_sv->auditionTimed(note.track, note.key, note.velocity, note.startTick,
-                                note.endTick());
+            m_sv.auditionTimed(note.track, note.key, note.velocity, note.startTick, note.endTick());
         inBand.push_back(note);
     }
     for (const ViewNote &old : m_bandAud) {
@@ -299,7 +298,7 @@ void PianoRoll::auditionBandEntrants(const QRectF &band)
             std::any_of(inBand.begin(), inBand.end(),
                         [&](const ViewNote &note) { return note.key == old.key; });
         if (!keyCovered)
-            m_sv->auditionTimedOff(m_sv->selectionModel().primaryTrack(), old.key);
+            m_sv.auditionTimedOff(m_sv.selectionModel().primaryTrack(), old.key);
     }
     m_bandAud = std::move(inBand);
 }
@@ -307,7 +306,7 @@ void PianoRoll::auditionBandEntrants(const QRectF &band)
 void PianoRoll::stopBandAuditions()
 {
     for (const ViewNote &note : m_bandAud)
-        m_sv->auditionTimedOff(m_sv->selectionModel().primaryTrack(), note.key);
+        m_sv.auditionTimedOff(m_sv.selectionModel().primaryTrack(), note.key);
     m_bandAud.clear();
 }
 

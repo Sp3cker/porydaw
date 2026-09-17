@@ -93,7 +93,7 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     Q_PROPERTY(QVariantMap velocityPromptAppearance READ velocityPromptAppearance CONSTANT FINAL)
 
   public:
-    explicit PianoRoll(SongView *songView);
+    explicit PianoRoll(SongView &songView);
 
     bool gestureActive() const override;
     void cancelPitchBendPopup();
@@ -308,7 +308,7 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     QFont m_keyboardHoverChipFont;
     int m_keyboardHoverChipHeight = 0;
     std::array<int, 128> m_keyboardHoverNameWidths{};
-    SongView *const m_sv;
+    SongView &m_sv;
     const songview::TimeCamera &m_camera;
     const songview::Grid &m_grid;
     TimelineInputHost *m_inputHost = nullptr;

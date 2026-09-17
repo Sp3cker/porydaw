@@ -77,10 +77,9 @@ int selectionRingPixels(qreal dpr)
 
 bool PianoRoll::insideTimeSelection(qreal x) const
 {
-    const auto &sel = m_sv->selectionModel().timeSelection();
-    if (!sel.active() ||
-        !m_sv->selectionModel().timeSelectionCoversTrack(m_sv->selectionModel().primaryTrack(),
-                                                         usedTrackMask(m_sv->timeline())))
+    const auto &sel = m_sv.selectionModel().timeSelection();
+    if (!sel.active() || !m_sv.selectionModel().timeSelectionCoversTrack(
+                             m_sv.selectionModel().primaryTrack(), usedTrackMask(m_sv.timeline())))
         return false;
     const qreal dpr = devicePixelRatio();
     const qreal startX = m_camera.displayX(double(sel.startTick), 0.0, dpr);
@@ -93,7 +92,7 @@ const std::array<qreal, PitchProjection::cMaxRows + 1> &PianoRoll::rowEdges() co
     const qreal dpr = devicePixelRatio();
     const qreal keyHeight = m_camera.keyHeight();
     const qreal scrollY = m_camera.scrollY();
-    const PitchProjection &projection = m_sv->pitchProjection();
+    const PitchProjection &projection = m_sv.pitchProjection();
     if (!m_rowEdgesValid || m_rowEdgesDpr != dpr || m_rowEdgesKeyHeight != keyHeight ||
         m_rowEdgesScrollY != scrollY || m_rowEdgesProjectionRevision != projection.revision()) {
         projection.buildRowEdges(m_rowEdges, m_rowEdgeCount, keyHeight, scrollY, dpr);
@@ -114,13 +113,13 @@ QRectF PianoRoll::pitchRowRect(int row, qreal x, qreal width) const
 
 qreal PianoRoll::keyTop(int key) const
 {
-    const int row = m_sv->pitchProjection().rowForPitch(key);
+    const int row = m_sv.pitchProjection().rowForPitch(key);
     return row == PitchProjection::cHiddenRow ? rowEdges()[0] : rowEdges()[row];
 }
 
 qreal PianoRoll::keyBottom(int key) const
 {
-    const int row = m_sv->pitchProjection().rowForPitch(key);
+    const int row = m_sv.pitchProjection().rowForPitch(key);
     return row == PitchProjection::cHiddenRow ? rowEdges()[0] : rowEdges()[row + 1];
 }
 
@@ -132,13 +131,13 @@ QRectF PianoRoll::keyRect(int key, qreal x, qreal width) const
 
 int PianoRoll::yToKey(qreal y) const
 {
-    return m_sv->pitchProjection().yToPitch(y, m_camera.keyHeight(), m_camera.scrollY(),
-                                            devicePixelRatio());
+    return m_sv.pitchProjection().yToPitch(y, m_camera.keyHeight(), m_camera.scrollY(),
+                                           devicePixelRatio());
 }
 
 int PianoRoll::foldDegreeDeltaForPointer(qreal y) const
 {
-    const PitchProjection &projection = m_sv->pitchProjection();
+    const PitchProjection &projection = m_sv.pitchProjection();
     const int pointerRow =
         projection.yToRow(y, m_camera.keyHeight(), m_camera.scrollY(), devicePixelRatio());
     const int grabRow = projection.rowForPitch(m_pressKey);
@@ -167,12 +166,12 @@ qreal PianoRoll::physicalPixel() const
 std::optional<PianoRoll::KeyboardHoverGeometry> PianoRoll::keyboardHoverGeometry(int key) const
 {
     if (key < 0 || key >= int(m_keyboardHoverNameWidths.size()) ||
-        m_sv->pitchProjection().rowForPitch(key) == PitchProjection::cHiddenRow)
+        m_sv.pitchProjection().rowForPitch(key) == PitchProjection::cHiddenRow)
         return std::nullopt;
 
     const QRectF highlight = keyRect(key, lyt::space(Space::Zero), m_geometry.pianoKeyboardWidth);
-    const auto source = keyboardRowSource(m_sv->voicegroup(), m_sv->timeline(),
-                                          m_sv->selectionModel().primaryTrack());
+    const auto source =
+        keyboardRowSource(m_sv.voicegroup(), m_sv.timeline(), m_sv.selectionModel().primaryTrack());
     const QString pad = source.drumPadName(key);
     const QString name = pad.isEmpty() ? keyName(key) : pad;
     const int chipWidth =
@@ -201,7 +200,7 @@ void PianoRoll::setHoverKey(int key)
 
 QRectF PianoRoll::noteRect(qreal x0, qreal x1, int key) const
 {
-    const int row = m_sv->pitchProjection().rowForPitch(key);
+    const int row = m_sv.pitchProjection().rowForPitch(key);
     if (row == PitchProjection::cHiddenRow)
         return QRectF(x0, rowEdges()[0],
                       std::max<qreal>(m_geometry.pianoRollNoteMinimumWidth, x1 - x0), 0.0);
@@ -243,12 +242,12 @@ bool PianoRoll::noteNameFits(const QRectF &noteRect, int key) const
 
 const ViewNote *PianoRoll::hitNote(QPointF pos) const
 {
-    const int selected = m_sv->selectionModel().primaryTrack();
+    const int selected = m_sv.selectionModel().primaryTrack();
     const ViewNote *hit = nullptr;
     bool hitInside = false;
     const ViewNote *gripHit = nullptr; // pos inside the note, on an edge grip
     const qreal reach = m_geometry.pianoRollNoteEdgeGripReach;
-    for (const ViewNote &note : m_sv->model().notes) {
+    for (const ViewNote &note : m_sv.model().notes) {
         if (note.track != selected)
             continue;
         const QRectF r = noteRect(note);
@@ -308,8 +307,8 @@ QRectF PianoRoll::displayedNoteRect(const ViewNote &note) const
 {
     const bool dragging = m_leftDrag == LeftDrag::Move || m_leftDrag == LeftDrag::Resize ||
                           m_leftDrag == LeftDrag::ResizeLeft;
-    if (!dragging || note.track != m_sv->selectionModel().primaryTrack() ||
-        !note.noteId.isAssigned() || !m_sv->selectionModel().isNoteSelected(note.noteId))
+    if (!dragging || note.track != m_sv.selectionModel().primaryTrack() ||
+        !note.noteId.isAssigned() || !m_sv.selectionModel().isNoteSelected(note.noteId))
         return noteRect(note);
     int64_t tick, endTick;
     if (m_leftDrag == LeftDrag::ResizeLeft) {
@@ -338,11 +337,11 @@ int PianoRoll::displayedNoteKey(const ViewNote &note) const
 {
     const bool dragging = m_leftDrag == LeftDrag::Move || m_leftDrag == LeftDrag::Resize ||
                           m_leftDrag == LeftDrag::ResizeLeft;
-    if (!dragging || note.track != m_sv->selectionModel().primaryTrack() ||
-        !note.noteId.isAssigned() || !m_sv->selectionModel().isNoteSelected(note.noteId))
+    if (!dragging || note.track != m_sv.selectionModel().primaryTrack() ||
+        !note.noteId.isAssigned() || !m_sv.selectionModel().isNoteSelected(note.noteId))
         return note.key;
-    if (m_sv->scaleFold()) {
-        const int destination = m_sv->nextScalePitch(note.key, m_dKey);
+    if (m_sv.scaleFold()) {
+        const int destination = m_sv.nextScalePitch(note.key, m_dKey);
         return destination >= 0 ? destination : note.key;
     }
     return std::clamp(int(note.key) + m_dKey, 0, 127);

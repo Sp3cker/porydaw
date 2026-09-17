@@ -95,7 +95,7 @@ void PianoRoll::openPitchBendEditor()
 {
     const std::vector<DocNote> notes = resolveSelection();
     if (notes.size() != 1) {
-        m_sv->announce(SongView::tr("Select one note to edit pitch bend."));
+        m_sv.announce(SongView::tr("Select one note to edit pitch bend."));
         return;
     }
     if (m_bendPopup) {
@@ -107,8 +107,8 @@ void PianoRoll::openPitchBendEditor()
     // every other outside press passes through. Scene presses map through
     // global coordinates so the shared hit-test helpers stay unchanged.
     auto *popup =
-        new PitchBendEditor(m_sv, &m_sv->document(), notes.front(), [this](QPointF scenePos) {
-            TimelineQuickView *const quick = m_sv->quickView();
+        new PitchBendEditor(&m_sv, &m_sv.document(), notes.front(), [this](QPointF scenePos) {
+            TimelineQuickView *const quick = m_sv.quickView();
             QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
             if (!window || !m_inputHost)
                 return false;
@@ -116,7 +116,7 @@ void PianoRoll::openPitchBendEditor()
         });
     if (!popup->hasEditableSpan()) {
         popup->deleteLater();
-        m_sv->announce(SongView::tr("Select one note to edit pitch bend."));
+        m_sv.announce(SongView::tr("Select one note to edit pitch bend."));
         return;
     }
     double noteFraction = -1.0;
@@ -127,11 +127,10 @@ void PianoRoll::openPitchBendEditor()
     // through the live input item here: G is keyboard-driven and can arrive
     // before the first band publication moves the item to the plot origin,
     // and the anchor then misses by exactly the item origin.
-    QQuickWindow *const anchorWindow =
-        m_sv->quickView() ? m_sv->quickView()->quickWindow() : nullptr;
+    QQuickWindow *const anchorWindow = m_sv.quickView() ? m_sv.quickView()->quickWindow() : nullptr;
     const TimelineBandGeometry rollGeometry =
-        m_sv->timelineBandLayout().geometry(TimelineBand::Roll).value_or(TimelineBandGeometry{});
-    for (const ViewNote &viewNote : m_sv->model().notes) {
+        m_sv.timelineBandLayout().geometry(TimelineBand::Roll).value_or(TimelineBandGeometry{});
+    for (const ViewNote &viewNote : m_sv.model().notes) {
         if (viewNote.noteId != notes.front().noteId)
             continue;
         if (!anchorWindow || rollGeometry.plotRect.isNull())
@@ -152,7 +151,7 @@ void PianoRoll::openPitchBendEditor()
     }
     if (noteScene.isNull()) {
         popup->deleteLater();
-        m_sv->announce(SongView::tr("Select one note to edit pitch bend."));
+        m_sv.announce(SongView::tr("Select one note to edit pitch bend."));
         return;
     }
     m_bendPopup = popup;
@@ -176,10 +175,10 @@ void PianoRoll::openPitchBendEditor()
 std::vector<DocNote> PianoRoll::resolveSelection() const
 {
     std::vector<DocNote> notes;
-    SongDocument &doc = m_sv->document();
-    for (NoteId id : m_sv->selectionModel().noteSelection()) {
+    SongDocument &doc = m_sv.document();
+    for (NoteId id : m_sv.selectionModel().noteSelection()) {
         DocNote note;
-        if (doc.findNote(id, &note) && note.engineTrack == m_sv->selectionModel().primaryTrack())
+        if (doc.findNote(id, &note) && note.engineTrack == m_sv.selectionModel().primaryTrack())
             notes.push_back(note);
     }
     return notes;
@@ -187,7 +186,7 @@ std::vector<DocNote> PianoRoll::resolveSelection() const
 
 void PianoRoll::transposeSelection(int dKey)
 {
-    SongDocument &doc = m_sv->document();
+    SongDocument &doc = m_sv.document();
     const std::vector<DocNote> notes = resolveSelection();
     if (notes.empty())
         return;
@@ -196,7 +195,7 @@ void PianoRoll::transposeSelection(int dKey)
         if (key < 0 || key > 127)
             return;
     }
-    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    const SongView::DocumentSwapHintScope swapHint{m_sv, cNoteMutationDirty};
     doc.moveNotes(notes, 0, dKey, /*mergeable=*/true);
     // Keep the moved notes in sight: the row the move headed toward
     // scrolls into view just enough (no re-centering).
@@ -205,7 +204,7 @@ void PianoRoll::transposeSelection(int dKey)
         const int key = int(note.key) + dKey;
         edge = dKey > 0 ? std::max(edge, key) : std::min(edge, key);
     }
-    m_sv->ensureKeyVisible(edge);
+    m_sv.ensureKeyVisible(edge);
     auditionKey(int(notes.front().key) + dKey, notes.front().velocity);
     m_auditioned = true;
     // Only note pixels changed here; the ensureKeyVisible reveal and any
@@ -216,15 +215,15 @@ void PianoRoll::transposeSelection(int dKey)
 void PianoRoll::transposeSelectedNotes(int semitones)
 {
     // Fold projection moves by scale degrees; plain transpose by semitones.
-    if (m_sv->scaleFold() && (semitones == 1 || semitones == -1))
-        m_sv->foldTransposeSelection(semitones);
+    if (m_sv.scaleFold() && (semitones == 1 || semitones == -1))
+        m_sv.foldTransposeSelection(semitones);
     else
         transposeSelection(semitones);
 }
 
 void PianoRoll::nudgeSelectedNotes(bool right)
 {
-    SongDocument &doc = m_sv->document();
+    SongDocument &doc = m_sv.document();
     const std::vector<DocNote> notes = resolveSelection();
     if (notes.empty())
         return;
@@ -236,7 +235,7 @@ void PianoRoll::nudgeSelectedNotes(bool right)
     const int64_t dTick = int64_t(snapped) - int64_t(anchor);
     if (dTick == 0)
         return;
-    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    const SongView::DocumentSwapHintScope swapHint{m_sv, cNoteMutationDirty};
     const uint64_t revision = doc.revision();
     doc.moveNotes(notes, dTick, 0, /*mergeable=*/true);
     // A rejected or no-op move leaves the revision untouched; there is no
@@ -253,7 +252,7 @@ void PianoRoll::nudgeSelectedNotes(bool right)
         const uint64_t end = uint64_t(tick) + note.duration;
         hi = std::max(hi, Tick(std::min<uint64_t>(end, CoreTimeDefaults::kMaxTick)));
     }
-    m_sv->ensureRangeVisible(lo, hi, right);
+    m_sv.ensureRangeVisible(lo, hi, right);
     // Only note pixels changed here; the ensureRangeVisible reveal above
     // queues its own camera request when it actually scrolls.
     requestQuickUpdate(cNoteMutationDirty);
@@ -261,7 +260,7 @@ void PianoRoll::nudgeSelectedNotes(bool right)
 
 void PianoRoll::resizeSelectedNotes(bool longer)
 {
-    SongDocument &doc = m_sv->document();
+    SongDocument &doc = m_sv.document();
     const std::vector<DocNote> notes = resolveSelection();
     if (notes.empty())
         return;
@@ -269,7 +268,7 @@ void PianoRoll::resizeSelectedNotes(bool longer)
     if (!delta || *delta == 0)
         return;
     const int64_t dDuration = *delta;
-    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    const SongView::DocumentSwapHintScope swapHint{m_sv, cNoteMutationDirty};
     const uint64_t revision = doc.revision();
     doc.resizeNotes(notes, dDuration, /*mergeable=*/true);
     // A rejected or no-op resize leaves the revision untouched; there is no
@@ -285,7 +284,7 @@ void PianoRoll::resizeSelectedNotes(bool longer)
         lo = std::min(lo, note.tick);
         hi = std::max(hi, Tick(end));
     }
-    m_sv->ensureRangeVisible(lo, hi, longer);
+    m_sv.ensureRangeVisible(lo, hi, longer);
     // Only note pixels changed here; the ensureRangeVisible reveal above
     // queues its own camera request when it actually scrolls.
     requestQuickUpdate(cNoteMutationDirty);
@@ -301,39 +300,39 @@ void PianoRoll::copySelectedNotes()
 void PianoRoll::cutSelectedNotes()
 {
     const std::vector<DocNote> notes = resolveSelection();
-    SongDocument &doc = m_sv->document();
+    SongDocument &doc = m_sv.document();
     if (notes.empty())
         return;
     copyNotes(notes);
-    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    const SongView::DocumentSwapHintScope swapHint{m_sv, cNoteMutationDirty};
     doc.deleteNotes(notes);
-    m_sv->selectionModel().clearNoteSelection();
+    m_sv.selectionModel().clearNoteSelection();
 }
 
 void PianoRoll::deleteSelectedNotes()
 {
     const std::vector<DocNote> notes = resolveSelection();
-    SongDocument &doc = m_sv->document();
+    SongDocument &doc = m_sv.document();
     if (notes.empty())
         return;
-    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    const SongView::DocumentSwapHintScope swapHint{m_sv, cNoteMutationDirty};
     doc.deleteNotes(notes);
-    m_sv->selectionModel().clearNoteSelection();
+    m_sv.selectionModel().clearNoteSelection();
 }
 
 void PianoRoll::duplicateSelectedNotes()
 {
-    SongDocument &doc = m_sv->document();
+    SongDocument &doc = m_sv.document();
     const std::vector<DocNote> notes = resolveSelection();
     if (notes.empty())
         return;
-    const int selectedTrack = m_sv->selectionModel().primaryTrack();
+    const int selectedTrack = m_sv.selectionModel().primaryTrack();
     Tick start = CoreTimeDefaults::kNoTick;
     uint64_t end = 0;
     std::vector<SongDocument::NewNote> duplicate;
     duplicate.reserve(notes.size());
     for (const DocNote &note : notes) {
-        const uint32_t duration = m_sv->copiedNoteDuration(note);
+        const uint32_t duration = m_sv.copiedNoteDuration(note);
         start = std::min(start, note.tick);
         end = std::max(end, uint64_t(note.tick) + duration);
         duplicate.push_back({note.tick, note.key, duration, note.velocity});
@@ -349,24 +348,23 @@ void PianoRoll::duplicateSelectedNotes()
     if (duplicate.empty())
         return;
     const std::vector<DocNote> before = doc.notesForTrack(selectedTrack);
-    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    const SongView::DocumentSwapHintScope swapHint{m_sv, cNoteMutationDirty};
     doc.addNotes(selectedTrack, duplicate);
-    m_sv->selectionModel().setNoteSelection(doc.insertedNoteIds(selectedTrack, before));
-    m_sv->ensureRangeVisible(CoreTimeDefaults::shiftTickClamped(start, int64_t(span)),
-                             Tick(std::min<uint64_t>(end + span, CoreTimeDefaults::kMaxTick)),
-                             true);
-    m_sv->announce(SongView::tr("Duplicated %n note(s)", nullptr, int(duplicate.size())));
+    m_sv.selectionModel().setNoteSelection(doc.insertedNoteIds(selectedTrack, before));
+    m_sv.ensureRangeVisible(CoreTimeDefaults::shiftTickClamped(start, int64_t(span)),
+                            Tick(std::min<uint64_t>(end + span, CoreTimeDefaults::kMaxTick)), true);
+    m_sv.announce(SongView::tr("Duplicated %n note(s)", nullptr, int(duplicate.size())));
     requestQuickUpdate(cNoteMutationDirty);
 }
 
 void PianoRoll::splitNotes()
 {
-    SongDocument &doc = m_sv->document();
-    const int selectedTrack = m_sv->selectionModel().primaryTrack();
+    SongDocument &doc = m_sv.document();
+    const int selectedTrack = m_sv.selectionModel().primaryTrack();
     std::vector<DocNote> selected = resolveSelection();
     std::vector<DocNote> notesToRemove;
     std::vector<SongDocument::NewNote> replacementNotes;
-    std::vector<NoteId> selection = m_sv->selectionModel().noteSelection();
+    std::vector<NoteId> selection = m_sv.selectionModel().noteSelection();
     std::sort(selected.begin(), selected.end(),
               [](const DocNote &a, const DocNote &b) { return a.noteId < b.noteId; });
     const auto isSelected = [&selected](NoteId id) {
@@ -408,7 +406,7 @@ void PianoRoll::splitNotes()
         fragmentPositions.push_back({partTick, note.key});
     }
     // Edit-cursor cuts also apply while stopped; their fragments remain unselected.
-    const Tick cursorTick = m_sv->editCursorTick();
+    const Tick cursorTick = m_sv.editCursorTick();
     for (const DocNote &note : doc.notesForTrack(selectedTrack)) {
         const uint64_t end = uint64_t(note.tick) + note.duration;
         if (note.unterminated() || isSelected(note.noteId) || cursorTick <= note.tick ||
@@ -427,7 +425,7 @@ void PianoRoll::splitNotes()
     SongDocument::RangeEdit rangeEdit;
     rangeEdit.removeNotes = std::move(notesToRemove);
     rangeEdit.addNotes.push_back({selectedTrack, std::move(replacementNotes)});
-    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    const SongView::DocumentSwapHintScope swapHint{m_sv, cNoteMutationDirty};
     doc.applyRangeEdit(SongDocument::tr("edit %n note(s)", nullptr, sourceCount), rangeEdit);
     for (NoteId id : doc.insertedNoteIds(selectedTrack, before)) {
         DocNote piece;
@@ -438,18 +436,18 @@ void PianoRoll::splitNotes()
             fragmentPositions.end())
             selection.push_back(id);
     }
-    m_sv->selectionModel().setNoteSelection(std::move(selection));
-    m_sv->announce(SongView::tr("Split %n note(s)", nullptr, sourceCount));
+    m_sv.selectionModel().setNoteSelection(std::move(selection));
+    m_sv.announce(SongView::tr("Split %n note(s)", nullptr, sourceCount));
     requestQuickUpdate(cNoteMutationDirty);
 }
 
 void PianoRoll::joinSelectedNotes()
 {
-    SongDocument &doc = m_sv->document();
+    SongDocument &doc = m_sv.document();
     const std::vector<DocNote> selected = resolveSelection();
     if (selected.size() < 2)
         return;
-    const int selectedTrack = m_sv->selectionModel().primaryTrack();
+    const int selectedTrack = m_sv.selectionModel().primaryTrack();
     std::map<uint8_t, std::vector<DocNote>> byKey;
     for (const DocNote &note : selected)
         byKey[note.key].push_back(note);
@@ -477,19 +475,19 @@ void PianoRoll::joinSelectedNotes()
     if (joinedNotes.empty())
         return;
     const std::vector<DocNote> before = doc.notesForTrack(selectedTrack);
-    std::vector<NoteId> selection = m_sv->selectionModel().noteSelection();
+    std::vector<NoteId> selection = m_sv.selectionModel().noteSelection();
     for (const DocNote &note : notesToRemove)
         selection.erase(std::remove(selection.begin(), selection.end(), note.noteId),
                         selection.end());
     SongDocument::RangeEdit rangeEdit;
     rangeEdit.removeNotes = std::move(notesToRemove);
     rangeEdit.addNotes.push_back({selectedTrack, std::move(joinedNotes)});
-    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    const SongView::DocumentSwapHintScope swapHint{m_sv, cNoteMutationDirty};
     doc.applyRangeEdit(SongDocument::tr("edit %n note(s)", nullptr, joinSourceCount), rangeEdit);
     for (const NoteId id : doc.insertedNoteIds(selectedTrack, before))
         selection.push_back(id);
-    m_sv->selectionModel().setNoteSelection(std::move(selection));
-    m_sv->announce(SongView::tr("Joined %n note(s)", nullptr, joinSourceCount));
+    m_sv.selectionModel().setNoteSelection(std::move(selection));
+    m_sv.announce(SongView::tr("Joined %n note(s)", nullptr, joinSourceCount));
     requestQuickUpdate(cNoteMutationDirty);
 }
 
@@ -499,40 +497,40 @@ void PianoRoll::copyNotes(const std::vector<DocNote> &notes)
     for (const DocNote &note : notes)
         base = std::min(base, note.tick);
     Clip clip;
-    ClipTrack ct{m_sv->selectionModel().primaryTrack(), {}};
+    ClipTrack ct{m_sv.selectionModel().primaryTrack(), {}};
     for (const DocNote &note : notes)
         ct.notes.push_back(
-            {uint32_t(note.tick - base), note.key, m_sv->copiedNoteDuration(note), note.velocity});
+            {uint32_t(note.tick - base), note.key, m_sv.copiedNoteDuration(note), note.velocity});
     clip.tracks.push_back(std::move(ct));
-    writeClipboard(clip, m_sv->timeline()->ticksPerBeat);
-    m_sv->announce(SongView::tr("Copied %n note(s)", nullptr, int(notes.size())));
+    writeClipboard(clip, m_sv.timeline()->ticksPerBeat);
+    m_sv.announce(SongView::tr("Copied %n note(s)", nullptr, int(notes.size())));
 }
 
 void PianoRoll::selectAllNotes()
 {
     std::vector<NoteId> ids;
-    for (const ViewNote &note : m_sv->model().notes) {
-        if (note.track == m_sv->selectionModel().primaryTrack() && note.noteId.isAssigned())
+    for (const ViewNote &note : m_sv.model().notes) {
+        if (note.track == m_sv.selectionModel().primaryTrack() && note.noteId.isAssigned())
             ids.push_back(note.noteId);
     }
-    m_sv->selectionModel().setNoteSelection(std::move(ids));
+    m_sv.selectionModel().setNoteSelection(std::move(ids));
 }
 
 void PianoRoll::selectBand(const QRectF &band, bool additive)
 {
     std::vector<NoteId> ids;
     if (additive) {
-        const auto &storedSelection = m_sv->selectionModel().noteSelection();
+        const auto &storedSelection = m_sv.selectionModel().noteSelection();
         ids.assign(storedSelection.begin(), storedSelection.end());
     }
-    for (const ViewNote &note : m_sv->model().notes) {
-        if (note.track != m_sv->selectionModel().primaryTrack() ||
+    for (const ViewNote &note : m_sv.model().notes) {
+        if (note.track != m_sv.selectionModel().primaryTrack() ||
             !noteRect(note).intersects(band) || !note.noteId.isAssigned())
             continue;
         if (std::find(ids.begin(), ids.end(), note.noteId) == ids.end())
             ids.push_back(note.noteId);
     }
-    m_sv->selectionModel().setNoteSelection(std::move(ids));
+    m_sv.selectionModel().setNoteSelection(std::move(ids));
 }
 
 void PianoRoll::showNoteMenu(QPointF localPos)
@@ -540,11 +538,11 @@ void PianoRoll::showNoteMenu(QPointF localPos)
     // Canonical actions re-resolve the selection at activation.
     if (resolveSelection().empty())
         return;
-    songview::TimelineQuickView *const quick = m_sv->quickView();
+    songview::TimelineQuickView *const quick = m_sv.quickView();
     QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
     if (!window || !m_inputHost)
         return;
-    const songview::EditActions *const actions = m_sv->editActions();
+    const songview::EditActions *const actions = m_sv.editActions();
     if (!actions)
         return;
     // Labels, shortcuts, enablement and dispatch come from the canonical QActions.
@@ -583,9 +581,9 @@ bool PianoRoll::focusNoteUnderCursor(QPointF globalPos)
     const ViewNote *hit = hitNote(pos);
     if (!hit)
         return false;
-    if (hit->track != m_sv->selectionModel().primaryTrack() || !hit->noteId.isAssigned() ||
-        !m_sv->selectionModel().isNoteSelected(hit->noteId))
-        m_sv->selectionModel().setNoteSelection({hit->noteId});
+    if (hit->track != m_sv.selectionModel().primaryTrack() || !hit->noteId.isAssigned() ||
+        !m_sv.selectionModel().isNoteSelected(hit->noteId))
+        m_sv.selectionModel().setNoteSelection({hit->noteId});
     m_inputHost->requestFocus(Qt::MouseFocusReason);
     requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection);
     return true;
@@ -601,7 +599,7 @@ void PianoRoll::retargetNoteMenu(QPointF scenePos)
 {
     // The host forward already proved the canvas stayed idle. Map the press
     // to global coordinates so the shared hit-test helpers stay unchanged.
-    songview::TimelineQuickView *const quick = m_sv->quickView();
+    songview::TimelineQuickView *const quick = m_sv.quickView();
     QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
     if (!window || !m_inputHost)
         return;
@@ -642,8 +640,8 @@ void PianoRoll::openSelectedVelocityPrompt()
 
 void PianoRoll::openVelocityPrompt(const std::vector<DocNote> &notes)
 {
-    SongDocument &document = m_sv->document();
-    songview::TimelineQuickView *const quick = m_sv->quickView();
+    SongDocument &document = m_sv.document();
+    songview::TimelineQuickView *const quick = m_sv.quickView();
     songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
     if (!session || notes.empty())
         return;
@@ -683,13 +681,13 @@ void PianoRoll::acceptVelocityPrompt(int velocity)
     m_pendingVelocityPrompt.reset(); // Never expose a pending target while mutating the document.
     QObject::disconnect(m_velocityPromptCancellation);
     m_velocityPromptCancellation = {};
-    if (songview::TimelineQuickView *const quick = m_sv->quickView()) {
+    if (songview::TimelineQuickView *const quick = m_sv.quickView()) {
         if (songview::QuickPopupSession *const session = quick->popupSession();
             session && session->owns(this)) {
             session->close();
         }
     }
-    SongDocument &document = m_sv->document();
+    SongDocument &document = m_sv.document();
     if (&document == pending.document && document.revision() == pending.documentRevision) {
         std::vector<DocNote> notes;
         notes.reserve(pending.targets.size());
@@ -702,7 +700,7 @@ void PianoRoll::acceptVelocityPrompt(int velocity)
             notes.push_back(note);
         }
         if (!notes.empty()) {
-            const SongView::DocumentSwapHintScope swapHint{*m_sv, cVelocityMutationDirty};
+            const SongView::DocumentSwapHintScope swapHint{m_sv, cVelocityMutationDirty};
             document.setNotesVelocity(notes, uint8_t(velocity));
             // Latch the chosen value even when the document operation becomes
             // a no-op so subsequent drawn notes retain the chosen velocity.
@@ -716,7 +714,7 @@ void PianoRoll::cancelVelocityPrompt()
 {
     if (!m_pendingVelocityPrompt)
         return;
-    songview::TimelineQuickView *const quick = m_sv->quickView();
+    songview::TimelineQuickView *const quick = m_sv.quickView();
     songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
     const bool ownsSession = session && session->owns(this);
     if (ownsSession)
@@ -727,7 +725,7 @@ void PianoRoll::cancelVelocityPrompt()
 
 void PianoRoll::cancelVelocityPromptWithoutFocus()
 {
-    songview::TimelineQuickView *const quick = m_sv->quickView();
+    songview::TimelineQuickView *const quick = m_sv.quickView();
     songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
     const bool ownsSession = m_pendingVelocityPrompt && session && session->owns(this);
     m_pendingVelocityPrompt.reset();
@@ -748,7 +746,7 @@ void PianoRoll::clearVelocityPrompt(bool restoreFocus)
 
 void PianoRoll::restoreVelocityPromptFocus()
 {
-    m_sv->focusTimelineBand(TimelineBand::Roll, Qt::OtherFocusReason);
+    m_sv.focusTimelineBand(TimelineBand::Roll, Qt::OtherFocusReason);
 }
 
 } // namespace songview

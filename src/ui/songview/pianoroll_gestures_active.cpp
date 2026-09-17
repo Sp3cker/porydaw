@@ -21,8 +21,8 @@ void PianoRoll::updateMoveDrag(const TimelinePointerInput &input)
     const double tick = m_camera.tickAtContentX(input.position.x());
     const int64_t grid = int64_t(m_grid.snapTicksAt(CoreTimeDefaults::tickFromDouble(m_pressTick)));
     const int64_t snappedD = int64_t(std::llround((tick - m_pressTick) / double(grid))) * grid;
-    const int dKey = m_sv->scaleFold() ? foldDegreeDeltaForPointer(input.position.y())
-                                       : yToKey(input.position.y()) - m_pressKey;
+    const int dKey = m_sv.scaleFold() ? foldDegreeDeltaForPointer(input.position.y())
+                                      : yToKey(input.position.y()) - m_pressKey;
     if (snappedD != m_dTick || dKey != m_dKey) {
         m_dTick = snappedD;
         if (dKey != m_dKey) {
@@ -37,8 +37,8 @@ void PianoRoll::auditionMovedSelection()
 {
     const std::vector<DocNote> notes = resolveSelection();
     if (!notes.empty()) {
-        const int key = m_sv->scaleFold()
-                            ? porydaw_scale::nextScalePitch(m_sv->scaleId(), m_sv->scaleRoot(),
+        const int key = m_sv.scaleFold()
+                            ? porydaw_scale::nextScalePitch(m_sv.scaleId(), m_sv.scaleRoot(),
                                                             notes.front().key, m_dKey)
                             : std::clamp(int(notes.front().key) + m_dKey, 0, 127);
         if (key >= 0) {
@@ -50,7 +50,7 @@ void PianoRoll::auditionMovedSelection()
 
 void PianoRoll::updateResizePreview()
 {
-    const auto durations = m_sv->document().resizeNotesDurations(m_resizePreview.notes, m_dDur);
+    const auto durations = m_sv.document().resizeNotesDurations(m_resizePreview.notes, m_dDur);
     m_resizePreview.endTicks.clear();
     for (size_t i = 0; i < m_resizePreview.notes.size(); ++i) {
         const DocNote &note = m_resizePreview.notes[i];
@@ -94,7 +94,7 @@ void PianoRoll::updateVelocityDrag(const TimelinePointerInput &input)
             m_auditioned = true;
         }
         requestQuickUpdate(cVelocityMutationDirty);
-        m_sv->updateVelocityGestureByDelta(m_dVel);
+        m_sv.updateVelocityGestureByDelta(m_dVel);
     }
 }
 
@@ -122,8 +122,8 @@ void PianoRoll::updateDrawDrag(const TimelinePointerInput &input)
 
 bool PianoRoll::isDrawableKey(int key) const
 {
-    return !m_sv->scaleFold() ||
-           (key >= 0 && porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), key));
+    return !m_sv.scaleFold() ||
+           (key >= 0 && porydaw_scale::isScalePitch(m_sv.scaleId(), m_sv.scaleRoot(), key));
 }
 
 void PianoRoll::drawSpanAt(double tick, Tick grid, Tick &start, int64_t &dur) const
@@ -146,7 +146,7 @@ void PianoRoll::updateTimeSelDrag(const TimelinePointerInput &input)
     EditorSelectionModel::TimeSelection sel;
     sel.startTick = std::min(m_rightAnchorTick, t);
     sel.endTick = std::max(m_rightAnchorTick, t);
-    m_sv->selectionModel().setTimeSelection(sel);
+    m_sv.selectionModel().setTimeSelection(sel);
 }
 
 void PianoRoll::updateBandDrag()
@@ -157,8 +157,8 @@ void PianoRoll::updateBandDrag()
 
 void PianoRoll::completeProjectionGesture()
 {
-    m_sv->setProjectionLocked(false);
-    m_sv->flushProjectionIfDirty();
+    m_sv.setProjectionLocked(false);
+    m_sv.flushProjectionIfDirty();
 }
 
 void PianoRoll::abortLiveLeftDrag()
@@ -172,15 +172,15 @@ void PianoRoll::abortLiveLeftDrag()
 
 void PianoRoll::releaseRightPress(const TimelinePointerInput &input)
 {
-    SongDocument &doc = m_sv->document();
+    SongDocument &doc = m_sv.document();
     const RightDrag drag = m_rightDrag; // snapshot first
     m_rightDrag = RightDrag::None;
     abortLiveLeftDrag(); // rule 3: aborts live left, no commit
     if (drag == RightDrag::TimeSel) {
-        if (m_sv->selectionModel().timeSelection().active())
-            m_sv->announceTimeSelection();
+        if (m_sv.selectionModel().timeSelection().active())
+            m_sv.announceTimeSelection();
         else
-            m_sv->selectionModel().clearTimeSelection();
+            m_sv.selectionModel().clearTimeSelection();
     } else if (drag == RightDrag::Band) {
         stopBandAuditions();
         selectBand(QRectF(m_pressPos, m_curPos).normalized(),
@@ -195,26 +195,26 @@ void PianoRoll::releaseRightPress(const TimelinePointerInput &input)
 void PianoRoll::releasePendingMenu(const TimelinePointerInput &input, SongDocument *doc)
 {
     if (doc && m_rightHit) {
-        const auto &selection = m_sv->selectionModel().noteSelection();
+        const auto &selection = m_sv.selectionModel().noteSelection();
         if (std::find(selection.begin(), selection.end(), m_rightHitId) == selection.end())
-            m_sv->selectionModel().setNoteSelection({m_rightHitId});
+            m_sv.selectionModel().setNoteSelection({m_rightHitId});
         showNoteMenu(input.position);
     } else if (insideTimeSelection(input.position.x())) {
-        if (songview::TimelineQuickView *const quick = m_sv->quickView();
+        if (songview::TimelineQuickView *const quick = m_sv.quickView();
             quick && quick->quickWindow() && m_inputHost)
-            m_sv->openTimeSelectionMenu(
+            m_sv.openTimeSelectionMenu(
                 quick->quickWindow()->mapFromGlobal(m_inputHost->mapToGlobal(input.position)));
     } else {
-        m_sv->selectionModel().clearNoteSelection();
-        m_sv->selectionModel().clearTimeSelection();
+        m_sv.selectionModel().clearNoteSelection();
+        m_sv.selectionModel().clearTimeSelection();
     }
 }
 
 void PianoRoll::releasePendingDrawClick(const TimelinePointerInput &input)
 {
     if (insideTimeSelection(input.position.x()))
-        m_sv->selectionModel().clearTimeSelection();
-    m_sv->commitEditCursor(m_grid.snapTick(m_pressTick));
+        m_sv.selectionModel().clearTimeSelection();
+    m_sv.commitEditCursor(m_grid.snapTick(m_pressTick));
     requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection | PianoRollQuickDirty::Overlay);
     completeProjectionGesture();
     stopNoteAudition(); // unique tail order: invalidate -> complete -> stop
@@ -224,13 +224,13 @@ void PianoRoll::releasePendingVelocityClick()
 {
     const NoteId id = m_velAnchor.noteId;
     if (m_velModMods & Qt::ControlModifier) {
-        const auto &storedSelection = m_sv->selectionModel().noteSelection();
+        const auto &storedSelection = m_sv.selectionModel().noteSelection();
         std::vector<NoteId> ids(storedSelection.begin(), storedSelection.end());
         if (std::erase(ids, id) == 0)
             ids.push_back(id);
-        m_sv->selectionModel().setNoteSelection(std::move(ids));
+        m_sv.selectionModel().setNoteSelection(std::move(ids));
     } else if (noteRequiresSelectionUpdate(m_velAnchor)) {
-        m_sv->selectionModel().setNoteSelection({id});
+        m_sv.selectionModel().setNoteSelection({id});
     }
     requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection);
     completeProjectionGesture();
@@ -239,55 +239,55 @@ void PianoRoll::releasePendingVelocityClick()
 
 void PianoRoll::commitDrawDrag()
 {
-    SongDocument &doc = m_sv->document();
-    const int selectedTrack = m_sv->selectionModel().primaryTrack();
+    SongDocument &doc = m_sv.document();
+    const int selectedTrack = m_sv.selectionModel().primaryTrack();
     const std::vector<DocNote> before = doc.notesForTrack(selectedTrack);
-    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    const SongView::DocumentSwapHintScope swapHint{m_sv, cNoteMutationDirty};
     doc.addNote(selectedTrack, m_drawTick, uint8_t(m_drawKey), uint32_t(m_drawDur), m_lastVelocity);
-    m_sv->selectionModel().setNoteSelection(doc.insertedNoteIds(selectedTrack, before));
+    m_sv.selectionModel().setNoteSelection(doc.insertedNoteIds(selectedTrack, before));
 }
 
 void PianoRoll::commitMoveDrag()
 {
-    SongDocument &doc = m_sv->document();
+    SongDocument &doc = m_sv.document();
     if (m_dTick == 0 && m_dKey == 0)
         return;
     std::vector<DocNote> notes = resolveSelection();
     if (notes.empty())
-        m_sv->selectionModel().clearNoteSelection();
+        m_sv.selectionModel().clearNoteSelection();
     else
         commitResolvedMove(doc, notes);
 }
 
 void PianoRoll::commitResolvedMove(SongDocument &doc, std::vector<DocNote> &notes)
 {
-    if (m_sv->scaleFold() && m_dKey != 0) {
+    if (m_sv.scaleFold() && m_dKey != 0) {
         std::vector<uint8_t> destinations;
-        if (!m_sv->resolveFoldDestinations(notes, m_dKey, destinations))
+        if (!m_sv.resolveFoldDestinations(notes, m_dKey, destinations))
             return;
-        const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+        const SongView::DocumentSwapHintScope swapHint{m_sv, cNoteMutationDirty};
         const bool moved = doc.moveNotesToPitches(notes, destinations, m_dTick);
         if (!moved)
             return;
     } else {
-        const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+        const SongView::DocumentSwapHintScope swapHint{m_sv, cNoteMutationDirty};
         doc.moveNotes(notes, m_dTick, m_dKey);
     }
     std::vector<NoteId> ids;
     ids.reserve(notes.size());
     for (const DocNote &note : notes)
         ids.push_back(note.noteId);
-    m_sv->selectionModel().setNoteSelection(std::move(ids));
+    m_sv.selectionModel().setNoteSelection(std::move(ids));
 }
 
 void PianoRoll::commitResizeDrag(LeftDrag drag, SongDocument *doc)
 {
     if (doc && drag == LeftDrag::Resize && m_dDur != 0) {
-        const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+        const SongView::DocumentSwapHintScope swapHint{m_sv, cNoteMutationDirty};
         doc->resizeNotes(resolveSelection(), m_dDur);
     } else if (doc && drag == LeftDrag::ResizeLeft && m_dTick != 0) {
         const std::vector<DocNote> notes = resolveSelection();
-        const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+        const SongView::DocumentSwapHintScope swapHint{m_sv, cNoteMutationDirty};
         doc->resizeNotesLeft(notes, m_dTick);
     }
 }
@@ -311,8 +311,8 @@ void PianoRoll::commitDrag()
     clearLiveDragToken(); // before any commit; kills either channel
     SongView::VelocityCommitResult velocityResult = SongView::VelocityCommitResult::NoGesture;
     if (drag == LeftDrag::Velocity)
-        velocityResult = m_sv->commitVelocityGesture();
-    SongDocument &doc = m_sv->document();
+        velocityResult = m_sv.commitVelocityGesture();
+    SongDocument &doc = m_sv.document();
     if (drag == LeftDrag::Draw) {
         commitDrawDrag();
     } else if (drag == LeftDrag::Move) {

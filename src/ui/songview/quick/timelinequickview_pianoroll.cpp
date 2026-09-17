@@ -167,12 +167,12 @@ void TimelineQuickView::rebuildGridRows()
     const qreal pixel = logicalPhysicalPixel(dpr);
     const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
 
-    const PitchProjection &projection = roll.m_sv->pitchProjection();
+    const PitchProjection &projection = roll.m_sv.pitchProjection();
     const auto &edges = roll.rowEdges();
     const QColor accidental = detail::pianoRollAccidentalLaneColor();
     const QColor octave = themes::color(themes::Role::song_view_piano_keyboard_separator);
     const QColor gridLine = detail::gridLineColor(50);
-    const bool scaleHighlight = roll.m_sv->scaleHighlight();
+    const bool scaleHighlight = roll.m_sv.scaleHighlight();
     const QColor tint = detail::pianoRollScaleHighlightColor();
     for (int row = 0; row < projection.visibleRowCount(); ++row) {
         const int key = projection.visiblePitchAt(row);
@@ -209,7 +209,7 @@ void TimelineQuickView::rebuildGridTime()
     }
 
     // Paint the shared time grid over the piano-specific pre-roll mask.
-    timeline_quick::composeBandedGrid(scene, TimelineQuickLayer::PianoGridTime, *roll.m_sv, plot,
+    timeline_quick::composeBandedGrid(scene, TimelineQuickLayer::PianoGridTime, roll.m_sv, plot,
                                       /*origin=*/0, dpr);
 }
 
@@ -217,13 +217,13 @@ void TimelineQuickView::rebuildNoteFills()
 {
     PianoRoll &roll = *m_roll;
     TimelineQuickScene &scene = *m_scene;
-    if (!roll.m_sv->timeline())
+    if (!roll.m_sv.timeline())
         return;
 
     const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
-    const PitchProjection &projection = roll.m_sv->pitchProjection();
-    const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
-    const auto &notes = roll.m_sv->model().notes;
+    const PitchProjection &projection = roll.m_sv.pitchProjection();
+    const int selectedTrack = roll.m_sv.selectionModel().primaryTrack();
+    const auto &notes = roll.m_sv.model().notes;
 
     for (int pass = 0; pass < 2; ++pass) {
         const bool ghostPass = pass == 0;
@@ -231,7 +231,7 @@ void TimelineQuickView::rebuildNoteFills()
             const bool ghost = note.track != selectedTrack;
             if (ghost != ghostPass)
                 continue;
-            if (ghost && roll.m_sv->scaleFold() &&
+            if (ghost && roll.m_sv.scaleFold() &&
                 projection.rowForPitch(note.key) == PitchProjection::cHiddenRow) {
                 continue;
             }
@@ -239,14 +239,14 @@ void TimelineQuickView::rebuildNoteFills()
             if (!noteRect.intersects(plot))
                 continue;
             const QRectF box = roll.noteBox(noteRect);
-            const int velocity = roll.m_sv->previewVelocity(note.noteId).value_or(note.velocity);
+            const int velocity = roll.m_sv.previewVelocity(note.noteId).value_or(note.velocity);
             if (ghost) {
                 addRect(scene.layer(TimelineQuickLayer::PianoNoteFills), box,
                         ghostNoteColor(note.track, isBlackKey(note.key)), plot);
                 continue;
             }
             addRect(scene.layer(TimelineQuickLayer::PianoNoteFills), box,
-                    roll.m_sv->noteFillColor(note.track, velocity), plot);
+                    roll.m_sv.noteFillColor(note.track, velocity), plot);
         }
     }
 }
@@ -255,18 +255,18 @@ void TimelineQuickView::rebuildDrawPreviewFill()
 {
     PianoRoll &roll = *m_roll;
     TimelineQuickScene &scene = *m_scene;
-    if (!roll.m_sv->timeline() || roll.m_leftDrag != PianoRoll::LeftDrag::Draw)
+    if (!roll.m_sv.timeline() || roll.m_leftDrag != PianoRoll::LeftDrag::Draw)
         return;
 
     const qreal dpr = roll.devicePixelRatio();
     const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
-    const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
+    const int selectedTrack = roll.m_sv.selectionModel().primaryTrack();
     const qreal x0 = roll.m_camera.displayX(double(roll.m_drawTick), 0.0, dpr);
     const qreal x1 =
         roll.m_camera.displayX(double(roll.m_drawTick + Tick(roll.m_drawDur)), 0.0, dpr);
     const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
     const QRectF box = roll.noteBox(previewRect);
-    const QColor fill = roll.m_sv->noteFillColor(selectedTrack, roll.m_lastVelocity);
+    const QColor fill = roll.m_sv.noteFillColor(selectedTrack, roll.m_lastVelocity);
     addRect(scene.layer(TimelineQuickLayer::PianoDrawPreviewFill), box, fill, plot);
 }
 
@@ -274,18 +274,18 @@ void TimelineQuickView::rebuildNoteBordersAndSelection()
 {
     PianoRoll &roll = *m_roll;
     TimelineQuickScene &scene = *m_scene;
-    if (!roll.m_sv->timeline())
+    if (!roll.m_sv.timeline())
         return;
 
     const qreal dpr = roll.devicePixelRatio();
     const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
-    const PitchProjection &projection = roll.m_sv->pitchProjection();
-    const auto &selection = roll.m_sv->selectionModel();
+    const PitchProjection &projection = roll.m_sv.pitchProjection();
+    const auto &selection = roll.m_sv.selectionModel();
     const int selectedTrack = selection.primaryTrack();
     const auto &timeSelection = selection.timeSelection();
     const SongDocument::TimeRange timeRange{Tick(timeSelection.startTick),
                                             Tick(timeSelection.endTick)};
-    const uint32_t usedTracks = usedTrackMask(roll.m_sv->timeline());
+    const uint32_t usedTracks = usedTrackMask(roll.m_sv.timeline());
     const uint32_t timeSelectedTracks =
         timeSelection.active() && timeSelection.scope == EditorSelectionModel::TimeSelection::Tracks
             ? selection.resolvedTrackScope(usedTracks)
@@ -308,11 +308,11 @@ void TimelineQuickView::rebuildNoteBordersAndSelection()
 
     for (int pass = 0; pass < 2; ++pass) {
         const bool ghostPass = pass == 0;
-        for (const ViewNote &note : roll.m_sv->model().notes) {
+        for (const ViewNote &note : roll.m_sv.model().notes) {
             const bool ghost = note.track != selectedTrack;
             if (ghost != ghostPass)
                 continue;
-            if (ghost && roll.m_sv->scaleFold() &&
+            if (ghost && roll.m_sv.scaleFold() &&
                 projection.rowForPitch(note.key) == PitchProjection::cHiddenRow) {
                 continue;
             }
@@ -348,13 +348,13 @@ void TimelineQuickView::rebuildOverlay()
 {
     PianoRoll &roll = *m_roll;
     TimelineQuickScene &scene = *m_scene;
-    if (!roll.m_sv->timeline())
+    if (!roll.m_sv.timeline())
         return;
 
     const qreal dpr = roll.devicePixelRatio();
     const qreal pixel = logicalPhysicalPixel(dpr);
     const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
-    const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
+    const int selectedTrack = roll.m_sv.selectionModel().primaryTrack();
 
     if (roll.m_leftDrag == PianoRoll::LeftDrag::Draw) {
         const qreal x0 = roll.m_camera.displayX(double(roll.m_drawTick), 0.0, dpr);
@@ -365,9 +365,9 @@ void TimelineQuickView::rebuildOverlay()
         addNoteBorder(scene, TimelineQuickLayer::PianoOverlay, box, 0, dpr, plot);
     }
 
-    const auto &selection = roll.m_sv->selectionModel();
+    const auto &selection = roll.m_sv.selectionModel();
     const auto &timeSelection = selection.timeSelection();
-    const uint32_t usedTracks = usedTrackMask(roll.m_sv->timeline());
+    const uint32_t usedTracks = usedTrackMask(roll.m_sv.timeline());
     if (roll.m_rightDrag == PianoRoll::RightDrag::Band) {
         const QRectF band = QRectF(roll.m_pressPos, roll.m_curPos).normalized().intersected(plot);
         QColor fill = themes::color(themes::Role::song_view_selection_fill);
@@ -393,7 +393,7 @@ void TimelineQuickView::rebuildOverlay()
                         plot);
     }
 
-    const MidiTimeline *timeline = roll.m_sv->timeline();
+    const MidiTimeline *timeline = roll.m_sv.timeline();
     if (timeline->loopStartTick != CoreTimeDefaults::kNoTick ||
         timeline->loopEndTick != CoreTimeDefaults::kNoTick) {
         const bool hasStart = timeline->loopStartTick != CoreTimeDefaults::kNoTick;
@@ -429,7 +429,7 @@ void TimelineQuickView::rebuildKeyboardKeys()
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
     const QRectF viewport(0, 0, keyboardWidth, roll.bounds().height());
     const qreal pixel = logicalPhysicalPixel(roll.devicePixelRatio());
-    const PitchProjection &projection = roll.m_sv->pitchProjection();
+    const PitchProjection &projection = roll.m_sv.pitchProjection();
     const auto &edges = roll.rowEdges();
     if (projection.visibleRowCount() > 0) {
         addRect(scene.layer(TimelineQuickLayer::PianoKeyboardKeys),
@@ -460,7 +460,7 @@ void TimelineQuickView::rebuildKeyboardHighlights()
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
     const QRectF viewport(0, 0, keyboardWidth, roll.bounds().height());
     const qreal pixel = logicalPhysicalPixel(roll.devicePixelRatio());
-    const PitchProjection &projection = roll.m_sv->pitchProjection();
+    const PitchProjection &projection = roll.m_sv.pitchProjection();
     const auto hoverGeometry = roll.keyboardHoverGeometry(roll.m_hoverKey);
     for (int row = 0; row < projection.visibleRowCount(); ++row) {
         const int key = projection.visiblePitchAt(row);
@@ -495,21 +495,21 @@ void TimelineQuickView::synchronizeNoteText()
     PianoRoll &roll = *m_roll;
     std::vector<TimelineQuickTextModel::Record> &records = m_noteTextRecords;
     records.clear();
-    if (!roll.m_sv->timeline()) {
+    if (!roll.m_sv.timeline()) {
         m_scene->m_pianoNoteTextModel->setRecords(records);
         return;
     }
 
     const qreal dpr = roll.devicePixelRatio();
     const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
-    const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
-    const auto &notes = roll.m_sv->model().notes;
+    const int selectedTrack = roll.m_sv.selectionModel().primaryTrack();
+    const auto &notes = roll.m_sv.model().notes;
     const bool velocityShortcut = keymap::Registry::instance().matchesModifier(
         QApplication::queryKeyboardModifiers(), QStringLiteral("roll.velocity_drag"));
     const bool showVelocityValues =
         roll.m_leftDrag == PianoRoll::LeftDrag::Velocity || velocityShortcut;
     const bool nameFontVisible =
-        !showVelocityValues && roll.m_sv->noteNameMode() && roll.m_noteNameFont.has_value();
+        !showVelocityValues && roll.m_sv.noteNameMode() && roll.m_noteNameFont.has_value();
     const bool velocityFontVisible = showVelocityValues && roll.m_velocityLabelFont.has_value();
 
     std::optional<QFontMetricsF> velocityMetrics = std::nullopt;
@@ -526,8 +526,8 @@ void TimelineQuickView::synchronizeNoteText()
         if (!noteRect.intersects(plot))
             continue;
         const QRectF box = roll.noteBox(noteRect);
-        const int velocity = roll.m_sv->previewVelocity(note.noteId).value_or(note.velocity);
-        const QColor fill = roll.m_sv->noteFillColor(note.track, velocity);
+        const int velocity = roll.m_sv.previewVelocity(note.noteId).value_or(note.velocity);
+        const QColor fill = roll.m_sv.noteFillColor(note.track, velocity);
         if (nameFontVisible && roll.noteNameFits(noteRect, roll.displayedNoteKey(note))) {
             const qreal inset = lyt::space(Space::Half);
             appendTextRecord(records,
@@ -559,7 +559,7 @@ void TimelineQuickView::synchronizeNoteText()
         const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
         const QRectF box = roll.noteBox(previewRect);
         const QString text = QString::number(roll.m_lastVelocity);
-        const QColor fill = roll.m_sv->noteFillColor(selectedTrack, roll.m_lastVelocity);
+        const QColor fill = roll.m_sv.noteFillColor(selectedTrack, roll.m_lastVelocity);
         if (previewRect.width() >=
             velocityMetrics->horizontalAdvance(text) + roll.m_geometry.velocityLabelFitAllowance) {
             appendTextRecord(records, drawPreviewTextKey, box, text, *roll.m_velocityLabelFont,
@@ -575,7 +575,7 @@ void TimelineQuickView::synchronizeLoadingText()
     PianoRoll &roll = *m_roll;
     std::vector<TimelineQuickTextModel::Record> &records = m_loadingTextRecords;
     records.clear();
-    if (!roll.m_sv->timeline()) {
+    if (!roll.m_sv.timeline()) {
         const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
         appendTextRecord(records, loadingTextKey, plot, SongView::tr("Loading..."),
                          typography::caption(roll.font()),
@@ -592,11 +592,11 @@ void TimelineQuickView::synchronizeKeyboardText()
     records.clear();
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
     const QRectF viewport(0, 0, keyboardWidth, roll.bounds().height());
-    const PitchProjection &projection = roll.m_sv->pitchProjection();
+    const PitchProjection &projection = roll.m_sv.pitchProjection();
     if (roll.m_keyboardLabelFont) {
         const QColor color = themes::color(themes::Role::song_view_piano_keyboard_label);
-        const auto source = keyboardRowSource(roll.m_sv->voicegroup(), roll.m_sv->timeline(),
-                                              roll.m_sv->selectionModel().primaryTrack());
+        const auto source = keyboardRowSource(roll.m_sv.voicegroup(), roll.m_sv.timeline(),
+                                              roll.m_sv.selectionModel().primaryTrack());
         const bool drumPads = source.isDrum();
         std::optional<QFontMetrics> labelMetrics;
         QColor drumPlate;

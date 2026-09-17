@@ -17,12 +17,12 @@ bool PianoRoll::pointerPress(const TimelinePointerInput &input)
     } else {
         m_curPosValid = false;
     }
-    if (!m_sv->timeline())
+    if (!m_sv.timeline())
         return false;
     if (m_inputHost)
         m_inputHost->requestFocus(Qt::MouseFocusReason);
     if (input.button == Qt::MiddleButton) {
-        m_sv->setProjectionLocked(true);
+        m_sv.setProjectionLocked(true);
         beginPanGesture(input);
         return true;
     }
@@ -34,7 +34,7 @@ bool PianoRoll::pointerPress(const TimelinePointerInput &input)
         beginKbdAudition(input);
         return true;
     }
-    m_sv->setProjectionLocked(true);
+    m_sv.setProjectionLocked(true);
     if (input.button == Qt::RightButton) {
         beginPendingMenu(input, hitNote(input.position));
         return true;
@@ -51,20 +51,20 @@ bool PianoRoll::pointerDoubleClick(const TimelinePointerInput &input)
     // release; dragging before release still sizes it); on a note it
     // deletes that note. Anywhere else a fast click-click behaves as two
     // presses — Qt replaces the second press with this event.
-    SongDocument &doc = m_sv->document();
+    SongDocument &doc = m_sv.document();
     if (input.surface == TimelineInputSurface::Gutter || input.button != Qt::LeftButton)
         return pointerPress(input);
     m_curPos = input.position;
     m_curPosValid = true;
-    m_sv->setProjectionLocked(true);
+    m_sv.setProjectionLocked(true);
     if (m_inputHost)
         m_inputHost->requestFocus(Qt::MouseFocusReason);
     if (const ViewNote *hit = hitNote(input.position)) {
         DocNote note;
         if (doc.findNote(hit->noteId, &note)) {
-            const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+            const SongView::DocumentSwapHintScope swapHint{m_sv, cNoteMutationDirty};
             doc.deleteNotes({note});
-            m_sv->selectionModel().clearNoteSelection();
+            m_sv.selectionModel().clearNoteSelection();
         }
         return true;
     }
@@ -220,8 +220,8 @@ void PianoRoll::panMove(const TimelinePointerInput &input)
 {
     const QPointF d = input.globalPosition - m_panPos;
     m_panPos = input.globalPosition;
-    m_sv->scrollByPx(-d.x());
-    m_sv->scrollRollBy(-d.y());
+    m_sv.scrollByPx(-d.x());
+    m_sv.scrollRollBy(-d.y());
 }
 
 void PianoRoll::kbdGlissandoMove(const TimelinePointerInput &input)
@@ -258,7 +258,7 @@ void PianoRoll::stopNoteAudition()
 
 void PianoRoll::auditionKey(int key, int velocity)
 {
-    m_sv->audition(m_sv->selectionModel().primaryTrack(), key, velocity);
+    m_sv.audition(m_sv.selectionModel().primaryTrack(), key, velocity);
     const int sounding = velocity > 0 ? key : -1;
     if (sounding != m_soundingKey) {
         m_soundingKey = sounding;
