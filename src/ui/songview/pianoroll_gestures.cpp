@@ -100,6 +100,7 @@ void PianoRoll::beginLeftPress(const TimelinePointerInput &input)
     m_dKey = 0;
     m_dDur = 0;
     m_dVel = 0;
+    m_resizePreview.clear();
 }
 
 bool PianoRoll::contentPressRejectedByScaleFold(const SongDocument *doc, const ViewNote *hit) const
@@ -179,6 +180,9 @@ void PianoRoll::armNoteDrag(const ViewNote &note, QPointF position)
         activateLeftDrag(LeftDrag::Resize);
         m_gripTick = note.endTick();
         m_gripOpposite = note.startTick;
+        m_resizePreview.clear();
+        m_resizePreview.notes = resolveSelection();
+        updateResizePreview();
     } else if (nearLeftEdge(note, position)) {
         activateLeftDrag(LeftDrag::ResizeLeft);
         m_gripTick = note.startTick;

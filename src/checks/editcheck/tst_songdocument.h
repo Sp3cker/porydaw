@@ -102,6 +102,11 @@ class EditCheckTest final : public QObject
 
     // Synthetic document contracts: one independently selectable slot
     // per behavior.
+    void noteResizeStopsAtNextSelectedStart();
+    void noteBatchCollisionRejects();
+    void noteMoveCollisionRejects();
+    void rangeEditCollisionRejects();
+    void timeRangeRemoveRippleTrim();
     void documentLoadPublication();
     void documentTempoEmpty();
     void documentVelocityAtomic();

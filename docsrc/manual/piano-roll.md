@@ -19,10 +19,32 @@ the grid; live audition while drawing. -->
 <!-- TODO: Drag to move (pitch + time), modifier for fine/unsnapped moves,
 duplicate gestures. -->
 
+On the same track, moving or pasting a group is refused if same-pitch notes
+partially overlap, contain one another, or share a start but have different ends,
+including moves that converge two notes onto exactly identical spans. Inserting
+several exactly identical spans at once is allowed as distinct notes. A time-range
+move that collapses a note to zero length is also refused. A refused paste leaves
+the selection, edit cursor, and view in place without announcing a successful paste.
+
+Against **unselected** notes, the edited note wins: an existing note keeps its
+head or tail, or is removed if completely covered. It is never split into two
+notes by this overlap rule.
+
 ## Resizing notes
 
 <!-- TODO: Grab an edge to lengthen/shorten; the effective (quantized)
 length shown inline — what the GBA will actually play. -->
+
+When you extend the right edges of several selected notes, each earlier note
+stops at the next selected note's start on the same track and pitch. The last
+note continues extending normally; notes on other pitches or tracks do not
+limit one another. Shortening again works from these visible lengths, with no
+hidden extension to undo first. Notes may meet exactly end-to-start.
+
+Other grouped edits, including left-edge resizing, are refused if the selected
+same-pitch notes on one track overlap.
+Unlike the edited-note-wins rule for unselected notes, this does not choose a
+winner within the selection.
 
 ## Selecting multiple notes
 
@@ -57,6 +79,12 @@ Covered notes and automation nodes use the normal selection highlight without be
 - **Without a selection**: opens three draggable number fields for bars, beats, and quarter-beat fractions, then inserts that duration across the whole song at the edit cursor — even while playing. The cursor position and meter are captured when the form opens, so accepting after playback has advanced still inserts at that captured edit cursor, never at the moving playhead.
 
 **Delete Time (Shift Left)** is available from the Edit menu and both time-selection context menus. It removes the active time selection's whole time span — contents plus duration — and shifts all later scoped notes and automation left by that amount. Afterward the selection clears and the edit cursor is parked at the start seam. Without an active selection, or with a selection whose scope cannot be resolved, the command does nothing (no prompt, no edit). **No confirmation prompt is shown**; undo (`Ctrl+Z`) restores the previous song in one step. There is also no default destructive keyboard shortcut for it.
+
+If a shifted note would overlap an earlier same-pitch note on the same track,
+the shifted note wins and the earlier note's crossing tail is trimmed. For
+example, deleting ticks `[20,50)` moves a note at `[110,120)` to `[80,90)` and
+trims an earlier note at `[0,100)` to `[0,80)`. Earlier notes that do not collide
+stay unchanged; Delete Time does not crop every note crossing the selected span.
 
 ### Ruler right-click: selection versus cursor menus
 Right-clicking the timeline ruler has two distinct outcomes, decided by where the press lands:

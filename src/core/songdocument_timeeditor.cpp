@@ -441,13 +441,18 @@ bool SongDocument::TimeEditor::remove()
     std::vector<SongDocument::EditOp> inserts;
     std::vector<std::vector<bool>> taken = makeTimeEditTaken();
     std::vector<XcmdEventRecord> xcmdEventRecords;
+    std::vector<PlannedNote> written;
+    std::vector<DocNote> edited;
     for (const DocNote &note : plan.notes) {
+        if (note.tick >= s)
+            edited.push_back(note);
         if (note.tick >= e) {
             appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.onIndex,
                                note.tick - span, MoveMode::SkipUnchanged, xcmdEventRecords);
             if (!note.unterminated()) {
                 const Tick endTick =
                     m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick;
+                written.push_back({note.engineTrack, note.key, note.tick - span, endTick - span});
                 appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.endIndex,
                                    endTick - span, MoveMode::SkipUnchanged, xcmdEventRecords);
             }
@@ -461,6 +466,10 @@ bool SongDocument::TimeEditor::remove()
                 consumeTimeEditEvent(taken, note.smfTrack, note.endIndex);
         }
     }
+    // Append trims after the existing inserts so recorded XCMD insertion
+    // indices remain valid. Earlier paired events are already taken.
+    if (!m_document.resolveNoteOverlaps(written, edited, removals, inserts))
+        return false;
     // DocNotes consume both events of every paired note. Close any selected
     // note event left behind as an orphan raw event using half-open semantics.
     for (const TimeEventRef &ref : plan.events) {

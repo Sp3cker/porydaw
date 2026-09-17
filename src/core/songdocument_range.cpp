@@ -78,7 +78,7 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
     // target freshly created tracks, which plan as empty streams.
     const int expandedSmfTracks = nextSmfTrack;
     std::vector<EditOp> trims;
-    if (!m_smf.tracks.empty()) {
+    {
         std::vector<std::vector<size_t>> removals(expandedSmfTracks);
         for (const DocNote &note : edit.removeNotes) {
             if (note.smfTrack < 0 || note.smfTrack >= int(removals.size()))
@@ -154,11 +154,14 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
         }
         std::vector<PlannedNote> written;
         for (const RangeEdit::TrackNotes &tn : edit.addNotes) {
+            if (tn.engineTrack < 0 || tn.engineTrack >= targetEngineTrackCount)
+                continue;
             for (const NewNote &note : tn.notes)
                 written.push_back({tn.engineTrack, note.key, note.tick,
                                    uint64_t(note.tick) + std::max<uint32_t>(1, note.duration)});
         }
-        resolveNoteOverlaps(written, edit.removeNotes, removals, trims);
+        if (!resolveNoteOverlaps(written, edit.removeNotes, removals, trims))
+            return;
         // All removals first (per SMF track, descending — appendRemoveOps sorts
         // and dedups), so every recorded index stays valid at apply time.
         for (size_t t = 0; t < m_smf.tracks.size(); t++)
@@ -311,11 +314,13 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
             if (note.unterminated())
                 continue;
             const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
-            written.push_back(
-                {note.engineTrack, note.key, newTick, uint64_t(newTick) + note.duration});
+            const Tick newEnd = CoreTimeDefaults::shiftTickClamped(
+                m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick, dTick);
+            written.push_back({note.engineTrack, note.key, newTick, newEnd});
         }
         std::vector<EditOp> trims;
-        resolveNoteOverlaps(written, notes, removals, trims);
+        if (!resolveNoteOverlaps(written, notes, removals, trims))
+            return;
         // All removals first (indices are read at apply time), then the
         // canonical XCMD emissions, then the events' exact bytes re-inserted
         // at the shifted ticks.

@@ -2,6 +2,7 @@
 
 #include <QtTest>
 
+#include <algorithm>
 #include <array>
 
 #include "checks/editcheck/tst_songdocument_support.h"
@@ -28,6 +29,64 @@ SongDocument::TimeScope trackZero()
 }
 
 } // namespace
+
+void EditCheckTest::timeRangeRemoveRippleTrim()
+{
+    using namespace songdocument_test;
+    for (Tick earlierEnd : {Tick(100), Tick(80), Tick(70)}) {
+        auto fixture = makeDocument(timeRangeFile());
+        QVERIFY(fixture);
+        auto &doc = fixture->document;
+        doc.addNotes(0, {{0, 60, earlierEnd, 81}, {110, 60, 10, 92}});
+        doc.addNotes(1, {{0, 60, 100, 73}, {110, 60, 10, 74}});
+        QVERIFY(notePairsConsistent(doc, 0));
+        QVERIFY(notePairsConsistent(doc, 1));
+        const auto original = doc.notesForTrack(0);
+        const auto other = doc.smf().tracks[size_t(doc.smfTrackFor(1))].events;
+        const SavedDocState before = captureDocState(doc);
+        QVERIFY(doc.removeTimeRange({20, 50}, trackZero()));
+        QVERIFY(notePairsConsistent(doc, 0));
+        QVERIFY(notePairsConsistent(doc, 1));
+        const auto notes = doc.notesForTrack(0);
+        QCOMPARE(notes.size(), size_t(2));
+        QCOMPARE(notes[0].tick, Tick(0));
+        QCOMPARE(notes[0].duration, uint32_t(std::min(earlierEnd, Tick(80))));
+        QCOMPARE(notes[1].tick, Tick(80));
+        QCOMPARE(notes[1].duration, uint32_t(10));
+        for (size_t i = 0; i < notes.size(); ++i) {
+            QCOMPARE(notes[i].noteId, original[i].noteId);
+            QCOMPARE(notes[i].velocity, original[i].velocity);
+        }
+        QVERIFY(doc.smf().tracks[size_t(doc.smfTrackFor(1))].events == other);
+        QCOMPARE(doc.undoStack()->count(), before.undoCount + 1);
+        const SavedDocState after = captureDocState(doc);
+        doc.undoStack()->undo();
+        QCOMPARE(doc.smf().write(), before.bytes);
+        doc.undoStack()->redo();
+        QCOMPARE(doc.smf().write(), after.bytes);
+        QVERIFY(notePairsConsistent(doc, 0));
+        QVERIFY(notePairsConsistent(doc, 1));
+    }
+    for (bool duplicate : {false, true}) {
+        auto fixture = makeDocument(timeRangeFile());
+        QVERIFY(fixture);
+        auto &doc = fixture->document;
+        doc.addNotes(0, {{0, 60, 30, 81}, {30, 60, 20, 92}});
+        QVERIFY(notePairsConsistent(doc, 0));
+        const SavedDocState before = captureDocState(doc);
+        if (duplicate)
+            QVERIFY(doc.duplicateTimeRange({10, 40}, trackZero()));
+        else
+            QVERIFY(doc.insertBlankTime({10, 40}, trackZero()));
+        QVERIFY(notePairsConsistent(doc, 0));
+        const SavedDocState after = captureDocState(doc);
+        doc.undoStack()->undo();
+        QCOMPARE(doc.smf().write(), before.bytes);
+        doc.undoStack()->redo();
+        QCOMPARE(doc.smf().write(), after.bytes);
+        QVERIFY(notePairsConsistent(doc, 0));
+    }
+}
 
 void EditCheckTest::timeRangeNoOps()
 {

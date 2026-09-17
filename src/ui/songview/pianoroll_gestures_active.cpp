@@ -48,6 +48,18 @@ void PianoRoll::auditionMovedSelection()
     }
 }
 
+void PianoRoll::updateResizePreview()
+{
+    const auto durations = m_sv->document().resizeNotesDurations(m_resizePreview.notes, m_dDur);
+    m_resizePreview.endTicks.clear();
+    for (size_t i = 0; i < m_resizePreview.notes.size(); ++i) {
+        const DocNote &note = m_resizePreview.notes[i];
+        if (!note.unterminated())
+            m_resizePreview.endTicks.emplace_back(
+                note.noteId, uint64_t(note.tick) + (durations ? (*durations)[i] : note.duration));
+    }
+}
+
 void PianoRoll::updateResizeDrag(const TimelinePointerInput &input)
 {
     const double tick = m_camera.tickAtContentX(input.position.x());
@@ -63,6 +75,8 @@ void PianoRoll::updateResizeDrag(const TimelinePointerInput &input)
     int64_t &target = m_leftDrag == LeftDrag::Resize ? m_dDur : m_dTick;
     if (delta != target) {
         target = delta;
+        if (m_leftDrag == LeftDrag::Resize)
+            updateResizePreview();
         requestQuickUpdate(cNoteMutationDirty);
     }
 }
@@ -313,6 +327,7 @@ void PianoRoll::commitDrag()
     m_dKey = 0;
     m_dDur = 0;
     m_dVel = 0;
+    m_resizePreview.clear();
     // The committed drag kind selects exactly the domains the commit touched;
     // camera and projection helpers queue their own requests, which coalesce.
     PianoRollQuickDirtySet dirty = PianoRollQuickDirty::None;

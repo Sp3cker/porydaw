@@ -4,6 +4,67 @@
 
 #include "checks/editcheck/tst_songdocument_support.h"
 
+void EditCheckTest::rangeEditCollisionRejects()
+{
+    using namespace songdocument_test;
+    for (bool empty : {false, true}) {
+        SmfFile smf;
+        if (!empty)
+            smf.tracks = {conductor(), {{channel(0xC0, 0, 0, 0)}, 200}};
+        auto fixture = makeDocument(smf);
+        QVERIFY(fixture);
+        auto &doc = fixture->document;
+        if (!empty) {
+            doc.addNote(0, 0, 60, 100, 91);
+            doc.addLanePoint(0, 7, 20, 80);
+            doc.addNote(0, 150, 61, 10, 92);
+            doc.undoStack()->undo();
+        }
+        const SavedDocState saved = captureDocState(doc);
+        const auto notes = empty ? std::vector<DocNote>{} : saved.notes;
+        SongDocument::RangeEdit edit;
+        edit.minimumEngineTrackCount = 2;
+        edit.removeNotes = notes;
+        edit.addNotes = {{1, {{10, 60, 20, 80}}}, {1, {{20, 60, 20, 90}}}};
+        edit.addPoints = {{1, 7, {{10, 90}}}};
+        edit.addTempo = {tempo(10, 150)};
+        doc.applyRangeEdit(QStringLiteral("colliding range"), edit);
+        QVERIFY2(docStateMismatch(doc, saved).isEmpty(), qPrintable(docStateMismatch(doc, saved)));
+    }
+    SmfFile smf;
+    smf.tracks = {conductor(), {{channel(0xC0, 0, 0, 0)}, 200}};
+    auto fixture = makeDocument(smf);
+    QVERIFY(fixture);
+    auto &doc = fixture->document;
+    doc.addNotes(0, {{20, 60, 10, 81}, {30, 60, 70, 92}});
+    doc.addLanePoint(0, 7, 10, 80);
+    doc.applyTempoEdit({{}, {tempo(10, 150)}});
+    auto notes = doc.notesForTrack(0);
+    const SavedDocState before = captureDocState(doc);
+    doc.moveRange({notes.front()}, doc.lanePoints(0, 7), -30, doc.tempoPoints());
+    QVERIFY2(docStateMismatch(doc, before).isEmpty(), qPrintable(docStateMismatch(doc, before)));
+    // [30,60) shifts to [0,20), not [0,30): the stationary [20,30) survives.
+    doc.addNote(0, 60, 60, 20, 73);
+    DocNote moving;
+    QVERIFY(doc.findNote(0, 30, 60, &moving));
+    const auto partialBefore = doc.smf().write();
+    doc.moveRange({moving}, {}, -40);
+    QVERIFY(notePairsConsistent(doc, 0));
+    DocNote tail;
+    QVERIFY(doc.findNote(0, 60, 60, &tail));
+    QCOMPARE(tail.duration, uint32_t(20));
+    QVERIFY(doc.findNote(0, 20, 60, &tail));
+    QCOMPARE(tail.duration, uint32_t(10));
+    QVERIFY(doc.findNote(0, 0, 60, &moving));
+    QCOMPARE(moving.duration, uint32_t(20));
+    const auto after = doc.smf().write();
+    doc.undoStack()->undo();
+    QCOMPARE(doc.smf().write(), partialBefore);
+    doc.undoStack()->redo();
+    QCOMPARE(doc.smf().write(), after);
+    QVERIFY(notePairsConsistent(doc, 0));
+}
+
 void EditCheckTest::rangeEdit_data()
 {
     addSongRows(SongCapability::EditableTrack);

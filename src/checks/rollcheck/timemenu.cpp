@@ -12,6 +12,7 @@
 #include <QPoint>
 #include <QPointer>
 #include <QQuickWindow>
+#include <QSignalSpy>
 #include <QString>
 #include <QtTest>
 #include <algorithm>
@@ -203,6 +204,137 @@ void PianoRollTest::timeSelectionMenuOpensWithPasteEnablement()
     QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undoIndex &&
                  doc.undoStack()->count() == undoCount,
              "a click on the disabled Paste row mutated the document");
+}
+
+void PianoRollTest::rejectedNotePastePreservesViewState()
+{
+    PianoRollFixture &check = *m_fixture;
+    const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+    QVERIFY(seed.has_value());
+    SongDocument &doc = check.document();
+    SongView &view = check.view();
+    const SnappedRows rows{view, check.rollInput()};
+    const Cell &cell = seed->cell;
+    const Tick snap = seed->snapCell;
+    DocNote original;
+    QVERIFY(doc.findNote(check.track(), cell.tick, uint8_t(cell.key), &original));
+    const clipcheck_support::ClipboardStateGuard clipboardGuard;
+    const quick_popup::PromptGuard popupGuard(view);
+    QSignalSpy announcements(&view, &SongView::statusMessage);
+    QSignalSpy cursorMoves(&view, &SongView::editCursorMoved);
+    QVERIFY(announcements.isValid());
+    QVERIFY(cursorMoves.isValid());
+
+    // Exercise both clipboard consumers with explicit note selection, then
+    // with the time-band menu. Selection setup uses the public model; Paste
+    // itself always enters through the existing key/menu command routing.
+    for (const bool rangeClip : {false, true}) {
+        songview::Clip clip;
+        clip.span = rangeClip ? 3 * snap : 0;
+        clip.tracks.push_back(
+            {check.track(),
+             {{0, uint8_t(cell.key), 2 * snap, 90}, {snap, uint8_t(cell.key), 2 * snap, 100}}});
+        songview::writeClipboard(clip, check.timeline().ticksPerBeat);
+        for (const bool timeSelection : {false, true}) {
+            view.selectionModel().setNoteSelection({original.noteId});
+            if (timeSelection) {
+                view.selectionModel().setTimeSelection(
+                    {cell.tick,
+                     cell.tick + snap,
+                     songview::EditorSelectionModel::TimeSelection::Tracks,
+                     {}});
+            }
+            // Keep the paste destination offscreen so a false reveal is
+            // observable independently from cursor and selection changes.
+            const Tick destination = check.timeline().lengthTicks + 16 * snap;
+            view.setEditCursorTick(destination);
+            const QByteArray before = doc.smf().write();
+            const uint64_t revision = doc.revision();
+            const int undoIndex = doc.undoStack()->index();
+            const int undoCount = doc.undoStack()->count();
+            const bool canRedo = doc.undoStack()->canRedo();
+            const auto selectedNotes = view.selectionModel().noteSelection();
+            const auto selectedTime = view.selectionModel().timeSelection();
+            const auto trackScope = view.selectionModel().storedTrackScope();
+            const double scrollX = view.camera().scrollX();
+            const double scrollY = view.camera().scrollY();
+            announcements.clear();
+            cursorMoves.clear();
+            if (timeSelection) {
+                const SharedTimeMenu menu =
+                    openSharedTimeMenu(check, rows, cell.tick, cell.tick + snap);
+                QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic));
+                const int pasteRow = timeMenuRow(*menu.model, songview::TimeSelectionAction::Paste);
+                QVERIFY(pasteRow >= 0 && menu.model->itemAt(pasteRow)->enabled);
+                QVERIFY(quick_popup::clickMenuRow(*menu.session, pasteRow));
+                QTRY_VERIFY(!menu.session->isOpen());
+            } else {
+                sendKeyStroke(check.rollInput(), Qt::Key_V, Qt::ControlModifier, false);
+            }
+            QCoreApplication::processEvents();
+            QCOMPARE(doc.smf().write(), before);
+            QCOMPARE(doc.revision(), revision);
+            QCOMPARE(doc.undoStack()->index(), undoIndex);
+            QCOMPARE(doc.undoStack()->count(), undoCount);
+            QCOMPARE(doc.undoStack()->canRedo(), canRedo);
+            QVERIFY(view.selectionModel().noteSelection() == selectedNotes);
+            QCOMPARE(view.selectionModel().timeSelection().startTick, selectedTime.startTick);
+            QCOMPARE(view.selectionModel().timeSelection().endTick, selectedTime.endTick);
+            QCOMPARE(view.selectionModel().timeSelection().scope, selectedTime.scope);
+            QCOMPARE(view.selectionModel().storedTrackScope(), trackScope);
+            QCOMPARE(view.editCursorTick(), destination);
+            QCOMPARE(view.camera().scrollX(), scrollX);
+            QCOMPARE(view.camera().scrollY(), scrollY);
+            QCOMPARE(cursorMoves.count(), 0);
+            QCOMPARE(announcements.count(), 0);
+        }
+
+        // Removing the conflicting incoming span admits the same command.
+        clip.tracks.front().notes.pop_back();
+        songview::writeClipboard(clip, check.timeline().ticksPerBeat);
+        const Tick base = view.grid().snapTick(double(view.editCursorTick()));
+        const QByteArray before = doc.smf().write();
+        const int undoIndex = doc.undoStack()->index();
+        announcements.clear();
+        cursorMoves.clear();
+        sendKeyStroke(check.rollInput(), Qt::Key_V, Qt::ControlModifier, false);
+        DocNote pasted;
+        QVERIFY(doc.findNote(check.track(), base, uint8_t(cell.key), &pasted));
+        QCOMPARE(pasted.duration, 2 * snap);
+        QCOMPARE(pasted.velocity, uint8_t(90));
+        QCOMPARE(view.editCursorTick(), base + (rangeClip ? clip.span : 2 * snap));
+        QVERIFY(!view.selectionModel().timeSelection().active());
+        if (!rangeClip)
+            QVERIFY(view.selectionModel().isNoteSelected(pasted.noteId));
+        QCOMPARE(cursorMoves.count(), 1);
+        QCOMPARE(announcements.count(), 1);
+        QCOMPARE(doc.undoStack()->index(), undoIndex + 1);
+        const QByteArray accepted = doc.smf().write();
+        doc.undoStack()->undo();
+        QCOMPARE(doc.smf().write(), before);
+        doc.undoStack()->redo();
+        QCOMPARE(doc.smf().write(), accepted);
+        doc.undoStack()->undo();
+        // Return the camera to the seed before opening the next band menu.
+        view.ensureTickVisible(cell.tick);
+    }
+
+    // Empty content intentionally moves its band without publishing an edit.
+    const Tick emptyStart = view.grid().snapTickUp(double(check.timeline().lengthTicks) + snap);
+    view.selectionModel().setTimeSelection(
+        {emptyStart, emptyStart + snap, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
+    const QByteArray beforeNudge = doc.smf().write();
+    const uint64_t revision = doc.revision();
+    const int undoIndex = doc.undoStack()->index();
+    const int undoCount = doc.undoStack()->count();
+    const Tick next = view.grid().snapTickUp(double(emptyStart) + 1.0);
+    sendKeyStroke(check.rollInput(), Qt::Key_Right, Qt::NoModifier, false);
+    QCOMPARE(view.selectionModel().timeSelection().startTick, next);
+    QCOMPARE(view.selectionModel().timeSelection().endTick, next + snap);
+    QCOMPARE(doc.smf().write(), beforeNudge);
+    QCOMPARE(doc.revision(), revision);
+    QCOMPARE(doc.undoStack()->index(), undoIndex);
+    QCOMPARE(doc.undoStack()->count(), undoCount);
 }
 
 void PianoRollTest::timeSelectionMenuStaleAndCancelNoOp()

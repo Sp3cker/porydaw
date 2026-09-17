@@ -319,6 +319,13 @@ QRectF PianoRoll::displayedNoteRect(const ViewNote &note) const
     } else {
         tick = std::max<int64_t>(0, int64_t(note.startTick) + m_dTick);
         endTick = std::max<int64_t>(tick + 1, int64_t(note.endTick()) + m_dTick + m_dDur);
+        if (m_leftDrag == LeftDrag::Resize) {
+            const auto capped =
+                std::find_if(m_resizePreview.endTicks.begin(), m_resizePreview.endTicks.end(),
+                             [&](const auto &entry) { return entry.first == note.noteId; });
+            if (capped != m_resizePreview.endTicks.end())
+                endTick = std::min(endTick, int64_t(capped->second));
+        }
     }
     const int key = displayedNoteKey(note);
     const qreal dpr = devicePixelRatio();

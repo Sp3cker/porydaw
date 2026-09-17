@@ -100,6 +100,7 @@ class PianoRollTest final : public QObject
     void timelineInsertBlankTimeLanes();
     void keyboardResizeNotes();
     void timeSelectionMenuOpensWithPasteEnablement();
+    void rejectedNotePastePreservesViewState();
     void timeSelectionMenuStaleAndCancelNoOp();
     void timeSelectionMenuInsertTimeAndStaleNoOp();
     void timeSelectionMenuSweepKeepsCanonicalEnablement();

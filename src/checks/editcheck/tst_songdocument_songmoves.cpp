@@ -2,7 +2,84 @@
 
 #include <QtTest>
 
+#include <algorithm>
+
 #include "checks/editcheck/tst_songdocument_support.h"
+
+void EditCheckTest::noteMoveCollisionRejects()
+{
+    using namespace songdocument_test;
+    for (int scenario = 0; scenario < 5; ++scenario) {
+        for (bool reverse : {false, true}) {
+            SmfFile smf;
+            smf.tracks = {conductor(), {{channel(0xC0, 0, 0, 0)}, 200}};
+            auto fixture = makeDocument(smf);
+            QVERIFY(fixture);
+            auto &doc = fixture->document;
+            if (scenario == 1 || scenario == 4)
+                doc.addNotes(0, {{20, 60, 10, 81}, {40, 60, 10, 92}});
+            else
+                doc.addNotes(0, {{20, 1, 20, 81}, {20, 2, 20, 92}});
+            QVERIFY(notePairsConsistent(doc, 0));
+            doc.addNote(0, 150, 70, 10, 80);
+            doc.undoStack()->undo();
+            const SavedDocState saved = captureDocState(doc);
+            const auto original = saved.notes;
+            auto selected = original;
+            if (reverse)
+                std::reverse(selected.begin(), selected.end());
+            if (scenario == 0)
+                doc.moveNotes(selected, 0, -2);
+            else if (scenario == 1)
+                doc.moveNotes(selected, -50, 0);
+            else if (scenario == 4)
+                doc.resizeNotesLeft(selected, -30);
+            else
+                QVERIFY(!doc.moveNotesToPitches(
+                    selected, std::vector<uint8_t>(selected.size(), scenario == 2 ? 3 : 1), 0));
+            QVERIFY2(docStateMismatch(doc, saved).isEmpty(),
+                     qPrintable(docStateMismatch(doc, saved)));
+            doc.undoStack()->redo();
+            QVERIFY(notePairsConsistent(doc, 0));
+            doc.undoStack()->undo();
+            QCOMPARE(doc.smf().write(), saved.bytes);
+        }
+    }
+    SmfFile smf;
+    smf.tracks = {conductor(), {{channel(0xC0, 0, 0, 0)}, 200}};
+    auto fixture = makeDocument(smf);
+    QVERIFY(fixture);
+    auto &doc = fixture->document;
+    doc.addNotes(0, {{20, 1, 10, 81}, {40, 2, 10, 92}});
+    doc.undoStack()->clear();
+    const auto before = doc.smf().write();
+    doc.moveNotes(doc.notesForTrack(0), 1, 0, true);
+    QVERIFY(notePairsConsistent(doc, 0));
+    doc.moveNotes(doc.notesForTrack(0), 1, 0, true);
+    QVERIFY(notePairsConsistent(doc, 0));
+    QCOMPARE(doc.undoStack()->count(), 1);
+    const auto moved = doc.smf().write();
+    doc.moveNotes(doc.notesForTrack(0), -100, -2, true);
+    QCOMPARE(doc.smf().write(), moved);
+    doc.undoStack()->undo();
+    QCOMPARE(doc.smf().write(), before);
+    doc.undoStack()->redo();
+    QCOMPARE(doc.smf().write(), moved);
+    QVERIFY(notePairsConsistent(doc, 0));
+    QVERIFY(doc.moveNotesToPitches(doc.notesForTrack(0), {4, 5}, 0));
+    QVERIFY(notePairsConsistent(doc, 0));
+
+    doc.undoStack()->clear();
+    DocNote note = doc.notesForTrack(0).front();
+    doc.moveNotes({note}, -100, 0, true);
+    QVERIFY(notePairsConsistent(doc, 0));
+    QVERIFY(doc.findNote(note.noteId, &note));
+    doc.moveNotes({note}, 1, 0, true);
+    QVERIFY(notePairsConsistent(doc, 0));
+    QCOMPARE(doc.undoStack()->count(), 2);
+    QVERIFY(doc.findNote(note.noteId, &note));
+    QCOMPARE(note.tick, Tick(1));
+}
 
 void EditCheckTest::noteMoveOverlap_data()
 {

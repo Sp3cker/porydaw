@@ -126,6 +126,9 @@ class SongDocument : public QObject
     bool save(QString *error);
     SongSaveSnapshot captureSaveSnapshot() const;
     void didSave(const SongSaveSnapshot &snapshot, bool flagsWritten);
+    // Duration planning only: no event edits or document scans.
+    std::optional<std::vector<uint32_t>> resizeNotesDurations(const std::vector<DocNote> &notes,
+                                                              int64_t dDuration) const;
 
     const QString &midPath() const { return m_midPath; }
     const QString &label() const { return m_label; }
@@ -535,28 +538,45 @@ class SongDocument : public QObject
     // (per SMF track, for the caller's appendRemoveOps pass) and the
     // trimmed events re-inserted with their exact bytes via trims (the
     // caller appends them after all its removals).
+    // Reject empty/overlapping participant spans before touching either
+    // output. Unchanged selected notes must also be included in written.
     struct PlannedNote {
         int engineTrack;
         uint8_t key;
         Tick tick;
         uint64_t endTick; // exclusive
     };
-    void resolveNoteOverlaps(const std::vector<PlannedNote> &written,
+    enum class ParticipantRule { Strict, AllowIdentical };
+    // AllowIdentical is insertion-only: first-following-release
+    // pairing exposes N identical inserted spans as N notes with distinct IDs
+    // (duplicateNoteIdentity). Convergent moves must reject identical spans
+    // (noteMoveCollisionRejects).
+    bool resolveNoteOverlaps(const std::vector<PlannedNote> &written,
                              const std::vector<DocNote> &editNotes,
-                             std::vector<std::vector<size_t>> &removals,
-                             std::vector<EditOp> &trims) const;
+                             std::vector<std::vector<size_t>> &removals, std::vector<EditOp> &trims,
+                             ParticipantRule rule = ParticipantRule::Strict) const;
     // Note-move op builders, split out so their commands can rebuild the
     // move with an accumulated delta when merging keyboard presses.
     // moveNotes rewrites each note's own on/end events (note ids preserved;
     // unterminated notes keep their patched note-on); moveNotesToPitches
     // mints fresh events and drops unterminated or no-op pitches.
-    std::vector<EditOp> buildMoveNotesOps(const std::vector<DocNote> &notes, int64_t dTick,
-                                          int dKey) const;
-    std::vector<EditOp> buildResizeNotesOps(const std::vector<DocNote> &notes,
-                                            int64_t dDuration) const;
-    std::vector<EditOp> buildMoveNotesToPitchesOps(const std::vector<DocNote> &notes,
-                                                   const std::vector<uint8_t> &destPitches,
-                                                   int64_t dTick) const;
+    struct ResizeNotesPlan {
+        std::vector<EditOp> ops;
+        std::vector<uint32_t> durations;
+    };
+    template <typename Rebuild, typename Store, typename Finish>
+    bool mergeNoteGesture(std::vector<EditOp> &ops, std::vector<EditOp> &nextOps, Rebuild rebuild,
+                          Store store, Finish finish);
+    std::optional<std::vector<uint32_t>> resizeNotesDurations(const std::vector<DocNote> &notes,
+                                                              int64_t dDuration,
+                                                              std::vector<size_t> &order) const;
+    std::optional<std::vector<EditOp>> buildMoveNotesOps(const std::vector<DocNote> &notes,
+                                                         int64_t dTick, int dKey) const;
+    std::optional<ResizeNotesPlan> buildResizeNotesOps(const std::vector<DocNote> &notes,
+                                                       int64_t dDuration) const;
+    std::optional<std::vector<EditOp>>
+    buildMoveNotesToPitchesOps(const std::vector<DocNote> &notes,
+                               const std::vector<uint8_t> &destPitches, int64_t dTick) const;
     // Replace one event: modify in place when the tick is unchanged (the
     // event keeps its position within its tick group — mid2agb stable-sorts,
     // so same-tick order is significant), else remove + re-insert so ticks

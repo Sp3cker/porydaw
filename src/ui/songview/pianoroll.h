@@ -12,6 +12,7 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #include "core/songdocument.h"
@@ -269,6 +270,7 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     void refreshHoverCursor(QPointF pos, Qt::KeyboardModifiers modifiers);
 
     std::vector<DocNote> resolveSelection() const;
+    void updateResizePreview();
     void transposeSelection(int dKey);
     void copyNotes(const std::vector<DocNote> &notes);
 
@@ -332,6 +334,18 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     int64_t m_dTick = 0;
     int m_dKey = 0; // semitones, or scale degrees during a Fold move
     int64_t m_dDur = 0;
+    // Right-edge resize preview: the resolved selection plus each terminated
+    // note's planned end tick, stored contiguously for the gesture.
+    struct ResizePreview {
+        std::vector<DocNote> notes;
+        std::vector<std::pair<NoteId, uint64_t>> endTicks;
+        void clear()
+        {
+            notes.clear();
+            endTicks.clear();
+        }
+    };
+    ResizePreview m_resizePreview;
     int m_dVel = 0;
     Tick m_drawTick = 0; // pending note of a draw gesture
     int64_t m_drawDur = 0;

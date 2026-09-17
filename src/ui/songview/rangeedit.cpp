@@ -530,7 +530,10 @@ void SongView::transposeTimeSelection(int dKey)
         }
     }
     const SongView::DocumentSwapHintScope swapHint{*this, cNoteMutationDirty};
+    const uint64_t revision = m_document.revision();
     m_document.moveNotes(notes, 0, dKey, /*mergeable=*/true);
+    if (m_document.revision() == revision)
+        return;
     // Keep the moved notes in sight: the row the move headed toward
     // scrolls into view just enough (no re-centering).
     int edge = int(notes.front().key) + dKey;
@@ -598,7 +601,13 @@ void SongView::nudgeTimeSelection(bool right)
             points.push_back(point);
     }
     tempo = std::move(contents.tempo);
+    const uint64_t revision = m_document.revision();
     m_document.moveRange(notes, points, dTick, tempo);
+    const bool hadContent = !notes.empty() || !points.empty() || !tempo.empty();
+    // Revision already reports edits without changing moveRange's public API.
+    // An empty-band nudge produces no edit but must still move the band.
+    if (m_document.revision() == revision && hadContent)
+        return;
     // The band follows even over empty content, so repeated nudges keep
     // aiming at the same region.
     EditorSelectionModel::TimeSelection moved = selection;
@@ -736,7 +745,10 @@ void SongView::pasteRangeAtEditCursor(const Clip &clip)
         announce(tr("Nothing useful to paste"));
         return;
     }
+    const uint64_t revision = m_document.revision();
     m_document.applyRangeEdit(tr("paste range"), edit);
+    if (m_document.revision() == revision)
+        return;
 
     // Set up for tiling: advance to the clip's end while keeping the newly
     // merged content, rather than the advanced cursor, in view.
@@ -770,7 +782,10 @@ void SongView::pasteFromClipboard()
         end = Tick(std::max<Tick>(end, tick + Tick(cn.duration)));
     }
     const SongView::DocumentSwapHintScope swapHint{*this, cNoteMutationDirty};
+    const uint64_t revision = m_document.revision();
     m_document.addNotes(selectedTrack, notes);
+    if (m_document.revision() == revision)
+        return;
     m_selectionModel.setNoteSelection(m_document.insertedNoteIds(selectedTrack, before));
     // Like pasteRangeAtEditCursor: advance the edit cursor past the pasted
     // notes so repeated Ctrl+V lays copies back-to-back, but keep the view
