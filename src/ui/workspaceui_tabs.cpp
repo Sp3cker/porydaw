@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <utility>
 
+#include "audio/audioengine.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
 
@@ -30,7 +31,7 @@ SongTab *WorkspaceUi::createTab(SongName name, const QString &title, bool activa
 {
     auto page = std::make_unique<SongTab>(std::move(name));
     SongTab *const tab = page.get();
-    tab->setSampleRate(m_audioSampleRate);
+    tab->setSampleRate(m_audio.sampleRate());
     tab->view().setVelocityColorMode(m_velocityColorMode);
     tab->view().setNoteNameMode(m_noteNameMode);
     tab->view().setFollowPlayhead(m_followPlayhead);
@@ -74,6 +75,10 @@ void WorkspaceUi::removeTab(SongTab *tab)
 
 void WorkspaceUi::destroyAllTabs()
 {
+    // Tab teardown replaces the selection context: stop browse audio before
+    // the old context is replaced. MainWindow unloads the engine against
+    // the outgoing selection first.
+    m_soundBrowser->stopAll();
     // MainWindow unloads the engine against the outgoing selection first.
     if (m_selectedTab) {
         m_selectedTab = nullptr;
@@ -116,6 +121,9 @@ void WorkspaceUi::publishSelectedIfChanged()
     SongTab *const selected = tabForWidget(m_tabs->currentWidget());
     if (selected == m_selectedTab)
         return;
+    // Tab selection changes stop browse audio before the old context is
+    // replaced; matching picker releases still forward (see wireTab).
+    m_soundBrowser->stopAll();
     m_selectedTab = selected;
     rebuildVoicegroupPresentation();
     persistTabs();
@@ -270,6 +278,8 @@ void WorkspaceUi::applyStagedUpdate(const SongName &name, VoicegroupBound &bound
     SongTab *const tab = songTabFor(name);
     if (!tab)
         return;
+    if (tab == m_selectedTab)
+        m_soundBrowser->stopAll();
     // The preceding LoadedBankView event already updated the cache; adopt
     // the published lease by the incoming id before the bind. The tab's
     // voicegroupId is not yet installed (applyMidiStage reset it) or stale
@@ -572,12 +582,4 @@ void WorkspaceUi::maybeSaveTab(SongTab *tab, const std::function<void(bool)> &co
     // The semantic save queues ahead of whatever the continuation submits
     // (a project open, say); the FIFO carries it out in order.
     submitSaveForTab(tab, [continuation](bool ok) { continuation(ok); });
-}
-
-// ---- Sample rate ------------------------------------------------------------
-
-void WorkspaceUi::applySampleRateToTabs()
-{
-    for (const auto &page : m_tabPages)
-        page->setSampleRate(m_audioSampleRate);
 }

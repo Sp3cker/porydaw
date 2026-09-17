@@ -742,7 +742,7 @@ class HostIntegrationTest final : public QObject
         if (!fixture)
             return std::nullopt;
         auto window = std::make_unique<MainWindow>();
-        if (!window->m_audioOk)
+        if (!window->m_workspace)
             return std::nullopt;
         const std::optional<SongName> firstName = SongName::create(m_songA);
         const std::optional<SongName> secondName = SongName::create(m_songB);

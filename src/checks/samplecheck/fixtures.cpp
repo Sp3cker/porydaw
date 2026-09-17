@@ -6,6 +6,10 @@
 #include <algorithm>
 #include <cmath>
 
+#include "audio/audioengine.h"
+#include "checks/support/audioengineaccess.h"
+#include "ui/soundbrowser/soundbrowser.h"
+
 bool writeFile(const QString &path, const QByteArray &bytes)
 {
     QDir().mkpath(QFileInfo(path).path());
@@ -233,4 +237,43 @@ std::vector<float> genSaw(double rate, double freq, double seconds, double amp)
 double centsOff(double f0, double reference)
 {
     return 1200.0 * std::log2(f0 / reference);
+}
+
+samplecheck::SampleEditorAudioFixture::SampleEditorAudioFixture()
+    : m_wasBackendSet(qEnvironmentVariableIsSet("PORYDAW_AUDIO_BACKEND"))
+    , m_previousBackend(qgetenv("PORYDAW_AUDIO_BACKEND"))
+{
+    qputenv("PORYDAW_AUDIO_BACKEND", QByteArrayLiteral("null"));
+    m_engine = std::make_unique<AudioEngine>();
+    if (!m_engine->init(&m_error))
+        return;
+    if (!m_engine->nullBackendForced() || !m_engine->usingNullBackend()) {
+        m_error = QStringLiteral("sample editor checks require the production null backend");
+        return;
+    }
+    if (!checks::AudioEngineTestAccess::parkDevice(*m_engine)) {
+        m_error = QStringLiteral("sample editor checks could not park the null audio device");
+        return;
+    }
+    m_browser = std::make_unique<soundbrowser::SoundBrowser>(*m_engine);
+}
+
+samplecheck::SampleEditorAudioFixture::~SampleEditorAudioFixture()
+{
+    m_browser.reset();
+    m_engine.reset();
+    if (m_wasBackendSet)
+        qputenv("PORYDAW_AUDIO_BACKEND", m_previousBackend);
+    else
+        qunsetenv("PORYDAW_AUDIO_BACKEND");
+}
+
+AudioEngine &samplecheck::SampleEditorAudioFixture::engine() const
+{
+    return *m_engine;
+}
+
+soundbrowser::SoundBrowser &samplecheck::SampleEditorAudioFixture::browser() const
+{
+    return *m_browser;
 }

@@ -144,12 +144,6 @@ class MainWindow : public QMainWindow
     // observations.
     void rebindEditActions(SongTab *tab);
 
-    // ---- Browse auditions (engine-owned; values resolved per call) ----
-    // Browse-audition a keysplit instrument: play whatever sub-voice the
-    // audition key (middle C) resolves to, with that sub-voice's own envelope
-    // — the same resolution the engine does per note (resolve_voice).
-    void auditionKeysplit(const QString &symbol);
-
     // The one editor-view persistence sink: each hub change writes the
     // complete state through *m_themeSettings. No in-memory mirror exists.
     void persistEditorViewState(const EditorViewState &state);
@@ -192,7 +186,6 @@ class MainWindow : public QMainWindow
     const MidiTimeline *m_appliedTimeline = nullptr;
     std::optional<SongSettings> m_appliedSettings;
 
-    bool m_audioOk = false;
     // False during harness runs so they don't overwrite the window-chrome
     // QSettings (geometry, state, song filters). Tab/session persistence is
     // WorkspaceUi's and always runs; harnesses redirect QSettings instead.

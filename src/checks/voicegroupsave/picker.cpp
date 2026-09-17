@@ -5,33 +5,59 @@
 #include <QtTest>
 
 #include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <span>
+#include <vector>
 
+#include "audio/audioengine.h"
+#include "checks/support/audioengineaccess.h"
 #include "checks/support/eventsynth.h"
 #include "checks/support/voicegroupbrowserdriver.h"
 #include "core/songdocument.h"
 #include "mainwindow.h"
+#include "ui/soundbrowser/soundbrowser.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/workspaceui.h"
 
 namespace checks {
 namespace {
 
-class ScopedConnections final
+double pickerPeak(const std::vector<float> &pcm)
 {
-  public:
-    ~ScopedConnections()
-    {
-        for (const QMetaObject::Connection &connection : m_connections)
-            QObject::disconnect(connection);
-    }
+    double result = 0.0;
+    for (const float sample : pcm)
+        result = std::max(result, std::abs(double(sample)));
+    return result;
+}
 
-    void add(const QMetaObject::Connection &connection) { m_connections.append(connection); }
-
-  private:
-    QList<QMetaObject::Connection> m_connections;
-};
+std::vector<float> renderParkedSeconds(AudioEngine &engine, double seconds)
+{
+    const auto frames = std::max(uint32_t{1}, uint32_t(std::ceil(seconds * engine.sampleRate())));
+    std::vector<float> pcm(static_cast<std::size_t>(frames) * 2);
+    AudioEngineTestAccess::renderParked(engine, std::span<float>(pcm));
+    return pcm;
+}
 
 } // namespace
+
+void VoicegroupSaveTest::backgroundBankPublicationKeepsAudition()
+{
+    QVERIFY(AudioEngineTestAccess::parkDevice(m_window->m_audio));
+    QObject owner;
+    WorkspaceUi &workspace = *m_window->m_workspace;
+    workspace.soundBrowser()->previewVoice(&owner, m_dsSlot, 60, 112);
+
+    LoadedBankView background = *m_browser->selectedBankView();
+    const auto id = VoicegroupId::create(QStringLiteral("sound/voicegroups/background.inc"), {});
+    QVERIFY(id);
+    QVERIFY(*id != background.id);
+    background.id = *id;
+    workspace.applyProjectEvent(ProjectEvent{std::move(background)});
+
+    QVERIFY2(pickerPeak(renderParkedSeconds(m_window->m_audio, 0.1)) >= 0.01,
+             "an unrelated bank publication must not cancel the selected bank audition");
+}
 
 void VoicegroupSaveTest::samplePickerAuditionsAndCommits()
 {
@@ -44,26 +70,18 @@ void VoicegroupSaveTest::samplePickerAuditionsAndCommits()
     const VgVoice before = *m_browser->selectedBankView()->slotViews.at(m_dsSlot).voice;
     QCOMPARE(m_browser->samplePickerCurrentSymbol(), before.symbol);
 
-    QStringList auditioned;
-    QList<VgAuditionKind> kinds;
-    int stops = 0;
-    ScopedConnections connections;
-    connections.add(connect(m_window->m_workspace.get(), &WorkspaceUi::sampleAuditionRequested,
-                            this,
-                            [&auditioned, &kinds](const QString &symbol, VgAuditionKind kind,
-                                                  const AuditionSlots::Adsr &) {
-                                auditioned.append(symbol);
-                                kinds.append(kind);
-                            }));
-    connections.add(connect(m_window->m_workspace.get(), &WorkspaceUi::sampleAuditionStopRequested,
-                            this, [&stops] { ++stops; }));
-
+    // Real playback through the workspace routing: park the device for
+    // deterministic capture, then prove a ready selection sounds and its
+    // close releases.
+    QVERIFY2(AudioEngineTestAccess::parkDevice(m_window->m_audio),
+             "sample picker parks the device for deterministic PCM capture");
     m_browser->openSamplePickerPopup();
     QLineEdit *search = m_browser->samplePickerFilterField();
     QVERIFY(search);
     QVERIFY(m_browser->samplePickerPopupIsVisible());
     QCOMPARE(m_browser->samplePickerPopupCornerColor(), themes::color(themes::Role::menu_outline));
     QVERIFY(m_browser->samplePickerSymbolRowCount() >= 2);
+
     QVERIFY2(settle([this] { return m_browser->samplePickerBadgedRowCount() > 0; }),
              "picker did not render a loop badge after its production lazy load");
     if (!m_screenshotPath.isEmpty()) {
@@ -76,16 +94,17 @@ void VoicegroupSaveTest::samplePickerAuditionsAndCommits()
     const QString target = m_browser->firstAlternatePlainPickerSymbol(before.symbol);
     QVERIFY2(!target.isEmpty(), "fixture has no alternate plain sample for picker commit contract");
     search->setText(target);
-    QVERIFY(auditioned.contains(target));
     QVERIFY2(settle([this] { return m_window->m_workspace->sampleSet() != nullptr; }),
              "first picker audition did not load the shared sample set");
     QCOMPARE(m_browser->currentPickerRowSymbol(), target);
+    QCoreApplication::processEvents();
+    QVERIFY2(pickerPeak(renderParkedSeconds(m_window->m_audio, 1.0)) >= 0.01,
+             "a ready popup selection starts audible playback through the workspace routing");
     m_browser->clickCurrentPickerRow();
     QVERIFY(m_browser->samplePickerPopupIsVisible());
     QCOMPARE(m_browser->selectedBankView()->slotViews.at(m_dsSlot).voice->symbol, before.symbol);
     m_browser->clickCurrentPickerRow();
     QVERIFY(!m_browser->samplePickerPopupIsVisible());
-    QVERIFY(stops > 0);
     QVERIFY2(settle([this, &target] {
                  const LoadedBankView *const bank = m_browser->selectedBankView();
                  return bank && bank->slotViews.at(m_dsSlot).voice &&
@@ -93,6 +112,11 @@ void VoicegroupSaveTest::samplePickerAuditionsAndCommits()
              }),
              "second picker click did not commit selected sample symbol");
     QVERIFY(!m_document->isDirty());
+    // The popup close stops the picker's owned request; drain the real
+    // release envelope before asserting digital silence.
+    renderParkedSeconds(m_window->m_audio, 2.5);
+    QVERIFY2(pickerPeak(renderParkedSeconds(m_window->m_audio, 0.1)) <= 1.0e-7,
+             "closing the popup releases the picker's playback");
     QVERIFY(m_browser->selectedBankView()->dirty);
     requestUndo();
     QVERIFY2(settle([this, &before] {
@@ -124,25 +148,6 @@ void VoicegroupSaveTest::samplePickerAuditionsAndCommits()
              "unlisted typed picker symbol undo did not restore clean voice");
 }
 
-void VoicegroupSaveTest::samplePickerKeysplitAuditions()
-{
-    m_browser->revealSlot(m_dsSlot);
-    QVERIFY(m_browser->hasSamplePickerEditor());
-    QList<VgAuditionKind> kinds;
-    ScopedConnections connections;
-    connections.add(connect(m_window->m_workspace.get(), &WorkspaceUi::sampleAuditionRequested,
-                            this,
-                            [&kinds](const QString &, VgAuditionKind kind,
-                                     const AuditionSlots::Adsr &) { kinds.append(kind); }));
-    m_browser->openSamplePickerPopup();
-    QVERIFY(m_browser->samplePickerPopupIsVisible());
-    QVERIFY2(m_browser->selectFirstKeysplitPickerRow(),
-             "required staged keysplit missing for picker audition via sound/keysplit_tables.inc "
-             "and sound/voicegroups/fixture_rich.inc");
-    QVERIFY(!kinds.isEmpty());
-    QCOMPARE(kinds.last(), VgAuditionKind::Keysplit);
-}
-
 void VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits()
 {
     const QStringList waves = m_window->m_workspace->projectState().catalog.progWave;
@@ -152,12 +157,9 @@ void VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits()
     m_browser->revealSlot(m_dsSlot);
     QCoreApplication::processEvents();
     const VgVoice before = *m_browser->selectedBankView()->slotViews.at(m_dsSlot).voice;
-    QList<VgAuditionKind> kinds;
-    ScopedConnections connections;
-    connections.add(connect(m_window->m_workspace.get(), &WorkspaceUi::sampleAuditionRequested,
-                            this,
-                            [&kinds](const QString &, VgAuditionKind kind,
-                                     const AuditionSlots::Adsr &) { kinds.append(kind); }));
+    // Input, popup, commit/undo and typed-symbol behavior below; audible
+    // browse routing is proven with real PCM in samplePickerAuditionsAndCommits
+    // and the browse* samplecheck slots, never via forwarding spies.
     QVERIFY(m_browser->activateVoiceType(VgMacro::ProgWave));
     QVERIFY2(settle([this] {
                  const LoadedBankView *const bank = m_browser->selectedBankView();
@@ -181,8 +183,6 @@ void VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits()
     QLineEdit *const search = m_browser->samplePickerFilterField();
     QVERIFY(search);
     search->setText(alternative);
-    QVERIFY(!kinds.isEmpty());
-    QCOMPARE(kinds.last(), VgAuditionKind::Wave);
     events::sendKey(*search, QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier, QString(), false, 1);
     QVERIFY2(settle([this, &alternative] {
                  const LoadedBankView *const bank = m_browser->selectedBankView();

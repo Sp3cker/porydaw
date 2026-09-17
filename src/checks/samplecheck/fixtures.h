@@ -3,7 +3,13 @@
 #include <QByteArray>
 #include <QString>
 #include <cstddef>
+#include <memory>
 #include <vector>
+
+class AudioEngine;
+namespace soundbrowser {
+class SoundBrowser;
+}
 
 struct FixtureSpec {
     quint32 rate = 13379;
@@ -51,3 +57,28 @@ double toneAmp(const std::vector<float> &values, double rate, double freq, size_
 double median(std::vector<double> values);
 std::vector<float> genSaw(double rate, double freq, double seconds, double amp);
 double centsOff(double f0, double reference);
+
+namespace samplecheck {
+
+class SampleEditorAudioFixture final
+{
+  public:
+    SampleEditorAudioFixture();
+    ~SampleEditorAudioFixture();
+    SampleEditorAudioFixture(const SampleEditorAudioFixture &) = delete;
+    SampleEditorAudioFixture &operator=(const SampleEditorAudioFixture &) = delete;
+
+    bool isReady() const noexcept { return m_error.isEmpty(); }
+    const QString &error() const noexcept { return m_error; }
+    AudioEngine &engine() const;
+    soundbrowser::SoundBrowser &browser() const;
+
+  private:
+    bool m_wasBackendSet = false;
+    QByteArray m_previousBackend;
+    QString m_error;
+    std::unique_ptr<AudioEngine> m_engine;
+    std::unique_ptr<soundbrowser::SoundBrowser> m_browser;
+};
+
+} // namespace samplecheck

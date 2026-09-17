@@ -59,6 +59,8 @@ class VoicegroupBankTest final : public QObject
     void previewFailureRollsBackCandidate();
     void blankMaterializationRevertAndSpentToken();
     void saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty();
+    void rebuildPreservesBanksAndDirtyEdits();
+    void failedRebuildPreservesAllPublishedBanks();
 
   private:
     std::optional<VoicegroupEditAppliedResult> editedDirectSound(QString &error);
@@ -314,6 +316,110 @@ void VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty()
     QVERIFY2(current && error.isEmpty(), qPrintable(error));
     QCOMPARE(current->bank.get(), dirtyView->view.bank.get());
     QVERIFY(current->dirty);
+}
+
+void VoicegroupBankTest::rebuildPreservesBanksAndDirtyEdits()
+{
+    QVERIFY(m_initial);
+    const VoicegroupLease cleanLease = m_initial->bank;
+    QString error;
+    QVERIFY2(m_project.rebuildVoicegroupProject(&error), qPrintable(error));
+    QVERIFY(error.isEmpty());
+    std::optional<LoadedBankView> rebuilt = m_project.loadBank(m_song, &error);
+    QVERIFY2(rebuilt && error.isEmpty(), qPrintable(error));
+    QCOMPARE(rebuilt->id, m_initial->id);
+    QCOMPARE(rebuilt->loadName, m_initial->loadName);
+    QVERIFY(!rebuilt->dirty);
+    QVERIFY(sameKindsExcept(*m_initial, *rebuilt));
+    QVERIFY(rebuilt->bank.get() != cleanLease.get());
+    // The pre-rebuild lease stays valid and unchanged.
+    QCOMPARE(cleanLease->voices[kDirectSoundSlot].key, uint8_t(60));
+
+    // Dirty path: the key-61 edit survives a rebuild with its identity.
+    const std::optional<VoicegroupEditAppliedResult> applied = editedDirectSound(error);
+    QVERIFY2(applied, qPrintable(error));
+    const VoicegroupLease dirtyLease = applied->view.bank;
+    QVERIFY2(m_project.rebuildVoicegroupProject(&error), qPrintable(error));
+    QVERIFY(error.isEmpty());
+    rebuilt = m_project.loadBank(m_song, &error);
+    QVERIFY2(rebuilt && error.isEmpty(), qPrintable(error));
+    QCOMPARE(rebuilt->id, m_initial->id);
+    QCOMPARE(rebuilt->loadName, m_initial->loadName);
+    QVERIFY(rebuilt->dirty);
+    QVERIFY(rebuilt->slotViews[kDirectSoundSlot].voice.has_value());
+    QCOMPARE(rebuilt->slotViews[kDirectSoundSlot].voice->key, 61);
+    QVERIFY(sameKindsExcept(*m_initial, *rebuilt));
+    QVERIFY(rebuilt->bank.get() != dirtyLease.get());
+    // The pre-rebuild dirty lease stays valid and unchanged.
+    QCOMPARE(dirtyLease->voices[kDirectSoundSlot].key, uint8_t(61));
+
+    // A follow-up expected-value edit applies against the preserved voice.
+    const VgVoice current = *rebuilt->slotViews[kDirectSoundSlot].voice;
+    VgVoice moved = current;
+    moved.key = 62;
+    const std::optional<VoicegroupEditResult> followUp = m_project.applyVoicegroupEdit(
+        {m_initial->id, SetVoicegroupSlot{kDirectSoundSlot, moved, current}}, &error);
+    QVERIFY2(followUp && error.isEmpty(), qPrintable(error));
+    const auto *const followUpApplied = std::get_if<VoicegroupEditAppliedResult>(&*followUp);
+    QVERIFY(followUpApplied);
+    QVERIFY(followUpApplied->view.dirty);
+    QCOMPARE(followUpApplied->view.slotViews[kDirectSoundSlot].voice->key, 62);
+}
+
+void VoicegroupBankTest::failedRebuildPreservesAllPublishedBanks()
+{
+    QVERIFY(m_initial);
+    // A second distinct canonical bank through the public loader. This
+    // fixture stages fixture_alt.inc but no playable song uses it, so a
+    // copied song record retargeted at its -G argument resolves it.
+    SongInfo altSong = m_song;
+    altSong.cfg.voicegroupArg = QStringLiteral("_fixture_alt");
+    QString error;
+    const std::optional<LoadedBankView> alt = m_project.loadBank(altSong, &error);
+    QVERIFY2(alt && error.isEmpty(), qPrintable(error));
+    QVERIFY(!(alt->id == m_initial->id));
+    QCOMPARE(alt->loadName, QStringLiteral("fixture_alt"));
+
+    // Make the rich bank dirty and retain both published leases.
+    const std::optional<VoicegroupEditAppliedResult> applied = editedDirectSound(error);
+    QVERIFY2(applied, qPrintable(error));
+    const VoicegroupLease richLease = applied->view.bank;
+    const VoicegroupLease altLease = alt->bank;
+
+    // Obstruct the dirty preview staging path: the rebuild must fail
+    // atomically and publish no replacement for either bank.
+    const QString previewPath = m_copy->root() + QStringLiteral("/.porydaw/vgpreview");
+    QVERIFY(QDir().mkpath(QFileInfo(previewPath).path()));
+    QFile blocker(previewPath);
+    QVERIFY(blocker.open(QIODevice::WriteOnly));
+    blocker.close();
+    QVERIFY(!m_project.rebuildVoicegroupProject(&error));
+    QVERIFY(!error.isEmpty());
+    error.clear();
+    QVERIFY(QFile::remove(previewPath));
+
+    const std::optional<LoadedBankView> richSurvived = m_project.loadBank(m_song, &error);
+    QVERIFY2(richSurvived && error.isEmpty(), qPrintable(error));
+    QCOMPARE(richSurvived->bank.get(), richLease.get());
+    QVERIFY(richSurvived->dirty);
+    QVERIFY(richSurvived->slotViews[kDirectSoundSlot].voice.has_value());
+    QCOMPARE(richSurvived->slotViews[kDirectSoundSlot].voice->key, 61);
+    const std::optional<LoadedBankView> altSurvived = m_project.loadBank(altSong, &error);
+    QVERIFY2(altSurvived && error.isEmpty(), qPrintable(error));
+    QCOMPARE(altSurvived->bank.get(), altLease.get());
+    QVERIFY(!altSurvived->dirty);
+    // Both retained leases remain usable.
+    QCOMPARE(richLease->voices[kDirectSoundSlot].key, uint8_t(61));
+    QCOMPARE(altLease->voices[0].key, uint8_t(60));
+
+    // Further edits and loads work after the failed rebuild.
+    const VgVoice current = *richSurvived->slotViews[kDirectSoundSlot].voice;
+    VgVoice moved = current;
+    moved.key = 62;
+    const std::optional<VoicegroupEditResult> followUp = m_project.applyVoicegroupEdit(
+        {m_initial->id, SetVoicegroupSlot{kDirectSoundSlot, moved, current}}, &error);
+    QVERIFY2(followUp && error.isEmpty(), qPrintable(error));
+    QVERIFY(std::get_if<VoicegroupEditAppliedResult>(&*followUp));
 }
 
 } // namespace

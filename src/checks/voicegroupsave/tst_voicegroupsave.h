@@ -61,9 +61,11 @@ class VoicegroupSaveTest final : public QObject
     void quickHeaderPressSurvivesVoicegroupRebuild();
     void typeColumnMapsEveryFamily();
     void samplePickerAuditionsAndCommits();
-    void samplePickerKeysplitAuditions();
     void samplePickerWaveModeAuditionsAndCommits();
+    void backgroundBankPublicationKeepsAudition();
     void newVoicegroupCreatesAndAssignsUndoably();
+    void sampleCommitRefreshPreservesDirtyBank();
+    void saveAsNewKeepsOriginalVoice();
 
   private:
     bool openSong(QString &error);

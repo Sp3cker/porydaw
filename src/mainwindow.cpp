@@ -35,8 +35,6 @@
 #include <windows.h>
 #endif
 
-#include <utility>
-
 #include "audio/wavexport.h"
 #include "core/miditimeline.h"
 #include "porydaw_scale.h"
@@ -160,6 +158,16 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     const EditorViewState initialEditorViewState = loadEditorViewState(*m_themeSettings);
     updateWindowFrameTheme();
     m_themeDialog = std::make_unique<themes::ThemeDialog>(*m_themeController, this);
+    QString audioError;
+    if (!m_audio.init(&audioError)) {
+        auto *error = new QLabel(tr("Audio initialization failed.\n\n%1").arg(audioError), this);
+        error->setObjectName(QStringLiteral("audioInitializationError"));
+        error->setTextFormat(Qt::PlainText);
+        error->setWordWrap(true);
+        error->setAlignment(Qt::AlignCenter);
+        setCentralWidget(error);
+        return;
+    }
     buildUi(initialEditorViewState);
 
     QSettings settings;
@@ -170,16 +178,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
          settings.value(QStringLiteral("songFilterSort")).toInt(),
          settings.value(QStringLiteral("songFilterCategory")).toString()});
 
-    // Composition order: WorkspaceUi first (the shell and its startup
-    // placeholder tabs), then the engine, then the worker seam — whose
-    // constructor queues the saved recipe's open for the next event-loop
-    // turn, after everything below is wired.
-    QString audioError;
-    m_audioOk = m_audio.init(&audioError);
-    if (!m_audioOk) {
-        QMessageBox::warning(this, tr("Audio Error"),
-                             tr("%1\n\nPlayback will be unavailable.").arg(audioError));
-    } else if (m_audio.usingNullBackend() && !m_audio.nullBackendForced()) {
+    if (m_audio.usingNullBackend() && !m_audio.nullBackendForced()) {
         // Non-modal: harnesses construct MainWindow offscreen and must not
         // block on a dialog (CI runs without a real audio server).
         auto *box = new QMessageBox(QMessageBox::Warning, tr("No Audio Output"),
@@ -193,16 +192,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
         box->show();
     }
     statusBar()->showMessage(
-        !m_audioOk ? tr("No audio device.")
-        : m_audio.usingNullBackend()
+        m_audio.usingNullBackend()
             ? tr("No audio output: silent null device.")
             : tr("Audio ready (%1 Hz, %2). Open a decomp project to get started.")
                   .arg(int(m_audio.sampleRate()))
                   .arg(m_audio.backendName()));
-    // Tabs build their timeline projections at the engine's resolved rate.
-    m_workspace->setAudioSampleRate(m_audio.sampleRate());
-    m_workspace->setSampleAuditionEngine(m_audioOk ? &m_audio : nullptr);
-
     m_projectWorkspace = std::make_unique<ProjectWorkspace>();
     // Direct publication wiring — no relays. WorkspaceUi's apply slots are
     // connected before MainWindow's own publication reactions so chrome
@@ -255,15 +249,15 @@ MainWindow::~MainWindow()
         m_uiTimer->stop();
     if (m_playheadTimer)
         m_playheadTimer->stop();
-    // Stop the audio thread first: the engine borrows the retained bank
-    // until shutdown() returns.
+    if (m_workspace) {
+        // Stop both engines before the workspace releases its tabs and
+        // audition owners. Their required engine references remain live.
+        m_audio.unloadSong();
+        m_workspace.reset();
+    }
     m_audio.shutdown();
-    // Then release the retained lease, before the tabs and the shared-bank
-    // view cache release theirs.
     m_selectedVoicegroup = {};
-    // Tab leases and the view cache die with the workspace...
-    m_workspace.reset();
-    // ...and the worker joins last: no GUI lease outlives Project I/O.
+    // The worker joins after every GUI lease has been released.
     m_projectWorkspace.reset();
 }
 
@@ -284,7 +278,7 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     // before any tab exists; no startup write or hub transaction happens.
     // The workspace chrome is built before the menus so the Edit menu can
     // borrow its transport and song-search actions.
-    m_workspace = std::make_unique<WorkspaceUi>(*this, initialEditorViewState);
+    m_workspace = std::make_unique<WorkspaceUi>(*this, initialEditorViewState, m_audio);
 
     // Menu
     QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
@@ -519,7 +513,7 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     connect(m_workspace.get(), &WorkspaceUi::editorViewStateChanged, this,
             &MainWindow::persistEditorViewState);
     connect(m_workspace.get(), &WorkspaceUi::editCursorSeekRequested, this, [this](Tick tick) {
-        if (!m_audioOk || !m_audio.songLoaded() || m_audio.transport() == Transport::Stopped)
+        if (!m_audio.songLoaded() || m_audio.transport() == Transport::Stopped)
             return;
         const uint64_t target = m_audio.timeline()->sampleForTick(tick);
         m_audio.seek(target);
@@ -530,56 +524,13 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     connect(m_workspace.get(), &WorkspaceUi::playPauseFromRequested, this, [this](Tick tick) {
         if (!m_selectedTab)
             return;
-        if (m_audioOk && m_audio.transport() == Transport::Playing) {
+        if (m_audio.transport() == Transport::Playing) {
             m_workspace->triggerPlayPause();
             m_selectedTab->view().commitEditCursor(tick);
             return;
         }
         m_selectedTab->view().commitEditCursor(tick);
         m_workspace->triggerPlayPause();
-    });
-
-    // Audition intents are copied values; every engine call stays here.
-    connect(m_workspace.get(), &WorkspaceUi::auditionNoteRequested, this,
-            [this](uint8_t track, uint8_t key, uint8_t velocity) {
-                if (m_audioOk && m_audio.songLoaded())
-                    m_audio.previewNote(track, key, velocity);
-            });
-    connect(m_workspace.get(), &WorkspaceUi::auditionNoteTimedRequested, this,
-            [this](uint8_t track, uint8_t key, uint8_t velocity, uint32_t durationSamples) {
-                if (m_audioOk && m_audio.songLoaded())
-                    m_audio.previewNoteTimed(track, key, velocity, durationSamples);
-            });
-    connect(m_workspace.get(), &WorkspaceUi::auditionVoiceRequested, this,
-            [this](uint8_t voice, uint8_t key, uint8_t velocity) {
-                if (m_audioOk)
-                    m_audio.previewVoice(voice, key, velocity);
-            });
-    connect(
-        m_workspace.get(), &WorkspaceUi::sampleAuditionRequested, this,
-        [this](const QString &symbol, VgAuditionKind kind, const AuditionSlots::Adsr &adsr) {
-            if (!m_audioOk)
-                return;
-            if (kind == VgAuditionKind::Keysplit) {
-                auditionKeysplit(symbol);
-                return;
-            }
-            if (kind == VgAuditionKind::Wave) {
-                if (const uint32_t *pw = m_workspace->progWaveFor(symbol))
-                    m_audio.auditionWave(
-                        QByteArray::fromRawData(reinterpret_cast<const char *>(pw), 16), 60, adsr);
-                return;
-            }
-            const WaveData *wd = m_workspace->sampleWaveFor(symbol);
-            if (!wd || !wd->data || wd->size == 0)
-                return;
-            m_audio.auditionSample(
-                QByteArray::fromRawData(reinterpret_cast<const char *>(wd->data), int(wd->size)),
-                wd->freq, wd->loopStart, (wd->status & 0x4000) != 0, 60, adsr);
-        });
-    connect(m_workspace.get(), &WorkspaceUi::sampleAuditionStopRequested, this, [this] {
-        if (m_audioOk)
-            m_audio.auditionSampleOff();
     });
 
     // Polyphony overflow debugger dock (SPEC §6.1): hidden by default (it's
@@ -594,15 +545,12 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     // playback, so hiding the dock suspends the mode and re-showing it
     // (checkbox still checked) resumes it.
     const auto applyPolyInvert = [this] {
-        if (m_audioOk)
-            m_audio.setPolyDebugInvert(m_polyPanel->invertChecked() && m_polyDock->isVisible());
+        m_audio.setPolyDebugInvert(m_polyPanel->invertChecked() && m_polyDock->isVisible());
     };
     connect(m_polyPanel, &PolyphonyPanel::invertToggled, this, applyPolyInvert);
     connect(m_polyDock, &QDockWidget::visibilityChanged, this, applyPolyInvert);
-    connect(m_polyPanel, &PolyphonyPanel::resetRequested, this, [this] {
-        if (m_audioOk)
-            m_audio.resetPolyStats();
-    });
+    connect(m_polyPanel, &PolyphonyPanel::resetRequested, this,
+            [this] { m_audio.resetPolyStats(); });
     connect(m_polyPanel, &PolyphonyPanel::jumpToEvent, this,
             [this](Tick tick, int track, int midiKey) {
                 // editCursorMoved's seek (above) already follows the cursor
@@ -750,8 +698,7 @@ void MainWindow::changeEvent(QEvent *event)
 void MainWindow::onSelectedTabChanged(SongTab *tab)
 {
     // Switching tabs stops playback in the tab being left.
-    if (m_audioOk)
-        m_audio.stop();
+    m_audio.stop();
     m_selectedTab = tab;
     // The canonical set follows the selection before any chrome reads it;
     // a null or unready view leaves every command disabled.
@@ -769,8 +716,7 @@ void MainWindow::onSelectedTabChanged(SongTab *tab)
         // retained lease is released — the engine borrows that bank until
         // unloadSong returns, and a tab awaiting VoicegroupBound has no
         // bank to bind yet.
-        if (m_audioOk)
-            m_audio.unloadSong();
+        m_audio.unloadSong();
         m_selectedVoicegroup = {};
         m_appliedTimeline = nullptr;
         m_appliedSettings.reset();
@@ -858,7 +804,7 @@ void MainWindow::applySelectedAudio()
 void MainWindow::refreshSelectedAudio()
 {
     SongTab *const tab = m_selectedTab;
-    if (!m_audioOk || !tab || !tab->isReady() || !tab->voicegroupLease())
+    if (!tab || !tab->isReady() || !tab->voicegroupLease())
         return;
 
     const VoicegroupLease lease = tab->voicegroupLease();
@@ -918,34 +864,6 @@ SongSettings MainWindow::songSettingsFor(const SongTab &tab) const
     return settings;
 }
 
-// ---- Browse auditions ---------------------------------------------------------
-
-void MainWindow::auditionKeysplit(const QString &symbol)
-{
-    const LoadedKeysplit *const keysplit = m_workspace->keysplitFor(symbol);
-    if (!keysplit)
-        return;
-    const uint8_t idx = keysplit->table[60];
-    if (idx >= VOICEGROUP_SIZE)
-        return; // old-style overflow index: nothing loaded to play
-    const ToneData &sub = keysplit->subGroup[idx];
-    if (sub.type & (VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL))
-        return; // nested split: the engine refuses these too
-    const AuditionSlots::Adsr adsr{sub.attack, sub.decay, sub.sustain, sub.release};
-    const int cgbType = sub.type & 0x07;
-    if (cgbType == 0 && sub.wav && sub.wav->data && sub.wav->size > 0) {
-        m_audio.auditionSample(
-            QByteArray::fromRawData(reinterpret_cast<const char *>(sub.wav->data),
-                                    int(sub.wav->size)),
-            sub.wav->freq, sub.wav->loopStart, (sub.wav->status & 0x4000) != 0, 60, adsr, sub.key);
-    } else if (cgbType == VOICE_PROGRAMMABLE_WAVE && sub.wavePointer) {
-        m_audio.auditionWave(
-            QByteArray::fromRawData(reinterpret_cast<const char *>(sub.wavePointer), 16), 60, adsr);
-    }
-    // Square/noise sub-voices: rare, and their audition would need CGB
-    // square plumbing — silently skipped.
-}
-
 // ---- Chrome -----------------------------------------------------------------
 
 void MainWindow::persistEditorViewState(const EditorViewState &state)
@@ -970,7 +888,7 @@ void MainWindow::updateChrome()
     m_importAction->setEnabled(projectOpen);
     m_importSampleAction->setEnabled(projectOpen);
     m_saveAction->setEnabled(ready);
-    m_exportWavAction->setEnabled(ready && m_audioOk && m_audio.songLoaded());
+    m_exportWavAction->setEnabled(ready && m_audio.songLoaded());
     m_settingsAction->setEnabled(ready);
     // Song-command availability is the canonical set's own refresh — driven
     // by the bound target's live eligibility, never this ready-only pass.
@@ -1017,8 +935,7 @@ void MainWindow::updateWindowTitle()
 
 void MainWindow::updateTransportActions()
 {
-    const bool loaded =
-        m_audioOk && m_selectedTab && m_selectedTab->isReady() && m_audio.songLoaded();
+    const bool loaded = m_selectedTab && m_selectedTab->isReady() && m_audio.songLoaded();
     auto state = WorkspaceUi::PlaybackState::Unavailable;
     if (loaded) {
         switch (m_audio.transport()) {
@@ -1057,8 +974,7 @@ void MainWindow::syncScaleControls()
 
 void MainWindow::synchronizePlayhead()
 {
-    const bool songLoaded =
-        m_audioOk && m_selectedTab && m_selectedTab->isReady() && m_audio.songLoaded();
+    const bool songLoaded = m_selectedTab && m_selectedTab->isReady() && m_audio.songLoaded();
     const bool playing = songLoaded && m_audio.transport() == Transport::Playing;
     const int uiInterval = playing ? kPlaybackUiIntervalMs : kIdleUiIntervalMs;
     if (m_uiTimer->interval() != uiInterval)
@@ -1091,7 +1007,7 @@ void MainWindow::synchronizePlayhead()
 // updates avoid repaint and layout work while the displayed values hold steady.
 void MainWindow::updateTimeLabel()
 {
-    const bool loaded = m_audioOk && m_selectedTab && m_audio.songLoaded();
+    const bool loaded = m_selectedTab && m_audio.songLoaded();
     const QString text =
         loaded ? QStringLiteral("%1 / %2").arg(formatTime(m_audio.playheadSamples()),
                                                formatTime(m_audio.timeline()->lengthSamples))
@@ -1101,7 +1017,7 @@ void MainWindow::updateTimeLabel()
 
 void MainWindow::updatePolyStatus()
 {
-    const bool loaded = m_audioOk && m_selectedTab && m_audio.songLoaded();
+    const bool loaded = m_selectedTab && m_audio.songLoaded();
     if (!loaded) {
         m_pcmValueLabel->clear();
         m_cgbValueLabel->clear();
@@ -1146,7 +1062,7 @@ void MainWindow::uiTick()
     updateTimeLabel();
     updatePolyStatus();
 
-    if (m_audioOk && m_selectedTab && m_audio.songLoaded() && m_polyDock->isVisible()) {
+    if (m_selectedTab && m_audio.songLoaded() && m_polyDock->isVisible()) {
         AudioEngine::PolySnapshot snap;
         m_audio.polySnapshot(&snap);
         m_polyPanel->updateSnapshot(snap);
@@ -1163,7 +1079,7 @@ void MainWindow::uiTick()
 // Play button resumes from the pause point.
 void MainWindow::startPlayback(bool fromEditCursor)
 {
-    if (!m_audioOk || !m_selectedTab || !m_selectedTab->isReady() || !m_audio.songLoaded())
+    if (!m_selectedTab || !m_selectedTab->isReady() || !m_audio.songLoaded())
         return;
     const bool seekToCursor = fromEditCursor || m_audio.transport() == Transport::Stopped;
     uint64_t target = 0;
@@ -1197,7 +1113,7 @@ void MainWindow::stopPlayback()
 void MainWindow::exportWav()
 {
     SongTab *const tab = m_selectedTab;
-    if (!tab || !tab->isReady() || !m_audioOk || !m_audio.songLoaded())
+    if (!tab || !tab->isReady() || !m_audio.songLoaded())
         return;
     const bool hasLoop = m_audio.timeline()->hasLoop();
 
@@ -1351,7 +1267,7 @@ void MainWindow::openSettings(bool songFirst)
             newEngine.analogFilter != m_engineSettings.analogFilter) {
             m_engineSettings = newEngine;
             m_engineSettings.save();
-            if (m_audioOk && m_selectedTab && m_audio.songLoaded()) {
+            if (m_selectedTab && m_audio.songLoaded()) {
                 const SongSettings settings = songSettingsFor(*m_selectedTab);
                 m_audio.updateSettings(settings);
                 m_appliedSettings = settings;
@@ -1369,7 +1285,7 @@ void MainWindow::openSettings(bool songFirst)
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (m_closeAccepted) {
+    if (!m_workspace || m_closeAccepted) {
         event->accept();
         return;
     }

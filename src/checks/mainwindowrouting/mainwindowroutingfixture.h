@@ -109,7 +109,7 @@ class MainWindowRoutingFixture
         if (!fixture)
             return std::nullopt;
         auto window = std::make_unique<MainWindow>();
-        if (!window->m_audioOk)
+        if (!window->m_workspace)
             return std::nullopt;
         const auto aName = SongName::create(songA);
         const auto bName = SongName::create(songB);

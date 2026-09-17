@@ -42,6 +42,10 @@ namespace keymap {
 class Registry;
 }
 
+namespace soundbrowser {
+class SoundBrowser;
+} // namespace soundbrowser
+
 namespace checks {
 class VoicegroupBrowserDriver;
 }
@@ -86,7 +90,7 @@ class WorkspaceUi final : public QObject
         qsizetype listedVoiceCount = 0;
     };
 
-    explicit WorkspaceUi(QMainWindow &host, const EditorViewState &initial);
+    WorkspaceUi(QMainWindow &host, const EditorViewState &initial, AudioEngine &audio);
     ~WorkspaceUi() override;
 
     // ---- Selected tab (MainWindow reads it directly for audio handoff) ----
@@ -159,27 +163,12 @@ class WorkspaceUi final : public QObject
     // chain; saves answered before a Cancel have already queued.
     void promptSaveAll(const std::function<void(bool)> &continuation);
 
-    // ---- MainWindow-pushed audio state ----
-
-    // Copied engine sample rate for tab timeline projections; applies to the
-    // open tabs and to every tab created afterwards.
-    void setAudioSampleRate(double sampleRate);
-    // Non-owning engine used only by the modal sample editor's synchronous
-    // in-memory audition protocol. Null keeps audition controls disabled.
-    void setSampleAuditionEngine(AudioEngine *engine) noexcept { m_sampleAuditionEngine = engine; }
+    // ---- Project samples and browsing ----
     // The audition sample set for engine auditions; empty until loaded.
     SampleSetLease sampleSet() const noexcept { return m_sampleSet; }
-    // Borrowed lookups into the current sample set, resolved through the
-    // same published catalog lists the set was loaded from (directSound,
-    // progWave, keysplits). The returned pointers borrow from the retained
-    // current sample set: valid until the workspace replaces it, never to be
-    // cached across event-loop turns. Null when the set is empty, the symbol
-    // is absent, or the entry is out of range; keysplit lookups also skip
-    // entries without sub-voicegroup or table data.
-    const WaveData *sampleWaveFor(const QString &symbol) const;
-    const uint32_t *progWaveFor(const QString &symbol) const;
-    const LoadedKeysplit *keysplitFor(const QString &symbol) const;
-
+    // The one browse-audition coordinator serving every surface (slot list,
+    // sample popup, voice picker). Owned as a child; never null after build.
+    soundbrowser::SoundBrowser *soundBrowser() const noexcept { return m_soundBrowser; }
     // ---- Chrome (preserved surface) ----
 
     void restoreSongFilters(const SongFilters &filters);
@@ -265,15 +254,6 @@ class WorkspaceUi final : public QObject
     void editCursorSeekRequested(Tick tick);
     void playPauseFromRequested(Tick tick);
 
-    // Audition intents are copied values; MainWindow owns every engine call.
-    void auditionNoteRequested(uint8_t track, uint8_t key, uint8_t velocity);
-    void auditionNoteTimedRequested(uint8_t track, uint8_t key, uint8_t velocity,
-                                    uint32_t durationSamples);
-    void auditionVoiceRequested(uint8_t voice, uint8_t key, uint8_t velocity);
-    void sampleAuditionRequested(const QString &symbol, VgAuditionKind kind,
-                                 const AuditionSlots::Adsr &adsr);
-    void sampleAuditionStopRequested();
-
   private:
     friend class checks::VoicegroupBrowserDriver;
 
@@ -303,7 +283,6 @@ class WorkspaceUi final : public QObject
     void handleSongFailed(const SongName &name, SongFailed failed);
     void onTabEdited(SongTab *tab);
     void startVoicegroupRebind(SongTab &tab);
-    void applySampleRateToTabs();
 
     // ---- Project state and events (workspaceui_project.cpp) ----
     void reconcileSnapshot();
@@ -332,10 +311,6 @@ class WorkspaceUi final : public QObject
     void resolveBankHardError(const VoicegroupMutationFailed &failure);
     void routeHistoryRequest(bool undo);
     QString mintSynthSymbol(const VgSynthDesc &desc);
-    // Loop badge / detail metadata for the picker's sample rows, resolved
-    // from the published catalog's DirectSound list against the audition
-    // sample set's parallel waves (the SampleSetLease seam).
-    SamplePickInfo samplePickInfoFor(const QString &symbol) const;
     void dropSavedPendingSynths(const SongTab &tab);
     QList<QPair<QString, VgSynthDesc>> pendingSynthDefsFor(const LoadedBankView &view) const;
 
@@ -385,6 +360,10 @@ class WorkspaceUi final : public QObject
     std::optional<int> m_pendingImportSlot;
     QString m_pendingEditSampleName;
     int m_pendingEditSampleSlot = -1;
+    // Set before the commit-triggered catalog refresh; consumed once by
+    // the steady republication branch to preload the refreshed sample
+    // set (never auto-auditions).
+    bool m_pendingSampleSetPreload = false;
     QString m_pendingCreatedLabel;
     bool m_pendingCreatedNewVoicegroup = false;
     QString m_pendingDeleteSong;
@@ -393,11 +372,11 @@ class WorkspaceUi final : public QObject
     QHash<QString, VgSynthDesc> m_pendingSynths; // minted-but-unsaved synth definitions
     SampleSetLease m_sampleSet;
     std::optional<LoadedBankView> m_bankView; // stable presentation copy the picker borrows
+    soundbrowser::SoundBrowser *m_soundBrowser = nullptr;
     QPointer<QMessageBox> m_registerConfirmation;
     QPointer<QMessageBox> m_deleteConfirmation;
 
-    double m_audioSampleRate = 0.0;
-    AudioEngine *m_sampleAuditionEngine = nullptr;
+    AudioEngine &m_audio;              // initialized before construction; outlives this workspace
     bool m_openRequested = false;      // this class submitted an open
     bool m_awaitingStartupOpen = true; // startup placeholders await the first terminal
     bool m_openGatePublished = true;

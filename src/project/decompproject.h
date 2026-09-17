@@ -129,8 +129,14 @@ class DecompProject
     // registers a song). Song ids are reassigned.
     bool reload(QString *error);
 
-    // Replaces the project-wide poryaaaa maps only after a complete context
-    // opens. Existing self-contained bank leases stay published and valid.
+    // Replaces the project-wide poryaaaa maps with a staged-then-published
+    // rebuild: every canonical bank stages its candidate lease first (clean
+    // banks through the replacement context, dirty banks from their own
+    // preview bytes) and nothing is installed until all succeed. Success
+    // preserves each record's identity, source object with unsaved edits,
+    // load name, and timestamp while clearing only the argument memo; any
+    // failure leaves the prior context, banks, and memo intact. Existing
+    // self-contained bank leases stay published and valid.
     bool rebuildVoicegroupProject(QString *error);
 
     // ---- Worker-side voicegroup bank ownership (Project I/O worker) ----

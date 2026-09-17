@@ -684,9 +684,10 @@ class SongView : public QObject
     // AudioEngine::previewNoteTimed, which sends the note-off itself.
     // velocity 0 releases the track+key's preview early.
     void auditionNoteTimed(int track, int key, int velocity, quint32 durationSamples);
-    // Voicegroup-entry audition from the voice picker; routed to
-    // AudioEngine::previewVoice like the voicegroup browser's signal.
-    void auditionVoice(int voice, int key, int velocity);
+    // Voicegroup-entry audition from the voice picker; routed to the browse
+    // coordinator's previewVoice. Owner is the VoicePicker surface instance
+    // holding the preview; velocity 0 releases.
+    void auditionVoice(int voice, int key, int velocity, QObject *owner);
     void statusMessage(const QString &text);
     void insertTimePromptChanged();
     // Edit cursor committed to a new position (click released); the main

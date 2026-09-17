@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QString>
 
+#include "checks/samplecheck/fixtures.h"
+
 namespace samplecheck {
 
 class SampleProcessingTest final : public QObject
@@ -15,6 +17,7 @@ class SampleProcessingTest final : public QObject
     explicit SampleProcessingTest(QString corpusRoot);
 
   private slots:
+    void initTestCase();
     void projectProbe();
     void projectSanitizeValidate();
     void projectInspect();
@@ -81,6 +84,15 @@ class SampleProcessingTest final : public QObject
     void editorCommit();
     void spaceAudition();
 
+    void browseOwnership();
+    void browseProjectResolution();
+    void browseExternalFile();
+
+    void libraryFolders();
+    void librarySourceLoad();
+    void libraryPreviewIsolation();
+    void librarySaveAsNew();
+
     void soundFontExtraction();
     void soundFontRefusals_data();
     void soundFontRefusals();
@@ -98,6 +110,7 @@ class SampleProcessingTest final : public QObject
 
   private:
     QString m_corpusRoot;
+    SampleEditorAudioFixture m_audio;
 };
 
 bool createWav2AgbProject(const QString &root);

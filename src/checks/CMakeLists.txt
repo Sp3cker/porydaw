@@ -239,8 +239,10 @@ qt_add_executable(porydaw_checks
     samplecheck/dsp.cpp
     samplecheck/editor.cpp
     samplecheck/analysis.cpp
+    samplecheck/browsing.cpp
     samplecheck/soundfont.cpp
     samplecheck/integration.cpp
+    samplecheck/library.cpp
     project/iofixture.h
     project/iofixture.cpp
     project/identity.cpp

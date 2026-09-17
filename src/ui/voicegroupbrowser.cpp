@@ -364,10 +364,10 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
                     adsr = {uint8_t(voice->attack), uint8_t(voice->decay), uint8_t(voice->sustain),
                             uint8_t(voice->release)};
                 }
-                emit sampleAuditionRequested(symbol, kind, adsr);
+                emit sampleAuditionRequested(symbol, kind, adsr, m_samplePicker);
             });
     connect(m_samplePicker, &SamplePickerButton::auditionStopRequested, this,
-            &VoicegroupBrowser::sampleAuditionStopRequested);
+            [this] { emit sampleAuditionStopRequested(m_samplePicker); });
     // Sample Editor entry (SPEC §6.2): visible on DirectSound sample voices.
     // Glyph-only tool buttons — the picker needs the row's width, and the
     // tooltips carry the words the labels used to.

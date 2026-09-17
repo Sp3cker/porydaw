@@ -11,6 +11,7 @@
 #include "audio/auditionslots.h"
 #include "audio/sampledoc.h"
 #include "audio/sampledsp.h"
+#include "ui/soundbrowser/soundbrowser.h"
 
 class AudioEngine;
 class QCheckBox;
@@ -24,6 +25,7 @@ class QLineEdit;
 class QPushButton;
 class QSpinBox;
 class QToolButton;
+class SampleLibraryPanel;
 class WaveformView;
 
 // The Sample Editor dialog (docs/sample-editor/PLAN.md §5): the dominant
@@ -52,15 +54,41 @@ class SampleEditorDialog : public QDialog
     // (SampleRegistrar::validateSampleName bound to the project).
     using NameValidator = std::function<bool(const QString &, QString *)>;
 
-    // engine may be null (audition strip disabled). destAdsr, when given,
-    // is the destination voice's envelope (browser-initiated flow) and
-    // enables the "use destination voice ADSR" audition option.
-    SampleEditorDialog(ImportedSample sample, NameValidator validator,
-                       AudioEngine *engine = nullptr, const AuditionSlots::Adsr *destAdsr = nullptr,
-                       QWidget *parent = nullptr);
+    // destAdsr, when given, is the destination voice's envelope
+    // (browser-initiated flow) and enables the "use destination voice
+    // ADSR" audition option.
+    SampleEditorDialog(ImportedSample sample, NameValidator validator, AudioEngine &engine,
+                       soundbrowser::SoundBrowser &browser,
+                       const AuditionSlots::Adsr *destAdsr = nullptr, QWidget *parent = nullptr);
+
+    // Source-less library state: an empty document with commit,
+    // document-editing controls and document Play disabled until
+    // loadLibrarySample succeeds. Library navigation, file preview and
+    // the audition-key control stay usable throughout.
+    SampleEditorDialog(NameValidator validator, AudioEngine &engine,
+                       soundbrowser::SoundBrowser &browser,
+                       const AuditionSlots::Adsr *destAdsr = nullptr, QWidget *parent = nullptr);
+    ~SampleEditorDialog() override;
 
     // The validated registration name (valid whenever the dialog accepts).
     QString sampleName() const;
+
+    // Decode path exactly once, hash those same bytes, then replace the
+    // editor state. Failure leaves document, undo, pitch/loop/controls,
+    // waveform and provenance untouched and reports through *error.
+    bool loadLibrarySample(const QString &path, QString *error);
+    // Raw library audition (current audition key, default envelope,
+    // one-shot, loop off) after stopping the dialog's own audition. A
+    // non-Started result surfaces through the panel status line; the
+    // loaded document and its provenance never change.
+    void previewLibrarySample(const QString &path);
+    // Provenance of the last successful library load (empty until one).
+    QString loadedSourceSha256() const { return m_librarySha; }
+    QString loadedSourcePath() const { return m_libraryPath; }
+    // Edit targets only: unlock the name with a validated "_copy"
+    // suggestion and commit a separate registration, leaving the
+    // original sample's bytes, sidecar and voice slot alone.
+    void saveAsNew();
 
     // The current render, exported per FORMATS.md §1 — what "Add to
     // Project" commits.
@@ -78,6 +106,10 @@ class SampleEditorDialog : public QDialog
     // registered as <name>, so the name is fixed (renames would need .inc
     // surgery — out of scope) and the commit button reads "Save Sample".
     void setEditTarget(const QString &name);
+
+    // Registered-name overload: the new-name validator gates Save as New
+    // acceptance (the single-argument form stays update-only).
+    void setEditTarget(const QString &name, NameValidator newNameValidator);
 
   protected:
     void done(int result) override; // silence the audition on any close
@@ -105,10 +137,14 @@ class SampleEditorDialog : public QDialog
     void stopAudition();
     void republishAudition();
     void auditionTick();
+    void installLibraryPanel();
+    void applyPitchPrefill();
+    void setSourceControlsEnabled(bool enabled);
+    void resetSample(ImportedSample sample);
 
     SampleDocument m_doc;
     NameValidator m_validator;
-    AudioEngine *m_engine = nullptr;
+    AudioEngine &m_engine;
     bool m_hasDestAdsr = false;
     AuditionSlots::Adsr m_destAdsr;
     QUndoStack m_undo;
@@ -159,6 +195,8 @@ class SampleEditorDialog : public QDialog
     QElapsedTimer m_auditionClock;
 
     WaveformView *m_waveform = nullptr;
+    QLabel *m_sourceLabel = nullptr;
+    QLabel *m_sourceFormat = nullptr;
     // The loop controls: a plain checkbox, and a frame that exists only
     // while the sample loops.
     QCheckBox *m_loopCheck = nullptr;
@@ -190,4 +228,15 @@ class SampleEditorDialog : public QDialog
     QLineEdit *m_nameEdit = nullptr;
     QLabel *m_nameStatus = nullptr;
     QPushButton *m_addButton = nullptr;
+    // Library-first state: the required browse coordinator, the panel in
+    // the splitter, and the last successful library load's provenance.
+    // Preview never touches the document or these getters.
+    soundbrowser::SoundBrowser &m_soundBrowser;
+    QString m_libraryPath;
+    QString m_librarySha;
+    // Edit-target Save as New: unlocked name, new-registration commit.
+    QString m_editTarget;
+    NameValidator m_saveAsNewValidator;
+    QPushButton *m_saveAsNewButton = nullptr;
+    SampleLibraryPanel *m_libraryPanel = nullptr;
 };

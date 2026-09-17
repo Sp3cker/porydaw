@@ -279,6 +279,10 @@ qt_add_library(porydaw_app STATIC
     src/ui/waveformview.h
     src/ui/samplepicker.cpp
     src/ui/samplepicker.h
+    src/ui/soundbrowser/soundbrowser.cpp
+    src/ui/soundbrowser/soundbrowser.h
+    src/ui/soundbrowser/samplelibrarypanel.cpp
+    src/ui/soundbrowser/samplelibrarypanel.h
     src/ui/voicegroupbrowser.cpp
     src/ui/voicegroupbrowser.h
     src/ui/voicetypeicons.cpp

@@ -23,9 +23,23 @@
 #include "ui/sampleeditordialog.h"
 #include "ui/sf2zonepicker.h"
 #include "ui/songtab.h"
+#include "ui/soundbrowser/soundbrowser.h"
 
 namespace {
 const QString kSampleSlotPrefix = QStringLiteral("DirectSoundWaveData_");
+
+std::optional<SampleSidecar> editedSidecar(SampleEditorDialog &dialog,
+                                           std::optional<SampleSidecar> original)
+{
+    if (!dialog.loadedSourceSha256().isEmpty()) {
+        original = SampleSidecar{};
+        original->sourcePath = dialog.loadedSourcePath();
+        original->sourceSha256 = dialog.loadedSourceSha256();
+    }
+    if (original)
+        original->params = dialog.document()->params();
+    return original;
+}
 } // namespace
 
 // ---- New song / MIDI import --------------------------------------------------
@@ -133,67 +147,77 @@ void WorkspaceUi::continueImportFlow(const SampleFormatProbe &probe)
         QMessageBox::warning(&m_host, tr("Import Sample"), probe.refusal);
         return;
     }
-    QSettings settings;
-    const QString startDir =
-        settings.value(QStringLiteral("lastSampleDir"), QDir::homePath()).toString();
-    const QString path = QFileDialog::getOpenFileName(
-        &m_host, tr("Import Sample"), startDir,
-        tr("Audio files (*.wav *.aif *.aiff *.mp3 *.flac *.ogg *.sf2);;"
-           "All files (*)"));
-    if (path.isEmpty())
-        return;
-    settings.setValue(QStringLiteral("lastSampleDir"), QFileInfo(path).path());
-
-    QFile sourceFile(path);
-    if (!sourceFile.open(QIODevice::ReadOnly)) {
-        QMessageBox::warning(&m_host, tr("Import Sample"), tr("Cannot read %1.").arg(path));
-        return;
-    }
-    const QByteArray sourceBytes = sourceFile.readAll();
-    sourceFile.close();
-
     ImportedSample sample;
-    QString error;
-    // Decode choices beyond the source bytes, recorded in the provenance
-    // sidecar so "Edit sample…" can re-decode identically.
-    bool leftOnly = false;
-    int sf2Zone = -1;
-    const auto fail = [this, &path, &error](const char *context) {
-        QMessageBox::warning(&m_host, context, tr("%1: %2").arg(QFileInfo(path).fileName(), error));
-    };
-    if (sf2Magic(sourceBytes)) {
-        // SoundFonts hold many samples: pick a zone first (FORMATS.md §5);
-        // the chosen zone then rides the ordinary editor pipeline.
-        Sf2File font;
-        if (!readSf2Bytes(sourceBytes, path, &font, &error)) {
-            fail("Import Sample");
+    std::optional<SampleSidecar> original;
+    // A destination-slot import starts in the library without a source.
+    if (!slot) {
+        QSettings settings;
+        const QString startDir =
+            settings.value(QStringLiteral("lastSampleDir"), QDir::homePath()).toString();
+        const QString path = QFileDialog::getOpenFileName(
+            &m_host, tr("Import Sample"), startDir,
+            tr("Audio files (*.wav *.aif *.aiff *.mp3 *.flac *.ogg *.sf2);;"
+               "All files (*)"));
+        if (path.isEmpty())
+            return;
+        settings.setValue(QStringLiteral("lastSampleDir"), QFileInfo(path).path());
+
+        QFile sourceFile(path);
+        if (!sourceFile.open(QIODevice::ReadOnly)) {
+            QMessageBox::warning(&m_host, tr("Import Sample"), tr("Cannot read %1.").arg(path));
             return;
         }
-        Sf2ZonePicker picker(font, &m_host);
-        if (picker.exec() != QDialog::Accepted)
-            return;
-        if (!extractSf2Zone(font, picker.selectedZone(), &sample, &error)) {
-            fail("Import Sample");
-            return;
-        }
-        sf2Zone = picker.selectedZone();
-    } else {
-        if (!importAudioBytes(sourceBytes, path, &sample, &error)) {
-            fail("Import Sample");
-            return;
-        }
-        if (sample.phaseCancelStereo &&
-            QMessageBox::question(&m_host, tr("Import Sample"),
-                                  tr("The left and right channels of %1 are phase-cancelling — "
-                                     "the mono mix may sound hollow.\n\n"
-                                     "Import the left channel only instead?")
-                                      .arg(QFileInfo(path).fileName())) == QMessageBox::Yes) {
-            if (!importAudioBytes(sourceBytes, path, &sample, &error, true)) {
+        const QByteArray sourceBytes = sourceFile.readAll();
+        sourceFile.close();
+
+        QString error;
+        // Decode choices beyond the source bytes, recorded in the provenance
+        // sidecar so "Edit sample…" can re-decode identically.
+        bool leftOnly = false;
+        int sf2Zone = -1;
+        const auto fail = [this, &path, &error](const char *context) {
+            QMessageBox::warning(&m_host, context,
+                                 tr("%1: %2").arg(QFileInfo(path).fileName(), error));
+        };
+        if (sf2Magic(sourceBytes)) {
+            // SoundFonts hold many samples: pick a zone first (FORMATS.md §5);
+            // the chosen zone then rides the ordinary editor pipeline.
+            Sf2File font;
+            if (!readSf2Bytes(sourceBytes, path, &font, &error)) {
                 fail("Import Sample");
                 return;
             }
-            leftOnly = true;
+            Sf2ZonePicker picker(font, &m_host);
+            if (picker.exec() != QDialog::Accepted)
+                return;
+            if (!extractSf2Zone(font, picker.selectedZone(), &sample, &error)) {
+                fail("Import Sample");
+                return;
+            }
+            sf2Zone = picker.selectedZone();
+        } else {
+            if (!importAudioBytes(sourceBytes, path, &sample, &error)) {
+                fail("Import Sample");
+                return;
+            }
+            if (sample.phaseCancelStereo &&
+                QMessageBox::question(&m_host, tr("Import Sample"),
+                                      tr("The left and right channels of %1 are phase-cancelling — "
+                                         "the mono mix may sound hollow.\n\n"
+                                         "Import the left channel only instead?")
+                                          .arg(QFileInfo(path).fileName())) == QMessageBox::Yes) {
+                if (!importAudioBytes(sourceBytes, path, &sample, &error, true)) {
+                    fail("Import Sample");
+                    return;
+                }
+                leftOnly = true;
+            }
         }
+        original = SampleSidecar{};
+        original->sourcePath = QFileInfo(path).absoluteFilePath();
+        original->sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
+        original->leftOnly = leftOnly;
+        original->sf2Zone = sf2Zone;
     }
 
     AuditionSlots::Adsr destAdsr;
@@ -215,7 +239,8 @@ void WorkspaceUi::continueImportFlow(const SampleFormatProbe &probe)
         [this](const QString &name, QString *validationError) {
             return validateNewSampleName(name, validationError);
         },
-        m_sampleAuditionEngine, hasDestAdsr ? &destAdsr : nullptr, &m_host);
+        m_audio, *m_soundBrowser, hasDestAdsr ? &destAdsr : nullptr, &m_host);
+    m_soundBrowser->stopAll();
     if (dialog.exec() != QDialog::Accepted)
         return;
 
@@ -224,13 +249,7 @@ void WorkspaceUi::continueImportFlow(const SampleFormatProbe &probe)
     CommitSampleInput input;
     input.name = dialog.sampleName();
     input.wavBytes = dialog.wavBytes();
-    SampleSidecar sidecar;
-    sidecar.sourcePath = QFileInfo(path).absoluteFilePath();
-    sidecar.sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
-    sidecar.leftOnly = leftOnly;
-    sidecar.sf2Zone = sf2Zone;
-    sidecar.params = dialog.document()->params();
-    input.sidecar = std::move(sidecar);
+    input.sidecar = editedSidecar(dialog, std::move(original));
     m_pendingImportSlot = slot; // for the committed assignment
     m_dialogOps++;
     updateOpenGate();
@@ -345,26 +364,27 @@ void WorkspaceUi::continueEditSampleFlow(const SampleRead &read)
                     QObject::tr("the sample keeps its registered name (%1).").arg(name);
             return false;
         },
-        m_sampleAuditionEngine, hasDestAdsr ? &destAdsr : nullptr, &m_host);
-    dialog.setEditTarget(name);
+        m_audio, *m_soundBrowser, hasDestAdsr ? &destAdsr : nullptr, &m_host);
+    dialog.setEditTarget(name, [this](const QString &candidate, QString *validationError) {
+        return validateNewSampleName(candidate, validationError);
+    });
     if (fromSource)
         dialog.applyParamsExternal(sidecar.params);
+    m_soundBrowser->stopAll();
     if (dialog.exec() != QDialog::Accepted)
         return;
 
     if (!m_state.snapshot.isOpen() || projectBusy() || m_dialogOps > 0)
         return;
     CommitSampleInput input;
-    input.name = name;
+    input.name = dialog.sampleName();
     input.wavBytes = dialog.wavBytes();
-    if (fromSource) {
-        sidecar.params = dialog.document()->params();
-        input.sidecar = std::move(sidecar);
-    } else {
-        input.removeSidecar = true;
-    }
-    input.update = true;
-    m_pendingEditSampleSlot = slot; // for the committed refresh
+    input.sidecar = editedSidecar(
+        dialog, fromSource ? std::optional<SampleSidecar>{std::move(sidecar)} : std::nullopt);
+    input.update = input.name == name;
+    input.removeSidecar = input.update && !input.sidecar;
+    if (input.update)
+        m_pendingEditSampleSlot = slot;
     m_dialogOps++;
     updateOpenGate();
     emit projectOperationRequested(ProjectOperation{std::move(input)});
@@ -384,12 +404,14 @@ void WorkspaceUi::handleSampleCommitted(const SampleCommitted &committed)
         return;
     }
     m_sampleSet.reset();
+    m_soundBrowser->clearProjectSamples();
     if (!committed.sidecarSaved && !committed.sidecarError.isEmpty())
         showStatus(tr("Sample imported, but saving its edit history failed: %1")
                        .arg(committed.sidecarError),
                    8000);
     m_dialogOps++;
     updateOpenGate();
+    m_pendingSampleSetPreload = true;
     emit projectOperationRequested(ProjectOperation{RefreshCatalogInput{}});
 
     // A browser-initiated import points its slot's voice at the new sample

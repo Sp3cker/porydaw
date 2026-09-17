@@ -240,7 +240,7 @@ void WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose()
 {
     MainWindow window;
     window.m_persistSession = false;
-    QVERIFY(window.m_audioOk && window.m_audio.usingNullBackend() &&
+    QVERIFY(window.m_workspace && window.m_audio.usingNullBackend() &&
             window.m_audio.backendName() == QStringLiteral("Null"));
     QSettings store;
     store.sync();

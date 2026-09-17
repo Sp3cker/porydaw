@@ -20,10 +20,10 @@
 #include <utility>
 
 #include "project/songregistry.h"
-#include "ui/newsongwizard.h"
 #include "ui/songlistpanel.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/soundbrowser/soundbrowser.h"
 
 namespace {
 const QString kLastProjectDirKey = QStringLiteral("lastProjectDir");
@@ -76,8 +76,10 @@ void WorkspaceUi::applyProjectState(ProjectState state)
 {
     if (m_state.catalog.directSound != state.catalog.directSound ||
         m_state.catalog.progWave != state.catalog.progWave ||
-        m_state.catalog.keysplits != state.catalog.keysplits)
+        m_state.catalog.keysplits != state.catalog.keysplits) {
         m_sampleSet.reset();
+        m_soundBrowser->clearProjectSamples();
+    }
     m_state = std::move(state);
 
     if (m_state.state == ProjectOpenState::Loading) {
@@ -125,7 +127,9 @@ void WorkspaceUi::applyProjectState(ProjectState state)
         m_boundArgs.clear();
         m_startupPlaceholders.clear();
         m_pendingSynths.clear();
+        m_pendingSampleSetPreload = false;
         m_sampleSet.reset();
+        m_soundBrowser->clearProjectSamples();
         clearStartupSongKeys();
         m_songList->setSongs(m_state.snapshot.songs());
         m_songList->setCurrentSong(-1);
@@ -146,6 +150,10 @@ void WorkspaceUi::applyProjectState(ProjectState state)
         // the new-voicegroup / refresh-catalog scan.
         consumeDialogOperation();
         reconcileSnapshot();
+        if (m_pendingSampleSetPreload) {
+            m_pendingSampleSetPreload = false;
+            ensureSampleSet();
+        }
     }
     if (acceptedOpen) {
         showStatus(tr("Opened %1 — %2 songs")
@@ -280,6 +288,7 @@ void WorkspaceUi::beginProjectSwitch(const QString &dir)
         m_deleteConfirmation = nullptr;
         box->close();
     }
+    m_soundBrowser->stopAll();
     cleanupPreview();
     m_openRequested = true;
     updateOpenGate();
@@ -358,6 +367,7 @@ void WorkspaceUi::applyProjectEvent(ProjectEvent event)
                 consumeDialogOperation();
             } else if constexpr (std::is_same_v<T, SampleSetReady>) {
                 m_sampleSet = published.sampleSet;
+                m_soundBrowser->setProjectSamples(m_sampleSet, m_state.catalog);
                 consumeDialogOperation();
                 rebuildVoicegroupPresentation();
             } else if constexpr (std::is_same_v<T, SamplesProbed>) {
@@ -383,9 +393,13 @@ void WorkspaceUi::applyProjectEvent(ProjectEvent event)
                             resolveBankHardError(failure);
                         } else if constexpr (std::is_same_v<F, SampleMutationFailed>) {
                             consumeDialogOperation();
+                            m_pendingImportSlot.reset();
+                            m_pendingEditSampleSlot = -1;
+                            m_pendingEditSampleName.clear();
                             QMessageBox::warning(&m_host, tr("Sample"), failure.message);
                         } else if constexpr (std::is_same_v<F, CatalogMutationFailed>) {
                             consumeDialogOperation();
+                            m_pendingSampleSetPreload = false;
                             showStatus(failure.message, 8000);
                         } else {
                             static_assert(std::is_void_v<F>, "Unhandled project mutation failure");

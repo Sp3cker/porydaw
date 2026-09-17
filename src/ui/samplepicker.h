@@ -4,20 +4,13 @@
 #include <QStringList>
 #include <functional>
 
+#include "ui/soundbrowser/soundbrowser.h"
+
 class QLabel;
 class QLineEdit;
 class QTimer;
 class QTreeWidget;
 class QTreeWidgetItem;
-
-// Row metadata the picker displays, resolved by the owner from the project's
-// committed sample files (the same WaveData the engine would play).
-struct SamplePickInfo {
-    bool known = false; // symbol resolved to sample data
-    bool looped = false;
-    int rateHz = 0;
-    double seconds = 0.0; // length at the sample's own rate
-};
 
 // The symbol as shown to the user: the loader's vg_set_voice_name prefix
 // stripping ("DirectSoundWaveData_sc88pro_trumpet" -> "sc88pro_trumpet").

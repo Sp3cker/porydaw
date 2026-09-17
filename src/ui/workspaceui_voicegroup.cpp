@@ -82,6 +82,11 @@ void WorkspaceUi::routeHistoryRequest(bool undo)
 
 void WorkspaceUi::applyBankView(LoadedBankView view)
 {
+    // Only a replacement of the selected bank invalidates browse audio.
+    const bool selected =
+        m_selectedTab && m_selectedTab->voicegroupId() && *m_selectedTab->voicegroupId() == view.id;
+    if (selected)
+        m_soundBrowser->stopAll();
     // The cache install precedes every resolution; tabs holding the identity
     // refresh their lease from the new view, others stay isolated.
     const VoicegroupId id = view.id;
@@ -90,7 +95,7 @@ void WorkspaceUi::applyBankView(LoadedBankView view)
         if (page->voicegroupId() && *page->voicegroupId() == id)
             page->applyBankView(*m_cache.find(id));
     }
-    if (m_selectedTab && m_selectedTab->voicegroupId() && *m_selectedTab->voicegroupId() == id) {
+    if (selected) {
         rebuildVoicegroupPresentation();
         emit selectedSongStateChanged();
     }
@@ -181,7 +186,7 @@ void WorkspaceUi::rebuildVoicegroupPresentation()
         m_voicegroupBrowser->setVoicegroupChoices(catalog.groupArgs);
         m_voicegroupBrowser->setSampleInfoProvider([this](const QString &symbol) {
             ensureSampleSet();
-            return samplePickInfoFor(symbol);
+            return m_soundBrowser->sampleInfo(symbol);
         });
         m_voicegroupBrowser->setSource(
             &*m_bankView, catalog.directSound, catalog.progWave, catalog.keysplits,
@@ -209,65 +214,6 @@ void WorkspaceUi::updateVoicegroupDockTitle()
 {
     const bool dirty = m_selectedTab && bankDirty(*m_selectedTab);
     m_voicegroupDock->setWindowTitle(dirty ? tr("Voicegroup*") : tr("Voicegroup"));
-}
-
-// ---- Sample set lookups -------------------------------------------------------
-//
-// The audition sample set's parallel arrays were loaded from the published
-// catalog lists in order, so a symbol resolves by catalog index. The pointer
-// results borrow from the retained current sample set: they stay valid until
-// the set is replaced and must not be cached across events.
-
-namespace {
-// Symbol -> index into the sample set's parallel arrays (the set was loaded
-// from the catalog lists in this order), or -1.
-int sampleSetIndex(const QStringList &symbols, int limit, const QString &symbol)
-{
-    const int index = symbols.indexOf(symbol);
-    return index >= 0 && index < limit ? index : -1;
-}
-} // namespace
-
-const WaveData *WorkspaceUi::sampleWaveFor(const QString &symbol) const
-{
-    if (!m_sampleSet)
-        return nullptr;
-    const int index = sampleSetIndex(m_state.catalog.directSound, m_sampleSet->count, symbol);
-    return index < 0 ? nullptr : m_sampleSet->waves[index];
-}
-
-const uint32_t *WorkspaceUi::progWaveFor(const QString &symbol) const
-{
-    if (!m_sampleSet)
-        return nullptr;
-    const int index = sampleSetIndex(m_state.catalog.progWave, m_sampleSet->progWaveCount, symbol);
-    return index < 0 ? nullptr : m_sampleSet->progWaves[index];
-}
-
-const LoadedKeysplit *WorkspaceUi::keysplitFor(const QString &symbol) const
-{
-    if (!m_sampleSet)
-        return nullptr;
-    const auto &pairs = m_state.catalog.keysplits;
-    for (int i = 0; i < pairs.size() && i < m_sampleSet->keysplitCount; i++) {
-        if (pairs.at(i).first == symbol && m_sampleSet->keysplits[i].subGroup &&
-            m_sampleSet->keysplits[i].table)
-            return &m_sampleSet->keysplits[i];
-    }
-    return nullptr;
-}
-
-SamplePickInfo WorkspaceUi::samplePickInfoFor(const QString &symbol) const
-{
-    SamplePickInfo info;
-    const WaveData *const wave = sampleWaveFor(symbol);
-    if (!wave || !wave->data || wave->size == 0)
-        return info;
-    info.known = true;
-    info.looped = (wave->status & 0x4000) != 0;
-    info.rateHz = int(wave->freq / 1024);
-    info.seconds = info.rateHz > 0 ? double(wave->size) / info.rateHz : 0.0;
-    return info;
 }
 
 // ---- Minted synth definitions ------------------------------------------------

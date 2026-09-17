@@ -4,22 +4,36 @@
 #include <QApplication>
 #include <QComboBox>
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QKeyEvent>
 #include <QLineEdit>
+#include <QMessageBox>
+#include <QPushButton>
 #include <QSignalSpy>
 #include <QStatusBar>
+#include <QTimer>
+#include <QToolButton>
 #include <QtTest>
 
 #include <algorithm>
+#include <functional>
+#include <utility>
 
+#include "checks/samplecheck/fixtures.h"
+#include "checks/samplecheck/samplecheck.h"
 #include "checks/support/eventsynth.h"
 #include "checks/support/songfixture.h"
 #include "checks/support/voicegroupbrowserdriver.h"
 #include "core/songdocument.h"
 #include "mainwindow.h"
+#include "project/samplereg.h"
+#include "project/voicegroupsource.h"
 #include "ui/dragspinbox.h"
+#include "ui/sampleeditordialog.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/soundbrowser/soundbrowser.h"
 #include "ui/workspaceui.h"
 
 namespace checks {
@@ -36,6 +50,58 @@ uint64_t appendTick(const SongDocument &document)
     for (const SmfTrack &track : document.smf().tracks)
         end = std::max(end, uint64_t(track.endTick));
     return end + 96;
+}
+
+class SampleDialogDriver
+{
+  public:
+    SampleDialogDriver()
+    {
+        QObject::connect(&m_timer, &QTimer::timeout, &m_timer, [this] {
+            auto *modal = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+            if (!modal)
+                return;
+            auto *editor = qobject_cast<SampleEditorDialog *>(modal);
+            if (!editor || !m_prepare) {
+                auto *message = qobject_cast<QMessageBox *>(modal);
+                error = message ? message->text() : QStringLiteral("Unexpected sample dialog");
+                modal->reject();
+                return;
+            }
+            auto prepare = std::exchange(m_prepare, {});
+            error = prepare(*editor);
+            auto *accept = editor->findChild<QPushButton *>(QStringLiteral("sampleAddButton"));
+            if (error.isEmpty() && (!accept || !accept->isEnabled()))
+                error = QStringLiteral("Sample editor refused the prepared commit");
+            handled = true;
+            if (error.isEmpty())
+                accept->click();
+            else
+                editor->reject();
+        });
+        m_timer.start(10);
+    }
+
+    void expect(std::function<QString(SampleEditorDialog &)> prepare)
+    {
+        handled = false;
+        error.clear();
+        m_prepare = std::move(prepare);
+    }
+
+    bool handled = false;
+    QString error;
+
+  private:
+    QTimer m_timer;
+    std::function<QString(SampleEditorDialog &)> m_prepare;
+};
+
+bool enableSampleRegistration(const QString &root)
+{
+    return ::writeFile(root + QStringLiteral("/audio_rules.mk"),
+                       "%.bin: %.wav\n\t$(WAV2AGB) -b $< $@\n") &&
+           SampleRegistrar::probeSampleFormat(root).ok();
 }
 
 } // namespace
@@ -286,4 +352,137 @@ void VoicegroupSaveTest::cleanSaveEmitsNoReceipt()
     QCoreApplication::processEvents();
     QCOMPARE(m_savedReceipts, receiptsBefore);
 }
+void VoicegroupSaveTest::sampleCommitRefreshPreservesDirtyBank()
+{
+    const QString root = m_project->root();
+    QVERIFY(enableSampleRegistration(root));
+    const int edited = adjacentRelease(m_originalVoice.release);
+    m_window->show();
+    m_browser->revealSlot(m_dsSlot);
+    QVERIFY(m_browser->releaseSpinBox());
+    m_browser->releaseSpinBox()->setValue(edited);
+    QVERIFY2(waitForBankRelease(m_dsSlot, edited, true), "setup voice edit did not settle");
+
+    const QString srcPath = QDir(root).filePath(QStringLiteral("libsrc/commit_tone.wav"));
+    QVERIFY(::writeFile(srcPath, samplecheck::hiResSampleWav()));
+    SampleDialogDriver driver;
+    driver.expect([&](SampleEditorDialog &dialog) {
+        QString error;
+        dialog.loadLibrarySample(srcPath, &error);
+        return error;
+    });
+    auto *newSample = m_window->findChild<QToolButton *>(QStringLiteral("vgNewSampleButton"));
+    QVERIFY(newSample && newSample->isEnabled());
+    newSample->click();
+
+    const QString symbol = QStringLiteral("DirectSoundWaveData_commit_tone");
+    QVERIFY2(
+        settle([&] {
+            const LoadedBankView *bank = m_browser->selectedBankView();
+            return !driver.error.isEmpty() ||
+                   (driver.handled &&
+                    m_window->m_workspace->projectState().catalog.directSound.contains(symbol) &&
+                    m_window->m_workspace->sampleSet() && bank &&
+                    bank->slotViews.at(m_dsSlot).voice->symbol == symbol);
+        }),
+        "library-first registration did not settle");
+    QVERIFY2(driver.error.isEmpty(), qPrintable(driver.error));
+    const LoadedBankView *bank = m_browser->selectedBankView();
+    QVERIFY(bank && bank->dirty);
+    QCOMPARE(bank->slotViews.at(m_dsSlot).voice->release, edited);
+    QVERIFY(m_window->m_workspace->soundBrowser()->sampleInfo(symbol).known);
+
+    // Registration assigns the slot through a second ordinary bank edit.
+    requestUndo();
+    QVERIFY2(settle([&] {
+                 const auto &voice = m_browser->selectedBankView()->slotViews.at(m_dsSlot).voice;
+                 return voice && voice->symbol == m_originalVoice.symbol;
+             }),
+             "assignment undo did not restore the original sample");
+    QVERIFY(waitForBankRelease(m_dsSlot, edited, true));
+    requestUndo();
+    QVERIFY2(waitForBankRelease(m_dsSlot, m_originalVoice.release, false),
+             "the pre-registration dirty edit lost its undo history");
+}
+
+void VoicegroupSaveTest::saveAsNewKeepsOriginalVoice()
+{
+    const QString root = m_project->root();
+    QVERIFY(enableSampleRegistration(root));
+    m_window->show();
+    m_browser->revealSlot(m_dsSlot);
+    const QString srcPath = QDir(root).filePath(QStringLiteral("libsrc/vgsave_orig.wav"));
+    const QByteArray sourceBytes = samplecheck::hiResSampleWav();
+    QVERIFY(::writeFile(srcPath, sourceBytes));
+    SampleDialogDriver driver;
+    driver.expect([&](SampleEditorDialog &dialog) {
+        QString error;
+        dialog.loadLibrarySample(srcPath, &error);
+        return error;
+    });
+    auto *newSample = m_window->findChild<QToolButton *>(QStringLiteral("vgNewSampleButton"));
+    QVERIFY(newSample && newSample->isEnabled());
+    newSample->click();
+    const QString origSymbol = QStringLiteral("DirectSoundWaveData_vgsave_orig");
+    QVERIFY2(settle([&] {
+                 const LoadedBankView *bank = m_browser->selectedBankView();
+                 return !driver.error.isEmpty() ||
+                        (driver.handled && m_window->m_workspace->sampleSet() && bank &&
+                         bank->slotViews.at(m_dsSlot).voice->symbol == origSymbol);
+             }),
+             "original library registration did not settle");
+    QVERIFY2(driver.error.isEmpty(), qPrintable(driver.error));
+    const VgVoice originalVoice = *m_browser->selectedBankView()->slotViews.at(m_dsSlot).voice;
+    const QString wavPath = root + QStringLiteral("/sound/direct_sound_samples/vgsave_orig.wav");
+    const QString sidecarPath =
+        SampleRegistrar::sampleSidecarPath(root, QStringLiteral("vgsave_orig"));
+    const QByteArray originalWav = readFileBytes(wavPath);
+    const QByteArray originalSidecar = readFileBytes(sidecarPath);
+    QVERIFY(!originalWav.isEmpty() && !originalSidecar.isEmpty());
+
+    for (const bool sourceAvailable : {true, false}) {
+        if (!sourceAvailable)
+            QVERIFY(QFile::remove(srcPath)); // forces the committed-WAV fallback, not a new sidecar
+        const QString name =
+            sourceAvailable ? QStringLiteral("vgsave_copy") : QStringLiteral("vgsave_fallback");
+        driver.expect([&](SampleEditorDialog &dialog) {
+            dialog.saveAsNew();
+            auto *edit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
+            auto *accept = dialog.findChild<QPushButton *>(QStringLiteral("sampleAddButton"));
+            if (!edit || !accept)
+                return QStringLiteral("Missing Save as New controls");
+            edit->setText(QStringLiteral("vgsave_orig"));
+            if (accept->isEnabled())
+                return QStringLiteral("Save as New accepted the occupied original name");
+            edit->setText(name);
+            return QString();
+        });
+        auto *editSample = m_window->findChild<QToolButton *>(QStringLiteral("vgEditSampleButton"));
+        QVERIFY(editSample && editSample->isEnabled());
+        editSample->click();
+        const QString symbol = QStringLiteral("DirectSoundWaveData_") + name;
+        QVERIFY2(
+            settle([&] {
+                return !driver.error.isEmpty() ||
+                       (driver.handled && m_window->m_workspace->sampleSet() &&
+                        m_window->m_workspace->projectState().catalog.directSound.contains(symbol));
+            }),
+            "Save as New registration did not settle");
+        QVERIFY2(driver.error.isEmpty(), qPrintable(driver.error));
+        QCOMPARE(readFileBytes(wavPath), originalWav);
+        QCOMPARE(readFileBytes(sidecarPath), originalSidecar);
+        QCOMPARE(*m_browser->selectedBankView()->slotViews.at(m_dsSlot).voice, originalVoice);
+        QVERIFY(QFile::exists(root + QStringLiteral("/sound/direct_sound_samples/") + name +
+                              QStringLiteral(".wav")));
+        if (sourceAvailable) {
+            SampleSidecar sidecar;
+            QVERIFY(SampleRegistrar::readSampleSidecar(root, name, &sidecar));
+            QCOMPARE(sidecar.sourcePath, srcPath);
+            QCOMPARE(sidecar.sourceSha256, SampleRegistrar::sourceHashHex(sourceBytes));
+        } else {
+            QVERIFY(!QFile::exists(SampleRegistrar::sampleSidecarPath(root, name)));
+        }
+    }
+}
+
 } // namespace checks

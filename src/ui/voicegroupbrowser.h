@@ -14,6 +14,7 @@ extern "C" {
 #include "audio/auditionslots.h"
 #include "project/voicegroupsource.h"
 #include "ui/samplepicker.h"
+#include "ui/soundbrowser/soundbrowser.h"
 
 class DragSpinBox;
 class QComboBox;
@@ -21,11 +22,6 @@ class QLabel;
 class QPushButton;
 class QSpinBox;
 class QToolButton;
-
-// What a picker row stands for, so the owner resolves its audition
-// correctly: samples publish PCM, waves publish CGB wave bytes, keysplits
-// resolve to whichever sub-voice the audition key lands on.
-enum class VgAuditionKind { Sample, Wave, Keysplit };
 
 // The voicegroup dock (SPEC §6.1): the current song's 128 voicegroup entries
 // with press-and-hold audition, plus an editor panel for the selected voice.
@@ -104,8 +100,8 @@ class VoicegroupBrowser : public QWidget
     // through the selected voice's envelope (samples/waves; a keysplit row's
     // envelope comes from its resolved sub-voice, so adsr is unused there).
     void sampleAuditionRequested(const QString &symbol, VgAuditionKind kind,
-                                 const AuditionSlots::Adsr &adsr);
-    void sampleAuditionStopRequested();
+                                 const AuditionSlots::Adsr &adsr, QObject *owner);
+    void sampleAuditionStopRequested(QObject *owner);
     // The user edited the selected voice. The browser does not touch the
     // source itself: the owner applies the edit (as a song undo command) and
     // reflects it back via voiceChanged / a full setSource. structural

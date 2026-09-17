@@ -4,6 +4,7 @@
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
+#include <QFile>
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QGroupBox>
@@ -27,10 +28,12 @@
 #include <span>
 
 #include "audio/audioengine.h"
+#include "audio/sampleimport.h"
 #include "audio/samplewav.h"
 #include "core/m4asemantics.h"
 #include "enginesettingsdialog.h"
 #include "project/samplereg.h"
+#include "ui/soundbrowser/samplelibrarypanel.h"
 #include "waveformview.h"
 
 namespace {
@@ -164,24 +167,10 @@ class SampleParamsCommand : public QUndoCommand
     bool m_first = true;
 };
 
-SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator validator,
-                                       AudioEngine *engine, const AuditionSlots::Adsr *destAdsr,
-                                       QWidget *parent)
-    : QDialog(parent)
-    , m_doc(std::move(sample))
-    , m_validator(std::move(validator))
-    , m_engine(engine)
+void SampleEditorDialog::applyPitchPrefill()
 {
-    setWindowTitle(tr("Sample Editor"));
-    if (destAdsr) {
-        m_hasDestAdsr = true;
-        m_destAdsr = *destAdsr;
-    }
-
-    // Pitch detection (DSP.md §4) runs once at open for every source. It
-    // prefills the key/cents only when the container carried no pitch
-    // metadata — a real smpl/INST unity note always wins — and otherwise
-    // just powers the mismatch hint beside the base key (updatePitchHint).
+    // Runs once per source. Container pitch metadata remains authoritative;
+    // otherwise a confident detection seeds the editor defaults.
     ensurePitchDetected();
     if (!m_doc.source().hasPitchMetadata && m_pitch.pitched) {
         SampleEditParams p = m_doc.params();
@@ -191,6 +180,24 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
             qBound(0.0, std::round((exact - std::floor(exact)) * 10000.0) / 100.0, 99.99);
         m_doc.setParams(p);
     }
+}
+
+SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator validator,
+                                       AudioEngine &engine, soundbrowser::SoundBrowser &browser,
+                                       const AuditionSlots::Adsr *destAdsr, QWidget *parent)
+    : QDialog(parent)
+    , m_doc(std::move(sample))
+    , m_validator(std::move(validator))
+    , m_engine(engine)
+    , m_soundBrowser(browser)
+{
+    setWindowTitle(tr("Sample Editor"));
+    if (destAdsr) {
+        m_hasDestAdsr = true;
+        m_destAdsr = *destAdsr;
+    }
+
+    applyPitchPrefill();
 
     const ImportedSample &src = m_doc.source();
     const SampleEditParams defaults = m_doc.params();
@@ -343,9 +350,10 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
     // ---- the pipeline form (the beginner surface; expert rows live in
     // the Advanced section below) ----
     auto *form = new QFormLayout;
-    auto *sourceLabel = new QLabel(QFileInfo(src.sourcePath).fileName(), this);
-    sourceLabel->setToolTip(src.sourcePath);
-    form->addRow(tr("Source:"), sourceLabel);
+    m_sourceLabel = new QLabel(QFileInfo(src.sourcePath).fileName(), this);
+    m_sourceLabel->setObjectName(QStringLiteral("sampleSourceName"));
+    m_sourceLabel->setToolTip(src.sourcePath);
+    form->addRow(tr("Source:"), m_sourceLabel);
 
     m_baseKey = new MidiKeySpinBox(this);
     m_baseKey->setObjectName(QStringLiteral("sampleBaseKey"));
@@ -428,12 +436,6 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
     audition->addWidget(m_useDestAdsr);
     audition->addStretch();
     column->addLayout(audition);
-    if (!m_engine) {
-        for (QWidget *w : std::initializer_list<QWidget *>{m_playButton, m_auditionKey}) {
-            w->setEnabled(false);
-            w->setToolTip(tr("Audio is unavailable."));
-        }
-    }
     m_auditionTimer.setInterval(33);
     connect(&m_auditionTimer, &QTimer::timeout, this, &SampleEditorDialog::auditionTick);
 
@@ -460,7 +462,9 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
         m_advancedToggle->setArrowType(on ? Qt::DownArrow : Qt::RightArrow);
     });
 
-    advForm->addRow(tr("Format:"), new QLabel(sourceLine(src), m_advancedBody));
+    m_sourceFormat = new QLabel(sourceLine(src), m_advancedBody);
+    m_sourceFormat->setObjectName(QStringLiteral("sampleSourceFormat"));
+    advForm->addRow(tr("Format:"), m_sourceFormat);
 
     m_cropStart = makeSpin("sampleCropStart", 0, frames - 1, int(defaults.cropStart), 1);
     m_cropEnd = makeSpin("sampleCropEnd", 1, frames, int(defaults.cropEnd), 2);
@@ -514,6 +518,12 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
     m_addButton->setObjectName(QStringLiteral("sampleAddButton"));
     m_addButton->setToolTip(tr("Exports the .wav into sound/direct_sound_samples/ and registers "
                                "it; the build's %.bin rule compiles it."));
+    m_saveAsNewButton = buttons->addButton(tr("Save as New"), QDialogButtonBox::ActionRole);
+    m_saveAsNewButton->setObjectName(QStringLiteral("sampleSaveAsNewButton"));
+    m_saveAsNewButton->setToolTip(tr("Registers the current render under a new name; the original "
+                                     "sample stays unchanged."));
+    m_saveAsNewButton->setVisible(false);
+    connect(m_saveAsNewButton, &QPushButton::clicked, this, &SampleEditorDialog::saveAsNew);
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     layout->addWidget(buttons);
@@ -535,6 +545,8 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
     // focusable child gets a filter that claims it — nothing here
     // legitimately types one: sample names are C identifiers and every
     // other field is numeric.
+    installLibraryPanel();
+    setSourceControlsEnabled(m_doc.source().frameCount() > 0);
     for (QWidget *w : findChildren<QWidget *>()) {
         if (w->focusPolicy() != Qt::NoFocus)
             w->installEventFilter(this);
@@ -553,6 +565,7 @@ QByteArray SampleEditorDialog::wavBytes()
 
 void SampleEditorDialog::setEditTarget(const QString &name)
 {
+    m_editTarget = name;
     m_nameEdit->setText(name);
     m_nameEdit->setReadOnly(true);
     m_nameEdit->setToolTip(tr("The sample keeps its registered name; renaming is not supported "
@@ -562,10 +575,168 @@ void SampleEditorDialog::setEditTarget(const QString &name)
     validateName();
 }
 
+void SampleEditorDialog::setEditTarget(const QString &name, NameValidator newNameValidator)
+{
+    setEditTarget(name);
+    m_saveAsNewValidator = std::move(newNameValidator);
+    m_saveAsNewButton->setVisible(true);
+}
+
 void SampleEditorDialog::done(int result)
 {
+    // Release only this dialog's owned requests. SoundBrowser ignores a
+    // stale owner's stop, so closing an idle dialog cannot cut newer audio.
     stopAudition();
     QDialog::done(result);
+}
+
+SampleEditorDialog::SampleEditorDialog(NameValidator validator, AudioEngine &engine,
+                                       soundbrowser::SoundBrowser &browser,
+                                       const AuditionSlots::Adsr *destAdsr, QWidget *parent)
+    : SampleEditorDialog(ImportedSample{}, std::move(validator), engine, browser, destAdsr, parent)
+{}
+
+SampleEditorDialog::~SampleEditorDialog()
+{
+    // Destruction can bypass done(); dependencies outlive this dialog.
+    stopAudition();
+}
+
+bool SampleEditorDialog::loadLibrarySample(const QString &path, QString *error)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (error)
+            *error = tr("Cannot read %1.").arg(path);
+        return false;
+    }
+    const QByteArray bytes = file.readAll();
+    file.close();
+
+    ImportedSample sample;
+    QString decodeError;
+    if (!importAudioBytes(bytes, path, &sample, &decodeError)) {
+        if (error)
+            *error = decodeError;
+        return false;
+    }
+
+    const QString sha = SampleRegistrar::sourceHashHex(bytes);
+    stopAudition();
+    resetSample(std::move(sample));
+    m_libraryPath = QFileInfo(path).absoluteFilePath();
+    m_librarySha = sha;
+    return true;
+}
+
+void SampleEditorDialog::previewLibrarySample(const QString &path)
+{
+    stopAudition();
+    const soundbrowser::AuditionResult result =
+        m_soundBrowser.auditionExternalFile(this, path, uint8_t(m_auditionKey->value()));
+    if (m_libraryPanel)
+        m_libraryPanel->showMessage(
+            result.status == soundbrowser::AuditionStatus::Started ? QString() : result.message);
+}
+
+void SampleEditorDialog::saveAsNew()
+{
+    if (m_editTarget.isEmpty())
+        return;
+    if (m_saveAsNewValidator)
+        m_validator = m_saveAsNewValidator;
+    QString suggestion = m_editTarget + QStringLiteral("_copy");
+    if (m_saveAsNewValidator) {
+        QString refusal;
+        if (!m_saveAsNewValidator(suggestion, &refusal))
+            suggestion = m_editTarget;
+    }
+    m_nameEdit->setReadOnly(false);
+    m_nameEdit->setToolTip(tr("Registers as a new sample; the original sample stays unchanged."));
+    m_nameEdit->setText(suggestion);
+    m_addButton->setText(tr("Add to Project"));
+    setWindowTitle(tr("Sample Editor"));
+    validateName();
+}
+
+void SampleEditorDialog::installLibraryPanel()
+{
+    auto *split = findChild<QSplitter *>(QStringLiteral("sampleSplit"));
+    if (!split)
+        return;
+    m_libraryPanel = new SampleLibraryPanel(this);
+    split->addWidget(m_libraryPanel);
+    split->setCollapsible(split->indexOf(m_libraryPanel), true);
+    split->setStretchFactor(split->indexOf(m_libraryPanel), 0);
+    connect(m_libraryPanel, &SampleLibraryPanel::previewRequested, this,
+            &SampleEditorDialog::previewLibrarySample);
+    connect(m_libraryPanel, &SampleLibraryPanel::loadRequested, this, [this](const QString &path) {
+        QString error;
+        if (!loadLibrarySample(path, &error) && m_libraryPanel)
+            m_libraryPanel->showMessage(error);
+    });
+}
+
+void SampleEditorDialog::setSourceControlsEnabled(bool enabled)
+{
+    m_nameEdit->setEnabled(enabled);
+    m_playButton->setEnabled(enabled);
+    m_loopCheck->setEnabled(enabled);
+    m_loopGroup->setEnabled(enabled);
+    m_cropStart->setEnabled(enabled);
+    m_cropEnd->setEnabled(enabled);
+    m_loopStart->setEnabled(enabled);
+    m_loopEnd->setEnabled(enabled);
+    m_baseKey->setEnabled(enabled);
+    m_fineTune->setEnabled(enabled);
+    m_pitchApply->setEnabled(enabled);
+    m_rateCombo->setEnabled(enabled);
+    m_normalizeMode->setEnabled(enabled);
+    m_crossfade->setEnabled(enabled);
+    m_tryLoop->setEnabled(enabled);
+    m_refineButton->setEnabled(enabled);
+    m_advancedBody->setEnabled(enabled);
+}
+
+void SampleEditorDialog::resetSample(ImportedSample sample)
+{
+    m_libraryPath.clear();
+    m_librarySha.clear();
+    m_doc = SampleDocument(std::move(sample));
+    m_undo.clear();
+    m_chips.clear();
+    m_chipsValid = false;
+    m_chipIndex = -1;
+    m_chipsCropStart = -1;
+    m_chipsCropEnd = -1;
+    m_chipsRate = -1.0;
+    m_pitchTried = false;
+    m_suggestStatus->clear();
+    m_waveform->setSample(&m_doc.source());
+    applyPitchPrefill();
+
+    if (!m_nameEdit->isReadOnly())
+        m_nameEdit->setText(m_doc.source().suggestedName);
+    setSourceControlsEnabled(true);
+
+    m_sourceLabel->setText(QFileInfo(m_doc.source().sourcePath).fileName());
+    m_sourceLabel->setToolTip(m_doc.source().sourcePath);
+    m_sourceFormat->setText(sourceLine(m_doc.source()));
+    const int frames = int(qMin<qint64>(m_doc.source().frameCount(), INT_MAX));
+    m_syncing = true;
+    m_cropStart->setRange(0, qMax(0, frames - 1));
+    m_cropEnd->setRange(1, qMax(1, frames));
+    m_loopStart->setRange(0, qMax(0, frames - 1));
+    m_loopEnd->setRange(0, qMax(0, frames - 1));
+    m_rateCombo->setItemText(
+        0, tr("Keep source (%1 Hz)")
+               .arg(m_doc.source().sampleRate, 0, 'f',
+                    m_doc.source().sampleRate == std::floor(m_doc.source().sampleRate) ? 0 : 2));
+    syncUiFromParams();
+    m_sourceCents = m_fineTune->value();
+    m_syncing = false;
+    validateName();
+    refreshOutputs();
 }
 
 // Space play/stop when no input has focus (keys unhandled by the focused
@@ -758,7 +929,8 @@ void SampleEditorDialog::refreshOutputs()
 void SampleEditorDialog::validateName()
 {
     QString error;
-    const bool ok = m_validator && m_validator(m_nameEdit->text(), &error);
+    const bool hasSource = m_doc.source().frameCount() > 0;
+    const bool ok = hasSource && m_validator && m_validator(m_nameEdit->text(), &error);
     m_addButton->setEnabled(ok);
     m_nameStatus->setText(ok ? (m_nameEdit->isReadOnly()
                                     ? tr("Saves over DirectSoundWaveData_%1's sample data")
@@ -989,11 +1161,11 @@ void SampleEditorDialog::toggleAudition()
 
 void SampleEditorDialog::startAudition(bool looped)
 {
-    if (!m_engine)
-        return;
     const ProcessedSample &out = m_doc.processed();
     if (out.s8.isEmpty())
         return;
+    // The document audition supersedes this dialog's library preview.
+    m_soundBrowser.stop(this);
     if (looped && !out.looped)
         looped = false;
 
@@ -1005,7 +1177,7 @@ void SampleEditorDialog::startAudition(bool looped)
     if (m_hasDestAdsr && m_useDestAdsr->isChecked())
         adsr = m_destAdsr;
     const uint8_t key = uint8_t(m_auditionKey->value());
-    m_republishPending = !m_engine->auditionSample(bytes, out.freq, loopStart, loopFlag, key, adsr);
+    m_republishPending = !m_engine.auditionSample(bytes, out.freq, loopStart, loopFlag, key, adsr);
     m_auditionMode = looped ? AuditionMode::Loop : AuditionMode::Once;
     m_auditionLooped = loopFlag;
     m_auditionSize = quint32(bytes.size());
@@ -1023,8 +1195,10 @@ void SampleEditorDialog::startAudition(bool looped)
 
 void SampleEditorDialog::stopAudition()
 {
-    if (m_engine)
-        m_engine->auditionSampleOff();
+    const bool ownAudition = m_auditionMode != AuditionMode::None || m_republishPending;
+    m_soundBrowser.stop(this);
+    if (ownAudition)
+        m_engine.auditionSampleOff();
     m_auditionMode = AuditionMode::None;
     m_republishPending = false;
     m_auditionTimer.stop();

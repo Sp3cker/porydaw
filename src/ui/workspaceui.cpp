@@ -13,11 +13,13 @@
 
 #include <algorithm>
 
+#include "audio/audioengine.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/songlistpanel.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/soundbrowser/soundbrowser.h"
 #include "ui/transportbar.h"
 
 namespace {
@@ -28,10 +30,11 @@ const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
 
 } // namespace
 
-WorkspaceUi::WorkspaceUi(QMainWindow &host, const EditorViewState &initial)
+WorkspaceUi::WorkspaceUi(QMainWindow &host, const EditorViewState &initial, AudioEngine &audio)
     : QObject(&host)
     , m_host(host)
     , m_editorViewState(initial)
+    , m_audio(audio)
 {
     buildUi();
 
@@ -138,6 +141,9 @@ void WorkspaceUi::buildUi()
     m_voicegroupDock->setObjectName(QStringLiteral("voicegroupDock"));
     m_voicegroupDock->setFeatures(QDockWidget::DockWidgetMovable);
     installDockTitle(m_voicegroupDock);
+    // The one browse-audition coordinator: a child of the workspace so its
+    // owned requests die with the workspace, before the engine shuts down.
+    m_soundBrowser = new soundbrowser::SoundBrowser(m_audio, this);
     m_voicegroupBrowser = new VoicegroupBrowser(m_voicegroupDock);
     m_voicegroupDock->setWidget(m_voicegroupBrowser);
     m_host.addDockWidget(Qt::LeftDockWidgetArea, m_voicegroupDock);
@@ -163,16 +169,24 @@ void WorkspaceUi::buildUi()
 void WorkspaceUi::wireBrowser()
 {
     connect(m_voicegroupBrowser, &VoicegroupBrowser::auditionVoice, this,
-            &WorkspaceUi::auditionVoiceRequested);
+            [this](int voice, int key, int velocity) {
+                m_soundBrowser->previewVoice(m_voicegroupBrowser, voice, key, velocity);
+            });
     connect(m_voicegroupBrowser, &VoicegroupBrowser::sampleAuditionRequested, this,
-            [this](const QString &symbol, VgAuditionKind kind, const AuditionSlots::Adsr &adsr) {
+            [this](const QString &symbol, VgAuditionKind kind, const AuditionSlots::Adsr &adsr,
+                   QObject *owner) {
                 // Browse auditions lazily load the shared sample set (loop
-                // badges, waves, and keysplit tables) before the engine call.
+                // badges, waves, and keysplit tables) before the coordinator
+                // call; the coordinator reports NotReady until it lands.
                 ensureSampleSet();
-                emit sampleAuditionRequested(symbol, kind, adsr);
+                const soundbrowser::AuditionResult result =
+                    m_soundBrowser->auditionSymbol(owner, symbol, kind, adsr);
+                if (result.status != soundbrowser::AuditionStatus::Started &&
+                    !result.message.isEmpty())
+                    showStatus(result.message, 5000);
             });
     connect(m_voicegroupBrowser, &VoicegroupBrowser::sampleAuditionStopRequested, this,
-            &WorkspaceUi::sampleAuditionStopRequested);
+            [this](QObject *owner) { m_soundBrowser->stop(owner); });
     connect(m_voicegroupBrowser, &VoicegroupBrowser::voiceEditRequested, this,
             [this](int slot, const VgVoice &voice, bool) { submitPickerEdit(slot, voice); });
     connect(m_voicegroupBrowser, &VoicegroupBrowser::newVoicegroupRequested, this,
@@ -206,19 +220,24 @@ void WorkspaceUi::wireTab(SongTab *tab)
 
     SongView &view = tab->view();
     connect(&view, &SongView::auditionNote, this, [this, tab](int track, int key, int velocity) {
-        if (tab == m_selectedTab)
-            emit auditionNoteRequested(uint8_t(track), uint8_t(key), uint8_t(velocity));
+        if (tab == m_selectedTab && m_audio.songLoaded())
+            m_audio.previewNote(uint8_t(track), uint8_t(key), uint8_t(velocity));
     });
     connect(&view, &SongView::auditionNoteTimed, this,
             [this, tab](int track, int key, int velocity, quint32 durationSamples) {
-                if (tab == m_selectedTab)
-                    emit auditionNoteTimedRequested(uint8_t(track), uint8_t(key), uint8_t(velocity),
-                                                    durationSamples);
+                if (tab == m_selectedTab && m_audio.songLoaded())
+                    m_audio.previewNoteTimed(uint8_t(track), uint8_t(key), uint8_t(velocity),
+                                             durationSamples);
             });
-    connect(&view, &SongView::auditionVoice, this, [this, tab](int voice, int key, int velocity) {
-        if (tab == m_selectedTab)
-            emit auditionVoiceRequested(uint8_t(voice), uint8_t(key), uint8_t(velocity));
-    });
+    connect(&view, &SongView::auditionVoice, this,
+            [this, tab](int voice, int key, int velocity, QObject *owner) {
+                // Starts are gated to the selected tab; matching releases
+                // still forward during teardown so a held picker note cannot
+                // stick when its tab closes underneath it.
+                if (velocity != 0 && tab != m_selectedTab)
+                    return;
+                m_soundBrowser->previewVoice(owner, voice, key, velocity);
+            });
     connect(&view, &SongView::editCursorMoved, this, [this, tab](Tick tick) {
         if (tab == m_selectedTab)
             emit editCursorSeekRequested(tick);
@@ -421,14 +440,6 @@ const SongInfo *WorkspaceUi::songInfoFor(const SongName &name) const
             return &song;
     }
     return nullptr;
-}
-
-void WorkspaceUi::setAudioSampleRate(double sampleRate)
-{
-    if (m_audioSampleRate == sampleRate)
-        return;
-    m_audioSampleRate = sampleRate;
-    applySampleRateToTabs();
 }
 
 void WorkspaceUi::toggleDrawerPage(EditorDrawerPage page)

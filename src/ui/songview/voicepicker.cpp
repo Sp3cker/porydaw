@@ -165,7 +165,7 @@ void VoicePicker::pressAndHold(int program)
 
     releaseHeld();
     m_soundingProgram = program;
-    emit m_owner.auditionVoice(program, kVoiceAuditionKey, kVoiceAuditionVel);
+    emit m_owner.auditionVoice(program, kVoiceAuditionKey, kVoiceAuditionVel, this);
 }
 
 void VoicePicker::releaseHeld()
@@ -173,7 +173,7 @@ void VoicePicker::releaseHeld()
     if (m_soundingProgram < 0)
         return;
 
-    emit m_owner.auditionVoice(m_soundingProgram, kVoiceAuditionKey, 0);
+    emit m_owner.auditionVoice(m_soundingProgram, kVoiceAuditionKey, 0, this);
     m_soundingProgram = -1;
 }
 

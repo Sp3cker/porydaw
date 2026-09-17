@@ -41,7 +41,7 @@ void VoicegroupSaveTest::init()
 
     m_window = std::make_unique<MainWindow>();
     m_window->m_persistSession = false;
-    QVERIFY2(m_window->m_audioOk, "VoicegroupSave requires a working application audio engine");
+    QVERIFY2(m_window->m_workspace, "VoicegroupSave requires a working application audio engine");
     QVERIFY2(openSong(error), qPrintable(error));
 }
 

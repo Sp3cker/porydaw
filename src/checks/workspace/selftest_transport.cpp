@@ -67,7 +67,7 @@ void WorkspaceTransportSelfTest::cleanup()
 SongTab *WorkspaceTransportSelfTest::openNull(MainWindow &window, SongView *&view)
 {
     window.m_persistSession = false;
-    if (!window.m_audioOk || !window.m_audio.usingNullBackend() ||
+    if (!window.m_workspace || !window.m_audio.usingNullBackend() ||
         window.m_audio.backendName() != QStringLiteral("Null"))
         return nullptr;
     auto *workspace = window.m_workspace.get();

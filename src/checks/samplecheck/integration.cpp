@@ -365,7 +365,7 @@ void SampleProcessingTest::sidecarEditDialog()
             *err = QStringLiteral("the sample keeps its registered name.");
         return false;
     };
-    SampleEditorDialog dialog(hiRes, acceptsRegisteredName);
+    SampleEditorDialog dialog(hiRes, acceptsRegisteredName, m_audio.engine(), m_audio.browser());
     dialog.setEditTarget(QStringLiteral("provenance_tone"));
     dialog.applyParamsExternal(params);
     dialog.show();

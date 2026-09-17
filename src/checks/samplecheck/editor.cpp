@@ -48,32 +48,14 @@ void sendSpaceStroke(QObject &target, Qt::KeyboardModifiers modifiers, bool auto
                             QStringLiteral(" "), autoRepeat, 1);
 }
 
-class ScopedNullAudioBackend final
-{
-  public:
-    ScopedNullAudioBackend()
-        : m_wasSet(qEnvironmentVariableIsSet("PORYDAW_AUDIO_BACKEND"))
-        , m_previous(qgetenv("PORYDAW_AUDIO_BACKEND"))
-    {
-        qputenv("PORYDAW_AUDIO_BACKEND", "null");
-    }
-
-    ~ScopedNullAudioBackend()
-    {
-        if (m_wasSet)
-            qputenv("PORYDAW_AUDIO_BACKEND", m_previous);
-        else
-            qunsetenv("PORYDAW_AUDIO_BACKEND");
-    }
-
-  private:
-    bool m_wasSet;
-    QByteArray m_previous;
-};
-
 } // namespace
 
 namespace samplecheck {
+
+void SampleProcessingTest::initTestCase()
+{
+    QVERIFY2(m_audio.isReady(), qPrintable(m_audio.error()));
+}
 
 void SampleProcessingTest::pipelinePrefillCollision()
 {
@@ -92,9 +74,12 @@ void SampleProcessingTest::pipelinePrefillCollision()
                              &prepared, &error),
              "prepared sample re-imports from the project");
     const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-    SampleEditorDialog dialog(prepared, [&](const QString &name, QString *validationError) {
-        return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-    });
+    SampleEditorDialog dialog(
+        prepared,
+        [&](const QString &name, QString *validationError) {
+            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+        },
+        m_audio.engine(), m_audio.browser());
     auto *nameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
     auto *addButton = dialog.findChild<QPushButton *>(QStringLiteral("sampleAddButton"));
     auto *status = dialog.findChild<QLabel *>(QStringLiteral("sampleNameStatus"));
@@ -118,7 +103,9 @@ void SampleProcessingTest::pipelinePreparedDefaults()
     QVERIFY2(importAudioBytes(preparedSampleWav(), QStringLiteral("fix/prepared_tone.wav"),
                               &prepared, &error),
              qPrintable(error));
-    SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
+    SampleEditorDialog dialog(
+        prepared, [](const QString &, QString *) { return true; }, m_audio.engine(),
+        m_audio.browser());
     auto *baseKey = dialog.findChild<QSpinBox *>(QStringLiteral("sampleBaseKey"));
     auto *fineTune = dialog.findChild<QDoubleSpinBox *>(QStringLiteral("sampleFineTune"));
     SampleDocument *document = dialog.document();
@@ -142,7 +129,9 @@ void SampleProcessingTest::pipelineKeyOverride()
     QVERIFY2(importAudioBytes(preparedSampleWav(), QStringLiteral("fix/prepared_tone.wav"),
                               &prepared, &error),
              qPrintable(error));
-    SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
+    SampleEditorDialog dialog(
+        prepared, [](const QString &, QString *) { return true; }, m_audio.engine(),
+        m_audio.browser());
     auto *baseKey = dialog.findChild<QSpinBox *>(QStringLiteral("sampleBaseKey"));
     SampleDocument *document = dialog.document();
     QVERIFY2(baseKey && document, "pipeline key controls found");
@@ -162,7 +151,9 @@ void SampleProcessingTest::pipelineLoopToggle()
     QVERIFY2(importAudioBytes(preparedSampleWav(), QStringLiteral("fix/prepared_tone.wav"),
                               &prepared, &error),
              qPrintable(error));
-    SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
+    SampleEditorDialog dialog(
+        prepared, [](const QString &, QString *) { return true; }, m_audio.engine(),
+        m_audio.browser());
     auto *loopOn = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
     SampleDocument *document = dialog.document();
     QVERIFY2(loopOn && document, "pipeline loop controls found");
@@ -187,7 +178,9 @@ void SampleProcessingTest::pipelineRateCommit()
     QVERIFY2(importAudioBytes(preparedSampleWav(), QStringLiteral("fix/prepared_tone.wav"),
                               &prepared, &error),
              qPrintable(error));
-    SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
+    SampleEditorDialog dialog(
+        prepared, [](const QString &, QString *) { return true; }, m_audio.engine(),
+        m_audio.browser());
     auto *loopOn = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
     auto *rateCombo = dialog.findChild<QComboBox *>(QStringLiteral("sampleRateCombo"));
     SampleDocument *document = dialog.document();
@@ -223,7 +216,9 @@ void SampleProcessingTest::pipelineCropNormalize()
     QVERIFY2(importAudioBytes(preparedSampleWav(), QStringLiteral("fix/prepared_tone.wav"),
                               &prepared, &error),
              qPrintable(error));
-    SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
+    SampleEditorDialog dialog(
+        prepared, [](const QString &, QString *) { return true; }, m_audio.engine(),
+        m_audio.browser());
     auto *loopOn = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
     auto *cropEnd = dialog.findChild<QSpinBox *>(QStringLiteral("sampleCropEnd"));
     auto *normalize = dialog.findChild<QComboBox *>(QStringLiteral("sampleNormalizeMode"));
@@ -250,9 +245,12 @@ void SampleProcessingTest::editorDrag()
                               &importError),
              qPrintable(importError));
     const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-    SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-        return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-    });
+    SampleEditorDialog dialog(
+        hiRes,
+        [&](const QString &name, QString *validationError) {
+            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+        },
+        m_audio.engine(), m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();
@@ -296,9 +294,12 @@ void SampleProcessingTest::editorPitchAdoption()
                               &importError),
              qPrintable(importError));
     const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-    SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-        return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-    });
+    SampleEditorDialog dialog(
+        hiRes,
+        [&](const QString &name, QString *validationError) {
+            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+        },
+        m_audio.engine(), m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();
@@ -327,9 +328,12 @@ void SampleProcessingTest::editorLoopPopulate()
                               &importError),
              qPrintable(importError));
     const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-    SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-        return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-    });
+    SampleEditorDialog dialog(
+        hiRes,
+        [&](const QString &name, QString *validationError) {
+            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+        },
+        m_audio.engine(), m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();
@@ -384,9 +388,12 @@ void SampleProcessingTest::editorLoopRefine()
                               &importError),
              qPrintable(importError));
     const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-    SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-        return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-    });
+    SampleEditorDialog dialog(
+        hiRes,
+        [&](const QString &name, QString *validationError) {
+            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+        },
+        m_audio.engine(), m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();
@@ -423,9 +430,12 @@ void SampleProcessingTest::editorCrossfade()
                               &importError),
              qPrintable(importError));
     const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-    SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-        return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-    });
+    SampleEditorDialog dialog(
+        hiRes,
+        [&](const QString &name, QString *validationError) {
+            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+        },
+        m_audio.engine(), m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();
@@ -464,11 +474,14 @@ void SampleProcessingTest::editorAuditionStrip()
                               &importError),
              qPrintable(importError));
     const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-    SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-        return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-    });
+    SampleEditorDialog dialog(
+        hiRes,
+        [&](const QString &name, QString *validationError) {
+            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+        },
+        m_audio.engine(), m_audio.browser());
     auto *play = dialog.findChild<QPushButton *>(QStringLiteral("sampleAuditionPlay"));
-    QVERIFY2(play && !play->isEnabled(), "audition strip disabled without audio");
+    QVERIFY2(play && play->isEnabled(), "audition strip enabled with initialized audio");
 }
 
 void SampleProcessingTest::editorUndo()
@@ -483,9 +496,12 @@ void SampleProcessingTest::editorUndo()
                               &importError),
              qPrintable(importError));
     const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-    SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-        return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-    });
+    SampleEditorDialog dialog(
+        hiRes,
+        [&](const QString &name, QString *validationError) {
+            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+        },
+        m_audio.engine(), m_audio.browser());
     SampleDocument *document = dialog.document();
     QUndoStack *undo = dialog.undoStack();
     auto *baseKey = dialog.findChild<QSpinBox *>(QStringLiteral("sampleBaseKey"));
@@ -513,9 +529,12 @@ void SampleProcessingTest::editorScroll()
                               &importError),
              qPrintable(importError));
     const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-    SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-        return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-    });
+    SampleEditorDialog dialog(
+        hiRes,
+        [&](const QString &name, QString *validationError) {
+            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+        },
+        m_audio.engine(), m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();
@@ -540,20 +559,33 @@ void SampleProcessingTest::editorSplitter()
                               &importError),
              qPrintable(importError));
     const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-    SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-        return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-    });
+    SampleEditorDialog dialog(
+        hiRes,
+        [&](const QString &name, QString *validationError) {
+            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+        },
+        m_audio.engine(), m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();
     WaveformView *wave = dialog.waveform();
     auto *split = dialog.findChild<QSplitter *>(QStringLiteral("sampleSplit"));
     QVERIFY2(wave && split, "waveform splitter found");
+    // The library panel shares the splitter: size every widget so the
+    // waveform maps to its own slot regardless of panel position. Grow
+    // the waveform first so the shrink assertion is independent of the
+    // initial layout distribution.
+    QList<int> grown(split->count(), 0);
+    grown[split->indexOf(wave)] = 10000;
+    split->setSizes(grown);
+    QApplication::processEvents();
     const int tall = wave->height();
-    split->setSizes({wave->minimumSizeHint().height(), 10000});
+    QList<int> shrunk(split->count(), 10000);
+    shrunk[split->indexOf(wave)] = wave->minimumSizeHint().height();
+    split->setSizes(shrunk);
     QApplication::processEvents();
     QVERIFY2(wave->height() < tall, "splitter drag shrinks the waveform");
-    split->setSizes({10000, split->sizes().value(1)});
+    split->setSizes(grown);
     QApplication::processEvents();
 }
 
@@ -570,9 +602,12 @@ void SampleProcessingTest::editorCommit()
                               &importError),
              qPrintable(importError));
     const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-    SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-        return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-    });
+    SampleEditorDialog dialog(
+        hiRes,
+        [&](const QString &name, QString *validationError) {
+            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+        },
+        m_audio.engine(), m_audio.browser());
     auto *nameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
     auto *baseKey = dialog.findChild<QSpinBox *>(QStringLiteral("sampleBaseKey"));
     SampleDocument *document = dialog.document();
@@ -615,16 +650,9 @@ void SampleProcessingTest::spaceAudition()
                               &importError),
              qPrintable(importError));
 
-    // Use the required production null backend, then park its callback so
-    // the actual AudioEngine process path can be rendered deterministically.
-    ScopedNullAudioBackend nullBackend;
-    AudioEngine engine;
-    QString audioError;
-    QVERIFY2(engine.init(&audioError), qPrintable(audioError));
-    QVERIFY2(engine.nullBackendForced() && engine.usingNullBackend(),
-             "Space audition uses the required production null backend");
-    QVERIFY2(checks::AudioEngineTestAccess::parkDevice(engine),
-             "Space audition parks the null device for deterministic PCM capture");
+    // The shared fixture uses the required production null backend and
+    // parks its callback for deterministic rendering.
+    AudioEngine &engine = m_audio.engine();
 
     const auto renderFrames = [&](uint32_t frames) {
         auto pcm = std::vector<float>(static_cast<std::size_t>(frames) * 2);
@@ -643,7 +671,8 @@ void SampleProcessingTest::spaceAudition()
         return result;
     };
 
-    SampleEditorDialog dialog(hiRes, [](const QString &, QString *) { return true; }, &engine);
+    SampleEditorDialog dialog(
+        hiRes, [](const QString &, QString *) { return true; }, engine, m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();

@@ -20,7 +20,7 @@ PolyphonyGateTest::~PolyphonyGateTest() = default;
 bool PolyphonyGateTest::prepareGateWindow()
 {
     m_window = std::make_unique<MainWindow>();
-    if (!m_window->m_audioOk)
+    if (!m_window->m_workspace)
         return false;
     m_window->show();
     QCoreApplication::processEvents();

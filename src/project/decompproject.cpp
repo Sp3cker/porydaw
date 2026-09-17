@@ -372,9 +372,51 @@ bool DecompProject::rebuildVoicegroupProject(QString *error)
             *error = QStringLiteral("Could not refresh the project voicegroup loader.");
         return false;
     }
+    // Stage a candidate lease for every canonical bank before installing
+    // anything: clean banks reload through the replacement context using
+    // their original file/section target, dirty banks from their own
+    // rendered preview bytes. Any failure leaves the prior context, banks,
+    // and memo untouched; staged candidates are self-owned and simply die.
+    struct StagedLease {
+        VoicegroupId id;
+        VoicegroupLease lease;
+    };
+    QVector<StagedLease> staged;
+    staged.reserve(qsizetype(m_banks.size()));
+    QString stageError;
+    for (const auto &pair : m_banks) {
+        const LoadedBankEntry &entry = pair.second;
+        LoadedVoiceGroup *raw = nullptr;
+        if (entry.source->dirty()) {
+            raw = loadPreviewedSource(m_root, entry.loadName, entry.source->renderPreview(),
+                                      &stageError);
+        } else {
+            const QByteArray targetPath = entry.source->filePath().toLocal8Bit();
+            const QByteArray sectionLabel = entry.source->sectionLabel().toLocal8Bit();
+            const VoicegroupTarget target = {targetPath.constData(), sectionLabel.constData()};
+            raw = replacement->load(target);
+            if (!raw && stageError.isEmpty()) {
+                stageError = QStringLiteral("Could not load voicegroup source %1.")
+                                 .arg(entry.source->filePath());
+            }
+        }
+        if (!raw) {
+            if (error) {
+                *error = stageError.isEmpty()
+                             ? QStringLiteral("Could not refresh the project voicegroup loader.")
+                             : stageError;
+            }
+            return false;
+        }
+        staged.append({entry.id, leaseWithMintedSynths(raw, *entry.source)});
+    }
     m_voicegroupProject.swap(replacement);
     m_voicegroupArgMemo.clear();
-    m_banks.clear();
+    for (StagedLease &candidate : staged) {
+        const auto it = m_banks.find(candidate.id);
+        if (it != m_banks.end())
+            it->second.current = std::move(candidate.lease);
+    }
     return true;
 }
 
