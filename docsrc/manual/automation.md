@@ -2,33 +2,19 @@
 
 ## What automation is
 
-<!-- TODO: Values that change over time instead of staying fixed — fade-outs,
-panning sweeps, tempo changes, vibrato depth. Drawn as line/step lanes under
-the piano roll. The Automation page holds only the tempo and CC lanes; voice
-changes have their own Voice Changes page (see
-[The Main Window](main-window.md)). -->
+<!-- TODO: Explain time-varying parameter curves in the shared Automation plot; Voice Changes use their own page. -->
 
 ## Adding a lane
 
-<!-- TODO: Per-track lane picker from the m4a parameter list; the tempo lane
-always available at the top level. -->
+<!-- TODO: Explain choosing any supported per-track parameter or song-global Tempo from the parameter list. -->
 
 ## The parameters you can automate
 
-<!-- TODO: Friendly table of the m4a-meaningful controls with plain-language
-descriptions and typical ranges:
-- Volume, Pan
-- MOD (LFO depth) / MODT (LFO type: 0=vibrato, 1=tremolo, 2=autopan)
-- TUNE (fine tune, bipolar — 64 is center/no detune)
-- BEND (pitch bend) / BENDR (bend range)
-- LFOS / LFODL (LFO speed / delay; LFODL takes effect from the next note-on)
-- Tempo (top-level lane)
-Flag which ones quantize on GBA hardware. -->
+<!-- TODO: Describe Modulation, Volume, Pan, Bend range, LFO speed, Echo volume, Echo length, Pitch bend, and Tempo, including ranges and hardware quantization. -->
 
 ## Drawing and editing values
 
-<!-- TODO: Click/drag to draw, step vs. line rendering, snapping, deleting
-points; undoable like everything else. -->
+<!-- TODO: Explain drawing, snapping, deleting, curve behavior, and undo. -->
 
 ## The value axis and zooming
 
@@ -42,11 +28,8 @@ points; undoable like everything else. -->
 MODT, TUNE, Pan, and Pitch bend use fixed value ranges; they do not offer
 value-range zoom.
 
-<!-- TODO: Gutter menu → Value range (auto-fit or fixed 0–16/32/64/127);
-display-only — data is never clipped; MOD auto-fits because its useful
-range is small. -->
+<!-- TODO: Explain display-only automatic and fixed value ranges without implying data clipping. -->
 
 ## Tempo changes
 
-<!-- TODO: The tempo lane; BPM; how tempo interacts with the position display
-and loops. -->
+<!-- TODO: Explain editing song-global Tempo in the shared plot, BPM limits, position display, and loops. -->

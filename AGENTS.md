@@ -57,31 +57,15 @@ four suites with `deno task verify --filter selectionkey --verbose`.
 
 **Never `grep` without `path`.** Root scans hit 56+ harnesses + `external/` + `build-*/` and time out.
 
-```
-# BAD
-grep pattern="velocity"
-
-# GOOD
-grep pattern="velocity" path="src/ui/songview; src/ui/editordrawer"
-grep pattern="SongDocument" path="src/core"
-grep pattern="voicegroup" path="src/project"
-lsp references file="src/core/songdocument.h" line=91 symbol="SongDocument"
-```
+Scope searches to relevant source directories; exclude build output and
+external dependencies unless relevant. Prefer LSP for symbol references
+and renames when available.
 
 Workflow:
 1. `glob path="src/ui/editordrawer"` or `read` the directory listing to discover files.
 2. `grep` scoped to that folder.
 3. `lsp definition/references` for symbols — follows re-exports that text search misses.
 4. range reads, never whole 3000L+ files hoping.
-
-Scopes by concern:
-- Piano roll / notes / velocity: `src/ui/songview; src/ui/editordrawer; src/core`
-- Voicegroup / samples: `src/project; src/ui/voicegroupbrowser.cpp; src/ui/samplepicker.cpp`
-- Playback / engine: `src/audio; src/core/timelineplayer.cpp; src/core/miditimeline.cpp`
-- Theme / layout: `src/ui/theme; src/ui/layout.cpp; src/ui/typography.cpp`
-- Harnesses: `src/checks` — for verification discovery or harness work (e.g. `grep pattern="editcheck" path="src/checks"`).
-
-Also: prefer `lsp` over `grep` for renames/references. Don't do cross-file `ast_edit` renames when `lsp rename` exists.
 
 ## File-size discipline
 
@@ -97,14 +81,9 @@ When the user requests a separate worktree, agents MUST run:
 deno task worktree:create -- <name> [--base fork-main]
 ```
 
-Do not invoke `git worktree add` or `git submodule update` directly for setup.
-Names are lowercase kebab-case. Creation uses `.worktrees/<name>` and
-`feature/<name>`, initializes and verifies the main checkout's shared
+This initializes and verifies the main checkout's shared
 `poryaaaa`, and leaves the linked worktree without a nested submodule checkout.
 
-Agents MUST work only in the path printed by `worktree:create`. Committing,
-merging, removing the worktree, deleting the branch, and pushing remain
-separate operations that require the corresponding explicit user request.
 
 ## Git synchronization
 
@@ -169,6 +148,13 @@ the test-only C++ registry exposed by `porydaw_checks --manifest`.
 - Checks use fixture files locally from repo. All copying and setup is handled by `tools/run_checks.ts`
 
 Checks testing human input often fail because user uses desktop while testing. Do not stress-test checks repeatedly as troubleshooting.
-When a check fails after your edit, `git stash` the edit and re-run that harness once: an
-identical failure is pre-existing and unrelated to your work. Reason from the failure output
-after that single baseline run; do not keep re-running as troubleshooting.
+Fix failures introduced by this task. Report pre-existing or uncertain
+failures without hiding them or expanding scope. If resolution requires
+a workaround or architectural change, stop and request approval. 
+
+## Workarounds require approval
+
+Before implementing a workaround, stop and notify the user. Explain the
+underlying problem and whether reworking the responsible code would eliminate
+the workaround. Recommend the root-cause fix when feasible. Wait for approval;
+do not silently accommodate broken invariants with guards or fallbacks.

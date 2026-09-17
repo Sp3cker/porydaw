@@ -33,17 +33,10 @@ AutomationCanvas::AutomationCanvas(AutomationPage &page)
     , m_hoverState(QGuiApplication::font())
 {
     refreshGeometry();
-    // The tap-tempo draft commits from an idle window scaled to the tapped
-    // tempo (TapTempoSession::idleCommitMs); tapTempo arms it per tap. Timer
-    // pattern follows QuickMenuHost::m_typeAheadReset (quickmenuhost.cpp).
+    // The tempo-scaled idle timer commits the current tap-tempo draft after the last tap.
     m_tapIdleCommit.setSingleShot(true);
     connect(&m_tapIdleCommit, &QTimer::timeout, this, &AutomationCanvas::commitTapTempo);
-    // The lane menus are typed adapters over the shared canvas popup session;
-    // the session itself is assigned later by the Quick host view. The host
-    // closes the session before emitting activated(), so the guarded open-
-    // time target survives until handleMenuAction consumes it — only a
-    // cancellation (Escape, outside press, foreign replacement, window
-    // resize or deactivation) clears it.
+    // Menu adapters keep guarded targets until activation consumes them or shared-session cancellation clears them.
     ensureMenuAdapters();
 }
 
@@ -70,10 +63,7 @@ void AutomationCanvas::hostAppearanceChanged()
     if (!m_inputHost)
         return;
     m_pencilCursorDpr = 0.0;
-    // TimelineInputItem::geometryChange publishes after the actual QML bounds
-    // update, so the compared body is never a stale pre-publication band
-    // width. Rebuild geometry only on a size change; appearance notifications
-    // carry the parameter-presentation refresh for font and theme churn.
+    // Rebuild lane geometry only after the input host publishes a changed size; always republish appearance.
     const QRect body = m_inputHost->bounds().toAlignedRect();
     if (m_nodeStack.empty() || m_nodeStack.front().body.size() != body.size())
         relayoutContent();
@@ -100,8 +90,7 @@ void AutomationCanvas::contentGeometryChanged()
     requestFullQuickUpdate();
 }
 
-// The shared plot fills the viewport, so content and viewport space coincide;
-// the vertical automation scroll transform is identity by design.
+// Shared-plot content and viewport coordinates are identical because automation has no vertical plot scrolling.
 QPointF AutomationCanvas::contentPosition(QPointF viewportPosition) const noexcept
 {
     return viewportPosition;
@@ -198,8 +187,7 @@ void AutomationCanvas::requestQuickUpdate(songview::AutomationRefreshSet dirty) 
 
 void AutomationCanvas::requestFullQuickUpdate() const
 {
-    // Full repaints re-render the selection layer, so the revision-keyed
-    // memo cannot survive them.
+    // A full repaint invalidates the revision-keyed selected-node multiplicity cache.
     invalidateSelectedNodeMultiplicity();
     requestQuickUpdate(songview::AutomationRefresh::All);
 }
@@ -208,10 +196,7 @@ void AutomationCanvas::requestSelectionQuickUpdate() const
 {
     invalidateSelectedNodeMultiplicity();
     requestQuickUpdate(songview::AutomationRefresh::Content);
-    // The existing selection refresh doubles as the selector's
-    // shared-selection indicator notification; no membership is cached. The
-    // signal is non-const, so emission crosses this refresh's const surface
-    // explicitly; activating it does not mutate the canvas.
+    // Selection refresh also republishes uncached parameter-inclusion state through the non-const signal.
     const_cast<AutomationCanvas *>(this)->parameterSelectionChanged();
 }
 
@@ -243,11 +228,7 @@ void AutomationCanvas::setPencilMode(bool enabled)
 {
     m_pencilMode = enabled;
     if (!m_activeGesture) {
-        // A stationary tool change reclassifies the current target at once:
-        // clearHover forces updateHover past its same-position early return,
-        // then refreshHoverAt republishes through the primary plot host's
-        // non-claiming refreshMouseHint, so nothing is claimed while a popup
-        // or another source owns input.
+        // Clear stationary hover before reclassifying it for the new tool without claiming foreign input ownership.
         m_hoverState.clearHover();
         refreshHoverAt(contentPositionFromGlobal(QCursor::pos()));
     }
@@ -288,10 +269,7 @@ void AutomationCanvas::rebuildRows()
 {
     ++m_rowGeneration;
     cancelInteraction();
-    // A structural rebuild remaps every LaneHandle in m_nodeStack, so a menu
-    // opened earlier would mutate a different lane: end it synchronously,
-    // without stealing focus. Only an owned session ends here; a foreign
-    // popup (a prompt, another band's menu) survives.
+    // Structural rebuilds invalidate lane handles, so close only menus owned by this canvas before remapping.
     cancelLaneMenuWithoutFocus();
     cancelNodeMenuWithoutFocus();
     invalidateSelectedNodeMultiplicity();
@@ -300,9 +278,7 @@ void AutomationCanvas::rebuildRows()
     m_hoverState.previewValueLabel = {};
     rebuildViewModel();
     contentGeometryChanged();
-    // Document and track rebuilds rebind every adapter and remap the
-    // selector's row identities: labels, appearance and selection markers
-    // are republished together.
+    // Document and track rebuilds republish remapped labels, appearance, and selection markers together.
     emit parameterPresentationChanged();
     emit parameterSelectionChanged();
 }
@@ -326,10 +302,7 @@ void AutomationCanvas::rebuildNodeStack()
     m_hoverState.clearHover();
     m_nodeStack.clear();
     m_ccAdapters.clear();
-    // Use the synchronously published plot viewport: after showing the drawer,
-    // the Quick input host can still have its hidden bounds until QML settles.
-    // Every logical slot shares this body so selected multi-lane edits keep
-    // valid value geometry; only activeLane() decides what renders and hit-tests.
+    // Every logical parameter uses the published plot body; only the active parameter renders and hit-tests.
     const QRect body(QPoint{}, m_page.automationViewportSize());
     const auto rows = m_viewModel.visibleRows();
     m_nodeStack.push_back({rows.front().id, &m_tempoLane, body});
@@ -340,8 +313,7 @@ void AutomationCanvas::rebuildNodeStack()
         m_nodeStack.push_back({rows[index].id, &m_ccAdapters[index - 1], body});
 }
 
-// Only the active parameter occupies the shared plot: a y inside the common
-// body resolves the active lane, anywhere else is no lane.
+// A point inside the shared body resolves to the active parameter; all other points resolve to no lane.
 LaneHandle AutomationCanvas::laneAt(int y) const noexcept
 {
     const LaneHandle active = activeLane();
@@ -352,8 +324,7 @@ LaneHandle AutomationCanvas::laneAt(int y) const noexcept
 }
 void AutomationCanvas::refreshHoverAt(const QPointF &position)
 {
-    // Resolve the active slot directly — Tempo is ordinary plot content, not
-    // gutter or header.
+    // Resolve the active parameter directly because Tempo uses the same plot as every other parameter.
     const LaneHandle handle =
         contentBounds().contains(position.toPoint()) ? activeLane() : LaneHandle{};
     const auto *slot = resolveSlot(handle);
@@ -363,9 +334,7 @@ void AutomationCanvas::refreshHoverAt(const QPointF &position)
         m_hoverState.updateHover(hoverTarget(), m_geometry, *slot->lane, slot->body, handle,
                                  projection(), position.x(), position.toPoint().y(), m_pencilMode);
     }
-    // Stationary update only: refreshMouseHint republishes solely while the
-    // primary plot item still owns the display, so post-release, cancellation
-    // and tool-change callers can never claim or resurrect ownership.
+    // Stationary refresh republishes hints only while the primary plot still owns their display.
     if (m_inputHost)
         m_inputHost->refreshMouseHint(mouseHintProfile());
 }
@@ -479,17 +448,13 @@ void AutomationCanvas::cancelInteraction()
     m_activeGesture.reset();
     m_band.clear();
     if (m_pendingValuePrompt) {
-        // Shared cancellation policy (detach, hide, deactivation, document
-        // change) drops the prompt without stealing focus from whoever has it.
+        // Shared cancellation drops the value prompt without stealing focus.
         m_pendingValuePrompt.reset();
         emit valuePromptChanged();
     }
-    // Shared view-state reset: a canvas interaction cancel drops the tap-
-    // tempo draft and its idle commit together with the rest of the goo.
+    // Cancelling canvas interaction also clears the tap-tempo draft and idle deadline.
     resetTapTempo();
-    // Same shared policy for the CC-lane delete confirmation: rebuilds,
-    // hides, detaches, and document changes drop its pending target and end
-    // only a session this canvas still owns, without stealing focus.
+    // Shared cancellation closes only this canvas's pending CC deletion session.
     cancelCcDeletePromptWithoutFocus();
     m_hoverState.previewValueLabel = {};
     m_hoverState.hover.highlightLocked = false;

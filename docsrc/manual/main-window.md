@@ -37,40 +37,28 @@ See [Working with Tracks](tracks.md) for more details.
 
 ## The piano roll
 
-<!-- TODO: Timeline, grid, loop region markers, edit cursor vs. playhead.
-Editing details in [Editing Notes](piano-roll.md). -->
+<!-- TODO: Explain the timeline, grid, loop markers, edit cursor, playhead, and note-editing link. -->
 
 ## The transport bar
 
-<!-- TODO: Play/pause/stop, loop toggle, follow-playhead toggle, position
-and tempo display, master volume, polyphony meter (link to
-[Polyphony](polyphony.md) for what the meter means). -->
+<!-- TODO: Explain transport controls, position and tempo displays, master volume, and the polyphony meter. -->
 
 ## Voice changes
 
-<!-- TODO: The top drawer page, above the Velocity and Automations pages.
-Each voice change holds the chosen program until the next change, drawn as
-a labeled span on the focused track's timeline. Double-click a position to
-pick a voice; right-click to insert, change, or delete a voice change.
-Toggle the page with `P` or View > Voice Changes; it shows, hides, and
-resizes independently of the Velocity and Automations pages. -->
+<!-- TODO: Explain Voice Changes editing, visibility, resizing, and its independent drawer page. -->
 
 ## Automation lanes
 
-<!-- TODO: The bottom drawer page: the tempo lane plus the per-track CC
-lanes. Voice changes have their own page above. Details in
-[Automation](automation.md). -->
+<!-- TODO: Describe the Automations drawer parameter selector and shared plot, then link to Automation. -->
 
 ## The voicegroup dock
 
-<!-- TODO: The current song's instrument list; click to audition. Details in
-[Instruments & Voicegroups](voicegroups.md). -->
+<!-- TODO: Explain the current song's instrument list, auditioning, and the Voicegroups link. -->
 
 ## Working with multiple songs (tabs)
 
-<!-- TODO: Open in New Tab, switching, per-tab dirty state, Close Tab. -->
+<!-- TODO: Explain opening, switching, dirty state, and closing for song tabs. -->
 
 ## Navigation cheat-sheet
 
-<!-- TODO: Scroll/zoom gestures (wheel, modifiers), jumping the playhead,
-following playback. Full key list in [Keyboard Shortcuts](shortcuts.md). -->
+<!-- TODO: Explain scroll and zoom gestures, playhead navigation, playback following, and the shortcuts link. -->

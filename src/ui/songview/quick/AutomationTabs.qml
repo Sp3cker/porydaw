@@ -1,8 +1,4 @@
-// Compact parameter selector for the automation gutter: catalog identities
-// as native Basic TabButtons in two columns, followed by a full-width Tempo
-// row. The canvas owns parameter identity, the parameter menu and shared
-// selection semantics. A Flickable owns vertical overflow, so the catalog
-// can grow without increasing the drawer's minimum height.
+// Automation parameters use a scrollable two-column grid, with song-global Tempo spanning both columns.
 import QtQuick
 import QtQuick.Controls.Basic as Controls
 import QtQuick.Layouts
@@ -16,9 +12,7 @@ Item {
 
     readonly property var appearance: canvas.parameterAppearance
 
-    // One shared inclusion list for the whole grid: the canvas getter builds
-    // a QList per read, so the tabs read a single root-level snapshot
-    // instead of one per-tab copy.
+    // Cache the shared-selection indexes once so each tab does not allocate its own QList copy.
     readonly property var selectedParams: root.canvas.selectedParameters
 
     readonly property var eventCounts: root.canvas.parameterEventCounts
@@ -39,9 +33,7 @@ Item {
 
             width: gutterScroller.width
 
-            // Two cells per row: each row pairs the identities that belong
-            // together, so the grid halves the labels' cumulative height
-            // while still filling the gutter's width in two equal columns.
+            // Two equal columns reduce selector height while filling the gutter width.
             columns: 2
             rowSpacing: 0
 
@@ -54,8 +46,7 @@ Item {
                     required property int index
                     required property string modelData
 
-                    // Song-global Tempo closes the catalog, after the CC
-                    // identities, on its own full-width row.
+                    // Song-global Tempo is the final catalog parameter and spans both columns.
                     readonly property bool tempoParameter:
                         tab.index === root.canvas.parameterLabels.length - 1
                     readonly property bool selectionIncluded:
@@ -71,17 +62,14 @@ Item {
                     text: modelData
                     font: root.appearance.font
                     padding: root.appearance.inset
-                    // The tempo row's Tap button sits outside the content
-                    // layout (below): reserve its width plus the row gap so
-                    // the draft readout never slides under it.
+                    // Reserve content space for Tempo's overlaid Tap control.
                     rightPadding: tab.tempoParameter
                                   ? root.appearance.inset
                                     + tapTempoButton.implicitWidth
                                     + root.appearance.inset
                                   : root.appearance.inset
                     focusPolicy: Qt.StrongFocus
-                    // The QTabBar-style hover fill must not depend on the
-                    // platform's useHoverEffects default.
+                    // Enable hover independently of the platform useHoverEffects default.
                     hoverEnabled: true
                     Layout.fillWidth: true
                     Layout.minimumHeight: root.appearance.minimumCellHeight
@@ -107,14 +95,7 @@ Item {
                         }
                     }
 
-                    // One hint group per tab: Control + click toggles the
-                    // ghost parameter instead of normal activation. The
-                    // description shows unconditionally, without mirroring
-                    // canGhostParameter and without touching the tab's
-                    // activation, hover or ghost-color behavior.
-                    // Qt broadens a handler's parent's accepted mouse buttons.
-                    // Keep the handler off the TabButton so a right press does
-                    // not take ClickFocus before its context menu opens.
+                    // Keep ghost hints off the tab so Control-click stays documented and right-click keeps menu focus.
                     Item {
                         anchors.fill: parent
 
@@ -127,15 +108,7 @@ Item {
                         }
                     }
 
-                    // Tempo row tap-tempo button: a plain Item (never a
-                    // Controls.Button) so a bare Space stays unclaimed for
-                    // the transport play/pause shortcut. Presses register
-                    // the tap (press, not release, so the draft updates
-                    // immediately) and are consumed here so the surrounding
-                    // TabButton never activates. It lives outside the
-                    // contentItem RowLayout, declared after pressArea, so it
-                    // stacks above the tab-wide press area instead of being
-                    // occluded by it; rightPadding above reserves its slot.
+                    // The overlaid Item registers taps on press without claiming Space or activating the parameter tab.
                     Item {
                         id: tapTempoButton
 
@@ -193,11 +166,7 @@ Item {
                             id: tapHoverHandler
                         }
 
-                        // Same activation-key contract as the tab
-                        // above: only plain Return/Enter (no auto
-                        // repeat) activates, and only those keys are
-                        // claimed from window shortcuts — bare Space
-                        // stays with the transport.
+                        // Plain nonrepeating Return or Enter registers a tap; Space remains the transport shortcut.
                         Keys.priority: Keys.AfterItem
                         Keys.onPressed: (event) => {
                             if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
@@ -224,13 +193,7 @@ Item {
                         Accessible.onPressAction: root.canvas.tapTempo()
                     }
 
-                    // Keyboard focus or a checked change must never leave the
-                    // tab outside the Flickable viewport: scroll by the
-                    // minimum contentY delta that fits the tab fully into
-                    // view (standard ensure-visible — no recentering, no
-                    // animation). Reacts only to checked/focus transitions,
-                    // never tracks continuously, and stands down while the
-                    // user's drag or flick is still in progress.
+                    // Focus or activation scrolls the tab minimally into view unless the user is moving the Flickable.
                     onCheckedChanged: if (checked) tab.ensureVisible()
                     onActiveFocusChanged: if (activeFocus) tab.ensureVisible()
 
@@ -244,10 +207,7 @@ Item {
                             gutterScroller.contentY = bottom - gutterScroller.height
                     }
 
-                    // Extend the advertised activation keys only where the native
-                    // button left them unhandled; auto-repeat and modified Return
-                    // stay editing input. Unhandled keys continue to the shared
-                    // SongView policy exactly once.
+                    // Handle plain Return or Enter locally and leave all other keys to shared SongView routing.
                     Keys.priority: Keys.AfterItem
                     Keys.onPressed: (event) => {
                         if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
@@ -257,20 +217,12 @@ Item {
                             event.accepted = true
                         }
                     }
-                    // Claim only the plain Return/Enter activation keys before
-                    // window-level shortcuts can take them from this focused
-                    // label: an item beats a shortcut only by accepting the
-                    // ShortcutOverride event. Bare Space stays unclaimed here so
-                    // the transport play/pause window shortcut outranks
-                    // incidental focus in this persistent control. Modified or
-                    // auto-repeat variants stay unclaimed and continue to the
-                    // shared SongView policy, matching onPressed below.
+                    // Claim ShortcutOverride only for plain nonrepeating Return or Enter so other keys reach window routing.
                     Keys.onShortcutOverride: (event) => event.accepted =
                         (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
                         && event.modifiers === Qt.NoModifier && !event.isAutoRepeat
 
-                    // Right-click and the context-menu key route through the
-                    // platform event into the existing owned parameter menu.
+                    // Route right-click and the context-menu key to the owned parameter menu.
                     Controls.ContextMenu.onRequested: (position) => {
                         const p = tab.mapToItem(root.sceneRoot, position.x, position.y)
                         root.canvas.openParameterMenu(tab.index, p.x, p.y)
@@ -320,10 +272,7 @@ Item {
                             Accessible.ignored: true
                         }
 
-                        // Live tap-tempo draft readout: appears only once
-                        // the canvas accumulator is listening, and stays
-                        // out of the accessible tree — the Tap button
-                        // below carries the accessible description.
+                        // Show the inaccessible draft readout only while tap-tempo is accumulating.
                         Text {
                             objectName: tab.tempoParameter
                                         ? "automationTempoTapDraft" : ""
@@ -340,7 +289,7 @@ Item {
 
                     }
 
-                    // Distinct indicators: the active tab takes the selected
+                    // Active, ghosted, focused, and selection-included states use distinct indicators.
                     background: Rectangle {
                         color: tab.checked ? root.appearance.tabSelectedBackground
                                            : tab.hovered ? root.appearance.tabHoverBackground
@@ -380,8 +329,7 @@ Item {
                         }
                     }
 
-                    // Tab selection for screen readers, never shared-time
-                    // inclusion; inclusion stays text-only in the description.
+                    // Accessibility selection follows the active tab; shared-selection inclusion stays descriptive.
                     Accessible.selected: tab.checked
                     Accessible.description:
                         (tab.tempoParameter ? qsTr("Song-global tempo parameter")

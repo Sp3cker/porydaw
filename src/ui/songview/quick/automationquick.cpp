@@ -116,13 +116,7 @@ struct LaneScaleLabelSpec {
     int value = 0;
 };
 
-// Active-lane scale labels in emission order max, min, neutral (only when the
-// lane has one). Each spec pairs its role with its value so the text-record
-// key stays semantic instead of depending on a loop-index cast. Positions are
-// a pure function of lane, body, geometry, and viewport so event-count edits
-// never move them. A label whose rect would intersect an already-kept label
-// is dropped, which covers neutral==max/min degeneracies and viewports too
-// short to separate max from min.
+// Emit nonoverlapping maximum, minimum, and optional neutral scale labels at their exact curve heights.
 LaneScaleLabels laneScaleLabels(const NodeLane &lane, const QRect &body,
                                 const AutomationGeometry &geometry, const QFontMetricsF &metrics,
                                 const QRectF &viewport, qreal left)
@@ -230,11 +224,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         std::vector<NodePoint> points;
     };
 
-    // Zero or one visible slot: exactly the active parameter renders and
-    // hit-tests in the one full-height plot. Every other logical lane keeps
-    // its adapter in m_nodeStack for shared selection, command targets, and
-    // cross-lane batch edits, with the same plot rectangle for value
-    // geometry.
+    // Render only the active parameter while retaining every logical adapter for shared cross-parameter operations.
     std::optional<VisibleLane> active;
     const LaneHandle activeHandle = activeLane();
     if (const NodeLaneSlot *slot = resolveSlot(activeHandle)) {
@@ -280,9 +270,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         transientTextRecords.reserve(1);
     const NodeLaneQuickPaint::Outputs outputs;
     const QColor background = opaqueColor(themes::Role::window_background);
-    // One grid and one band frame span the whole viewport. The stacked
-    // per-row separators, pinned Tempo header, and Add-lane strip are gone
-    // with the shared plot; QML owns the parameter labels in the gutter.
+    // One grid and band frame fill the shared plot while QML owns all parameter labels.
     if (content) {
         addRect(scene.layer(TimelineQuickLayer::AutomationGrid), viewport, background, viewport);
         composeBandedGrid(scene, TimelineQuickLayer::AutomationGrid, m_page.m_owner, viewport, 0.0,
@@ -325,8 +313,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     const qreal labelInset = layout::space(layout::Space::One);
     std::vector<TimelineQuickTextModel::Record> laneTextRecords;
     std::vector<QRectF> placedGhostLabels;
-    // Ghost counts describe document-written events only; synthetic tick-0
-    // defaults are not events. The active count belongs to its gutter tab.
+    // Ghost counts include only written events; the active count belongs to its selector tab.
     const auto laneCountText = [this](int parameterIndex) {
         const std::optional<EditorAutomationRowId> row = parameterRow(parameterIndex);
         const std::size_t eventCount = row ? parameterEventCount(*row) : std::size_t{0};
@@ -336,11 +323,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                                : SongView::tr("%1 Events").arg(qulonglong(eventCount));
     };
     if (active) {
-        // Left-edge scale labels (max, min, neutral when the lane has one)
-        // ride the lane-text pipeline; their rects seed placedGhostLabels,
-        // and short ticks mark each value's exact curve height. Ticks are
-        // content-gated: the grid layer is not reset on hover/transient
-        // passes, so appends there would accumulate.
+        // Scale-label rectangles prevent ghost-label overlap, and content-only ticks avoid accumulation.
         const qreal tickLength = 3.0 * layout::space(layout::Space::Half);
         const auto scaleLabels =
             laneScaleLabels(*active->slot->lane, active->body, m_geometry, captionMetrics, viewport,
@@ -398,8 +381,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                               .value_or(ghostLane.lane.neutralValue());
         const qreal y = nodelane::valueY(ghostLane.lane, ghostLane.body, m_geometry, value);
         QString text = parameterLabelList.value(ghostLane.parameterIndex);
-        // Ghost membership already implies written events, but a future filter
-        // change must never leave a dangling separator behind.
+        // Append the separator only when the ghost still has a nonempty written-event count.
         const QString countText = laneCountText(ghostLane.parameterIndex);
         if (!countText.isEmpty())
             text += QStringLiteral(" · ") + countText;
@@ -424,9 +406,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     if (active) {
         const VisibleLane &lane = *active;
         const QColor color = themes::color(themes::Role::song_view_automation_node_ink);
-        // Unchanged phantom handoff: a provisional phantom gesture paints its
-        // own held origin; otherwise the lane's origin phantom is derived from
-        // its points.
+        // Use a provisional gesture phantom when present; otherwise derive the origin phantom from lane points.
         const auto phantom =
             phantomGesture && phantomGesture->lane == lane.handle
                 ? std::optional<OriginPhantom>{OriginPhantom{
@@ -458,8 +438,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         NodeLaneQuickPaint::composeTransient(context, transient, m_band.active, outputs);
         NodeLaneQuickPaint::composeHover(context, hover, outputs);
     }
-    // Plot value labels keep their pre-clip rectangles and clip against the
-    // lane overflow, unchanged from the stacked renderer.
+    // Plot value labels retain pre-clip rectangles and clip against the lane overflow.
     const auto appendValueLabel = [&active](std::vector<TimelineQuickTextModel::Record> &records,
                                             TimelineQuickTextKeyKind kind,
                                             const NodeLaneHoverState::ValueLabelCache &label) {

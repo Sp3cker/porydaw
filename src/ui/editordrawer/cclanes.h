@@ -33,11 +33,9 @@ class CCLanes final
 {
   public:
     static uint8_t bendController() noexcept;
-    // The supported CC identities in selector display order. Tempo is
-    // represented by the separate first row in AutomationViewModel.
+    // Supported per-track parameter identities in selector order; song-global Tempo is cataloged separately.
     static std::span<const uint8_t> supportedControllers() noexcept;
-    // Canonical lane title for any controller — bend, descriptor-backed XCMD
-    // lanes, and plain M4A CCs. Single source of truth for lane labels.
+    // Return the canonical label for bend, descriptor-backed XCMD, or plain M4A controller parameters.
     static QString laneLabel(uint8_t controller);
     static uint8_t defaultRange(uint8_t controller) noexcept;
     static int autoRange(int maximum) noexcept;

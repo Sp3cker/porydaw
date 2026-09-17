@@ -44,20 +44,14 @@ class TimelineQuickScene;
 class TimelineQuickView;
 } // namespace songview
 
-// AutomationCanvas owns automation interaction and content geometry. AutomationPage owns the
-// viewport and scroll range; the attached TimelineInputHost provides input-surface services.
+// AutomationCanvas owns automation interaction and shared-plot geometry; AutomationPage owns the viewport.
 class AutomationCanvas final : public QObject, public songview::TimelineBandInteraction
 {
     Q_OBJECT
     Q_DISABLE_COPY_MOVE(AutomationCanvas)
 
   public:
-    // Stable typed selectors for the shared Quick canvas menus. Ordinary
-    // commands carry fixed ids; the lane menu's dynamic rows offset their
-    // controller by AddLaneBase (add a new lane) or ShowLaneBase (reveal a
-    // hidden lane). The value-range submenu's rows are the Range* ids proper
-    // (Auto, 16, 32, 64, 127). Checks and production dispatch both read
-    // these.
+    // Stable lane-menu action ids are shared by production and checks; obsolete add, show, and hide ids stay reserved.
     enum class CanvasMenuAction : int {
         Copy = 1,
         Paste = 2,
@@ -74,10 +68,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
         AddLaneBase = 256,
         ShowLaneBase = 512,
     };
-    // Typed row ids of the node point context menu. The node menu carries
-    // its own QuickMenuModel over the shared popup session, so this id space
-    // is disjoint from CanvasMenuAction's. Production dispatch and the checks
-    // that click rendered rows both read these.
+    // Node-menu action ids are disjoint from lane-menu ids and shared by production and checks.
     enum class NodeMenuAction : int {
         SetValue = 1,
         DeleteNode = 2,
@@ -94,8 +85,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     const AutomationViewModel &viewModel() const noexcept { return m_viewModel; }
     void rebuildRows();
     void cancelInteraction() override;
-    // Document identity is fixed for this canvas. Revision plus row generation
-    // proves a captured command target; layout-only rebuilds preserve handles.
+    // Document revision and row generation validate captured targets; layout-only rebuilds preserve handles.
     struct TargetEpoch {
         uint64_t documentRevision = 0;
         uint64_t rowGeneration = 0;
@@ -120,11 +110,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
         return m_pendingValuePrompt ? m_pendingValuePrompt->prompt : NodeValuePrompt{};
     }
 
-    // QML bridge for CcDeleteConfirm.qml, the shared-session confirmation
-    // behind the lane menu's Delete CC lane action on a lane that still
-    // carries events. The prompt lives on this canvas — never a DrawerChrome
-    // pass-through. No lane pointer crosses the prompt; its displayed title
-    // and event count are captured for QML component creation.
+    // The QML delete confirmation captures target identity and display data without retaining a lane pointer.
     struct PendingCcDeletePrompt {
         TargetEpoch epoch;
         LaneHandle lane;
@@ -148,20 +134,13 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void setPencilMode(bool enabled);
     bool pencilMode() const noexcept { return m_pencilMode; }
     bool isPanning() const noexcept;
-    // Document revision captured when the active pan began; the page compares
-    // it against the live revision instead of a stored snapshot.
+    // The page compares the captured pan revision with the live document revision.
     uint64_t panStartRevision() const noexcept { return m_pan.startRevision; }
-    // Primary track captured beside the revision; a track switch does not bump
-    // the document revision, so the page compares both.
+    // The page also compares the captured track because track changes do not change the document revision.
     int panStartTrack() const noexcept { return m_pan.startTrack; }
     bool bandPreviewContainsLane(LaneHandle handle) const noexcept;
     QRect laneBody(LaneHandle handle) const;
-    // The view-local parameter selector for the shared gutter: supported CC
-    // identities plus song-global Tempo, all
-    // available without written events. `index` is a catalog position
-    // (parameterRow), never a LaneHandle; a null m_activeController selects
-    // Tempo. The active parameter is view-local (default Volume), retained by
-    // the owning SongTab, never persisted; switching it is a view-only change.
+    // Catalog indexes identify supported per-track parameters plus song-global Tempo; activation is SongTab-local and view-only.
     int tapTempoDraftBpm() const noexcept { return m_tapTempo.draftBpm(); }
     int tapTempoTapCount() const noexcept { return int(m_tapTempo.tapCount()); }
     Q_PROPERTY(
@@ -187,24 +166,16 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     Q_INVOKABLE void activateParameter(int index);
     Q_INVOKABLE void openParameterMenu(int index, qreal sceneX, qreal sceneY);
     Q_INVOKABLE void toggleGhostParameter(int index);
-    // The Tempo row's tap-tempo gesture: each invocation (Enter/Return in
-    // Tap hint mode, or the QML click control) registers one beat from the
-    // user. The draft recomputes from the newest intervals; an idle window —
-    // the same distance that starts a fresh session — commits it once to the
-    // document's tick-0 tempo and resets. tapTempoDraftBpm and
-    // tapTempoTapCount share tapTempoDraftChanged; tapTempoCommitted fires
-    // only on a real write.
+    // Tap samples update a draft, and its tempo-scaled idle deadline commits one tick-zero tempo edit.
     Q_PROPERTY(int tapTempoDraftBpm READ tapTempoDraftBpm NOTIFY tapTempoDraftChanged FINAL)
     Q_PROPERTY(int tapTempoTapCount READ tapTempoTapCount NOTIFY tapTempoDraftChanged FINAL)
     Q_INVOKABLE void tapTempo();
-    // View-state API: drops the draft and cancels the pending idle commit.
-    // Idempotent — no-op when no draft is held.
+    // Resetting tap-tempo drops the draft and idle deadline and is safe when already idle.
     void resetTapTempo();
 
     Q_INVOKABLE void parameterPressed(int index, Qt::KeyboardModifiers modifiers);
     Q_INVOKABLE void parameterClicked(int index);
-    // Binds the shared canvas popup session once TimelineQuickView exists;
-    // the automation menus are typed QuickMenuHost adapters over it.
+    // The Quick host supplies the shared popup session used by automation menu adapters.
     void setPopupSession(songview::QuickPopupSession *session);
 
     void attachInputHost(songview::TimelineInputHost &host) override;
@@ -311,9 +282,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
 
     AutomationProjection projection() const;
     NodeLaneHoverTarget hoverTarget() const;
-    // True consumes the node hit even when the open aborts (teardown,
-    // refused publish, a newer popup on the session, stale snapshot); false
-    // is only a genuine miss, which keeps the caller's fallback available.
+    // A node hit is consumed even if menu publication aborts; false reports only a genuine miss.
     bool showNodeMenuNear(LaneHandle handle, const QPointF &position,
                           const QPointF &globalPosition);
 
@@ -358,8 +327,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
                                        const QString &undoLabel);
     void showTimeSelectionMenuFor(LaneHandle contextLane, const QPointF &scenePosition);
     void showLaneMenuFor(LaneHandle handle, const QPointF &scenePosition);
-    // Handle for the currently resolved active-parameter row, searched in
-    // m_nodeStack per call: rebuilds remap handles, so no index is cached.
+    // Resolve the active row handle on demand because structural rebuilds remap m_nodeStack.
     LaneHandle activeLane() const noexcept;
     LaneHandle laneAt(int y) const noexcept;
     void showAddLaneMenu(const QPointF &scenePosition);
@@ -370,20 +338,11 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void cancelLaneMenuWithoutFocus();
     // Consumes the guarded node-menu target; clears it before any command.
     void handleNodeMenuAction(int actionId);
-    // Outside-right sink from the node menu host: retargets to the point
-    // under the press and reopens, or stays dismissed on a miss.
+    // An outside-right press retargets the node menu to the pressed point or leaves it closed on a miss.
     void retargetNodeMenu(const QPointF &scenePosition);
     // Ends only the node menu's session ownership, without stealing focus.
     void cancelNodeMenuWithoutFocus();
-    // Shared-session Quick confirmation behind Delete CC lane on a nonempty
-    // lane; implemented in automationcanvas_deleteprompt.cpp. clear drops the
-    // pending target, optionally returning focus to the band; the
-    // without-focus variant serves the shared invalidation policy (document
-    // change, rebuild, hidden, detach, session replacement) and only ends a
-    // session this canvas still owns.
-    // writtenEventCount is resolved once at show time by the caller's
-    // document-written query; revision equality revalidated across the open's
-    // cancellation keeps that captured count truthful.
+    // The guarded CC deletion prompt restores focus on demand and closes only its own current-revision session.
     bool openCcDeletePrompt(LaneHandle handle, std::size_t writtenEventCount);
     void clearCcDeletePrompt(bool restoreFocus);
     void cancelCcDeletePromptWithoutFocus();
@@ -394,9 +353,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void rebuildNodeStack();
     const NodeLaneSlot *resolveSlot(LaneHandle handle) const noexcept;
     void refreshHoverAt(const QPointF &position);
-    // The current idle target/tool profile for the status hint: node, origin
-    // phantom, sweep background or pencil background from the resolved hover
-    // hit. An invalid hover lane selects an empty profile.
+    // The current hover target and tool select the status hint; an invalid lane selects the empty hint.
     ui::hint_profiles::Id mouseHintProfile() const;
     bool resolveLane(LaneHandle handle, const NodeLane **lane, QRect *body) const noexcept;
     NodeLane *mutableLane(LaneHandle handle) noexcept;
@@ -448,7 +405,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     std::optional<PendingCcDeletePrompt> m_pendingCcDeletePrompt;
     QMetaObject::Connection m_ccDeletePromptCancellation;
     NodeLaneHoverState m_hoverState;
-    // Active CC controller; nullopt selects Tempo (see Q_PROPERTY docs).
+    // The active parameter is encoded as a CC controller, with nullopt representing song-global Tempo.
     std::optional<uint8_t> m_activeController = CoreTimeDefaults::kCcVolume;
     std::vector<uint8_t> m_ghostControllers;
     bool m_ghostTempo = false;
