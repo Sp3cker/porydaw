@@ -11,6 +11,7 @@
 #include <QVector>
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -322,8 +323,9 @@ class WorkspaceUi final : public QObject
     void submitCreateSong(NewSongWizard &wizard);
 
     // ---- Voicegroup bank coordinator and picker (workspaceui_voicegroup.cpp) ----
-    void beginBankTransition(PendingBankTransition transition, const VoicegroupEditInput &draft);
-    void submitPickerEdit(int slot, const VgVoice &voice);
+    bool beginBankTransition(PendingBankTransition transition, const VoicegroupEditInput &draft);
+    bool submitPickerEdit(int slot, const VgVoice &voice,
+                          std::function<void(bool)> completion = {});
     void rebuildVoicegroupPresentation();
     void syncVoicegroupLoading();
     void updateVoicegroupDockTitle();

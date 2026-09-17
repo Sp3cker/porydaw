@@ -432,7 +432,8 @@ void SongView::requestVoicePicker(const QString &title, int initialVoice, QObjec
     pending.origin = origin;
     m_pendingVoicePicker = std::move(pending);
 
-    auto *picker = new songview::VoicePicker(*this, title, initialVoice, this);
+    auto *picker =
+        new songview::VoicePicker(*this, title, initialVoice, m_voicePickerServices, this);
     m_voicePicker = picker;
     QObject::disconnect(m_voicePickerCancellation);
     m_voicePickerCancellation =

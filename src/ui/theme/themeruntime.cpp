@@ -1,4 +1,5 @@
 #include "themeruntime.h"
+#include "color_math.h"
 #include "ui/layout.h"
 #include "ui/typography.h"
 
@@ -27,6 +28,33 @@ namespace {
 std::optional<QPalette> capturedStartupPalette;
 QSet<QObject *> gridLineRefreshTargets;
 std::optional<Theme> currentTheme;
+
+constexpr Role textRoleOn(Role surface, Role restingText)
+{
+    switch (surface) {
+    case Role::selection_background:
+    case Role::song_view_selection_fill:
+        return Role::selection_text;
+    case Role::tab_selected_background:
+        return Role::tab_selected_text;
+    case Role::button_pressed_background:
+        return Role::button_pressed_text;
+    case Role::menu_item_pressed_background:
+        return Role::menu_item_pressed_text;
+    case Role::item_selected_background:
+        return Role::item_selected_text;
+    case Role::header_checked_background:
+        return Role::header_checked_text;
+    case Role::track_mute_checked_background:
+        return Role::track_mute_checked_text;
+    case Role::track_solo_checked_background:
+        return Role::track_solo_checked_text;
+    case Role::song_view_track_header_selection:
+        return Role::song_view_track_header_selection_text;
+    default:
+        return restingText;
+    }
+}
 
 // QPalette covers colors Qt paints natively; the component QSS fragments below
 // handle states and subcontrols that one global palette cannot distinguish.
@@ -586,6 +614,21 @@ bool onlyGridLineColorChanged(const Theme &before, const Theme &after)
 
 } // namespace
 
+const QColor &textOn(const Theme &theme, Role surface, Role restingText)
+{
+    return theme.color(textRoleOn(surface, restingText));
+}
+
+QColor textOn(const Theme &theme, const QColor &surface, Role restingText)
+{
+    const auto resting = theme.color(restingText);
+    if (contrastRatio(resting, surface) >= 4.5)
+        return resting;
+    const QColor black(Qt::black);
+    const QColor white(Qt::white);
+    return contrastRatio(black, surface) >= contrastRatio(white, surface) ? black : white;
+}
+
 void initialize(QApplication &application)
 {
     if (!capturedStartupPalette)
@@ -652,6 +695,18 @@ const QColor &color(Role role)
 {
     Q_ASSERT(currentTheme);
     return currentTheme->color(role);
+}
+
+const QColor &textOn(Role surface, Role restingText)
+{
+    Q_ASSERT(currentTheme);
+    return textOn(*currentTheme, surface, restingText);
+}
+
+QColor textOn(const QColor &surface, Role restingText)
+{
+    Q_ASSERT(currentTheme);
+    return textOn(*currentTheme, surface, restingText);
 }
 
 } // namespace themes

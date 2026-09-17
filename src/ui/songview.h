@@ -36,6 +36,7 @@
 #include "ui/songview/timeaxis.h"
 #include "ui/songview/timecamera.h"
 #include "ui/songview/timelinebandlayout.h"
+#include "ui/songview/voicepickermodel.h"
 #include "ui/songviewmodel.h"
 #include "ui/velocitygesturemodel.h"
 
@@ -158,6 +159,10 @@ class SongView : public QObject
     // Voicegroup swap after a -G settings change (labels only; may be null
     // while the audio engine frees the old one).
     void setVoicegroup(const LoadedVoiceGroup *voicegroup);
+    void setVoicePickerServices(songview::VoicePickerServices services)
+    {
+        m_voicePickerServices = std::move(services);
+    }
 
     // Transient per-tab camera, selection, grid, and event-list state. It is
     // never persisted or propagated between tabs.
@@ -945,6 +950,7 @@ class SongView : public QObject
     QPointer<songview::EditActions> m_editActions;
     uint64_t m_transientInputGeneration = 0; // advanced only by cancelTransientInput()
     SongViewModel m_model;
+    songview::VoicePickerServices m_voicePickerServices;
     songview::EditorSelectionModel m_selectionModel;
     Geometry m_geometry;
     songview::PitchProjection m_projection;

@@ -205,6 +205,52 @@ void WorkspaceUi::wireTab(SongTab *tab)
     });
 
     SongView &view = tab->view();
+    view.setVoicePickerServices(songview::VoicePickerServices{
+        .snapshot = [this, tab]() -> std::optional<songview::VoicePickerProjectData> {
+            if (tab != m_selectedTab || !tab->isReady())
+                return std::nullopt;
+            const LoadedBankView *const bank = bankViewFor(*tab);
+            if (!bank)
+                return std::nullopt;
+            QStringList synths;
+            synths.reserve(m_state.catalog.synths.defs.size());
+            for (const auto &definition : m_state.catalog.synths.defs)
+                synths.append(definition.first);
+            return songview::VoicePickerProjectData{
+                .directSound = m_state.catalog.directSound,
+                .progWave = m_state.catalog.progWave,
+                .keysplits = m_state.catalog.keysplits,
+                .drumkits = m_state.catalog.drumkits,
+                .synths = std::move(synths),
+                .slotViews = bank->slotViews,
+                .adsrDefaults = m_state.catalog.typicalAdsr,
+            };
+        },
+        .insert =
+            [this, tab](int slot, const VgVoice &voice, std::function<void(bool)> completion) {
+                if (tab != m_selectedTab) {
+                    if (completion)
+                        completion(false);
+                    return false;
+                }
+                return submitPickerEdit(slot, voice, std::move(completion));
+            },
+        .auditionSample =
+            [this, tab](const QString &symbol, const VgAdsr &adsr) {
+                if (tab != m_selectedTab)
+                    return;
+                ensureSampleSet();
+                emit sampleAuditionRequested(
+                    symbol, VgAuditionKind::Sample,
+                    AuditionSlots::Adsr{uint8_t(adsr.attack), uint8_t(adsr.decay),
+                                        uint8_t(adsr.sustain), uint8_t(adsr.release)});
+            },
+        .stopSampleAudition =
+            [this, tab] {
+                if (tab == m_selectedTab)
+                    emit sampleAuditionStopRequested();
+            },
+    });
     connect(&view, &SongView::auditionNote, this, [this, tab](int track, int key, int velocity) {
         if (tab == m_selectedTab)
             emit auditionNoteRequested(uint8_t(track), uint8_t(key), uint8_t(velocity));

@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cmath>
+#include <limits>
 
 namespace themes {
 namespace {
@@ -23,6 +24,19 @@ QColor mixColors(const QColor &first, const QColor &second, double firstWeight)
 QColor colorFromHex(preset_colors::HexColor hex)
 {
     return QColor(QLatin1String(hex.data(), static_cast<int>(hex.size())));
+}
+
+QColor blackOrWhiteByWorstContrast(const std::initializer_list<QColor> &fills)
+{
+    const auto black = QColor::fromRgb(0, 0, 0);
+    const auto white = QColor::fromRgb(255, 255, 255);
+    auto blackScore = std::numeric_limits<double>::max();
+    auto whiteScore = std::numeric_limits<double>::max();
+    for (const auto &fill : fills) {
+        blackScore = std::min(blackScore, contrastRatio(black, fill));
+        whiteScore = std::min(whiteScore, contrastRatio(white, fill));
+    }
+    return whiteScore > blackScore ? white : black;
 }
 
 Theme resolvePreset(const preset_colors::PresetColors &colors)
@@ -49,6 +63,10 @@ Theme resolveDarkPreset(const preset_colors::PresetColors &colors)
     };
     for (const auto role : activeTextRoles)
         theme.color(role) = activeText;
+    // Solo keeps the darker Accent fill, so it needs the opposite endpoint
+    // from the light selected surfaces above.
+    theme.color(Role::track_solo_checked_text) =
+        blackOrWhiteByWorstContrast({theme.color(Role::track_solo_checked_background)});
     return theme;
 }
 

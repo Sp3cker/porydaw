@@ -15,37 +15,6 @@
 #include <algorithm>
 namespace lyt = ::layout;
 using Space = lyt::Space;
-
-
-namespace songview::detail {
-
-VisibleRows visibleVoiceRows(const std::array<VoiceFamily, VOICEGROUP_SIZE> &families,
-                             const QStringList &displayNames, const QSet<int> &usedSlots,
-                             std::optional<VoiceFamily> family, bool usedOnly, bool namedOnly,
-                             int currentRow)
-{
-    VisibleRows result;
-    int firstVisible = -1;
-    for (int voice = 0; voice < VOICEGROUP_SIZE; ++voice) {
-        const bool visible = (!family || families[voice] == *family) &&
-                             (!usedOnly || usedSlots.contains(voice)) &&
-                             (!namedOnly || !displayNames.at(voice).isEmpty());
-        result.rows[voice] = visible;
-        if (!visible)
-            continue;
-        ++result.matchingCount;
-        if (firstVisible < 0)
-            firstVisible = voice;
-    }
-    result.nextRow = currentRow >= 0 && currentRow < VOICEGROUP_SIZE &&
-                             result.rows[static_cast<std::size_t>(currentRow)]
-                         ? currentRow
-                         : firstVisible;
-    return result;
-}
-
-} // namespace songview::detail
-
 namespace {
 
 constexpr int cMaxVoiceProgram = int(songview::VoicePickerModel::cVoiceCount) - 1;
@@ -190,11 +159,98 @@ int VoicePickerModel::usedCount() const noexcept
                              [](const Entry &entry) { return entry.used; }));
 }
 
+ProjectVoicePickerModel::ProjectVoicePickerModel(QObject *parent) : QAbstractListModel(parent) {}
 
-VoicePicker::VoicePicker(SongView &owner, QString title, int initialVoice, QObject *parent)
+int ProjectVoicePickerModel::rowCount(const QModelIndex &parent) const
+{
+    return parent.isValid() ? 0 : int(m_visibleRows.size());
+}
+
+QVariant ProjectVoicePickerModel::data(const QModelIndex &index, int role) const
+{
+    if (!index.isValid() || index.row() < 0 || index.row() >= int(m_visibleRows.size()))
+        return {};
+    const VoicePickerProjectVoice &voice = m_voices[static_cast<std::size_t>(m_visibleRows[index.row()])];
+    switch (role) {
+    case Program:
+        return voice.existingSlot;
+    case Label:
+        return voice.displayName;
+    }
+    return {};
+}
+
+QHash<int, QByteArray> ProjectVoicePickerModel::roleNames() const
+{
+    static const QHash<int, QByteArray> roles = {
+        {Program, "program"},
+        {Label, "label"},
+    };
+    return roles;
+}
+
+void ProjectVoicePickerModel::setProject(VoicePickerProjectData project)
+{
+    beginResetModel();
+    m_project = std::move(project);
+    m_voices = projectVoiceEntries(m_project);
+    rebuild();
+    endResetModel();
+}
+
+void ProjectVoicePickerModel::setFilters(const QString &query, std::optional<VoiceFamily> family,
+                                         ProjectVoiceMembership membership)
+{
+    if (query == m_query && family == m_family && membership == m_membership)
+        return;
+    m_query = query;
+    m_family = family;
+    m_membership = membership;
+    rebuild();
+}
+
+int ProjectVoicePickerModel::sourceRowAt(int row) const noexcept
+{
+    return row >= 0 && row < int(m_visibleRows.size()) ? m_visibleRows[row] : -1;
+}
+
+int ProjectVoicePickerModel::familyCount(VoiceFamily family) const
+{
+    return int(std::count_if(m_voices.cbegin(), m_voices.cend(),
+                             [family](const VoicePickerProjectVoice &voice) {
+                                 return voice.family == family;
+                             }));
+}
+
+const VoicePickerProjectVoice *ProjectVoicePickerModel::voiceAt(int row) const noexcept
+{
+    return row >= 0 && row < int(m_voices.size()) ? &m_voices[static_cast<std::size_t>(row)]
+                                                  : nullptr;
+}
+
+void ProjectVoicePickerModel::rebuild()
+{
+    beginResetModel();
+    m_visibleRows.clear();
+    for (int row = 0; row < int(m_voices.size()); ++row) {
+        const VoicePickerProjectVoice &voice = m_voices[static_cast<std::size_t>(row)];
+        const bool membershipMatches =
+            m_membership == ProjectVoiceMembership::All ||
+            (m_membership == ProjectVoiceMembership::InVoicegroup && voice.existingSlot >= 0) ||
+            (m_membership == ProjectVoiceMembership::AvailableToTrade && voice.existingSlot < 0);
+        if (membershipMatches && (!m_family || voice.family == *m_family) &&
+            projectVoiceMatches(voice, m_query))
+            m_visibleRows.push_back(row);
+    }
+    endResetModel();
+}
+
+VoicePicker::VoicePicker(SongView &owner, QString title, int initialVoice,
+                         VoicePickerServices services, QObject *parent)
     : QObject(parent)
     , m_owner(owner)
     , m_model(owner, this)
+    , m_services(std::move(services))
     , m_title(std::move(title))
     , m_appearance(voicePickerAppearanceFor())
 {
@@ -345,4 +401,134 @@ void VoicePicker::setCurrentProgram(int program)
         emit selectionChanged(m_currentProgram);
 }
 
+
+QAbstractItemModel *VoicePicker::voicePickerModel()
+{
+    return m_projectMode ? static_cast<QAbstractItemModel *>(&m_projectModel)
+                         : static_cast<QAbstractItemModel *>(&m_model);
+}
+
+int VoicePicker::matchingCount() const noexcept
+{
+    return m_projectMode ? m_projectModel.matchingCount() : m_model.matchingCount();
+}
+
+void VoicePicker::setProjectMode(bool enabled)
+{
+    if (enabled == m_projectMode)
+        return;
+    releaseHeld();
+    m_projectMode = enabled && projectAvailable();
+    if (m_projectMode && m_projectModel.rowCount() == 0 && m_services.snapshot) {
+        if (const auto project = m_services.snapshot())
+            m_projectModel.setProject(std::move(*project));
+    }
+    const int clampedInitial = std::clamp(m_currentProgram, 0, cMaxVoiceProgram);
+    m_currentProjectRow = -1;
+    if (m_projectMode) {
+        for (int row = 0; row < m_projectModel.rowCount(); ++row) {
+            const auto *voice = m_projectModel.voiceAt(m_projectModel.sourceRowAt(row));
+            if (voice && voice->existingSlot == clampedInitial) {
+                m_currentProjectRow = row;
+                break;
+            }
+        }
+    }
+    emit modelChanged();
+    emit projectModeChanged();
+    emit filtersChanged();
+}
+
+void VoicePicker::setProjectMembership(int membership)
+{
+    const auto normalized =
+        membership >= 0 && membership <= int(ProjectVoiceMembership::AvailableToTrade)
+            ? static_cast<ProjectVoiceMembership>(membership)
+            : ProjectVoiceMembership::All;
+    if (normalized == m_projectMembership)
+        return;
+    m_projectMembership = normalized;
+    m_projectModel.setFilters(m_filter, m_selectedFamily >= 0
+                                            ? std::optional<VoiceFamily>(kFamilies[m_selectedFamily])
+                                            : std::nullopt,
+                              m_projectMembership);
+    emit filtersChanged();
+}
+
+QVariantList VoicePicker::tradeTargets() const
+{
+    QVariantList targets;
+    targets.reserve(int(VoicePickerModel::cVoiceCount));
+    for (int slot = 0; slot < int(VoicePickerModel::cVoiceCount); ++slot) {
+        const auto *entry = m_projectModel.voiceAt(slot);
+        const QString name = entry && entry->existingSlot == slot
+                                 ? entry->displayName
+                                 : entry && !entry->displayName.isEmpty() ? entry->displayName
+                                                                          : familyLabel(entry ? entry->family : VoiceFamily::Sample);
+        targets.append(QVariantMap{{QStringLiteral("slot"), slot},
+                                   {QStringLiteral("label"),
+                                    tr("%1 — %2").arg(QString::number(slot), name)}});
+    }
+    return targets;
+}
+
+void VoicePicker::setTradeTarget(int slot)
+{
+    const int normalized = slot >= 0 && slot < int(VoicePickerModel::cVoiceCount) ? slot : -1;
+    if (normalized == m_tradeTarget)
+        return;
+    m_tradeTarget = normalized;
+    emit tradeTargetChanged();
+}
+
+void VoicePicker::tradeSelectedProjectVoice()
+{
+    if (m_tradePending || !m_projectMode || !m_services.insert)
+        return;
+    const auto *voice = m_projectModel.voiceAt(m_currentProjectRow);
+    if (!voice || voice->existingSlot >= 0 || m_tradeTarget < 0)
+        return;
+    releaseHeld();
+    m_tradePending = true;
+    emit tradePendingChanged();
+    const QPointer<VoicePicker> guard(this);
+    const QString symbol = voice->symbol;
+    const VgVoice replacement = voice->replacement;
+    const int target = m_tradeTarget;
+    const bool submitted = m_services.insert(target, replacement, [guard, symbol](bool applied) {
+        if (!guard)
+            return;
+        guard->m_tradePending = false;
+        emit guard->tradePendingChanged();
+        if (guard->m_services.snapshot) {
+            if (const auto project = guard->m_services.snapshot())
+                guard->m_projectModel.setProject(std::move(*project));
+        }
+        int selectedRow = -1;
+        for (int row = 0; row < guard->m_projectModel.rowCount(); ++row) {
+            const auto *refreshed = guard->m_projectModel.voiceAt(guard->m_projectModel.sourceRowAt(row));
+            if (refreshed && refreshed->symbol == symbol) {
+                selectedRow = row;
+                if (refreshed->existingSlot >= 0)
+                    guard->m_currentProgram = refreshed->existingSlot;
+                break;
+            }
+        }
+        guard->m_currentProjectRow = selectedRow;
+        guard->emit filtersChanged();
+        guard->emit currentRowChanged();
+    });
+    if (!submitted && m_tradePending) {
+        m_tradePending = false;
+        emit tradePendingChanged();
+    }
+}
+
+void VoicePicker::setCurrentProjectRow(int row)
+{
+    if (row == m_currentProjectRow)
+        return;
+    m_currentProjectRow = row;
+    emit currentRowChanged();
+}
 } // namespace songview

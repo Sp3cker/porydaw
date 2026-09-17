@@ -20,6 +20,7 @@
 #include <climits>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <memory>
 #include <utility>

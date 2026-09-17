@@ -19,34 +19,39 @@
 // BEFORE the worker submission, and the keyed terminal outcome resolves
 // through the origin tab's history.
 
-void WorkspaceUi::beginBankTransition(PendingBankTransition transition,
+bool WorkspaceUi::beginBankTransition(PendingBankTransition transition,
                                       const VoicegroupEditInput &draft)
 {
     if (!m_cache.begin(std::move(transition)))
-        return; // a transition is already pending; the gate made this unreachable
+        return false;
     emit bankActionsChanged(false);
     updateOpenGate();
     emit projectOperationRequested(ProjectOperation{draft});
+    return true;
 }
 
-void WorkspaceUi::submitPickerEdit(int slot, const VgVoice &voice)
+bool WorkspaceUi::submitPickerEdit(int slot, const VgVoice &voice,
+                                   std::function<void(bool)> completion)
 {
     SongTab *const tab = m_selectedTab;
-    if (!tab || !tab->isReady() || !bankActionsEnabled())
-        return;
+    if (!tab || !tab->isReady() || !bankActionsEnabled()) {
+        if (completion)
+            completion(false);
+        return false;
+    }
     const LoadedBankView *const view = bankViewFor(*tab);
-    if (!view || slot < 0 || slot >= view->slotViews.size())
-        return;
+    if (!view || slot < 0 || slot >= view->slotViews.size()) {
+        if (completion)
+            completion(false);
+        return false;
+    }
     if (!view->dirty)
         tab->history().sealBankMerge();
-    // The current bank voice is the expected state; nullopt submits a blank
-    // materialization. The worker is the only validator.
     const SetVoicegroupSlot edit{slot, voice, view->slotViews.at(slot).voice};
     const VoicegroupEditInput draft{view->id, edit};
     PendingBankTransition transition{draft.id, tab->name(), PendingBankTransition::Kind::Initial,
-                                     draft};
-    // Initial bank edits submit without pushing.
-    beginBankTransition(std::move(transition), draft);
+                                     draft, std::move(completion)};
+    return beginBankTransition(std::move(transition), draft);
 }
 
 void WorkspaceUi::requestUndo()

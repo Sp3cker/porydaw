@@ -36,10 +36,10 @@ void VoicegroupViewCache::resolveApplied(VoicegroupEditApplied outcome, SongHist
 {
     if (!m_pending || !(m_pending->voicegroup == outcome.voicegroup))
         return;
-    const auto &pending = *m_pending;
-    switch (pending.kind) {
+    auto completion = std::move(m_pending->completion);
+    switch (m_pending->kind) {
     case PendingBankTransition::Kind::Initial:
-        originHistory.pushConfirmedBank(pending.draft, outcome.materialization);
+        originHistory.pushConfirmedBank(m_pending->draft, outcome.materialization);
         break;
     case PendingBankTransition::Kind::Undo:
         originHistory.crossConfirmedBankUndo(outcome.materialization);
@@ -49,6 +49,8 @@ void VoicegroupViewCache::resolveApplied(VoicegroupEditApplied outcome, SongHist
         break;
     }
     m_pending.reset();
+    if (completion)
+        completion(true);
 }
 
 void VoicegroupViewCache::resolveConflict(VoicegroupEditConflict outcome,
@@ -56,6 +58,7 @@ void VoicegroupViewCache::resolveConflict(VoicegroupEditConflict outcome,
 {
     if (!m_pending || !(m_pending->voicegroup == outcome.voicegroup))
         return;
+    auto completion = std::move(m_pending->completion);
     switch (m_pending->kind) {
     case PendingBankTransition::Kind::Initial:
         break; // an initial conflict leaves the history unchanged
@@ -67,6 +70,8 @@ void VoicegroupViewCache::resolveConflict(VoicegroupEditConflict outcome,
         break;
     }
     m_pending.reset();
+    if (completion)
+        completion(false);
 }
 
 // A hard worker error for the pending voicegroup ends the one in-flight
@@ -76,13 +81,19 @@ void VoicegroupViewCache::resolveHardError(VoicegroupMutationFailed failure)
 {
     if (!m_pending || !(m_pending->voicegroup == failure.voicegroup))
         return;
+    auto completion = std::move(m_pending->completion);
     m_pending.reset();
+    if (completion)
+        completion(false);
 }
 
 void VoicegroupViewCache::clear()
 {
     m_views.clear();
+    auto completion = m_pending ? std::move(m_pending->completion) : std::function<void(bool)>{};
     m_pending.reset();
+    if (completion)
+        completion(false);
 }
 
 bool VoicegroupViewCache::bankActionsEnabled() const

@@ -15,4 +15,12 @@ void apply(QApplication &application, const Theme &theme);
 void registerGridLineRefreshTarget(QObject &target);
 /// Returns a color from the currently applied complete theme.
 const QColor &color(Role role);
+/// Resolves text for the exact opaque surface it is painted on.
+const QColor &textOn(const Theme &theme, Role surface, Role restingText);
+/// Preserves resting text when readable; otherwise chooses black or white for an exact fill.
+QColor textOn(const Theme &theme, const QColor &surface, Role restingText);
+/// Runtime form using the currently applied theme.
+const QColor &textOn(Role surface, Role restingText);
+/// Runtime form for a computed fill color.
+QColor textOn(const QColor &surface, Role restingText);
 } // namespace themes

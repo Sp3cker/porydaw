@@ -327,6 +327,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/otherstrip.h
     src/ui/songview/voicepicker.cpp
     src/ui/songview/voicepicker.h
+    src/ui/songview/voicepickermodel.cpp
+    src/ui/songview/voicepickermodel.h
     src/ui/songview/trackheadermodel.cpp
     src/ui/songview/trackheadermodel.h
     src/ui/songview/trackheadermenu.cpp

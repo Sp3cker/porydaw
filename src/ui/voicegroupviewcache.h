@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QHash>
+#include <functional>
 #include <optional>
 
 #include "project/projectworkspace.h"
@@ -18,6 +19,7 @@ struct PendingBankTransition {
     SongName origin;
     Kind kind = Kind::Initial;
     VoicegroupEditInput draft; // copied submitted input; draft.id == voicegroup
+    std::function<void(bool)> completion;
 };
 
 // WorkspaceUi's private shared-bank coordinator. It owns the published GUI
