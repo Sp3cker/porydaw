@@ -104,8 +104,24 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         QVERIFY(session->a != session->b);
         QVERIFY(!session->a->isReady());
         QVERIFY(!session->b->isReady());
+        QTabBar *const tabBar = window.findChild<QTabBar *>();
+        QVERIFY(tabBar);
+        tabBar->setFocusPolicy(Qt::StrongFocus);
+        window.activateWindow();
+        QTRY_COMPARE(QApplication::activeWindow(), &window);
+        tabBar->setFocus(Qt::OtherFocusReason);
+        QTRY_COMPARE(QApplication::focusWidget(), tabBar);
         QVERIFY(waitForTabReady(*window.m_workspace, session->a));
+        QCOMPARE(QApplication::focusWidget(), tabBar);
         QVERIFY(waitForTabReady(*window.m_workspace, session->b));
+        QWidget *focused = QApplication::focusWidget();
+        QVERIFY(focused && (focused == session->b || session->b->isAncestorOf(focused)));
+        tabBar->setFocus(Qt::OtherFocusReason);
+        QCOMPARE(QApplication::focusWidget(), tabBar);
+        window.m_workspace->selectSongTab(session->a);
+        focused = QApplication::focusWidget();
+        QVERIFY(focused && (focused == session->a || session->a->isAncestorOf(focused)));
+        window.m_workspace->selectSongTab(session->b);
 
         constexpr uint64_t tick = 24;
         window.stopPlayback();
@@ -211,7 +227,6 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         time.endTick = session->a->timeline()->ticksPerBeat;
         session->a->view().selectionModel().setTimeSelection(time);
         window.m_workspace->selectSongTab(session->b);
-        session->b->view().focusActiveSurface();
         QCoreApplication::processEvents();
         QCoreApplication::sendPostedEvents();
         QCoreApplication::processEvents();

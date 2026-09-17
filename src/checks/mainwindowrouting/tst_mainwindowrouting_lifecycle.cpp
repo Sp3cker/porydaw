@@ -139,6 +139,30 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot);
     }
 
+    void selectionDuringReloadFocusesWhenReady()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        WorkspaceUi &workspace = *session->window->m_workspace;
+        SongTab *const a = session->a;
+        SongTab *const b = session->b;
+        QVERIFY(a->isReady());
+        QVERIFY(b->isReady());
+        QCOMPARE(workspace.selectedSongTab(), b);
+
+        workspace.requestSongOpen(b->name());
+        QVERIFY(!b->isReady());
+        workspace.selectSongTab(a);
+        QCOMPARE(workspace.selectedSongTab(), a);
+        workspace.selectSongTab(b);
+        QCOMPARE(workspace.selectedSongTab(), b);
+        QVERIFY(!b->isReady());
+
+        QVERIFY(waitForTabReady(workspace, b));
+        QWidget *const focused = QApplication::focusWidget();
+        QVERIFY(focused && (focused == b || b->isAncestorOf(focused)));
+    }
+
     void freshBind()
     {
         const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);

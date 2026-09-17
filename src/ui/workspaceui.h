@@ -367,6 +367,7 @@ class WorkspaceUi final : public QObject
 
     std::vector<std::unique_ptr<SongTab>> m_tabPages;
     SongTab *m_selectedTab = nullptr;
+    bool m_focusSelectedWhenReady = false;
     EditorViewState m_editorViewState;
 
     ProjectState m_state;

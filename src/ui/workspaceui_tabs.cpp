@@ -74,6 +74,7 @@ void WorkspaceUi::removeTab(SongTab *tab)
 
 void WorkspaceUi::destroyAllTabs()
 {
+    m_focusSelectedWhenReady = false;
     // MainWindow unloads the engine against the outgoing selection first.
     if (m_selectedTab) {
         m_selectedTab = nullptr;
@@ -117,10 +118,13 @@ void WorkspaceUi::publishSelectedIfChanged()
     if (selected == m_selectedTab)
         return;
     m_selectedTab = selected;
+    m_focusSelectedWhenReady = selected && !selected->isReady();
     rebuildVoicegroupPresentation();
     persistTabs();
     emit selectedSongTabChanged(selected);
     emit selectedSongStateChanged();
+    if (selected == m_selectedTab && selected && selected->isReady())
+        selected->view().focusActiveSurface();
 }
 
 std::vector<SongTab *> WorkspaceUi::tabsInDisplayOrder() const
@@ -287,6 +291,10 @@ void WorkspaceUi::applyStagedUpdate(const SongName &name, VoicegroupBound &bound
     if (tab == m_selectedTab) {
         rebuildVoicegroupPresentation();
         emit selectedSongStateChanged();
+    }
+    if (tab == m_selectedTab && m_focusSelectedWhenReady && tab->isReady()) {
+        m_focusSelectedWhenReady = false;
+        tab->view().focusActiveSurface();
     }
 }
 
