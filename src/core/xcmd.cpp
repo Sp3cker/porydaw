@@ -21,18 +21,12 @@
 namespace xcmd {
 namespace {
 
-enum class SelectorBlockKind : uint8_t {
-    KnownEpoch,  // selector 0x08/0x09 with payload bytes: one point per byte
-    OpaqueEpoch, // any other selector epoch (or a payload-less known selector)
-    StrayRun,    // payload bytes before any selector
-};
-
 struct SelectorBlock {
-    SelectorBlockKind kind = SelectorBlockKind::OpaqueEpoch;
     uint8_t stream = 0;
-    uint8_t selector = 0;                       // epoch selector value
-    size_t selectorEvent = SIZE_MAX;            // ordinal of the selector event, if any
-    std::vector<size_t> payloadEvents;          // event ordinals in scan order
+    uint8_t selector = 0;                   // epoch selector value
+    const Descriptor *descriptor = nullptr; // resolved epoch descriptor, if the selector is known
+    size_t selectorEvent = SIZE_MAX;        // ordinal of the selector event, if any
+    std::vector<size_t> payloadEvents;      // event ordinals in scan order
     Tick firstTick = CoreTimeDefaults::kNoTick; // occupied tick span
     Tick lastTick = 0;
 };
@@ -68,16 +62,15 @@ ParsedEvents parseEvents(std::span<const Event> events) noexcept
         if (event.controller == kSelectorController) {
             block = parsed.blocks.size();
             SelectorBlock newBlock;
-            newBlock.kind = SelectorBlockKind::OpaqueEpoch;
             newBlock.stream = event.stream;
             newBlock.selector = event.value;
+            newBlock.descriptor = descriptorForSelector(event.value);
             newBlock.firstTick = newBlock.lastTick = event.tick;
             parsed.blocks.push_back(std::move(newBlock));
             open[stream] = block;
         } else if (block == SIZE_MAX) {
             block = parsed.blocks.size();
             SelectorBlock newBlock;
-            newBlock.kind = SelectorBlockKind::StrayRun;
             newBlock.stream = event.stream;
             newBlock.firstTick = newBlock.lastTick = event.tick;
             parsed.blocks.push_back(std::move(newBlock));
@@ -103,17 +96,12 @@ ParsedEvents parseEvents(std::span<const Event> events) noexcept
             blockRef.lastTick = std::max(blockRef.lastTick, event.tick);
         }
     }
-    // A known-selector epoch with at least one payload byte yields points.
-    for (SelectorBlock &block : parsed.blocks)
-        if (block.selectorEvent != SIZE_MAX && !block.payloadEvents.empty() &&
-            descriptorForSelector(block.selector))
-            block.kind = SelectorBlockKind::KnownEpoch;
     return parsed;
 }
 
 constexpr bool isKnownLaneBlock(const SelectorBlock &block) noexcept
 {
-    return block.kind == SelectorBlockKind::KnownEpoch;
+    return block.descriptor != nullptr && !block.payloadEvents.empty();
 }
 
 Projection toProjection(const ParsedEvents &parsed) noexcept
@@ -125,7 +113,7 @@ Projection toProjection(const ParsedEvents &parsed) noexcept
         for (const size_t eventIndex : block.payloadEvents) {
             const ProtocolEvent &protocolEvent = parsed.events[eventIndex];
             Point point;
-            point.lane = descriptorForSelector(block.selector)->laneController;
+            point.lane = block.descriptor->laneController;
             point.tick = protocolEvent.tick;
             point.value = protocolEvent.value;
             point.index = protocolEvent.source->index;
@@ -158,10 +146,17 @@ struct RemoveSet {
     }
 };
 
+struct NormalizedPointWrite {
+    // Points into the caller's writes span; descriptor is its resolved lane
+    // descriptor (normalizePointWrites rejects unknown lanes).
+    const PointWrite *write = nullptr;
+    const Descriptor *descriptor = nullptr;
+};
+
 struct NormalizedPointWrites {
-    // Points into the caller's writes span. Entries stay in first-key order;
-    // a duplicate key replaces the pointer at its original position.
-    std::vector<const PointWrite *> active;
+    // Entries stay in first-key order; a duplicate key replaces the write at
+    // its original position.
+    std::vector<NormalizedPointWrite> active;
 };
 
 struct PointRewritePlan {
@@ -251,18 +246,20 @@ normalizePointWrites(std::span<const PointWrite> writes) noexcept
     NormalizedPointWrites normalized;
     normalized.active.reserve(writes.size());
     for (const PointWrite &write : writes) {
-        if (!descriptorForLane(write.lane))
+        const Descriptor *descriptor = descriptorForLane(write.lane);
+        if (!descriptor)
             return std::nullopt;
         bool duplicate = false;
-        for (const PointWrite *&active : normalized.active) {
-            if (!samePointWriteSlot(*active, write))
+        for (NormalizedPointWrite &active : normalized.active) {
+            if (!samePointWriteSlot(*active.write, write))
                 continue;
-            active = &write;
+            active.write = &write;
+            active.descriptor = descriptor;
             duplicate = true;
             break;
         }
         if (!duplicate)
-            normalized.active.push_back(&write);
+            normalized.active.push_back({&write, descriptor});
     }
     return normalized;
 }
@@ -286,8 +283,8 @@ std::optional<PointRewritePlan> planPointRewrite(const ParsedEvents &parsed,
     plan.removedPointIdentities.seal();
     for (size_t blockIndex = 0; blockIndex < parsed.blocks.size(); ++blockIndex) {
         const SelectorBlock &block = parsed.blocks[blockIndex];
-        for (const PointWrite *write : plan.writes.active) {
-            const auto relation = pointWriteBlockRelation(*write, block);
+        for (const NormalizedPointWrite &write : plan.writes.active) {
+            const auto relation = pointWriteBlockRelation(*write.write, block);
             if (relation == PointWriteBlockRelation::Opaque)
                 return std::nullopt;
             plan.touchedBlocks[blockIndex] |= relation == PointWriteBlockRelation::Known;
@@ -305,18 +302,18 @@ void appendPointRewriteBlockRemoval(const ParsedEvents &parsed, const SelectorBl
         removed.add(parsed.events[eventIndex].source->index);
 }
 
-bool writeReplacesPoint(const PointWrite &write, const ProtocolEvent &event,
+bool writeReplacesPoint(const NormalizedPointWrite &write, const ProtocolEvent &event,
                         uint8_t selector) noexcept
 {
-    return write.stream == event.stream && write.tick == event.tick &&
-           descriptorForLane(write.lane)->selector == selector;
+    return write.write->stream == event.stream && write.write->tick == event.tick &&
+           write.descriptor->selector == selector;
 }
 
 bool pointIsReplaced(const NormalizedPointWrites &writes, const ProtocolEvent &event,
                      uint8_t selector) noexcept
 {
-    for (const PointWrite *write : writes.active)
-        if (writeReplacesPoint(*write, event, selector))
+    for (const NormalizedPointWrite &write : writes.active)
+        if (writeReplacesPoint(write, event, selector))
             return true;
     return false;
 }
@@ -344,11 +341,12 @@ Patch emitPointRewrite(const ParsedEvents &parsed, const PointRewritePlan &plan)
         for (const size_t eventIndex : block.payloadEvents)
             emitPointRewritePoint(inserts, parsed.events[eventIndex], block, plan);
     }
-    for (const PointWrite *write : plan.writes.active) {
-        const Descriptor *descriptor = descriptorForLane(write->lane);
-        const uint8_t value = uint8_t(std::clamp(int(write->value), int(descriptor->minimumValue),
-                                                 int(descriptor->maximumValue)));
-        appendCanonicalPoint(inserts, write->tick, descriptor->selector, value, write->channel);
+    for (const NormalizedPointWrite &write : plan.writes.active) {
+        const uint8_t value =
+            uint8_t(std::clamp(int(write.write->value), int(write.descriptor->minimumValue),
+                               int(write.descriptor->maximumValue)));
+        appendCanonicalPoint(inserts, write.write->tick, write.descriptor->selector, value,
+                             write.write->channel);
     }
     return finishPatch(std::move(removed), std::move(inserts));
 }
@@ -574,34 +572,27 @@ TrafficAssessment assessTraffic(std::span<const Event> events) noexcept
         entry.payloadCount = uint32_t(block.payloadEvents.size());
         entry.firstTick = block.firstTick;
         entry.lastTick = block.lastTick;
-        switch (block.kind) {
-        case SelectorBlockKind::KnownEpoch: {
+        if (block.selectorEvent == SIZE_MAX) {
+            entry.kind = TrafficKind::StrayPayloads;
+            entry.exportClass = ExportClass::NeedsReview;
+        } else if (block.descriptor == nullptr) {
+            // PrintExtendedOp's default: PrintWait only.
+            entry.kind = TrafficKind::UnknownSelectorEpoch;
+            entry.exportClass = ExportClass::NotExported;
+        } else if (block.payloadEvents.empty()) {
+            // The register latched but no payload byte followed: the
+            // command never fires (stock mid2agb drops the wait too).
+            entry.kind = TrafficKind::DanglingSelector;
+            entry.exportClass = ExportClass::NeedsReview;
+        } else {
             entry.kind = TrafficKind::CompleteEchoPoints;
             entry.exportClass = ExportClass::Supported;
-            // KnownEpoch always carries a known selector: each payload byte
-            // is one completed logical point on that selector's lane.
-            if (descriptorForSelector(block.selector)->laneController == kEchoVolumeLane)
+            // A known epoch always carries a resolved descriptor: each
+            // payload byte is one completed logical point on its lane.
+            if (block.descriptor->laneController == kEchoVolumeLane)
                 assessment.echoPoints.volume += entry.payloadCount;
             else
                 assessment.echoPoints.length += entry.payloadCount;
-            break;
-        }
-        case SelectorBlockKind::OpaqueEpoch:
-            if (descriptorForSelector(block.selector)) {
-                // The register latched but no payload byte followed: the
-                // command never fires (stock mid2agb drops the wait too).
-                entry.kind = TrafficKind::DanglingSelector;
-                entry.exportClass = ExportClass::NeedsReview;
-            } else {
-                // PrintExtendedOp's default: PrintWait only.
-                entry.kind = TrafficKind::UnknownSelectorEpoch;
-                entry.exportClass = ExportClass::NotExported;
-            }
-            break;
-        case SelectorBlockKind::StrayRun:
-            entry.kind = TrafficKind::StrayPayloads;
-            entry.exportClass = ExportClass::NeedsReview;
-            break;
         }
         assessment.blocks.push_back(entry);
     }
@@ -651,7 +642,7 @@ Patch canonicalizeForExport(std::span<const Event> events) noexcept
             for (const size_t eventIndex : block.payloadEvents)
                 emitKnownPoint(inserts, parsed.events[eventIndex], block, nullptr);
         } else if (block.selectorEvent != SIZE_MAX && block.payloadEvents.empty() &&
-                   descriptorForSelector(block.selector)) {
+                   block.descriptor) {
             // A payload-less known selector is inaudible, and stock mid2agb
             // drops the wait that follows it: remove the dangling byte.
             removed.add(parsed.events[block.selectorEvent].source->index);

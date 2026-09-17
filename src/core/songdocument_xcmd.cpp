@@ -234,6 +234,7 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
     struct LaneRequests {
         int engineTrack = -1;
         uint8_t cc = 0;
+        const xcmd::Descriptor *descriptor = nullptr;
         std::vector<LaneMoveRequest> requests;
         std::vector<DocLanePoint> existingPoints;
         std::vector<LaneMovePoint> existing;
@@ -244,7 +245,8 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
     // a linear slot lookup beats a map. The lane's point snapshot is taken
     // once per slot. For descriptor lanes lanePoints is exactly the local
     // projection; for plain lanes it is the raw CC scan.
-    const auto laneSlot = [&lanes, this](int engineTrack, uint8_t cc) -> size_t {
+    const auto laneSlot = [&lanes, this](int engineTrack, uint8_t cc,
+                                         const xcmd::Descriptor *descriptor) -> size_t {
         for (size_t i = 0; i < lanes.size(); ++i) {
             if (lanes[i].engineTrack == engineTrack && lanes[i].cc == cc)
                 return i;
@@ -252,6 +254,7 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
         LaneRequests lane;
         lane.engineTrack = engineTrack;
         lane.cc = cc;
+        lane.descriptor = descriptor;
         lane.existingPoints = lanePoints(engineTrack, cc);
         lane.existing.reserve(lane.existingPoints.size());
         for (const DocLanePoint &point : lane.existingPoints)
@@ -273,13 +276,14 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
         // re-validates every identity before anything is pushed (a stale or
         // cross-lane identity rejects the whole batch). Plain lanes have no
         // planner, so their bytes are verified here.
-        if (!xcmd::isLaneController(move.cc) &&
+        const xcmd::Descriptor *descriptor = xcmd::descriptorForLane(move.cc);
+        if (descriptor == nullptr &&
             (!laneEventMatches(source, move.cc) || source.tick != move.point.tick ||
              laneValue(source, move.cc) != move.point.value))
             continue;
         if (!sourceIndices.emplace(smfTrack, move.point.index).second)
             continue;
-        LaneRequests &lane = lanes[laneSlot(move.engineTrack, move.cc)];
+        LaneRequests &lane = lanes[laneSlot(move.engineTrack, move.cc, descriptor)];
         size_t sourceId = lane.existingPoints.size();
         for (size_t id = 0; id < lane.existingPoints.size(); ++id) {
             if (lane.existingPoints[id].smfTrack == move.point.smfTrack &&
@@ -306,10 +310,10 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
         if (!plan || plan->empty())
             continue;
         const uint8_t channel = channelFor(lane.engineTrack);
-        const bool xcmdLane = xcmd::isLaneController(lane.cc);
+        const xcmd::Descriptor *descriptor = lane.descriptor;
         for (size_t id : plan->removeIds) {
             const DocLanePoint &sourcePoint = lane.existingPoints[id];
-            if (xcmdLane) {
+            if (descriptor) {
                 // The identity leaves; the destination is re-emitted
                 // canonically by the per-track rewrite below.
                 xcmdRemovals[size_t(sourcePoint.smfTrack)].push_back(uint64_t(sourcePoint.index));
@@ -319,8 +323,7 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
         }
         for (const LaneMoveWrite &write : plan->writes) {
             const DocLanePoint &sourcePoint = lane.existingPoints[write.sourceId];
-            if (xcmdLane) {
-                const xcmd::Descriptor *descriptor = xcmd::descriptorForLane(lane.cc);
+            if (descriptor) {
                 const int clamped = std::clamp(write.value, int(descriptor->minimumValue),
                                                int(descriptor->maximumValue));
                 xcmdWrites[size_t(sourcePoint.smfTrack)].push_back(
