@@ -9,6 +9,7 @@
 #include <QPointF>
 #include <QRectF>
 #include <QSize>
+#include <QtMath>
 #include <QtTest>
 #include <algorithm>
 #include <optional>
@@ -90,7 +91,10 @@ void PianoRollTest::resizeSelection()
     auto &roll = check.rollInput();
     const int track = check.track();
     const Cell &b = seed->b;
-    const Cell d = check.findFreeCell();
+    // Leave room for both selected notes to grow. A cell before B can abut
+    // it, in which case the production resize correctly clamps the first note.
+    const int firstProbe = qCeil(view.camera().contentX(double(b.tick + 2 * b.dur)));
+    const Cell d = check.findFreeCell(firstProbe, true);
     QVERIFY2(d.key >= 0, "no free grid cell for the selection resize");
     doc.addNote(track, d.tick, uint8_t(d.key), uint32_t(2 * d.dur), 100);
     DocNote dBefore;

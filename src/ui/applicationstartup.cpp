@@ -8,8 +8,10 @@
 #include <QApplication>
 #include <QEventLoop>
 #include <QFont>
+#include <QFontDatabase>
 #include <QGuiApplication>
 #include <QIcon>
+#include <QStandardPaths>
 #include <QStyleHints>
 #include <QWidget>
 
@@ -33,6 +35,20 @@ void installOffscreenSystemFont(QApplication &application)
         auto font = QFont{};
         font.setFamily(QStringLiteral(".AppleSystemUIFont"));
         application.setFont(font);
+    }
+#elif defined(Q_OS_WIN)
+    // The offscreen backend does not discover Windows system fonts. Register
+    // the UI face before typography captures the platform's font pixel size.
+    if (QGuiApplication::platformName() == QStringLiteral("offscreen")) {
+        const auto path =
+            QStandardPaths::locate(QStandardPaths::FontsLocation, QStringLiteral("segoeui.ttf"));
+        const auto id = QFontDatabase::addApplicationFont(path);
+        const auto families = QFontDatabase::applicationFontFamilies(id);
+        if (!families.isEmpty()) {
+            auto font = application.font();
+            font.setFamily(families.first());
+            application.setFont(font);
+        }
     }
 #else
     Q_UNUSED(application);

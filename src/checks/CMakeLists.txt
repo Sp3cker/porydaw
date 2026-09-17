@@ -360,6 +360,22 @@ qt_add_executable(porydaw_checks
 set_target_properties(porydaw_checks PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
 
+if(WIN32 AND TARGET Qt6::windeployqt)
+    get_target_property(checks_qt_core_type Qt6::Core TYPE)
+    if(NOT checks_qt_core_type STREQUAL "STATIC_LIBRARY")
+        add_custom_command(TARGET porydaw_checks POST_BUILD
+            COMMAND Qt6::windeployqt
+                    --include-plugins qoffscreen
+                    --qmldir "${PROJECT_SOURCE_DIR}/src/ui"
+                    --no-translations
+                    --no-opengl-sw
+                    --no-system-d3d-compiler
+                    "$<TARGET_FILE:porydaw_checks>"
+            VERBATIM
+        )
+    endif()
+endif()
+
 porydaw_enable_project_warnings(porydaw_checks)
 if(APPLE)
     target_sources(porydaw_checks PRIVATE

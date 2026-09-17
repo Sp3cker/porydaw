@@ -1,10 +1,12 @@
 #include "checks/rollcheck/static/tst_pianorollstatic.h"
 
 #include <QCoreApplication>
+#include <QCursor>
 #include <QEnterEvent>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QScopeGuard>
 #include <QWheelEvent>
 #include <QWindow>
 #include <QtTest>
@@ -389,6 +391,11 @@ void PianoRollStaticTest::tooltipFloatsBelowRuler()
     }
     const QPointer<QQuickItem> guardedControl =
         division ? guardedDivisionControl : guardedFeelControl;
+#ifdef Q_OS_WIN
+    const QPoint originalCursorPosition = QCursor::pos();
+    const auto restoreCursor =
+        qScopeGuard([originalCursorPosition] { QCursor::setPos(originalCursorPosition); });
+#endif
     bool windowEntered = false;
     const auto setHover = [&guardedCanvasRoot, &guardedQuickWindow,
                            &windowEntered](const QPointer<QQuickItem> &control, bool entering) {
@@ -402,6 +409,11 @@ void PianoRollStaticTest::tooltipFloatsBelowRuler()
                  : canvasRoot->mapToScene(
                        QPointF(canvasRoot->width() / 2.0, canvasRoot->height() / 2.0)))
                 .toPoint();
+#ifdef Q_OS_WIN
+        // QTest's QWindow mouse moves do not move the native cursor. Keep it
+        // over the control so Windows cannot send a leave during the tooltip delay.
+        QCursor::setPos(quickWindow->mapToGlobal(windowPosition));
+#endif
         if (entering) {
             if (!windowEntered) {
                 const QPointF point(windowPosition);

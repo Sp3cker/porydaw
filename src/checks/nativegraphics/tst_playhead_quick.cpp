@@ -173,20 +173,22 @@ void RenderingPlayheadTest::quickPolarityAndEdges()
         const QRect plot =
             geometry->plotRect.translated(-geometry->rect.topLeft()).intersected(frame.rect());
         const QRect gutter{0, 0, (std::max)(0, plot.left()), frame.height()};
+        // Controls may share the playhead hue. Compare pixels against the
+        // hidden playhead instead of treating that color as unique to it.
+        overlay->setPlayhead(initialTimelineX, false, playing);
+        checks::support::pumpQuick();
+        const QImage hiddenFrame =
+            checks::support::captureQuickBand(view, geometry->rect, &captureError);
+        QVERIFY2(!hiddenFrame.isNull(), qPrintable(captureError));
+        overlay->setPlayhead(initialTimelineX, true, playing);
+        checks::support::pumpQuick();
         if (kQuickCarriesPlayhead) {
-            QVERIFY(!checks::support::hasSolidPlayheadPixel(frame, gutter, color));
-            QVERIFY(checks::support::hasSolidPlayheadPixel(frame, plot, color));
+            const QRect gutterPixels = checks::support::devicePixelRect(frame, gutter);
+            QVERIFY2(frame.copy(gutterPixels) == hiddenFrame.copy(gutterPixels), name);
+            QVERIFY2(checks::support::hasSolidPlayheadPixel(frame, plot, color), name);
         } else {
-            // A lane's controls can use the same theme hue as the playhead.
             // Native-only movement must leave its Quick pixels unchanged.
-            overlay->setPlayhead(initialTimelineX, false, playing);
-            checks::support::pumpQuick();
-            const QImage hiddenFrame =
-                checks::support::captureQuickBand(view, geometry->rect, &captureError);
-            QVERIFY2(!hiddenFrame.isNull(), qPrintable(captureError));
             QVERIFY2(frame == hiddenFrame, name);
-            overlay->setPlayhead(initialTimelineX, true, playing);
-            checks::support::pumpQuick();
         }
     };
     assertBand(songview::TimelineBand::Roll, "roll");

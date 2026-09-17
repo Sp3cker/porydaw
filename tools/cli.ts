@@ -216,7 +216,6 @@ async function runVerify(rawArgs: string[]): Promise<void> {
     }
   }
 
-  const binary = join(BUILD_DIR, "porydaw_checks");
   const reporterArgs = verbose ? ["--reporter=verbose"] : [];
   const args = [...reporterArgs, ...filters, ...passthrough];
   if (qtPayload !== undefined) args.push("--qt", ...qtPayload);
@@ -228,6 +227,13 @@ async function runVerify(rawArgs: string[]): Promise<void> {
   }
   if (options.help) showHelp("verify");
   await runBuild(["porydaw", "porydaw_checks", "mid2agb"]);
+  const binary = join(
+    BUILD_DIR,
+    ...((Deno.build.os === "windows" && await usesMultiConfigBuild())
+      ? ["Release"]
+      : []),
+    Deno.build.os === "windows" ? "porydaw_checks.exe" : "porydaw_checks",
+  );
   const cmd = new Deno.Command("deno", {
     args: [
       "run",

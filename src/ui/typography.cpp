@@ -2,6 +2,7 @@
 #include <algorithm>
 
 #include <QApplication>
+#include <QDebug>
 #include <QFontDatabase>
 #include <QFontInfo>
 #include <QFontMetrics>
@@ -60,16 +61,20 @@ std::optional<QFont> fitFont(QFont font, int maximumPixelSize, int availableHeig
 bool installBundledFonts(QApplication &application)
 {
     const auto baseFontPx = QFontInfo(application.font()).pixelSize();
-    if (baseFontPx <= 0)
+    if (baseFontPx <= 0) {
+        qWarning() << "Cannot resolve the application font pixel size:" << application.font();
         return false;
+    }
     const auto regular = QFontDatabase::addApplicationFont(
         QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-Regular.ttf"));
     const auto semibold = QFontDatabase::addApplicationFont(
         QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-SemiBold.ttf"));
     const auto mono = QFontDatabase::addApplicationFont(
         QStringLiteral(":/fonts/AtkinsonHyperlegibleMono-Regular.ttf"));
-    if (regular < 0 || semibold < 0 || mono < 0)
+    if (regular < 0 || semibold < 0 || mono < 0) {
+        qWarning() << "Cannot load bundled fonts:" << regular << semibold << mono;
         return false;
+    }
     if (!capturedBaseFontPx)
         capturedBaseFontPx = baseFontPx;
     auto font = application.font();
@@ -81,6 +86,9 @@ bool installBundledFonts(QApplication &application)
                            resolved.pixelSize() == qMax(1, qRound(*capturedBaseFontPx * bodyScale));
     if (installed)
         installedBodyFont = font;
+    else
+        qWarning() << "Cannot resolve bundled body font:" << resolved.family()
+                   << resolved.pixelSize();
     return installed;
 }
 

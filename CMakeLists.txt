@@ -620,6 +620,7 @@ if(WIN32)
     elseif(TARGET Qt6::windeployqt)
         add_custom_command(TARGET porydaw POST_BUILD
             COMMAND Qt6::windeployqt
+                    --qmldir "${PROJECT_SOURCE_DIR}/src/ui"
                     # SVG image/icon plugins are soft dependencies, so force
                     # their deployment rather than relying on executable scanning.
                     --include-plugins qsvg,qsvgicon

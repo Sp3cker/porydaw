@@ -124,6 +124,8 @@ void PianoRollTest::timeSelectionMenuOpensWithPasteEnablement()
         songview::readClipboard(check.timeline().ticksPerBeat);
     QVERIFY2(seeded && !seeded->empty(),
              "Copy did not seed a non-empty range clip on the clipboard");
+    // Native clipboard change notifications can arrive after setMimeData returns.
+    QTRY_VERIFY(view.editActions()->pasteClipPresent());
 
     const quick_popup::PromptGuard guard(view);
     const SharedTimeMenu opened =
@@ -189,6 +191,7 @@ void PianoRollTest::timeSelectionMenuOpensWithPasteEnablement()
     // a real attempted click on the disabled row neither dispatches nor
     // dismisses: the menu stays open until an explicit dismissal.
     songview::writeClipboard(songview::Clip{}, check.timeline().ticksPerBeat);
+    QTRY_VERIFY(!view.editActions()->pasteClipPresent());
     const SharedTimeMenu reopened =
         openSharedTimeMenu(check, rows, d.tick + snapCell, d.tick + 2 * snapCell);
     QVERIFY2(reopened.session, qUtf8Printable(reopened.diagnostic));

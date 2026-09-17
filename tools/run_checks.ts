@@ -263,6 +263,7 @@ function executionEnvironment(
   }
   return {
     PORYDAW_AUDIO_BACKEND: "null",
+    QT_FORCE_STDERR_LOGGING: "1",
     ...environment,
     QT_QPA_PLATFORM: platformFor(check),
   };

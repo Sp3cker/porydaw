@@ -79,6 +79,7 @@ export function createReporter(
       const sec = (result.durationMs / 1000).toFixed(2);
       // Also emit legacy line for CI greps that look for run_checks: FAIL
       console.log(`not ok: ${name} (${sec}s)`);
+      console.log(`exit code: ${result.code}`);
       const output = result.output.trim();
       if (output) {
         // Full output, never capped: Qt multi-failure diagnostics and
