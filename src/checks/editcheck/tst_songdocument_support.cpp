@@ -114,6 +114,66 @@ bool sameNotes(const std::vector<DocNote> &left, const std::vector<DocNote> &rig
     return true;
 }
 
+bool notePairsConsistent(const SongDocument &document, int engineTrack)
+{
+    const int smfTrack = document.smfTrackFor(engineTrack);
+    if (smfTrack < 0 || smfTrack >= int(document.smf().tracks.size()))
+        return false;
+
+    const uint8_t channel = document.channelFor(engineTrack);
+    const auto &events = document.smf().tracks[size_t(smfTrack)].events;
+    const auto notes = document.notesForTrack(engineTrack);
+
+    for (const DocNote &note : notes) {
+        if (note.engineTrack != engineTrack || note.smfTrack != smfTrack ||
+            note.channel != channel || note.unterminated() || note.duration == 0 ||
+            note.onIndex >= events.size() || note.endIndex >= events.size() ||
+            note.endIndex <= note.onIndex)
+            return false;
+
+        const SmfEvent &on = events[note.onIndex];
+        const SmfEvent &end = events[note.endIndex];
+        if (!on.isChannel() || !on.isNoteOn() || on.channel() != channel || on.data0 != note.key ||
+            on.data1 != note.velocity || on.tick != note.tick || !end.isChannel() ||
+            !end.isNoteEnd() || end.channel() != channel || end.data0 != note.key ||
+            end.tick <= on.tick || uint64_t(end.tick) - uint64_t(on.tick) != note.duration)
+            return false;
+    }
+
+    for (size_t index = 0; index < events.size(); ++index) {
+        const SmfEvent &event = events[index];
+        if (!event.isChannel() || event.channel() != channel)
+            continue;
+
+        const bool isOn = event.isNoteOn();
+        const bool isEnd = event.isNoteEnd();
+        if (!isOn && !isEnd)
+            continue;
+
+        size_t claims = 0;
+        for (const DocNote &note : notes) {
+            if ((isOn && note.onIndex == index) || (isEnd && note.endIndex == index))
+                ++claims;
+        }
+        if (claims != 1)
+            return false;
+    }
+
+    for (size_t left = 0; left < notes.size(); ++left) {
+        for (size_t right = left + 1; right < notes.size(); ++right) {
+            if (notes[left].key != notes[right].key)
+                continue;
+
+            const uint64_t leftEnd = uint64_t(notes[left].tick) + notes[left].duration;
+            const uint64_t rightEnd = uint64_t(notes[right].tick) + notes[right].duration;
+            if (uint64_t(notes[left].tick) < rightEnd && uint64_t(notes[right].tick) < leftEnd)
+                return false;
+        }
+    }
+
+    return true;
+}
+
 bool findsTimeSig(const SongDocument &document, uint64_t tick, DocTimeSig *out)
 {
     for (const DocTimeSig &signature : document.timeSigs()) {

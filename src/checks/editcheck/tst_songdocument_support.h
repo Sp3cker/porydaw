@@ -30,6 +30,11 @@ bool tracksSorted(const SmfFile &smf);
 bool noteEndsBeforeOnsAt(const SongDocument &document, int engineTrack, uint64_t tick);
 bool hasLiveTempo(const SongDocument &document);
 bool sameNotes(const std::vector<DocNote> &left, const std::vector<DocNote> &right);
+// True when the track's note stream satisfies the spec invariant: every
+// positive-velocity note-on resolves to a positive half-open span, each
+// release is claimed by exactly one projected note, no release is left
+// unclaimed, and same-pitch spans are pairwise disjoint (adjacency legal).
+bool notePairsConsistent(const SongDocument &document, int engineTrack);
 bool findsTimeSig(const SongDocument &document, uint64_t tick, DocTimeSig *out);
 
 int firstEditableTrack(const SongDocument &document);

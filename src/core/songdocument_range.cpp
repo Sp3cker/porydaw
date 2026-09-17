@@ -14,12 +14,14 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
     std::vector<EditOp> ops;
     const int targetEngineTrackCount =
         std::clamp(edit.minimumEngineTrackCount, engineTrackCount(), 16);
-    // Admission: every destination the edit writes must fit the Tick domain.
-    // One out-of-range member rejects the whole edit before track expansion,
-    // removal planning, or history. Eligibility mirrors the write passes
-    // below: notes and lane points on engine tracks outside the post-
-    // expansion map are skipped there, so they are not checked here; tempo
-    // points always participate.
+    // Admission: every destination the edit writes must fit the Tick
+    // domain, and the complete combined written-note set must satisfy the
+    // single collision rule. One out-of-range member rejects the whole
+    // edit before track expansion, removal planning, or history.
+    // Note eligibility below mirrors the emission loop: a group targeted
+    // at an engine track outside the post-expansion map is skipped there,
+    // so its members stay out of the combined set.
+    std::vector<PlannedNote> written;
     for (const RangeEdit::TrackNotes &tn : edit.addNotes) {
         if (tn.engineTrack < 0 || tn.engineTrack >= targetEngineTrackCount)
             continue;
@@ -27,8 +29,14 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
             const uint64_t end = uint64_t(note.tick) + std::max<uint32_t>(1, note.duration);
             if (end > CoreTimeDefaults::kMaxTick)
                 return;
+            written.push_back({tn.engineTrack, note.key, note.tick, end});
         }
     }
+    // Deliberately outside `!m_smf.tracks.empty()`: an empty original SMF
+    // with a track-expanding batch still admits here (its stationary set
+    // is empty, but batch-vs-batch disjointness applies).
+    if (!noteEditAdmissible(written, edit.removeNotes))
+        return;
     for (const RangeEdit::LaneWrite &lw : edit.addPoints) {
         if (lw.engineTrack < 0 || lw.engineTrack >= targetEngineTrackCount)
             continue;
@@ -77,7 +85,6 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
     // SMF track count after the expansion above. Descriptor-lane writes may
     // target freshly created tracks, which plan as empty streams.
     const int expandedSmfTracks = nextSmfTrack;
-    std::vector<EditOp> trims;
     if (!m_smf.tracks.empty()) {
         std::vector<std::vector<size_t>> removals(expandedSmfTracks);
         for (const DocNote &note : edit.removeNotes) {
@@ -152,13 +159,6 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
                 return; // semantics unsatisfiable: fail without mutation
             appendXcmdPatchOps(removals, xcmdInserts, int(track), *patch);
         }
-        std::vector<PlannedNote> written;
-        for (const RangeEdit::TrackNotes &tn : edit.addNotes) {
-            for (const NewNote &note : tn.notes)
-                written.push_back({tn.engineTrack, note.key, note.tick,
-                                   uint64_t(note.tick) + std::max<uint32_t>(1, note.duration)});
-        }
-        resolveNoteOverlaps(written, edit.removeNotes, removals, trims);
         // All removals first (per SMF track, descending — appendRemoveOps sorts
         // and dedups), so every recorded index stays valid at apply time.
         for (size_t t = 0; t < m_smf.tracks.size(); t++)
@@ -184,7 +184,6 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
         for (const LanePointValue &pt : lw.points)
             appendLaneInsertOps(ops, smfTrack, channel, lw.cc, pt.tick, pt.value);
     }
-    ops.insert(ops.end(), trims.begin(), trims.end());
     if (edit.removeTempo.empty() && edit.addTempo.empty()) {
         pushEdit(text, std::move(ops));
         return;
@@ -309,13 +308,22 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
         std::vector<PlannedNote> written;
         for (const DocNote &note : notes) {
             if (note.unterminated())
-                continue;
+                continue; // raw re-insertion keeps its raw behavior: no span
+            // Plan exactly the endpoints the emission will produce: each
+            // event lands at its own independently clamped tick, so the
+            // written span is [clamped on, clamped end event).
             const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
-            written.push_back(
-                {note.engineTrack, note.key, newTick, uint64_t(newTick) + note.duration});
+            const uint64_t newEnd =
+                CoreTimeDefaults::shiftTickClamped(uint64_t(note.tick) + note.duration, dTick);
+            if (newEnd <= newTick)
+                return; // left clamp collapsed a positive-duration span
+            written.push_back({note.engineTrack, note.key, newTick, newEnd});
         }
-        std::vector<EditOp> trims;
-        resolveNoteOverlaps(written, notes, removals, trims);
+        // Single collision rule over the exact emitted geometry; refusal
+        // leaves notes, lane points and tempo untouched before any op
+        // assembly.
+        if (!noteEditAdmissible(written, notes))
+            return;
         // All removals first (indices are read at apply time), then the
         // canonical XCMD emissions, then the events' exact bytes re-inserted
         // at the shifted ticks.
@@ -333,7 +341,6 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
                 ops.push_back(op);
             }
         }
-        ops.insert(ops.end(), trims.begin(), trims.end());
     }
     if (tempo.empty()) {
         pushEdit(tr("move range"), std::move(ops));

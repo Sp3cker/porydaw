@@ -197,7 +197,10 @@ void PianoRoll::transposeSelection(int dKey)
             return;
     }
     const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    const uint64_t revision = doc.revision();
     doc.moveNotes(notes, 0, dKey, /*mergeable=*/true);
+    if (doc.revision() == revision)
+        return;
     // Keep the moved notes in sight: the row the move headed toward
     // scrolls into view just enough (no re-centering).
     int edge = int(notes.front().key) + dKey;

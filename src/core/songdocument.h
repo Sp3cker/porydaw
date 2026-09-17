@@ -194,32 +194,33 @@ class SongDocument : public QObject
     };
     void addNotes(int engineTrack, const std::vector<NewNote> &notes);
     void deleteNotes(const std::vector<DocNote> &notes);
-    // Move by a tick/key delta (note lengths preserved). mergeable marks a
-    // keyboard transpose/nudge press: consecutive mergeable moves of the
-    // same notes collapse into one undo command that re-lands from the
-    // gesture's start, so a neighbor trimmed by a merely-passed-through
-    // overlap comes back (only the final resting position trims). An inverse
-    // merged press restores the start and removes that command, but still
-    // publishes the current-state mutation. Mouse gestures stay one command
-    // per drag.
+    // Move by a tick/key delta (note lengths preserved). Overlaps or upper
+    // tick overflow refuse the whole edit before history or state changes.
+    // Consecutive mergeable keyboard presses on the same NoteIds collapse
+    // only when the accumulated move from the gesture start exactly matches
+    // the sequential result; non-composing clamps keep separate commands.
+    // An inverse merged press restores the start and removes that command,
+    // while still publishing the mutation. Mouse drags stay separate.
     void moveNotes(const std::vector<DocNote> &notes, int64_t dTick, int dKey,
                    bool mergeable = false);
     // Batch move with per-note destination pitches. Each note moves from its
     // current key to the corresponding destKey (destPitches[i] for notes[i]).
     // dTick is the common time delta (0 for pitch-only moves). mergeable works
     // identically to moveNotes. All notes must belong to the same engine track.
-    // Returns false and pushes nothing if any destKey is outside 0-127.
+    // Returns false without a push for empty/mismatched inputs, invalid
+    // pitches, out-of-range deltas or destinations, collisions, or an empty
+    // operation plan. An unchanged pitch-only request returns true without
+    // a push. Unterminated notes obey the same start-tick overflow refusal.
     bool moveNotesToPitches(const std::vector<DocNote> &notes,
                             const std::vector<uint8_t> &destPitches, int64_t dTick,
                             bool mergeable = false);
-    // Resize by a duration delta (note-ons pinned). mergeable marks a
-    // keyboard lengthen/shorten press: consecutive mergeable resizes of the
-    // same notes collapse into one undo command that re-lands from the
-    // gesture's start, so a neighbor trimmed by a merely-passed-through
-    // overlap comes back (only the final duration trims). An inverse merged
-    // press restores the start and removes that command, but still
-    // publishes the current-state mutation. Mouse gestures stay one command
-    // per drag.
+    // Resize by a duration delta (note-ons pinned, minimum duration one).
+    // Overlaps or upper tick overflow refuse the whole edit before mutation.
+    // Consecutive mergeable keyboard presses collapse only when accumulated
+    // and sequential durations agree; a minimum-duration clamp that does
+    // not compose keeps separate commands. An inverse merged press restores
+    // the start and removes the command, while publishing the mutation.
+    // Mouse drags stay separate.
     void resizeNotes(const std::vector<DocNote> &notes, int64_t dDuration, bool mergeable = false);
     // Left-edge resize: move the note-on by dTick with the note-off pinned
     // (tick and duration adjust together, at least 1 tick of note remains).
@@ -522,41 +523,46 @@ class SongDocument : public QObject
     void appendNoteInsertOps(std::vector<EditOp> &ops, int smfTrack, uint8_t channel, Tick tick,
                              uint8_t key, uint32_t duration, uint8_t velocity) const;
     void appendRemoveOps(std::vector<EditOp> &ops, int smfTrack, std::vector<size_t> indices) const;
-    // Same-key overlap resolution for edits that write notes. The pairing
-    // rule (every note-on takes the first same-key end after it) cannot
-    // represent two overlapping notes on one key — a written note landing
-    // over a stationary one would silently re-pair the neighbor's end. So
-    // the edited note wins: a stationary same-track same-key note
-    // overlapping a written span keeps its head (end trimmed to the span
-    // start), keeps its tail (start moved to the span end), or is removed
-    // when fully covered — never split. written spans are the notes the
-    // edit is inserting; editNotes are the notes it already rewrites
-    // (excluded from trimming). Victim indices are appended to removals
-    // (per SMF track, for the caller's appendRemoveOps pass) and the
-    // trimmed events re-inserted with their exact bytes via trims (the
-    // caller appends them after all its removals).
+    // The single note-pair collision rule for every semantic edit that
+    // writes notes. `written` carries the final planned half-open spans of
+    // every participant (an unchanged per-pitch destination contributes
+    // its current span); `editNotes` are those participants, exempted from
+    // the stationary set by NoteId. Within each (engineTrack, key) group a
+    // written span must be positive and pairwise disjoint from the others
+    // (adjacency accepts; identical duplicate spans overlap and refuse),
+    // and disjoint from every stationary note on that (engineTrack, key).
+    // An unterminated stationary note has no paired end to compare against
+    // and is skipped — a documented limit over pre-existing raw material,
+    // never repaired here. Pure: mutates nothing and returns false on the
+    // first violation.
     struct PlannedNote {
         int engineTrack;
         uint8_t key;
         Tick tick;
         uint64_t endTick; // exclusive
     };
-    void resolveNoteOverlaps(const std::vector<PlannedNote> &written,
-                             const std::vector<DocNote> &editNotes,
-                             std::vector<std::vector<size_t>> &removals,
-                             std::vector<EditOp> &trims) const;
+    bool noteEditAdmissible(const std::vector<PlannedNote> &written,
+                            const std::vector<DocNote> &editNotes) const;
+
     // Note-move op builders, split out so their commands can rebuild the
-    // move with an accumulated delta when merging keyboard presses.
-    // moveNotes rewrites each note's own on/end events (note ids preserved;
-    // unterminated notes keep their patched note-on); moveNotesToPitches
-    // mints fresh events and drops unterminated or no-op pitches.
-    std::vector<EditOp> buildMoveNotesOps(const std::vector<DocNote> &notes, int64_t dTick,
-                                          int dKey) const;
-    std::vector<EditOp> buildResizeNotesOps(const std::vector<DocNote> &notes,
-                                            int64_t dDuration) const;
-    std::vector<EditOp> buildMoveNotesToPitchesOps(const std::vector<DocNote> &notes,
-                                                   const std::vector<uint8_t> &destPitches,
-                                                   int64_t dTick) const;
+    // move with an accumulated delta when merging keyboard presses. All
+    // three return nullopt on admission refusal and are otherwise pure op
+    // plans built from the current state. One emission path: each note's
+    // own on/end events are rewritten in place (note id preserved, velocity
+    // intact) with the planned destination tick/key — nothing is removed,
+    // reminted or left behind. buildResizeNotesOps keeps the fork-main
+    // shape (per-note max(1, duration + d), kMaxTick headroom guard,
+    // admission) and refuses when the grouped result would collide.
+    std::optional<std::vector<EditOp>> buildMoveOps(const std::vector<DocNote> &notes,
+                                                    std::vector<uint8_t> destKeys, int64_t dTick,
+                                                    bool skipUnchanged) const;
+    std::optional<std::vector<EditOp>> buildMoveNotesOps(const std::vector<DocNote> &notes,
+                                                         int64_t dTick, int dKey) const;
+    std::optional<std::vector<EditOp>>
+    buildMoveNotesToPitchesOps(const std::vector<DocNote> &notes,
+                               const std::vector<uint8_t> &destPitches, int64_t dTick) const;
+    std::optional<std::vector<EditOp>> buildResizeNotesOps(const std::vector<DocNote> &notes,
+                                                           int64_t dDuration) const;
     // Replace one event: modify in place when the tick is unchanged (the
     // event keeps its position within its tick group — mid2agb stable-sorts,
     // so same-tick order is significant), else remove + re-insert so ticks

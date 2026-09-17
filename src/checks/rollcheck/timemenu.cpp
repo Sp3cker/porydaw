@@ -12,10 +12,12 @@
 #include <QPoint>
 #include <QPointer>
 #include <QQuickWindow>
+#include <QSignalSpy>
 #include <QString>
 #include <QtTest>
 #include <algorithm>
 #include <optional>
+#include <vector>
 
 #include "core/songdocument.h"
 #include "ui/songtab.h"
@@ -96,6 +98,197 @@ int timeMenuRow(songview::QuickMenuModel &model, songview::TimeSelectionAction a
 }
 
 } // namespace
+
+void PianoRollTest::rejectedNotePastePreservesViewState()
+{
+    PianoRollFixture &check = *m_fixture;
+    const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+    QVERIFY(seed.has_value());
+    SongDocument &doc = check.document();
+    SongView &view = check.view();
+    const SnappedRows rows{view, check.rollInput()};
+    const Cell &cell = seed->cell;
+    DocNote original;
+    QVERIFY(doc.findNote(check.track(), cell.tick, uint8_t(cell.key), &original));
+    view.commitEditCursor(cell.tick);
+    view.selectionModel().setNoteSelection({original.noteId});
+    view.selectionModel().setTimeSelection({cell.tick,
+                                            cell.tick + seed->snapCell,
+                                            songview::EditorSelectionModel::TimeSelection::Tracks,
+                                            {}});
+    const clipcheck_support::ClipboardStateGuard clipboardGuard;
+    const quick_popup::PromptGuard popupGuard(view);
+    songview::Clip clip;
+    clip.tracks.push_back(
+        {check.track(), {{0, original.key, original.duration, original.velocity}}});
+    songview::writeClipboard(clip, check.timeline().ticksPerBeat);
+
+    const QByteArray before = doc.smf().write();
+    const uint64_t revision = doc.revision();
+    const int undoIndex = doc.undoStack()->index();
+    const int undoCount = doc.undoStack()->count();
+    const bool canRedo = doc.undoStack()->canRedo();
+    const auto selection = view.selectionModel().timeSelection();
+    const auto noteSelection = view.selectionModel().noteSelection();
+    const Tick cursor = view.editCursorTick();
+    const double scrollX = view.camera().scrollX();
+    const double scrollY = view.camera().scrollY();
+    QSignalSpy announcements(&view, &SongView::statusMessage);
+    QSignalSpy cursorMoves(&view, &SongView::editCursorMoved);
+    QSignalSpy publications(&doc, &SongDocument::documentChanged);
+    // Note and time selections are mutually exclusive. Exercise the note
+    // selection first through the real key route, then the band via its menu.
+    view.selectionModel().setNoteSelection({original.noteId});
+    sendKeyStroke(check.rollInput(), Qt::Key_V, Qt::ControlModifier, false);
+    QCOMPARE(doc.smf().write(), before);
+    QCOMPARE(doc.revision(), revision);
+    QCOMPARE(doc.undoStack()->index(), undoIndex);
+    QCOMPARE(doc.undoStack()->count(), undoCount);
+    QCOMPARE(doc.undoStack()->canRedo(), canRedo);
+    QVERIFY(view.selectionModel().noteSelection() == std::vector<NoteId>{original.noteId});
+    QCOMPARE(view.editCursorTick(), cursor);
+    QCOMPARE(view.camera().scrollX(), scrollX);
+    QCOMPARE(view.camera().scrollY(), scrollY);
+    QCOMPARE(announcements.count(), 0);
+    QCOMPARE(cursorMoves.count(), 0);
+    QCOMPARE(publications.count(), 0);
+    view.selectionModel().setTimeSelection(selection);
+    const SharedTimeMenu rejected =
+        openSharedTimeMenu(check, rows, selection.startTick, selection.endTick);
+    QVERIFY2(rejected.session, qUtf8Printable(rejected.diagnostic));
+    const int pasteRow = timeMenuRow(*rejected.model, songview::TimeSelectionAction::Paste);
+    QVERIFY(pasteRow >= 0 && rejected.model->itemAt(pasteRow)->enabled);
+    QVERIFY(quick_popup::clickMenuRow(*rejected.session, pasteRow));
+    QCoreApplication::processEvents();
+    QCOMPARE(doc.smf().write(), before);
+    QCOMPARE(doc.revision(), revision);
+    QCOMPARE(doc.undoStack()->index(), undoIndex);
+    QCOMPARE(doc.undoStack()->count(), undoCount);
+    QCOMPARE(doc.undoStack()->canRedo(), canRedo);
+    QVERIFY(view.selectionModel().noteSelection() == noteSelection);
+    const auto &retained = view.selectionModel().timeSelection();
+    QCOMPARE(retained.startTick, selection.startTick);
+    QCOMPARE(retained.endTick, selection.endTick);
+    QCOMPARE(retained.scope, selection.scope);
+    QCOMPARE(view.editCursorTick(), cursor);
+    QCOMPARE(view.camera().scrollX(), scrollX);
+    QCOMPARE(view.camera().scrollY(), scrollY);
+    QCOMPARE(announcements.count(), 0);
+    QCOMPARE(cursorMoves.count(), 0);
+    QCOMPARE(publications.count(), 0);
+
+    // Keep the same Paste route and cursor, but put the incoming note in free
+    // time beyond the song so success cannot depend on the imported fixture.
+    const Tick destination = view.grid().snapTickUp(double(check.timeline().lengthTicks) + 1.0);
+    clip.tracks.front().notes.front().relTick = uint32_t(destination - cursor);
+    songview::writeClipboard(clip, check.timeline().ticksPerBeat);
+    const SharedTimeMenu accepted =
+        openSharedTimeMenu(check, rows, selection.startTick, selection.endTick);
+    QVERIFY2(accepted.session, qUtf8Printable(accepted.diagnostic));
+    const int acceptedRow = timeMenuRow(*accepted.model, songview::TimeSelectionAction::Paste);
+    QVERIFY(acceptedRow >= 0 && accepted.model->itemAt(acceptedRow)->enabled);
+    QVERIFY(quick_popup::clickMenuRow(*accepted.session, acceptedRow));
+    QCoreApplication::processEvents();
+    DocNote pasted;
+    QVERIFY(doc.findNote(check.track(), destination, original.key, &pasted));
+    QCOMPARE(pasted.duration, original.duration);
+    QCOMPARE(pasted.velocity, original.velocity);
+    QVERIFY(view.selectionModel().noteSelection() == std::vector<NoteId>{pasted.noteId});
+    QCOMPARE(view.editCursorTick(), destination + original.duration);
+    QCOMPARE(doc.undoStack()->index(), undoIndex + 1);
+    QCOMPARE(announcements.count(), 1);
+    QCOMPARE(cursorMoves.count(), 1);
+    QCOMPARE(publications.count(), 1);
+    doc.undoStack()->undo();
+    QCOMPARE(doc.smf().write(), before);
+
+    // A note starting before the band is stationary even when its tail
+    // intersects it. Transposing the later note onto that tail must refuse.
+    const Tick start = destination + seed->snapCell;
+    doc.addNotes(check.track(), {{start, 61, uint32_t(2 * seed->snapCell), 100},
+                                 {start + seed->snapCell, 60, uint32_t(seed->snapCell), 100}});
+    DocNote participant;
+    QVERIFY(doc.findNote(check.track(), start + seed->snapCell, 60, &participant));
+    view.selectionModel().setNoteSelection({participant.noteId});
+    view.selectionModel().setTimeSelection({start + seed->snapCell,
+                                            start + 2 * seed->snapCell,
+                                            songview::EditorSelectionModel::TimeSelection::Tracks,
+                                            {}});
+    const QByteArray beforeTranspose = doc.smf().write();
+    const uint64_t transposeRevision = doc.revision();
+    const int transposeUndoIndex = doc.undoStack()->index();
+    const int transposeUndoCount = doc.undoStack()->count();
+    const bool transposeCanRedo = doc.undoStack()->canRedo();
+    const auto transposeSelection = view.selectionModel().timeSelection();
+    const Tick transposeCursor = view.editCursorTick();
+    const double transposeX = view.camera().scrollX();
+    const double transposeY = view.camera().scrollY();
+    announcements.clear();
+    cursorMoves.clear();
+    publications.clear();
+    sendKeyStroke(check.rollInput(), Qt::Key_Up, Qt::NoModifier, false);
+    QCOMPARE(doc.smf().write(), beforeTranspose);
+    QCOMPARE(doc.revision(), transposeRevision);
+    QCOMPARE(doc.undoStack()->index(), transposeUndoIndex);
+    QCOMPARE(doc.undoStack()->count(), transposeUndoCount);
+    QCOMPARE(doc.undoStack()->canRedo(), transposeCanRedo);
+    QCOMPARE(view.selectionModel().timeSelection().startTick, transposeSelection.startTick);
+    QCOMPARE(view.selectionModel().timeSelection().endTick, transposeSelection.endTick);
+    QCOMPARE(view.editCursorTick(), transposeCursor);
+    QCOMPARE(view.camera().scrollX(), transposeX);
+    QCOMPARE(view.camera().scrollY(), transposeY);
+    QCOMPARE(announcements.count(), 0);
+    QCOMPARE(cursorMoves.count(), 0);
+    QCOMPARE(publications.count(), 0);
+
+    // Positive control: the same Up route must actually execute when the
+    // move is legal, so a swallowed key cannot pass the refusal leg above.
+    // Relocate the participant to a free pitch whose +1 neighbour is free
+    // too (setup through the public document API; the keystroke below is
+    // the route under test).
+    int freeKey = -1;
+    for (int key = 0; key < 126 && freeKey < 0; ++key) {
+        if (key == 60 || key == 61)
+            continue;
+        if (!check.isOccupied(start + seed->snapCell, uint32_t(seed->snapCell), key, true) &&
+            !check.isOccupied(start + seed->snapCell, uint32_t(seed->snapCell), key + 1, true))
+            freeKey = key;
+    }
+    QVERIFY2(freeKey >= 0, "could not find a free pitch pair for the accepted transpose");
+    doc.moveNotes({participant}, 0, freeKey - 60);
+    DocNote relocated;
+    QVERIFY2(doc.findNote(check.track(), start + seed->snapCell, uint8_t(freeKey), &relocated),
+             "the setup move did not reach the free pitch");
+    view.selectionModel().setTimeSelection(transposeSelection);
+    const QByteArray beforeAccepted = doc.smf().write();
+    const uint64_t acceptedRevision = doc.revision();
+    const int acceptedUndoIndex = doc.undoStack()->index();
+    const int acceptedUndoCount = doc.undoStack()->count();
+    announcements.clear();
+    cursorMoves.clear();
+    publications.clear();
+    sendKeyStroke(check.rollInput(), Qt::Key_Up, Qt::NoModifier, false);
+    DocNote transposed;
+    QVERIFY2(doc.findNote(check.track(), start + seed->snapCell, uint8_t(freeKey + 1), &transposed),
+             "Up did not transpose the relocated note when the move was legal");
+    QVERIFY(doc.revision() != acceptedRevision);
+    QCOMPARE(doc.undoStack()->index(), acceptedUndoIndex + 1);
+    QCOMPARE(doc.undoStack()->count(), acceptedUndoCount + 1);
+    QCOMPARE(announcements.count(), 1);
+    QCOMPARE(publications.count(), 1);
+    QVERIFY(view.selectionModel().timeSelection().active());
+    QCOMPARE(view.selectionModel().timeSelection().startTick, start + seed->snapCell);
+    QCOMPARE(view.selectionModel().timeSelection().endTick, start + 2 * seed->snapCell);
+    QCOMPARE(view.editCursorTick(), transposeCursor);
+    doc.undoStack()->undo();
+    QCOMPARE(doc.smf().write(), beforeAccepted);
+    QVERIFY(doc.findNote(check.track(), start + seed->snapCell, uint8_t(freeKey), &relocated));
+    QVERIFY(doc.undoStack()->canRedo());
+    doc.undoStack()->redo();
+    QVERIFY(doc.findNote(check.track(), start + seed->snapCell, uint8_t(freeKey + 1), &transposed));
+    doc.undoStack()->undo();
+    QCOMPARE(doc.smf().write(), beforeAccepted);
+}
 
 void PianoRollTest::timeSelectionMenuOpensWithPasteEnablement()
 {

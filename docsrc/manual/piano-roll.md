@@ -14,15 +14,31 @@ editable, other tracks are ghosted for context. -->
 <!-- TODO: Click-drag to draw; the snap grid; how the drawn length follows
 the grid; live audition while drawing. -->
 
+An edit that would make two notes overlap on the same track and pitch is
+refused in full: no note data changes and nothing is added to the undo
+history. This applies to drawing over a note, moving or transposing onto
+one, pasting overlapping or identical copies, and resizing a group into
+another member. If the refusal follows a new press — for example, starting
+a draw over a note — the press has already replaced any previous selection;
+the refusal itself still adds nothing. Adjacent, back-to-back notes are
+legal, and notes on different tracks or pitches may overlap.
+
 ## Moving and copying notes
 
 <!-- TODO: Drag to move (pitch + time), modifier for fine/unsnapped moves,
 duplicate gestures. -->
 
+Moving, transposing, and copying follow the same overlap rule: a conflict
+refuses the entire edit rather than shortening or removing another note.
+
 ## Resizing notes
 
 <!-- TODO: Grab an edge to lengthen/shorten; the effective (quantized)
 length shown inline — what the GBA will actually play. -->
+
+Resizing follows the same overlap rule, including grouped resizes. During
+a drag, the preview may show the attempted geometry. If the commit would
+create an overlap, the notes snap back to their unchanged geometry.
 
 ## Selecting multiple notes
 
@@ -58,6 +74,11 @@ Covered notes and automation nodes use the normal selection highlight without be
 
 **Delete Time (Shift Left)** is available from the Edit menu and both time-selection context menus. It removes the active time selection's whole time span — contents plus duration — and shifts all later scoped notes and automation left by that amount. Afterward the selection clears and the edit cursor is parked at the start seam. Without an active selection, or with a selection whose scope cannot be resolved, the command does nothing (no prompt, no edit). **No confirmation prompt is shown**; undo (`Ctrl+Z`) restores the previous song in one step. There is also no default destructive keyboard shortcut for it.
 
+If deleting time would shift a note onto an earlier same-pitch note that
+its own tail or head would collide with, the whole command is refused:
+nothing changes, including the selection and edit cursor (the status line
+says only that the command made no change).
+
 ### Ruler right-click: selection versus cursor menus
 Right-clicking the timeline ruler has two distinct outcomes, decided by where the press lands:
 
@@ -73,7 +94,7 @@ When a time selection is active, both right-click context menus (the timeline ru
 
 - **Duplicate time** (`Ctrl+D` default, or `Cmd+D` on macOS): Copies all scoped content within the active time selection and inserts it immediately after the selection span, shifting later scoped content to the right. Automation streams cleanly seed their effective values at the destination seam. After duplicating, the time selection automatically advances to the newly created duplicate region (and the edit cursor commits to its end), allowing rapid repetition by pressing `Ctrl+D` repeatedly. Requires an active time selection.
 - **Cut range** / **Copy range** / **Delete range** / ordinary `Delete`, `Backspace`, and Cut: These clear only the **contents** within the selection — the notes, automation points, and tempo markers inside the span are removed, but later events stay put; time never collapses. In contrast, Delete Time (Shift Left) removes the selected **duration** itself and ripples later content left. Ordinary Delete intentionally does not reassign to the rippling command.
-- **Paste at edit cursor**: pastes previously copied range data starting at the current edit cursor position.
+- **Paste at edit cursor**: pastes previously copied range data starting at the current edit cursor position. If any pasted notes would overlap on the same track and pitch, the entire paste is refused. Conflicting plain-note and range pastes change nothing: no selection loss, cursor movement, or camera scrolling.
 - **Clear time selection**: Clears the current time selection band.
 
 All time editing operations are undoable as a single command on the undo stack (`Ctrl+Z`).

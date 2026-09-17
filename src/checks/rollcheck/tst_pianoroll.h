@@ -31,7 +31,7 @@ class PianoRollTest final : public QObject
     void init();
     void cleanup();
 
-    void duplicateNoteIdentity();
+    void noteIdentityEditDiscipline();
     void timelineProjection();
     void viewStateRoundTrip();
     void trackRemapMove();
@@ -100,6 +100,7 @@ class PianoRollTest final : public QObject
     void timelineInsertBlankTimeLanes();
     void keyboardResizeNotes();
     void timeSelectionMenuOpensWithPasteEnablement();
+    void rejectedNotePastePreservesViewState();
     void timeSelectionMenuStaleAndCancelNoOp();
     void timeSelectionMenuInsertTimeAndStaleNoOp();
     void timeSelectionMenuSweepKeepsCanonicalEnablement();

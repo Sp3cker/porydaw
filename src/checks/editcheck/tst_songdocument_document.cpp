@@ -550,9 +550,9 @@ void EditCheckTest::documentPublicationNetZero()
     smf.format = 1;
     smf.division = 24;
     smf.tracks.push_back(
-        {{songdocument_test::channel(0xC0, 0, 1, 0), songdocument_test::channel(0x90, 0, 70, 100),
+        {{songdocument_test::channel(0xC0, 0, 1, 0), songdocument_test::channel(0x90, 0, 72, 100),
           songdocument_test::channel(0x90, 0, 69, 100), songdocument_test::channel(0x80, 2, 69, 0),
-          songdocument_test::channel(0x80, 4, 70, 0)},
+          songdocument_test::channel(0x80, 4, 72, 0)},
          8});
     auto fixture =
         songdocument_test::makeDocument(std::move(smf), QStringLiteral("publication-net-zero"));
@@ -598,9 +598,9 @@ void EditCheckTest::documentMergedOverlapPublication()
     smf.format = 1;
     smf.division = 24;
     smf.tracks.push_back(
-        {{songdocument_test::channel(0xC0, 0, 1, 0), songdocument_test::channel(0x90, 0, 70, 100),
+        {{songdocument_test::channel(0xC0, 0, 1, 0), songdocument_test::channel(0x90, 0, 75, 100),
           songdocument_test::channel(0x90, 0, 69, 100), songdocument_test::channel(0x80, 2, 69, 0),
-          songdocument_test::channel(0x80, 4, 70, 0)},
+          songdocument_test::channel(0x80, 4, 75, 0)},
          8});
     auto fixture = songdocument_test::makeDocument(std::move(smf),
                                                    QStringLiteral("merged-overlap-publication"));
@@ -628,9 +628,8 @@ void EditCheckTest::documentMergedOverlapPublication()
     QVERIFY(remaps.empty());
     QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
     QVERIFY(document.findNote(0, 0, 70, &moved));
-    QVERIFY(document.findNote(0, 2, 70, &survivor));
-    QCOMPARE(survivor.duration, uint32_t(2));
-
+    QVERIFY(document.findNote(0, 0, 75, &survivor));
+    QCOMPARE(survivor.duration, uint32_t(4));
     order.clear();
     remaps.clear();
     before = document.revision();
@@ -640,7 +639,7 @@ void EditCheckTest::documentMergedOverlapPublication()
     QVERIFY(remaps.empty());
     QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
     QVERIFY(document.findNote(0, 0, 71, &moved));
-    QVERIFY(document.findNote(0, 0, 70, &survivor));
+    QVERIFY(document.findNote(0, 0, 75, &survivor));
     QCOMPARE(survivor.duration, uint32_t(4));
 
     order.clear();
@@ -652,7 +651,7 @@ void EditCheckTest::documentMergedOverlapPublication()
     QVERIFY(remaps.empty());
     QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
     QVERIFY(document.findNote(0, 0, 72, &moved));
-    QVERIFY(document.findNote(0, 0, 70, &survivor));
+    QVERIFY(document.findNote(0, 0, 75, &survivor));
     QCOMPARE(survivor.duration, uint32_t(4));
 
     order.clear();
@@ -663,7 +662,7 @@ void EditCheckTest::documentMergedOverlapPublication()
     QVERIFY(remaps.empty());
     QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
     QVERIFY(document.findNote(0, 0, 69, &moved));
-    QVERIFY(document.findNote(0, 0, 70, &survivor));
+    QVERIFY(document.findNote(0, 0, 75, &survivor));
     QCOMPARE(survivor.duration, uint32_t(4));
 
     order.clear();

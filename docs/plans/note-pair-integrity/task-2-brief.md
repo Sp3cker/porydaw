@@ -1,64 +1,223 @@
-# Keep rejected edits truthful in the UI
+# Core admission and stable identity
 
 ## 1. Context
 
-Consume Task 1's unchanged-revision rejection contract from [spec.md](spec.md). Inherit [Global Constraints](plan.md#global-constraints). The document fix alone is insufficient: current paste callers clear selection, advance the edit cursor and announce success after a rejected void mutation. This package owns those consumer effects, shown-UI evidence and the user-facing explanation.
+Implement [spec.md](spec.md)'s single collision rule at SongDocument's
+planning seam. Inherit [Global Constraints](plan.md#global-constraints).
+Fork-main's `resolveNoteOverlaps` is a transactional trim/remove planner
+(edited-note-wins) with no participant-vs-participant check, and
+`buildMoveNotesToPitchesOps` remints identities via `appendNoteInsertOps`.
+This task replaces all of that with one pure admission predicate plus
+optional, side-effect-free builders, and makes NoteIds stable through every
+semantic move. Tasks 3, 4 and 5 consume the predicate and the unchanged
+public rejection contract (void mutations leave revision, bytes, undo state
+and IDs untouched; `moveNotesToPitches` returns false).
+
+The baseline is fork-main: nothing described here is being deleted from an
+in-flight diff — `resizeNotesDurations`, `allowIdenticalParticipants`,
+`ResizeNotesPlan` and resize-preview plumbing do not exist and must not be
+introduced.
 
 ## 2. Exact write set
 
-- `src/ui/songview/rangeedit.cpp`
-- `src/checks/rollcheck/timemenu.cpp`
-- `src/checks/rollcheck/tst_pianoroll.h`
-- `docsrc/manual/piano-roll.md`
+- `src/core/songdocument.h`
+- `src/core/songdocument.cpp`
+- `src/checks/editcheck/tst_songdocument.h`
+- `src/checks/editcheck/tst_songdocument_songnotes.cpp`
+- `src/checks/editcheck/tst_songdocument_songmoves.cpp`
 
 ## 3. Prerequisites
 
-Task 1: colliding semantic document edits refuse atomically without changing revision; per-pitch moves return false; successful Delete Time collision resolution trims the stationary head.
+Task 1: `songdocument_test::notePairsConsistent` is available and is asserted
+after every accepted mutation in the matrix below.
 
 ## 4. Interface contract
 
-Public SongView signatures stay unchanged. Edit bodies of `pasteRangeAtEditCursor`, `pasteFromClipboard`, `nudgeTimeSelection`, and `transposeTimeSelection` only. Retain clipboard decoding, DestinationMapper, scope resolution, DocumentSwapHintScope, cursor placement and successful-edit announcements.
+Preserve every public mutation signature (`addNote`, `addNotes`,
+`moveNotes`, `moveNotesToPitches`, `resizeNotes`, `resizeNotesLeft`) and the
+declarations/roles of `PlannedNote`, `EditOp`, `appendRemoveOps`,
+`appendNoteInsertOps`, `applyOps`, `revertOps`, `notesForTrack`, and the
+three mergeable command classes.
 
-Capture revision immediately before each document mutation and gate success-only view effects on revision change. For `nudgeTimeSelection`, continue moving the selection band when the gathered edit is genuinely empty; when nonempty content is rejected, keep the band unchanged. Do not replace existing scope rules with revision checks.
+Replace the private trim/remove resolver with a pure predicate:
 
-No rejection dialog, new status channel, synthetic key routing, or public result type. Rejected paste retains note/time selection, edit cursor and camera and emits no successful-paste announcement. Accepted paste keeps existing tiling and selection behavior. `foldTransposeSelection` and piano-roll resize/nudge already have boolean/revision gates and stay unchanged.
+```cpp
+bool noteEditAdmissible(const std::vector<PlannedNote> &written,
+                        const std::vector<DocNote> &editNotes) const;
+```
 
-Add the slot `rejectedNotePastePreservesViewState` to the existing rollcheck class, implemented in `timemenu.cpp`. Reuse its shown fixture, `clipcheck_support::ClipboardStateGuard`, typed clip writer, and existing menu/key routing. No test-only SongView accessor.
+- `written` are the final half-open spans of every terminated participant,
+  including unchanged participants of per-pitch moves. Within each
+  (engineTrack, key) group: an empty span (`endTick <= tick`) refuses; any
+  overlap between two written spans refuses (adjacency accepts). Identical
+  duplicate spans overlap — they refuse everywhere, including `addNotes`.
+- Against stationary notes: for each engine track touched, scan
+  `notesForTrack`; exempt `editNotes` members by `NoteId` (not by
+  `(smfTrack, onIndex)`); an unterminated stationary note is skipped exactly
+  as fork-main's resolver skipped it (documented limit over pre-existing raw
+  material). Any intersection between a stationary span and a written span on
+  the same (engineTrack, key) refuses.
+- The predicate mutates nothing, is `const`, and produces no removals or
+  trims. Group or index participant spans by (engineTrack, key, tick) and
+  compare only neighboring spans within each group — no quadratic all-pairs
+  scan across pitches or tracks, and no whole-song copy. Participant
+  exemption uses an efficient NoteId membership lookup (not a linear
+  `editNotes` scan per stationary note), stationary notes are compared only
+  against written spans in their own (engineTrack, key) group, and the
+  stationary scan keeps the one `notesForTrack` pass per touched track.
+
+Change the three builders to `std::optional<std::vector<EditOp>>`, arguments
+unchanged: `buildMoveNotesOps`, `buildMoveNotesToPitchesOps`,
+`buildResizeNotesOps`. `nullopt` means refusal. Builders stay side-effect
+free; public callers and command constructors build once and refuse before
+history or publication. No `ResizeNotesPlan`, no realized-duration storage:
+`buildResizeNotesOps` keeps the fork-main shape (per-note
+`max(1, duration + d)`, `kMaxTick` headroom guard, admission) and refuses
+when the grouped result would collide.
+
+Unify the per-pitch builder with the plain move builder: one emission path
+rewrites each note's own on/end events (`preservesNoteId = true`,
+velocity intact), taking the destination key per note. Consequences the
+tests must pin:
+
+- NoteIds survive pitch/scale-fold moves; the `appendNoteInsertOps` emission
+  and the `shouldSkip` semantics (including the unchanged-participant
+  injection) are gone from this path.
+- An unchanged destination still contributes its current span to `written`
+  (a converging sibling refuses against it) but emits no ops.
+- An unterminated participant moves its patched note-on to the destination
+  key instead of staying behind; it contributes no span. Its note-on start
+  tick still obeys start-tick overflow admission: `note.tick + dTick` is
+  validated for every rewritten note including unterminated ones (the
+  end-tick/duration check applies only to terminated notes), so a positive
+  `dTick` past `kMaxTick` headroom refuses the batch atomically instead of
+  silently clamping the note-on to `kMaxTick`.
+
+Command merging becomes plan-first in all three `mergeWith` bodies: after the
+existing compatibility match, evaluate the accumulated candidate against the
+pure predicate and the overflow guards before reverting anything; a refused
+candidate returns false with zero document mutation (the stack keeps the two
+separate commands). Admission alone is not sufficient: because clamping does
+not compose additively, a merge is committed only when the accumulated
+candidate geometry replanned from the gesture originals exactly equals the
+already-applied sequential final geometry of the two commands, compared per
+participant by `NoteId` (tick, key and duration). Any mismatch returns false
+before any revert, leaving both accepted commands separate — e.g. one note
+moved −20 then +10 (clamped at tick 0) must not merge into a net −10 that
+rebuilds a different landing, and a duration resized −20 then +5 must not
+merge into a net −15. `MoveNotesToPitchesCommand::movesMyOutputs` drops its
+by-value tuple matcher and uses the `MoveNotesCommand` pattern (match each
+original note's output tick/key/duration/velocity by `NoteId`). The incoming
+`destPitches` vector stays bound to the incoming notes' `NoteId`s: when the
+second call supplies the same notes in a different order, the matched
+destinations are reordered into the original `m_notes` order (or the merge
+refuses) before overflow checks, admission and assignment — positional reuse
+of `other->m_destPitches` against `m_notes` is prohibited.
+`MoveNotesCommand`/`ResizeNotesCommand` keep their clamp-composition
+compatibility loops and clean-index behavior.
+
+Consumers in this task's files: `addNote`, `addNotes`, `resizeNotesLeft`,
+and the three builders' public entry points refuse on `nullopt`/false before
+pushing anything. Void refusals change no bytes, tempo, tracks, IDs,
+revision, save-state token, undo count or redo availability.
+
+Test slots (declared in `tst_songdocument.h`, all synthetic-document slots
+defined in this task's two .cpp files; corpus slots keep their per-song
+rows):
+
+- New: `noteBatchCollisionRejects`, `noteResizeCollisionRejects` (bodies in
+  `tst_songdocument_songnotes.cpp`), `noteIdentityStable` (body in
+  `tst_songdocument_songmoves.cpp`).
+- Renamed: `noteMoveOverlap` → `noteMoveOverlapRefuses` (body rewritten to
+  the refusal contract).
+- Rewritten bodies, names kept: `noteMoveOverlap`'s old trim expectations,
+  `noteMoveCollision` (per-pitch trim/remove pins become refusal +
+  stationary identity retention), `noteMoveMerge` (rerouted through free
+  pitches; merge-count, undo and clean-index assertions kept),
+  `noteMoveBatch` (adds NoteId-preservation through per-pitch moves),
+  `noteEditingBatch` (adds identical-twin rejection).
+- Added cases inside those existing slots only (no new slot declarations):
+  `noteMoveMerge` gains clamp non-composition refusals — a move sequence
+  whose accumulated delta replans to different geometry than the two
+  applied commands (e.g. −20 then +10 clamped at tick 0) must not merge and
+  must leave both commands undo/redo-correct, plus the same boundary for
+  per-pitch time movement and for resize (duration clamped at 1); and a
+  reversed-order second per-pitch call asserting each `NoteId` lands on its
+  own destination pitch through merge and undo/redo. `noteMoveBatch` gains
+  an unterminated note-on moved by a positive `dTick` past `kMaxTick`
+  headroom: the batch refuses (false return, bytes/history/identity
+  unchanged) rather than capping the note-on at `kMaxTick`.
 
 ## 5. Implementation steps
 
-1. Apply the revision gates to both paste paths, then range transpose/nudge with the explicit empty-content exception. Keep each check adjacent to the existing mutation; do not extract a generic UI mutation wrapper.
-2. Add the shown-UI regression for plain-note and range clips containing conflicting same-pitch spans. Drive the real Paste command, observe unchanged document/undo, selection and cursor, and no success announcement. Use existing public signals/state, not literal message matching. A subsequent valid paste must advance/select normally and undo normally; clipboard state must be restored on all exits. Extend the scenario to distinguish empty-band nudge from rejected nonempty mutation where reachable through the UI, without forcing an impossible gesture or inventing a private-access hook.
-3. Perform the native smoke below after core/UI checks pass. Confirm grouped extension caps the earlier selected note at the next selected start while later notes continue extending, adjacency remains editable, and ripple collision trims rather than leaves a stray event. Inspect the actual Event List after these actions; do not infer release integrity from note rectangles alone.
-4. Update the existing manual's note editing and Delete Time sections with the grouped-extension cap, remaining rejection cases and crossing-note trimming. Distinguish the selected-note cap from the existing edited-note-wins rule for unselected notes. Do not describe cleanup/import repair as shipped. Remove temporary smoke files after proof; no new changelog file or placeholder docs.
+1. Add the failing matrix first using `songdocument_test::makeDocument`
+   synthetic clean songs; capture bytes, revision, undo index/count/clean
+   state, IDs and velocities before each refusal. Keep the actual pre-fix
+   failures as reproduction evidence.
+2. Add `noteEditAdmissible` (header comment replaces the fork-main
+   edited-note-wins comment block above `resolveNoteOverlaps`), delete
+   `resolveNoteOverlaps` and its `removals`/`trims` plumbing from `addNote`,
+   `addNotes`, `resizeNotesLeft` and the builders; wire refusals at each
+   public entry. `deleteNotes` and non-note lanes are untouched.
+3. Convert the three builders to `std::optional`, unify per-pitch emission
+   with `buildMoveNotesOps`' own-event rewrite, and switch the command
+   constructors to prebuilt ops.
+4. Restructure the three `mergeWith` bodies to plan-first as specified;
+   overflow guards precede the predicate; the rewind-rebuild-apply path runs
+   only after admission succeeded — and only after the accumulated candidate
+   geometry was proven equal to the already-applied sequential geometry per
+   `NoteId`, with per-pitch destinations realigned to the original note
+   order when the incoming order differs.
+5. Complete the slot matrix below, reroute `noteMoveMerge` through free
+   pitches, and run the named checks.
 
 ## 6. Acceptance predicate
 
-Task 1's refusal reaches users without fake cursor movement/selection changes/success messages, accepted commands retain their existing behavior, and the manual matches the observed surface.
+Every spec row holds through unchanged public mutations: grouped right-edge
+extension `[0,10)` + `[20,30)` with +20 refuses atomically (no cap); grouped
+left extension into a sibling refuses; single-note resize/draw/move onto a
+stationary note refuses with the stationary note's ID, span and velocity
+untouched; identical `addNotes` twins refuse while disjoint and adjacent
+batches accept; per-pitch moves preserve NoteIds (including unterminated
+participants) and refuse convergent or clamped-colliding destinations;
+unterminated per-pitch participants obey start-tick overflow refusal;
+mergeable sequences whose accumulated candidate geometry differs from the
+applied sequential result stay as two commands with correct undo/redo;
+undo/redo of accepted edits round-trips bytes exactly; refused edits leave
+bytes, revision, undo/redo availability and IDs identical; accepted edits
+leave `songdocument_test::notePairsConsistent` true.
 
-NAMED CHECKS (implementer on its settled tree; otherwise controller):
+NAMED CHECKS (controller under SHARED_TREE; implementer on its settled
+tree):
 
 ```sh
-deno task verify --filter rollcheck --exclude rollcheck-static --qt rejectedNotePastePreservesViewState
-deno task verify --filter rollcheck --verbose
+deno task verify --filter editcheck --qt noteBatchCollisionRejects noteResizeCollisionRejects noteIdentityStable noteMoveOverlapRefuses noteMoveCollision noteMoveMerge noteMoveBatch noteEditingBatch
+deno task verify --filter editcheck --verbose
 ```
 
-The first command exercises the new shown-UI rejection/accepted-paste boundary. The second preserves existing pointer, keyboard, selection, time-menu and static roll behavior. `rollcheck` requires an available native desktop for its shown checks; a skipped native scenario does not count as proof.
+The first command is the new/rewritten matrix; the second proves raw
+editing, tick limits, publication, history, ranges and time edits stay
+green. Known gap outside this write set: `documentPublicationNetZero` and
+`documentMergedOverlapPublication` (`tst_songdocument_document.cpp`) move a
+note onto an equal-start stationary note and will fail under uniform
+refusal; they — with the `addNote`-seeded overlap in
+`drawerpresentation/velocity.cpp` — are owned by the inline Direct Task 6
+of [plan.md](plan.md), `Align downstream fixtures with refusal semantics`
+(prerequisite: this task), not this brief. The full-harness green
+expectation therefore holds at the plan milestone once Task 6 lands; at
+this task's own settle point the two named document slots are the recorded
+exception.
 
 ## 7. Task-specific constraints
 
-- A document no-op must not be reported as a successful insertion. Do not preserve the planner proposal's suggested false-success paste behavior merely because overflow rejection had the same wart.
-- Preserve intentional empty time-selection movement. Revision alone cannot distinguish that case from refused content.
-- This is not a preview redesign: a provisional drag may show attempted geometry before release; the committed view must show the capped result for grouped extension or unchanged geometry for a rejected operation.
-
-## Controller verification
-
-Run final settled-tree checks once both tasks settle:
-
-```sh
-deno task verify --filter editcheck --filter rollcheck --verbose
-```
-
-Format only the changed C++ files with `deno task format <explicit changed C++ paths>` under the plan-wide ownership policy.
-
-Launch the built Porydaw app through the supervised process tool with a visible native window. Create a new song with same-pitch `[0,10)` and `[20,30)` notes or grid-scaled equivalents, select both, and extend by 20. Release: the earlier note ends at 20, the later note ends at 50, and both IDs/velocities survive. Continue lengthening: the earlier note remains capped while the later grows. Shorten again: visible notes respond immediately, without hidden extension debt. Check undo/redo and exact adjacency. Exercise convergent pitch movement if available in the current scale-fold surface. For Delete Time, use same-pitch `[0,100)` and `[110,120)` or grid-scaled equivalents and delete `[20,50)`; inspect the trimmed head and moved note, then undo/redo. Inspect raw release rows in the Event List to ensure each belongs to one visible note. Attempt conflicting plain/range paste through the real command and confirm no cursor advance, selection loss or success report; valid paste still tiles. Record actual observations and a native-window screenshot; do not claim this smoke ran during planning.
+- No command may enter `QUndoStack` to discover admission failure; initial
+  planning and merged replanning use the same gate.
+- No public planning API leaves `SongDocument` (no `resizeNotesDurations`
+  ever); the predicate and builders stay private.
+- No stationary note is ever trimmed, shortened, moved or removed by a
+  semantic edit; refusal is the only collision outcome.
+- No identical-duplicate admission flag or branch anywhere.
+- Pre-existing shared-end/unterminated raw material keeps fork-main
+  interpretation; no whole-document cleanup pass.
+- Selection ownership, playback, new-song creation and SMF pairing code are
+  untouched.

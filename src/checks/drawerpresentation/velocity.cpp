@@ -456,7 +456,17 @@ void VelocityPageTest::transientBandAndStackedNodes()
     fixture.refresh();
     DocNote first;
     QVERIFY(fixture.document.findNote(fixture.notes[0].noteId, &first));
-    fixture.document.addNote(0, first.tick + 8, first.key, first.duration, first.velocity);
+    const int smfTrack = fixture.document.smfTrackFor(0);
+    const uint8_t channel = fixture.document.channelFor(0);
+    fixture.document.insertRawEvent(smfTrack, SmfEvent{.tick = Tick(first.tick + 8),
+                                                       .status = uint8_t(0x90 | channel),
+                                                       .data0 = first.key,
+                                                       .data1 = first.velocity});
+    fixture.document.insertRawEvent(smfTrack,
+                                    SmfEvent{.tick = Tick(first.tick + 8 + first.duration),
+                                             .status = uint8_t(0x80 | channel),
+                                             .data0 = first.key,
+                                             .data1 = 0});
     fixture.refresh();
     const auto notes = fixture.document.notesForTrack(0);
     const auto overlap = std::find_if(notes.cbegin(), notes.cend(), [&first](const DocNote &note) {

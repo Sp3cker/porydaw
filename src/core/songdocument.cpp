@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <algorithm>
+#include <tuple>
 
 #include "core/miditimeline.h"
 #include "core/velocitymodel.h"
@@ -173,24 +174,24 @@ class SongCfgCommand : public QUndoCommand
 };
 
 // A note move that may merge with the next one (keyboard transpose/nudge —
-// rapid presses form one gesture). Merging first reverts both commands,
-// which restores any neighbor the intermediate position had trimmed via
-// resolveNoteOverlaps, then re-lands the accumulated delta from the
-// gesture's ORIGINAL notes — only the final resting position decides what
-// gets trimmed. QUndoStack refuses to merge across its clean index, so a
-// save between presses keeps its own command.
+// rapid presses form one gesture). Merging replans the accumulated delta
+// from the gesture's ORIGINAL notes with the pure admission predicate
+// before any revert: a refused candidate returns false with the document
+// untouched by construction. When admitted, the accumulated move re-lands
+// in one hop from the pre-gesture state. QUndoStack refuses to merge
+// across its clean index, so a save between presses keeps its own command.
 class MoveNotesCommand : public QUndoCommand
 {
   public:
     MoveNotesCommand(SongDocument *doc, std::vector<DocNote> notes, int64_t dTick, int dKey,
-                     bool mergeable)
+                     bool mergeable, std::vector<SongDocument::EditOp> ops)
         : QUndoCommand(SongDocument::tr("move %n note(s)", nullptr, int(notes.size())))
         , m_doc(doc)
         , m_notes(std::move(notes))
         , m_dTick(dTick)
         , m_dKey(dKey)
         , m_mergeable(mergeable)
-        , m_ops(doc->buildMoveNotesOps(m_notes, dTick, dKey))
+        , m_ops(std::move(ops))
     {}
 
     int id() const override { return m_mergeable ? 0x4d76 : -1; } // 'Mv'
@@ -223,14 +224,46 @@ class MoveNotesCommand : public QUndoCommand
             const_cast<MoveNotesCommand *>(static_cast<const MoveNotesCommand *>(command));
         if (!other->m_mergeable || !movesMyOutputs(other->m_notes))
             return false;
-        // Both commands are applied here (the stack redoes the new one
-        // before offering the merge). Rewind to the pre-gesture state, then
-        // land the accumulated move in one hop.
+        // Plan first from the pre-gesture state: overflow guards precede
+        // the predicate, and a refused candidate leaves both commands
+        // applied (the stack keeps them separate). Nothing was reverted,
+        // so the document is untouched by construction.
+        if (other->m_dTick > int64_t(CoreTimeDefaults::kMaxTick) ||
+            other->m_dTick < -int64_t(CoreTimeDefaults::kMaxTick))
+            return false;
+        const int64_t newDTick = m_dTick + other->m_dTick;
+        if (newDTick > int64_t(CoreTimeDefaults::kMaxTick) ||
+            newDTick < -int64_t(CoreTimeDefaults::kMaxTick))
+            return false;
+        const int newDKey = m_dKey + other->m_dKey;
+        for (const DocNote &note : m_notes) {
+            if (newDTick > int64_t(CoreTimeDefaults::kMaxTick) - int64_t(note.tick))
+                return false;
+            const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, newDTick);
+            if (!note.unterminated() &&
+                uint64_t(newTick) + note.duration > CoreTimeDefaults::kMaxTick)
+                return false;
+            const auto incoming =
+                std::find_if(other->m_notes.begin(), other->m_notes.end(),
+                             [&](const DocNote &next) { return next.noteId == note.noteId; });
+            if (incoming == other->m_notes.end() ||
+                newTick != CoreTimeDefaults::shiftTickClamped(incoming->tick, other->m_dTick) ||
+                std::clamp(int64_t(note.key) + newDKey, int64_t(0), int64_t(127)) !=
+                    std::clamp(int64_t(incoming->key) + other->m_dKey, int64_t(0), int64_t(127)) ||
+                note.duration != incoming->duration)
+                return false; // Clamping must compose to the already-applied result.
+        }
+        auto candidate = m_doc->buildMoveNotesOps(m_notes, newDTick, newDKey);
+        if (!candidate || candidate->empty())
+            return false;
+        // Admission succeeded: rewind both applied commands, rebuild the
+        // candidate against the pre-gesture state (op indices are state
+        // owned), and land the accumulated move in one hop.
+        m_dTick = newDTick;
+        m_dKey = newDKey;
         m_doc->revertOps(other->m_ops);
         m_doc->revertOps(m_ops);
-        m_dTick += other->m_dTick;
-        m_dKey += other->m_dKey;
-        m_ops = m_doc->buildMoveNotesOps(m_notes, m_dTick, m_dKey);
+        m_ops = *m_doc->buildMoveNotesOps(m_notes, m_dTick, m_dKey);
         if (movesMyOutputs(m_notes)) {
             setObsolete(true);
             return true;
@@ -280,14 +313,15 @@ class MoveNotesToPitchesCommand : public QUndoCommand
 {
   public:
     MoveNotesToPitchesCommand(SongDocument *doc, std::vector<DocNote> notes,
-                              std::vector<uint8_t> destPitches, int64_t dTick, bool mergeable)
+                              std::vector<uint8_t> destPitches, int64_t dTick, bool mergeable,
+                              std::vector<SongDocument::EditOp> ops)
         : QUndoCommand(SongDocument::tr("move %n note(s)", nullptr, int(notes.size())))
         , m_doc(doc)
         , m_notes(std::move(notes))
         , m_destPitches(std::move(destPitches))
         , m_dTick(dTick)
         , m_mergeable(mergeable)
-        , m_ops(doc->buildMoveNotesToPitchesOps(m_notes, m_destPitches, dTick))
+        , m_ops(std::move(ops))
     {}
 
     int id() const override { return m_mergeable ? 0x4d50 : -1; } // 'MP'
@@ -310,11 +344,73 @@ class MoveNotesToPitchesCommand : public QUndoCommand
             static_cast<const MoveNotesToPitchesCommand *>(command));
         if (!other->m_mergeable || !movesMyOutputs(other->m_notes))
             return false;
+        // Plan first from the pre-gesture state: overflow guards precede
+        // the predicate, and a refused candidate leaves both commands
+        // applied (the stack keeps them separate). Nothing was reverted,
+        // so the document is untouched by construction.
+        if (other->m_dTick < -int64_t(CoreTimeDefaults::kMaxTick) ||
+            other->m_dTick > int64_t(CoreTimeDefaults::kMaxTick))
+            return false;
+        const int64_t newDTick = m_dTick + other->m_dTick;
+        if (newDTick < -int64_t(CoreTimeDefaults::kMaxTick) ||
+            newDTick > int64_t(CoreTimeDefaults::kMaxTick))
+            return false;
+        std::vector<uint8_t> alignedPitches;
+        alignedPitches.reserve(m_notes.size());
+        for (size_t i = 0; i < m_notes.size(); i++) {
+            const DocNote &note = m_notes[i];
+            const auto incoming =
+                std::find_if(other->m_notes.begin(), other->m_notes.end(),
+                             [&](const DocNote &next) { return next.noteId == note.noteId; });
+            if (incoming == other->m_notes.end() ||
+                CoreTimeDefaults::shiftTickClamped(note.tick, newDTick) !=
+                    CoreTimeDefaults::shiftTickClamped(incoming->tick, other->m_dTick) ||
+                note.duration != incoming->duration)
+                return false;
+            // Each destination belongs to the incoming note's identity,
+            // not its position in the original gesture's selection.
+            alignedPitches.push_back(
+                other->m_destPitches[size_t(incoming - other->m_notes.begin())]);
+            if (note.smfTrack < 0 || note.smfTrack >= int(m_doc->m_smf.tracks.size()) ||
+                (alignedPitches[i] == note.key && newDTick == 0))
+                continue; // key no-op: the builder emits nothing to overflow
+            if (newDTick > int64_t(CoreTimeDefaults::kMaxTick) - int64_t(note.tick))
+                return false;
+            const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, newDTick);
+            if (!note.unterminated() &&
+                uint64_t(newTick) + note.duration > CoreTimeDefaults::kMaxTick)
+                return false;
+        }
+        // The candidate here is only the admission gate: refusal leaves the
+        // document untouched (the stack keeps the two separate commands).
+        auto candidate = m_doc->buildMoveNotesToPitchesOps(m_notes, alignedPitches, newDTick);
+        if (!candidate)
+            return false;
+        if (candidate->empty()) {
+            // Zero accumulated delta: the merged result is a pure no-op —
+            // rewind both applied commands to the pre-gesture state and
+            // obsolete this command, so the inverse press produces no
+            // history entry and the bytes are already back at the start.
+            // Both reverts land exactly where each command's redo began,
+            // but each of those redos published a change; publish the
+            // restored state too so observers see a balanced notification
+            // even though the bytes round-trip to the gesture start.
+            m_destPitches = std::move(alignedPitches);
+            m_dTick = newDTick;
+            m_doc->revertOps(other->m_ops);
+            m_doc->revertOps(m_ops);
+            setObsolete(true);
+            emit m_doc->documentChanged();
+            return true;
+        }
+        m_destPitches = std::move(alignedPitches);
+        m_dTick = newDTick;
+        // Admission succeeded: rewind both applied commands, rebuild the
+        // candidate against the pre-gesture state (op indices are state
+        // owned), and land the accumulated move in one hop.
         m_doc->revertOps(other->m_ops);
         m_doc->revertOps(m_ops);
-        m_destPitches = other->m_destPitches;
-        m_dTick += other->m_dTick;
-        m_ops = m_doc->buildMoveNotesToPitchesOps(m_notes, m_destPitches, m_dTick);
+        m_ops = *m_doc->buildMoveNotesToPitchesOps(m_notes, m_destPitches, m_dTick);
         m_doc->applyOps(m_ops);
         emit m_doc->documentChanged();
         return true;
@@ -323,8 +419,6 @@ class MoveNotesToPitchesCommand : public QUndoCommand
   private:
     static bool allOnSameEngineTrack(const std::vector<DocNote> &notes)
     {
-        if (notes.empty())
-            return false;
         const int engineTrack = notes.front().engineTrack;
         return std::all_of(notes.begin(), notes.end(), [engineTrack](const DocNote &note) {
             return note.engineTrack == engineTrack;
@@ -333,26 +427,30 @@ class MoveNotesToPitchesCommand : public QUndoCommand
 
     bool movesMyOutputs(const std::vector<DocNote> &next) const
     {
+        // The next press must edit the notes exactly where this command
+        // left them — matched per note by its stable NoteId against the
+        // planned output geometry. The builder's plan lands every note
+        // (unterminated participants included, via their note-on) at the
+        // shifted tick and m_destPitches[i], so the matcher copies it.
         if (next.size() != m_notes.size() || !allOnSameEngineTrack(m_notes) ||
             !allOnSameEngineTrack(next) || m_notes.front().engineTrack != next.front().engineTrack)
             return false;
-        using Pos = std::tuple<int, Tick, int, uint32_t, uint8_t, uint8_t>;
-        std::vector<Pos> mine, theirs;
         for (size_t i = 0; i < m_notes.size(); i++) {
             const DocNote &note = m_notes[i];
-            const Tick tick = note.unterminated()
-                                  ? note.tick
-                                  : CoreTimeDefaults::shiftTickClamped(note.tick, m_dTick);
-            const int key = note.unterminated() ? note.key : m_destPitches[i];
-            mine.push_back(
-                {note.engineTrack, tick, key, note.duration, note.velocity, note.channel});
+            const Tick outputTick = CoreTimeDefaults::shiftTickClamped(note.tick, m_dTick);
+            const uint8_t outputKey = uint8_t(m_destPitches[i]);
+            const auto output =
+                std::find_if(next.begin(), next.end(), [&](const DocNote &candidate) {
+                    return candidate.noteId == note.noteId &&
+                           candidate.engineTrack == note.engineTrack &&
+                           candidate.tick == outputTick && candidate.key == outputKey &&
+                           candidate.duration == note.duration &&
+                           candidate.velocity == note.velocity && candidate.channel == note.channel;
+                });
+            if (output == next.end())
+                return false;
         }
-        for (const DocNote &note : next)
-            theirs.push_back({note.engineTrack, note.tick, int(note.key), note.duration,
-                              note.velocity, note.channel});
-        std::sort(mine.begin(), mine.end());
-        std::sort(theirs.begin(), theirs.end());
-        return mine == theirs;
+        return true;
     }
 
     SongDocument *m_doc;
@@ -364,23 +462,22 @@ class MoveNotesToPitchesCommand : public QUndoCommand
 };
 
 // A note resize that may merge with the next one (keyboard lengthen/shorten —
-// rapid presses form one gesture). Merging first reverts both commands,
-// which restores any neighbor the intermediate duration had trimmed via
-// resolveNoteOverlaps, then re-lands the accumulated delta from the
-// gesture's ORIGINAL notes — only the final duration decides what gets
-// trimmed. QUndoStack refuses to merge across its clean index, so a save
-// between presses keeps its own command.
+// rapid presses form one gesture). Merging replans the accumulated delta
+// from the gesture's ORIGINAL notes with the pure admission predicate
+// before any revert: a refused candidate returns false with the document
+// untouched by construction. QUndoStack refuses to merge across its clean
+// index, so a save between presses keeps its own command.
 class ResizeNotesCommand : public QUndoCommand
 {
   public:
     ResizeNotesCommand(SongDocument *doc, std::vector<DocNote> notes, int64_t dDuration,
-                       bool mergeable)
+                       bool mergeable, std::vector<SongDocument::EditOp> ops)
         : QUndoCommand(SongDocument::tr("resize %n note(s)", nullptr, int(notes.size())))
         , m_doc(doc)
         , m_notes(std::move(notes))
         , m_dDuration(dDuration)
         , m_mergeable(mergeable)
-        , m_ops(doc->buildResizeNotesOps(m_notes, dDuration))
+        , m_ops(std::move(ops))
     {}
 
     int id() const override { return m_mergeable ? 0x5273 : -1; } // 'Rs'
@@ -413,13 +510,37 @@ class ResizeNotesCommand : public QUndoCommand
             const_cast<ResizeNotesCommand *>(static_cast<const ResizeNotesCommand *>(command));
         if (!other->m_mergeable || !resizesMyOutputs(other->m_notes))
             return false;
-        // Both commands are applied here (the stack redoes the new one
-        // before offering the merge). Rewind to the pre-gesture state, then
-        // land the accumulated resize in one hop.
+        // Plan first from the pre-gesture state: overflow guards precede
+        // the predicate, and a refused candidate leaves both commands
+        // applied (the stack keeps them separate). Nothing was reverted,
+        // so the document is untouched by construction.
+        const int64_t newDDuration = m_dDuration + other->m_dDuration;
+        if (newDDuration > int64_t(CoreTimeDefaults::kMaxTick) ||
+            newDDuration < -int64_t(CoreTimeDefaults::kMaxTick))
+            return false;
+        for (const DocNote &note : m_notes) {
+            if (newDDuration >
+                int64_t(CoreTimeDefaults::kMaxTick) - int64_t(note.tick) - int64_t(note.duration))
+                return false;
+            const auto incoming =
+                std::find_if(other->m_notes.begin(), other->m_notes.end(),
+                             [&](const DocNote &next) { return next.noteId == note.noteId; });
+            if (incoming == other->m_notes.end() ||
+                std::max<int64_t>(1, int64_t(note.duration) + newDDuration) !=
+                    std::max<int64_t>(1, int64_t(incoming->duration) + other->m_dDuration) ||
+                note.tick != incoming->tick || note.key != incoming->key)
+                return false;
+        }
+        auto candidate = m_doc->buildResizeNotesOps(m_notes, newDDuration);
+        if (!candidate || candidate->empty())
+            return false;
+        m_dDuration = newDDuration;
+        // Admission succeeded: rewind both applied commands, rebuild the
+        // candidate against the pre-gesture state (op indices are state
+        // owned), and land the accumulated resize in one hop.
         m_doc->revertOps(other->m_ops);
         m_doc->revertOps(m_ops);
-        m_dDuration += other->m_dDuration;
-        m_ops = m_doc->buildResizeNotesOps(m_notes, m_dDuration);
+        m_ops = *m_doc->buildResizeNotesOps(m_notes, m_dDuration);
         if (resizesMyOutputs(m_notes)) {
             setObsolete(true);
             return true;
@@ -1040,82 +1161,66 @@ void SongDocument::appendEventEditOps(std::vector<EditOp> &ops, int smfTrack, si
     ops.push_back(std::move(insert));
 }
 
-void SongDocument::resolveNoteOverlaps(const std::vector<PlannedNote> &written,
-                                       const std::vector<DocNote> &editNotes,
-                                       std::vector<std::vector<size_t>> &removals,
-                                       std::vector<EditOp> &trims) const
+// The single collision rule; see the declaration for the contract. Overlap
+// between two written spans (duplicates included) or against a stationary
+// note refuses the whole edit — no trim, no removal, no winner for equal
+// starts. Stationary membership is exempted by NoteId because every
+// participant's identity is stable through the planned edit.
+bool SongDocument::noteEditAdmissible(const std::vector<PlannedNote> &written,
+                                      const std::vector<DocNote> &editNotes) const
 {
     if (written.empty())
-        return;
-    std::vector<PlannedNote> spans = written;
-    std::sort(spans.begin(), spans.end(),
-              [](const PlannedNote &a, const PlannedNote &b) { return a.tick < b.tick; });
-    std::vector<int> tracks;
-    for (const PlannedNote &w : spans) {
-        if (std::find(tracks.begin(), tracks.end(), w.engineTrack) == tracks.end())
-            tracks.push_back(w.engineTrack);
+        return true;
+    for (const PlannedNote &note : written) {
+        if (note.endTick <= note.tick)
+            return false;
     }
-    const auto isEdited = [&](const DocNote &s) {
-        for (const DocNote &n : editNotes) {
-            if (n.smfTrack == s.smfTrack && n.onIndex == s.onIndex)
-                return true;
-        }
-        return false;
-    };
-    for (int t : tracks) {
-        for (const DocNote &s : notesForTrack(t)) {
-            // An unterminated note has no end to trim; it stays as-is.
-            if (s.unterminated() || isEdited(s))
-                continue;
-            Tick sTick = s.tick;
-            uint64_t sEnd = uint64_t(s.tick) + s.duration;
-            bool covered = false, trimEnd = false, trimLeft = false;
-            for (const PlannedNote &w : spans) {
-                if (w.engineTrack != t || w.key != s.key || w.endTick <= sTick || w.tick >= sEnd)
-                    continue;
-                if (sTick < w.tick) {
-                    // Head survives (a strictly containing note keeps only
-                    // its head — no splitting). Later spans start at or past
-                    // the new end, so this settles the note.
-                    sEnd = w.tick;
-                    trimEnd = true;
-                    break;
-                }
-                if (sEnd > w.endTick) {
-                    // Tail survives; it may still hit a later span.
-                    sTick = w.endTick;
-                    trimLeft = true;
-                    continue;
-                }
-                covered = true;
-                break;
-            }
-            if (covered) {
-                removals[size_t(s.smfTrack)].push_back(s.onIndex);
-                removals[size_t(s.smfTrack)].push_back(s.endIndex);
-                continue;
-            }
-            if (trimLeft) {
-                removals[size_t(s.smfTrack)].push_back(s.onIndex);
-                EditOp op;
-                op.type = EditOp::InsertEvent;
-                op.smfTrack = s.smfTrack;
-                op.event = m_smf.tracks[size_t(s.smfTrack)].events[s.onIndex];
-                op.event.tick = sTick;
-                op.preservesNoteId = true;
-                trims.push_back(op);
-            }
-            if (trimEnd) {
-                removals[size_t(s.smfTrack)].push_back(s.endIndex);
-                EditOp op;
-                op.type = EditOp::InsertEvent;
-                op.smfTrack = s.smfTrack;
-                op.event = m_smf.tracks[size_t(s.smfTrack)].events[s.endIndex];
-                op.event.tick = sEnd;
-                trims.push_back(op);
-            }
-        }
+    auto sorted = written;
+    std::sort(sorted.begin(), sorted.end(), [](const PlannedNote &a, const PlannedNote &b) {
+        return std::tie(a.engineTrack, a.key, a.tick, a.endTick) <
+               std::tie(b.engineTrack, b.key, b.tick, b.endTick);
+    });
+    for (size_t i = 1; i < sorted.size(); ++i) {
+        const PlannedNote &previous = sorted[i - 1];
+        const PlannedNote &note = sorted[i];
+        if (previous.engineTrack == note.engineTrack && previous.key == note.key &&
+            note.tick < previous.endTick)
+            return false;
     }
+    std::vector<NoteId> participantIds;
+    participantIds.reserve(editNotes.size());
+    for (const DocNote &note : editNotes)
+        participantIds.push_back(note.noteId);
+    std::sort(participantIds.begin(), participantIds.end());
+
+    // One projection per touched track. Within each pitch, admitted spans
+    // have increasing ends, so the first end past a stationary start is
+    // the only candidate needed to decide whether that stationary note overlaps.
+    for (auto trackBegin = sorted.cbegin(); trackBegin != sorted.cend();) {
+        const int engineTrack = trackBegin->engineTrack;
+        const auto trackEnd = std::upper_bound(
+            trackBegin, sorted.cend(), engineTrack,
+            [](int track, const PlannedNote &note) { return track < note.engineTrack; });
+        for (const DocNote &stationary : notesForTrack(engineTrack)) {
+            if (stationary.unterminated() ||
+                std::binary_search(participantIds.begin(), participantIds.end(), stationary.noteId))
+                continue;
+            const auto groupBegin = std::lower_bound(
+                trackBegin, trackEnd, stationary.key,
+                [](const PlannedNote &note, uint8_t key) { return note.key < key; });
+            const auto groupEnd = std::upper_bound(
+                groupBegin, trackEnd, stationary.key,
+                [](uint8_t key, const PlannedNote &note) { return key < note.key; });
+            const auto overlap = std::upper_bound(
+                groupBegin, groupEnd, uint64_t(stationary.tick),
+                [](uint64_t tick, const PlannedNote &note) { return tick < note.endTick; });
+            if (overlap != groupEnd &&
+                uint64_t(overlap->tick) < uint64_t(stationary.tick) + stationary.duration)
+                return false;
+        }
+        trackBegin = trackEnd;
+    }
+    return true;
 }
 
 void SongDocument::addNote(int engineTrack, Tick tick, uint8_t key, uint32_t duration,
@@ -1125,20 +1230,15 @@ void SongDocument::addNote(int engineTrack, Tick tick, uint8_t key, uint32_t dur
     if (smfTrack < 0)
         return;
     // A persisted note end must stay at or below kMaxTick; a zero duration
-    // normalizes to one tick before the check. Reject before planning any
-    // overlap removal so an invalid end leaves the document untouched.
+    // normalizes to one tick before the checks. The single collision rule
+    // refuses an overlapping span before anything is pushed.
     if (uint64_t(tick) + std::max<uint32_t>(1, duration) > CoreTimeDefaults::kMaxTick)
         return;
-    std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
-    std::vector<EditOp> trims;
-    resolveNoteOverlaps(
-        {{engineTrack, key, tick, uint64_t(tick) + std::max<uint32_t>(1, duration)}}, {}, removals,
-        trims);
+    if (!noteEditAdmissible(
+            {{engineTrack, key, tick, uint64_t(tick) + std::max<uint32_t>(1, duration)}}, {}))
+        return;
     std::vector<EditOp> ops;
-    for (size_t t = 0; t < m_smf.tracks.size(); t++)
-        appendRemoveOps(ops, int(t), std::move(removals[t]));
     appendNoteInsertOps(ops, smfTrack, channelFor(engineTrack), tick, key, duration, velocity);
-    ops.insert(ops.end(), trims.begin(), trims.end());
     pushEdit(tr("add note"), std::move(ops));
 }
 
@@ -1147,26 +1247,24 @@ void SongDocument::addNotes(int engineTrack, const std::vector<NewNote> &notes)
     const int smfTrack = smfTrackFor(engineTrack);
     if (smfTrack < 0 || notes.empty())
         return;
-    std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
-    std::vector<PlannedNote> written;
-    // One invalid end rejects the whole batch before overlap planning.
+    // One invalid end or an overlap inside the batch or against stationary
+    // notes rejects the whole batch before anything is pushed.
     for (const NewNote &note : notes) {
         if (uint64_t(note.tick) + std::max<uint32_t>(1, note.duration) > CoreTimeDefaults::kMaxTick)
             return;
     }
+    std::vector<PlannedNote> written;
+    written.reserve(notes.size());
     for (const NewNote &note : notes)
         written.push_back({engineTrack, note.key, note.tick,
                            uint64_t(note.tick) + std::max<uint32_t>(1, note.duration)});
-    std::vector<EditOp> trims;
-    resolveNoteOverlaps(written, {}, removals, trims);
+    if (!noteEditAdmissible(written, {}))
+        return;
     const uint8_t channel = channelFor(engineTrack);
     std::vector<EditOp> ops;
-    for (size_t t = 0; t < m_smf.tracks.size(); t++)
-        appendRemoveOps(ops, int(t), std::move(removals[t]));
     for (const NewNote &note : notes)
         appendNoteInsertOps(ops, smfTrack, channel, note.tick, note.key, note.duration,
                             note.velocity);
-    ops.insert(ops.end(), trims.begin(), trims.end());
     pushEdit(tr("add %n note(s)", nullptr, int(notes.size())), std::move(ops));
 }
 
@@ -1216,11 +1314,17 @@ void SongDocument::moveNotes(const std::vector<DocNote> &notes, int64_t dTick, i
         });
     if (!changes)
         return;
-    m_history.pushDocument(std::make_unique<MoveNotesCommand>(this, notes, dTick, dKey, mergeable));
+    // Plan (and refuse) before anything enters the undo stack: nullopt
+    // leaves revision, bytes, IDs and undo state untouched.
+    auto ops = buildMoveNotesOps(notes, dTick, dKey);
+    if (!ops || ops->empty())
+        return;
+    m_history.pushDocument(
+        std::make_unique<MoveNotesCommand>(this, notes, dTick, dKey, mergeable, std::move(*ops)));
     // The command suppresses publication from its initial redo because a
-    // merge can replace that provisional state. Publish the public move call
-    // after the stack settles: an inverse merge may remove the command but
-    // has still restored live state.
+    // merge can replace that provisional state. Publish the public move
+    // call after the stack settles: an inverse merge may remove the
+    // command but has still restored live state.
     publishMutation(currentTrackRemap());
 }
 
@@ -1244,166 +1348,198 @@ bool SongDocument::moveNotesToPitches(const std::vector<DocNote> &notes,
     }
     if (!anyMove)
         return true;
-    // Notes the builder skips (invalid track, unterminated, or a no-op
-    // pitch) never move; every rewritten note must keep its stored start
-    // and end at or below kMaxTick or the whole batch is refused.
+    // Notes that stay put never move; every rewritten note must keep its
+    // stored start and end at or below kMaxTick or the whole batch is
+    // refused. Plan (and refuse) before anything enters the undo stack.
     for (size_t i = 0; i < notes.size(); i++) {
         const DocNote &note = notes[i];
-        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) || note.unterminated() ||
+        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
             (destPitches[i] == note.key && dTick == 0))
             continue;
         if (dTick > int64_t(CoreTimeDefaults::kMaxTick) - int64_t(note.tick))
             return false;
         const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
-        if (uint64_t(newTick) + note.duration > CoreTimeDefaults::kMaxTick)
+        if (!note.unterminated() && uint64_t(newTick) + note.duration > CoreTimeDefaults::kMaxTick)
             return false;
     }
-    m_history.pushDocument(
-        std::make_unique<MoveNotesToPitchesCommand>(this, notes, destPitches, dTick, mergeable));
+    auto ops = buildMoveNotesToPitchesOps(notes, destPitches, dTick);
+    if (!ops || ops->empty())
+        return false;
+    m_history.pushDocument(std::make_unique<MoveNotesToPitchesCommand>(
+        this, notes, destPitches, dTick, mergeable, std::move(*ops)));
     return true;
 }
 
-namespace {
-
-// Shared move-planning for the two note-move builders: collects each
-// surviving note's removal indices (per SMF track) and its written span
-// (destination key, shifted tick) for resolveNoteOverlaps. destKeyAt
-// computes the destination pitch (index-aware, so moveNotesToPitches can
-// read destPitches[i]); shouldSkip decides per note whether it stays
-// untouched (nothing for moveNotes; unterminated or no-op pitches for
-// moveNotesToPitches). Unterminated notes are removed but never rewritten.
-void collectMovePlans(const std::vector<DocNote> &notes, int64_t dTick, auto destKeyAt,
-                      auto shouldSkip, std::vector<std::vector<size_t>> &outRemovals,
-                      auto &outWritten)
+// Shared move planning for both move builders. Each note's own on/end
+// events are rewritten (preservesNoteId keeps the minted identity, velocity
+// stays in the copied note-on) with the planned destination tick and key —
+// `destKeys[i]` is note i's destination pitch. Notes with an invalid SMF
+// track plan nothing; an unterminated participant moves its patched note-on
+// to the destination key and contributes no span. A no-op (same key, zero
+// tick delta) still contributes its current span to the admission set but
+// emits no ops, so a converging sibling refuses against it. Pure: builds op
+// plans or reports refusal, touches nothing.
+//
+// Index discipline: applyOps erases at the op's stored index sequentially,
+// so all index-bearing ops (RemoveEvent/ModifyEvent) must be emitted first
+// in descending index order per SMF track, and inserts follow — otherwise a
+// later note's removal index points across an already-shifted track. The
+// builder stages the per-note remove/modify records and inserts separately,
+// sorts the index-bearing records without changing their type or payload,
+// and appends the inserts afterwards.
+std::optional<std::vector<SongDocument::EditOp>>
+SongDocument::buildMoveOps(const std::vector<DocNote> &notes, std::vector<uint8_t> destKeys,
+                           int64_t dTick, bool skipUnchanged) const
 {
-    for (size_t i = 0; i < notes.size(); i++) {
-        const DocNote &note = notes[i];
-        const uint8_t destKey = destKeyAt(i, note);
-        if (note.smfTrack < 0 || note.smfTrack >= int(outRemovals.size()) ||
-            shouldSkip(note, destKey))
-            continue;
-        outRemovals[size_t(note.smfTrack)].push_back(note.onIndex);
-        if (note.unterminated())
-            continue;
-        outRemovals[size_t(note.smfTrack)].push_back(note.endIndex);
-        const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
-        outWritten.push_back(
-            {note.engineTrack, destKey, newTick, uint64_t(newTick) + note.duration});
-    }
-}
-
-} // namespace
-
-std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vector<DocNote> &notes,
-                                                                  int64_t dTick, int dKey) const
-{
-    // Every note moves; the note's own on/end events are rewritten with the
-    // new tick and key (note id preserved, velocity intact). Unterminated
-    // notes keep just their patched note-on.
-    const auto destKeyAt = [dKey](size_t, const DocNote &note) {
-        return uint8_t(std::clamp(int(note.key) + dKey, 0, 127));
-    };
-    const auto shouldSkip = [](const DocNote &, uint8_t) { return false; };
-    std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
     std::vector<PlannedNote> written;
-    collectMovePlans(notes, dTick, destKeyAt, shouldSkip, removals, written);
-    std::vector<EditOp> trims;
-    resolveNoteOverlaps(written, notes, removals, trims);
-    std::vector<EditOp> ops;
-    for (size_t t = 0; t < m_smf.tracks.size(); t++)
-        appendRemoveOps(ops, int(t), std::move(removals[t]));
+    written.reserve(notes.size());
+    std::vector<std::vector<EditOp>> removals(m_smf.tracks.size());
+    std::vector<std::vector<EditOp>> inserts(m_smf.tracks.size());
     for (size_t i = 0; i < notes.size(); i++) {
         const DocNote &note = notes[i];
-        const uint8_t destKey = destKeyAt(i, note);
-        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
-            shouldSkip(note, destKey))
+        const uint8_t destKey = destKeys[i];
+        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()))
             continue;
+        const bool moved = destKey != note.key || dTick != 0;
         const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
-        EditOp on;
-        on.type = EditOp::InsertEvent;
-        on.smfTrack = note.smfTrack;
-        on.event = m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
-        on.event.tick = newTick;
-        on.event.data0 = destKey;
-        on.preservesNoteId = true;
-        ops.push_back(std::move(on));
+        if (!moved && skipUnchanged) {
+            // Stays exactly where it is, but its current span still
+            // participates in admission so a converging sibling refuses.
+            if (!note.unterminated())
+                written.push_back(
+                    {note.engineTrack, destKey, newTick, uint64_t(newTick) + note.duration});
+            continue;
+        }
+        if (!note.unterminated())
+            written.push_back(
+                {note.engineTrack, destKey, newTick, uint64_t(newTick) + note.duration});
+        std::vector<EditOp> &trackRemovals = removals[size_t(note.smfTrack)];
+        std::vector<EditOp> &trackInserts = inserts[size_t(note.smfTrack)];
+        SmfEvent on = m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
+        on.tick = newTick;
+        on.data0 = destKey;
         if (!note.unterminated()) {
-            EditOp end;
-            end.type = EditOp::InsertEvent;
-            end.smfTrack = note.smfTrack;
-            end.event = m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex];
-            const uint64_t endTick = uint64_t(newTick) + note.duration;
-            Q_ASSERT(endTick <= CoreTimeDefaults::kMaxTick);
-            end.event.tick = Tick(endTick);
-            end.event.data0 = destKey;
-            ops.push_back(std::move(end));
+            SmfEvent end = m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex];
+            end.tick = Tick(uint64_t(newTick) + note.duration);
+            end.data0 = destKey;
+            EditOp op;
+            op.smfTrack = note.smfTrack;
+            if (end.tick == m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick) {
+                op.type = EditOp::ModifyEvent;
+                op.index = note.endIndex;
+                op.event = std::move(end);
+                trackRemovals.push_back(std::move(op)); // ModifyEvent is index-bearing too
+            } else {
+                op.type = EditOp::RemoveEvent;
+                op.index = note.endIndex;
+                trackRemovals.push_back(std::move(op));
+                EditOp insert;
+                insert.type = EditOp::InsertEvent;
+                insert.smfTrack = note.smfTrack;
+                insert.event = std::move(end);
+                trackInserts.push_back(std::move(insert));
+            }
+        }
+        EditOp op;
+        op.smfTrack = note.smfTrack;
+        if (on.tick == m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex].tick) {
+            op.type = EditOp::ModifyEvent;
+            op.index = note.onIndex;
+            op.event = std::move(on);
+            trackRemovals.push_back(std::move(op)); // ModifyEvent is index-bearing too
+        } else {
+            op.type = EditOp::RemoveEvent;
+            op.index = note.onIndex;
+            trackRemovals.push_back(std::move(op));
+            EditOp insert;
+            insert.type = EditOp::InsertEvent;
+            insert.smfTrack = note.smfTrack;
+            insert.event = std::move(on);
+            insert.preservesNoteId = true;
+            trackInserts.push_back(std::move(insert));
         }
     }
-    ops.insert(ops.end(), trims.begin(), trims.end());
+    if (!noteEditAdmissible(written, notes))
+        return std::nullopt;
+    std::vector<EditOp> ops;
+    ops.reserve(written.size() * 3);
+    for (size_t t = 0; t < m_smf.tracks.size(); t++) {
+        std::sort(removals[t].begin(), removals[t].end(),
+                  [](const EditOp &a, const EditOp &b) { return a.index > b.index; });
+        for (EditOp &op : removals[t])
+            ops.push_back(std::move(op));
+        for (EditOp &op : inserts[t])
+            ops.push_back(std::move(op));
+    }
     return ops;
 }
 
-std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesToPitchesOps(
+std::optional<std::vector<SongDocument::EditOp>>
+SongDocument::buildMoveNotesOps(const std::vector<DocNote> &notes, int64_t dTick, int dKey) const
+{
+    // Every note moves by the common delta; keys clamp to 0-127.
+    std::vector<uint8_t> destKeys(notes.size());
+    for (size_t i = 0; i < notes.size(); i++)
+        destKeys[i] = uint8_t(std::clamp(int(notes[i].key) + dKey, 0, 127));
+    return buildMoveOps(notes, std::move(destKeys), dTick, false);
+}
+
+std::optional<std::vector<SongDocument::EditOp>> SongDocument::buildMoveNotesToPitchesOps(
     const std::vector<DocNote> &notes, const std::vector<uint8_t> &destPitches, int64_t dTick) const
 {
-    // Unterminated notes (no end event to rewrite) and no-op pitches stay.
-    const auto destKeyAt = [&destPitches](size_t i, const DocNote &) { return destPitches[i]; };
-    const auto shouldSkip = [dTick](const DocNote &note, uint8_t destKey) {
-        return note.unterminated() || (destKey == note.key && dTick == 0);
-    };
-    std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
-    std::vector<PlannedNote> written;
-    collectMovePlans(notes, dTick, destKeyAt, shouldSkip, removals, written);
-    std::vector<EditOp> trims;
-    resolveNoteOverlaps(written, notes, removals, trims);
-    std::vector<EditOp> ops;
-    for (size_t t = 0; t < m_smf.tracks.size(); t++)
-        appendRemoveOps(ops, int(t), std::move(removals[t]));
-    for (size_t i = 0; i < notes.size(); i++) {
-        const DocNote &note = notes[i];
-        const uint8_t destKey = destKeyAt(i, note);
-        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
-            shouldSkip(note, destKey))
-            continue;
-        const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
-        appendNoteInsertOps(ops, note.smfTrack, note.channel, newTick, destKey, note.duration,
-                            note.velocity);
-    }
-    ops.insert(ops.end(), trims.begin(), trims.end());
-    return ops;
+    return buildMoveOps(notes, destPitches, dTick, true);
 }
 
-std::vector<SongDocument::EditOp>
+std::optional<std::vector<SongDocument::EditOp>>
 SongDocument::buildResizeNotesOps(const std::vector<DocNote> &notes, int64_t dDuration) const
 {
-    std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+    // Index discipline mirrors buildMoveOps: all index-bearing ops first
+    // (per track, descending), then the inserts.
     std::vector<PlannedNote> written;
+    std::vector<std::vector<EditOp>> removals(m_smf.tracks.size());
+    std::vector<std::vector<EditOp>> inserts(m_smf.tracks.size());
     for (const DocNote &note : notes) {
-        if (note.unterminated() || note.smfTrack < 0 || note.smfTrack >= int(removals.size()))
+        if (note.unterminated() || note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()))
             continue;
-        removals[size_t(note.smfTrack)].push_back(note.endIndex);
+        // Per-note max(1, duration + d), then the kMaxTick headroom guard:
+        // never capped, one out-of-range resize refuses the batch.
         const uint32_t newDuration =
             uint32_t(std::max<int64_t>(1, int64_t(note.duration) + dDuration));
-        written.push_back(
-            {note.engineTrack, note.key, note.tick, uint64_t(note.tick) + uint64_t(newDuration)});
-    }
-    std::vector<EditOp> trims;
-    resolveNoteOverlaps(written, notes, removals, trims);
-    std::vector<EditOp> ops;
-    for (size_t t = 0; t < m_smf.tracks.size(); t++)
-        appendRemoveOps(ops, int(t), std::move(removals[t]));
-    for (const DocNote &note : notes) {
-        const uint32_t newDuration =
-            uint32_t(std::max<int64_t>(1, int64_t(note.duration) + dDuration));
-        EditOp end;
-        end.type = EditOp::InsertEvent;
-        end.smfTrack = note.smfTrack;
         const uint64_t endTick = uint64_t(note.tick) + newDuration;
-        Q_ASSERT(endTick <= CoreTimeDefaults::kMaxTick);
-        end.event = makeChannelEvent(0x9, note.channel, Tick(endTick), note.key, 0);
-        ops.push_back(end);
+        if (endTick > CoreTimeDefaults::kMaxTick)
+            return std::nullopt;
+        written.push_back({note.engineTrack, note.key, note.tick, endTick});
+        // Consume and re-land (not duplicate) the note's own end event.
+        std::vector<EditOp> &trackRemovals = removals[size_t(note.smfTrack)];
+        EditOp op;
+        op.smfTrack = note.smfTrack;
+        if (Tick(endTick) == m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick) {
+            op.type = EditOp::ModifyEvent;
+            op.index = note.endIndex;
+            op.event = makeChannelEvent(0x9, note.channel, Tick(endTick), note.key, 0);
+            trackRemovals.push_back(std::move(op)); // ModifyEvent is index-bearing too
+        } else {
+            op.type = EditOp::RemoveEvent;
+            op.index = note.endIndex;
+            trackRemovals.push_back(std::move(op));
+            EditOp insert;
+            insert.type = EditOp::InsertEvent;
+            insert.smfTrack = note.smfTrack;
+            insert.event = makeChannelEvent(0x9, note.channel, Tick(endTick), note.key, 0);
+            inserts[size_t(note.smfTrack)].push_back(std::move(insert));
+        }
     }
-    ops.insert(ops.end(), trims.begin(), trims.end());
+    if (!noteEditAdmissible(written, notes))
+        return std::nullopt;
+    std::vector<EditOp> ops;
+    for (size_t t = 0; t < m_smf.tracks.size(); t++) {
+        std::sort(removals[t].begin(), removals[t].end(),
+                  [](const EditOp &a, const EditOp &b) { return a.index > b.index; });
+        for (EditOp &op : removals[t])
+            ops.push_back(std::move(op));
+        for (EditOp &op : inserts[t])
+            ops.push_back(std::move(op));
+    }
     return ops;
 }
 
@@ -1429,11 +1565,17 @@ void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDurat
     });
     if (!changes)
         return;
-    m_history.pushDocument(std::make_unique<ResizeNotesCommand>(this, notes, dDuration, mergeable));
+    // Plan (and refuse) before anything enters the undo stack: nullopt
+    // leaves revision, bytes, IDs and undo state untouched.
+    auto ops = buildResizeNotesOps(notes, dDuration);
+    if (!ops || ops->empty())
+        return;
+    m_history.pushDocument(
+        std::make_unique<ResizeNotesCommand>(this, notes, dDuration, mergeable, std::move(*ops)));
     // The command suppresses publication from its initial redo because a
     // merge can replace that provisional state. Publish the public resize
-    // call after the stack settles: an inverse merge may remove the command
-    // but has still restored live state.
+    // call after the stack settles: an inverse merge may remove the
+    // command but has still restored live state.
     publishMutation(currentTrackRemap());
 }
 
@@ -1448,38 +1590,60 @@ void SongDocument::resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dT
     });
     if (!changes)
         return;
-    std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+    // Index discipline mirrors buildMoveOps, and the empty-ops guard below
+    // keeps an all-invalid-track batch from pushing an empty command.
     std::vector<PlannedNote> written;
+    std::vector<std::vector<EditOp>> removals(m_smf.tracks.size());
+    std::vector<std::vector<EditOp>> inserts(m_smf.tracks.size());
     for (const DocNote &note : notes) {
-        if (note.smfTrack < 0 || note.smfTrack >= int(removals.size()))
+        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()))
             continue;
-        removals[size_t(note.smfTrack)].push_back(note.onIndex);
-        if (note.unterminated())
-            continue;
-        const uint64_t endTick = uint64_t(note.tick) + uint64_t(note.duration);
-        const Tick newTick =
-            Tick(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, int64_t(endTick) - 1));
-        written.push_back({note.engineTrack, note.key, newTick, endTick});
-    }
-    std::vector<EditOp> trims;
-    resolveNoteOverlaps(written, notes, removals, trims);
-    std::vector<EditOp> ops;
-    for (size_t t = 0; t < m_smf.tracks.size(); t++)
-        appendRemoveOps(ops, int(t), std::move(removals[t]));
-    for (const DocNote &note : notes) {
-        // An unterminated note has no note-off to pin; its note-on just moves.
+        // An unterminated note has no note-off to pin; its note-on just
+        // moves and contributes no span.
         const int64_t maxTick =
             note.unterminated() ? INT64_MAX : int64_t(note.tick) + int64_t(note.duration) - 1;
         const Tick newTick = Tick(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, maxTick));
-        EditOp on;
-        on.type = EditOp::InsertEvent;
-        on.smfTrack = note.smfTrack;
-        on.event = m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
-        on.event.tick = newTick;
-        on.preservesNoteId = true;
-        ops.push_back(std::move(on));
+        SmfEvent on = m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
+        on.tick = newTick;
+        std::vector<EditOp> &trackRemovals = removals[size_t(note.smfTrack)];
+        EditOp op;
+        op.smfTrack = note.smfTrack;
+        if (on.tick == m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex].tick) {
+            op.type = EditOp::ModifyEvent;
+            op.index = note.onIndex;
+            op.event = std::move(on);
+            trackRemovals.push_back(std::move(op)); // ModifyEvent is index-bearing too
+        } else {
+            op.type = EditOp::RemoveEvent;
+            op.index = note.onIndex;
+            trackRemovals.push_back(std::move(op));
+            EditOp insert;
+            insert.type = EditOp::InsertEvent;
+            insert.smfTrack = note.smfTrack;
+            insert.event = std::move(on);
+            insert.preservesNoteId = true;
+            inserts[size_t(note.smfTrack)].push_back(std::move(insert));
+        }
+        if (note.unterminated())
+            continue;
+        const uint64_t endTick = uint64_t(note.tick) + uint64_t(note.duration);
+        written.push_back({note.engineTrack, note.key, newTick, endTick});
     }
-    ops.insert(ops.end(), trims.begin(), trims.end());
+    // A left edge that would cross a same-key neighbor refuses atomically;
+    // the stationary note keeps its span.
+    if (!noteEditAdmissible(written, notes))
+        return;
+    std::vector<EditOp> ops;
+    for (size_t t = 0; t < m_smf.tracks.size(); t++) {
+        std::sort(removals[t].begin(), removals[t].end(),
+                  [](const EditOp &a, const EditOp &b) { return a.index > b.index; });
+        for (EditOp &op : removals[t])
+            ops.push_back(std::move(op));
+        for (EditOp &op : inserts[t])
+            ops.push_back(std::move(op));
+    }
+    if (ops.empty())
+        return;
     pushEdit(tr("resize %n note(s)", nullptr, int(notes.size())), std::move(ops));
 }
 

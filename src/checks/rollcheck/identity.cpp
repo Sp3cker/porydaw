@@ -1,7 +1,9 @@
 #include "checks/rollcheck/rollcheck.h"
 #include "checks/rollcheck/tst_pianoroll.h"
 
+#include <QByteArray>
 #include <QQuickWindow>
+#include <QSignalSpy>
 #include <QSize>
 #include <QtTest>
 
@@ -19,7 +21,7 @@
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songviewmodel.h"
 
-void PianoRollTest::duplicateNoteIdentity()
+void PianoRollTest::noteIdentityEditDiscipline()
 {
     QString error;
     const std::unique_ptr<checks::LoadedSong> source =
@@ -34,25 +36,22 @@ void PianoRollTest::duplicateNoteIdentity()
 
     const int track = m_fixture->track();
     const std::vector<DocNote> before = projectionDoc.notesForTrack(track);
-    const SongDocument::NewNote duplicate{480, 60, 24, 100};
-    projectionDoc.addNotes(track, {duplicate, duplicate});
+    const Tick tick = projectionDoc.buildTimeline(48000.0)->lengthTicks + 48;
+    projectionDoc.addNotes(track, {{tick, 60, 24, 100}, {tick, 64, 24, 100}});
     const std::vector<DocNote> after = projectionDoc.notesForTrack(track);
-    std::vector<DocNote> duplicates;
+    std::vector<DocNote> inserted;
     for (const DocNote &candidate : after) {
         const bool existed =
             std::any_of(before.begin(), before.end(), [&](const DocNote &previous) {
                 return previous.noteId == candidate.noteId;
             });
         if (!existed)
-            duplicates.push_back(candidate);
+            inserted.push_back(candidate);
     }
-    if (duplicates.size() != 2 || !duplicates[0].noteId.isAssigned() ||
-        !duplicates[1].noteId.isAssigned() || duplicates[0].noteId == duplicates[1].noteId ||
-        duplicates[0].tick != duplicates[1].tick ||
-        duplicates[0].duration != duplicates[1].duration ||
-        duplicates[0].key != duplicates[1].key ||
-        duplicates[0].velocity != duplicates[1].velocity) {
-        QFAIL("document did not mint distinct equal-visible duplicate note IDs");
+    if (inserted.size() != 2 || !inserted[0].noteId.isAssigned() ||
+        !inserted[1].noteId.isAssigned() || inserted[0].noteId == inserted[1].noteId ||
+        inserted[0].tick != inserted[1].tick || inserted[0].key == inserted[1].key) {
+        QFAIL("document did not mint distinct IDs for same-tick different-key notes");
     }
 
     SongView identityView(projectionDoc);
@@ -68,13 +67,13 @@ void PianoRollTest::duplicateNoteIdentity()
         identityTimeline = std::move(rebuilt);
     });
     identityView.selectTrack(track);
-    identityView.selectionModel().setNoteSelection({duplicates[0].noteId, duplicates[1].noteId});
+    identityView.selectionModel().setNoteSelection({inserted[0].noteId, inserted[1].noteId});
     identityView.trackHeaderClicked(track, Qt::NoModifier);
     if (!identityView.selectionModel().noteSelection().empty())
         QFAIL("plain click on the active track header did not clear note selection");
 
-    const DocNote firstBefore = duplicates[0];
-    const DocNote secondBefore = duplicates[1];
+    const DocNote firstBefore = inserted[0];
+    const DocNote secondBefore = inserted[1];
     const auto sameNoteIdentityAndValue = [](const DocNote &lhs, const DocNote &rhs) {
         return lhs.noteId == rhs.noteId && lhs.engineTrack == rhs.engineTrack &&
                lhs.smfTrack == rhs.smfTrack && lhs.tick == rhs.tick &&
@@ -94,7 +93,7 @@ void PianoRollTest::duplicateNoteIdentity()
     const std::vector<NoteId> &editedSelection = identityView.selectionModel().noteSelection();
     if (!firstEdit || !secondStable || editedSelection.size() != 1 ||
         editedSelection.front() != firstBefore.noteId) {
-        QFAIL("one-ID edit changed the wrong duplicate");
+        QFAIL("one-ID edit changed the wrong note or lost selection");
     }
 
     projectionDoc.undoStack()->undo();
@@ -106,15 +105,102 @@ void PianoRollTest::duplicateNoteIdentity()
                               sameNoteIdentityAndValue(secondRestored, secondBefore);
     const std::vector<NoteId> &undoSelection = identityView.selectionModel().noteSelection();
     if (!undoRestored || undoSelection.size() != 1 || undoSelection.front() != firstBefore.noteId) {
-        QFAIL("one-ID SongView edit did not restore both duplicates on Undo");
+        QFAIL("one-ID SongView edit did not restore both notes on Undo");
     }
 
-    identityView.selectionModel().setNoteSelection({duplicates[0].noteId, duplicates[1].noteId});
+    identityView.selectionModel().setNoteSelection({inserted[0].noteId, inserted[1].noteId});
     const int otherTrack = track == 0 ? 1 : 0;
     if (otherTrack < projectionDoc.engineTrackCount()) {
         identityView.trackHeaderClicked(otherTrack, Qt::NoModifier);
         if (!identityView.selectionModel().noteSelection().empty())
             QFAIL("switching track headers did not clear note selection");
+    }
+
+    // Ordinary note-selection arrows must not reveal or audition a refused
+    // destination. Exercise both directions with an offscreen destination,
+    // then remove the blocker and repeat the identical key route.
+    checks::rollcheck::PianoRollFixture &check = *m_fixture;
+    SongDocument &doc = check.document();
+    SongView &view = check.view();
+    const checks::rollcheck::SnappedRows rows{view, check.rollInput()};
+    for (const int direction : {1, -1}) {
+        const Tick start = check.timeline().lengthTicks + 48;
+        const int destinationKey = 60 + direction;
+        doc.addNotes(track, {{start, 60, 24, 100}, {start, uint8_t(destinationKey), 24, 100}});
+        DocNote participant;
+        DocNote blocker;
+        QVERIFY(doc.findNote(track, start, 60, &participant));
+        QVERIFY(doc.findNote(track, start, uint8_t(destinationKey), &blocker));
+        view.selectionModel().setNoteSelection({participant.noteId});
+        QVERIFY(!view.selectionModel().timeSelection().active());
+        view.scrollRollBy((129 - destinationKey) * view.camera().keyHeight() -
+                          view.camera().scrollY());
+        QVERIFY(rows.bottom(destinationKey) <= 0.0);
+        const QByteArray refusedBytes = doc.smf().write();
+        const uint64_t refusedRevision = doc.revision();
+        const int refusedIndex = doc.undoStack()->index();
+        const int refusedCount = doc.undoStack()->count();
+        const bool refusedRedo = doc.undoStack()->canRedo();
+        const auto selected = view.selectionModel().noteSelection();
+        const Tick cursor = view.editCursorTick();
+        const double scrollX = view.camera().scrollX();
+        const double scrollY = view.camera().scrollY();
+        QSignalSpy publications(&doc, &SongDocument::documentChanged);
+        QSignalSpy auditions(&view, &SongView::auditionNote);
+        const int key = direction > 0 ? Qt::Key_Up : Qt::Key_Down;
+        checks::rollcheck::sendKeyStroke(check.rollInput(), key, Qt::NoModifier, false);
+        QCOMPARE(doc.smf().write(), refusedBytes);
+        QCOMPARE(doc.revision(), refusedRevision);
+        QCOMPARE(doc.undoStack()->index(), refusedIndex);
+        QCOMPARE(doc.undoStack()->count(), refusedCount);
+        QCOMPARE(doc.undoStack()->canRedo(), refusedRedo);
+        QVERIFY(view.selectionModel().noteSelection() == selected);
+        QVERIFY(!view.selectionModel().timeSelection().active());
+        QCOMPARE(view.editCursorTick(), cursor);
+        QCOMPARE(view.camera().scrollX(), scrollX);
+        QCOMPARE(view.camera().scrollY(), scrollY);
+        QCOMPARE(publications.count(), 0);
+        for (const auto &audition : std::as_const(auditions))
+            QVERIFY(audition.at(2).toInt() <= 0);
+
+        doc.deleteNotes({blocker});
+        const QByteArray acceptedBytes = doc.smf().write();
+        const uint64_t acceptedRevision = doc.revision();
+        const int acceptedIndex = doc.undoStack()->index();
+        const int acceptedCount = doc.undoStack()->count();
+        publications.clear();
+        auditions.clear();
+        checks::rollcheck::sendKeyStroke(check.rollInput(), key, Qt::NoModifier, false);
+        DocNote transposed;
+        QVERIFY(doc.findNote(participant.noteId, &transposed));
+        DocNote expected = participant;
+        expected.key = uint8_t(destinationKey);
+        QVERIFY(sameNoteIdentityAndValue(transposed, expected));
+        QCOMPARE(doc.revision(), acceptedRevision + 1);
+        QCOMPARE(publications.count(), 1);
+        QCOMPARE(doc.undoStack()->index(), acceptedIndex + 1);
+        QCOMPARE(doc.undoStack()->count(), acceptedCount + 1);
+        QVERIFY(view.selectionModel().noteSelection() == selected);
+        QVERIFY(!view.selectionModel().timeSelection().active());
+        QVERIFY(rows.top(destinationKey) >= 0.0);
+        QVERIFY(rows.bottom(destinationKey) <= check.rollInput().bounds().height());
+        QVERIFY(view.camera().scrollY() != scrollY);
+        int positiveAuditions = 0;
+        for (const auto &audition : std::as_const(auditions)) {
+            if (audition.at(2).toInt() <= 0)
+                continue;
+            ++positiveAuditions;
+            QCOMPARE(audition.at(0).toInt(), track);
+            QCOMPARE(audition.at(1).toInt(), destinationKey);
+            QCOMPARE(audition.at(2).toInt(), int(participant.velocity));
+        }
+        QCOMPARE(positiveAuditions, 1);
+        doc.undoStack()->undo();
+        QCOMPARE(doc.smf().write(), acceptedBytes);
+        QCOMPARE(doc.undoStack()->index(), acceptedIndex);
+        QVERIFY(doc.findNote(participant.noteId, &transposed));
+        QVERIFY(sameNoteIdentityAndValue(transposed, participant));
+        QVERIFY(view.selectionModel().noteSelection() == selected);
     }
 }
 

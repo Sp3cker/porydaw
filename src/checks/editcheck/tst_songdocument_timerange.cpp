@@ -61,6 +61,113 @@ void EditCheckTest::timeRangeNoOps()
     QCOMPARE(document.smf().write(), sentinelBytes);
     QVERIFY(document.tempoPoints() == tempos);
     QCOMPARE(document.undoStack()->count(), sentinelUndoCount);
+
+    // A same-pitch straddle refuses atomically: stationary A [60,180) on key
+    // 62 keeps its span (no trimming) while B [290,310) on key 62 shifts left
+    // by the deleted [100,220), landing at [170,190) — overlapping A on
+    // [170,180). Nothing changes — bytes, revision, undo stack and both
+    // notes stay intact.
+    document.addNote(0, 60, 62, 120, 90);
+    document.addNote(0, 290, 62, 20, 90);
+    DocNote neighbor;
+    QVERIFY(document.findNote(0, 290, 62, &neighbor));
+    const NoteId neighborId = neighbor.noteId;
+    const QByteArray straddleBytes = document.smf().write();
+    const uint64_t straddleRevision = document.revision();
+    const int straddleUndo = document.undoStack()->count();
+    QVERIFY(!document.removeTimeRange({100, 220}, trackZero()));
+    QCOMPARE(document.smf().write(), straddleBytes);
+    QCOMPARE(document.revision(), straddleRevision);
+    QCOMPARE(document.undoStack()->count(), straddleUndo);
+    DocNote straddleAfter;
+    QVERIFY(document.findNote(0, 60, 62, &straddleAfter));
+    QCOMPARE(straddleAfter.tick, Tick(60));
+    QCOMPARE(straddleAfter.duration, uint32_t(120));
+    QVERIFY(document.findNote(neighborId, &straddleAfter));
+    QCOMPARE(straddleAfter.tick, Tick(290));
+    QCOMPARE(straddleAfter.duration, uint32_t(20));
+
+    // The non-colliding far-B ripple still runs and is undoable
+    // byte-exactly: deleting [200,260) shifts B [290,310) left by 60 to
+    // [230,250), free space, while the stationary A [60,180) stays
+    // untouched. One command restores exact bytes on undo.
+    QVERIFY(document.removeTimeRange({200, 260}, trackZero()));
+    QVERIFY(document.findNote(neighborId, &straddleAfter));
+    QCOMPARE(straddleAfter.tick, Tick(230));
+    QCOMPARE(straddleAfter.duration, uint32_t(20));
+    QVERIFY(document.findNote(0, 60, 62, &straddleAfter));
+    QCOMPARE(straddleAfter.tick, Tick(60));
+    QCOMPARE(straddleAfter.duration, uint32_t(120));
+    QVERIFY(songdocument_test::notePairsConsistent(document, 0));
+    QCOMPARE(document.undoStack()->count(), straddleUndo + 1);
+    document.undoStack()->undo();
+    QCOMPARE(document.smf().write(), straddleBytes);
+    QVERIFY(songdocument_test::notePairsConsistent(document, 0));
+
+    // Long-note ripple: a note starting after the deleted range whose
+    // shifted final span overlaps only its own old span accepts — the
+    // participant's NoteId exempts it from its own pre-move position.
+    DocNote rippleNote;
+    document.addNote(0, 400, 64, 130, 90);
+    QVERIFY(document.findNote(0, 400, 64, &rippleNote));
+    const NoteId rippleId = rippleNote.noteId;
+    const QByteArray rippleBytes = document.smf().write();
+    const uint64_t rippleRevision = document.revision();
+    const int rippleUndo = document.undoStack()->count();
+    QVERIFY(document.removeTimeRange({300, 360}, trackZero()));
+    QVERIFY(document.findNote(rippleId, &rippleNote));
+    QCOMPARE(rippleNote.tick, Tick(340));
+    QCOMPARE(rippleNote.duration, uint32_t(130));
+    QCOMPARE(document.revision(), rippleRevision + 1);
+    QCOMPARE(document.undoStack()->count(), rippleUndo + 1);
+    QVERIFY(songdocument_test::notePairsConsistent(document, 0));
+    document.undoStack()->undo();
+    QCOMPARE(document.smf().write(), rippleBytes);
+    QVERIFY(songdocument_test::notePairsConsistent(document, 0));
+
+    // Two shifted participants whose final spans cross the other's old
+    // positions but stay mutually disjoint also accept; both keep their
+    // NoteIds and one command restores exact bytes on undo.
+    document.addNote(0, 400, 65, 60, 90);
+    document.addNote(0, 462, 65, 60, 90);
+    DocNote firstShift;
+    DocNote secondShift;
+    QVERIFY(document.findNote(0, 400, 65, &firstShift));
+    QVERIFY(document.findNote(0, 462, 65, &secondShift));
+    const NoteId firstShiftId = firstShift.noteId;
+    const NoteId secondShiftId = secondShift.noteId;
+    const QByteArray crossBytes = document.smf().write();
+    const uint64_t crossRevision = document.revision();
+    const int crossUndo = document.undoStack()->count();
+    QVERIFY(document.removeTimeRange({340, 400}, trackZero()));
+    QVERIFY(document.findNote(firstShiftId, &firstShift));
+    QCOMPARE(firstShift.tick, Tick(340));
+    QCOMPARE(firstShift.duration, uint32_t(60));
+    QVERIFY(document.findNote(secondShiftId, &secondShift));
+    QCOMPARE(secondShift.tick, Tick(402));
+    QCOMPARE(secondShift.duration, uint32_t(60));
+    QCOMPARE(document.revision(), crossRevision + 1);
+    QCOMPARE(document.undoStack()->count(), crossUndo + 1);
+    QVERIFY(songdocument_test::notePairsConsistent(document, 0));
+    document.undoStack()->undo();
+    QCOMPARE(document.smf().write(), crossBytes);
+    QVERIFY(songdocument_test::notePairsConsistent(document, 0));
+
+    // The refusal rule survives the exemption: a same-key stationary
+    // note the shifted span would land on still refuses atomically.
+    document.undoStack()->undo();
+    document.addNote(0, 300, 65, 60, 90);
+    const QByteArray blockedBytes = document.smf().write();
+    const uint64_t blockedRevision = document.revision();
+    const int blockedUndo = document.undoStack()->count();
+    QVERIFY(!document.removeTimeRange({340, 400}, trackZero()));
+    QCOMPARE(document.smf().write(), blockedBytes);
+    QCOMPARE(document.revision(), blockedRevision);
+    QCOMPARE(document.undoStack()->count(), blockedUndo);
+    DocNote blocker;
+    QVERIFY(document.findNote(0, 300, 65, &blocker));
+    QCOMPARE(blocker.tick, Tick(300));
+    QCOMPARE(blocker.duration, uint32_t(60));
 }
 
 void EditCheckTest::timeRangeInsertScopeAndSplit()
@@ -489,6 +596,29 @@ void EditCheckTest::timeRangeWholeSong()
     QCOMPARE(document.smf().write(), before);
     document.undoStack()->redo();
     QCOMPARE(document.smf().write(), after);
+
+    // A straddle refusal keeps zero state even when the scope covers every
+    // track: deleting [3000,3060) would shift B [3100,3200) to [3040,3140)
+    // inside the stationary A [2950,3050) on key 61.
+    document.addNote(0, 2950, 61, 100, 80);
+    document.addNote(0, 3100, 61, 100, 80);
+    DocNote wholeNeighbor;
+    QVERIFY(document.findNote(0, 3100, 61, &wholeNeighbor));
+    const NoteId wholeNeighborId = wholeNeighbor.noteId;
+    const QByteArray wholeStraddleBytes = document.smf().write();
+    const uint64_t wholeStraddleRevision = document.revision();
+    const int wholeStraddleUndo = document.undoStack()->count();
+    QVERIFY(!document.removeTimeRange({3000, 3060}, wholeSong));
+    QCOMPARE(document.smf().write(), wholeStraddleBytes);
+    QCOMPARE(document.revision(), wholeStraddleRevision);
+    QCOMPARE(document.undoStack()->count(), wholeStraddleUndo);
+    DocNote wholeStraddleAfter;
+    QVERIFY(document.findNote(0, 2950, 61, &wholeStraddleAfter));
+    QCOMPARE(wholeStraddleAfter.tick, Tick(2950));
+    QCOMPARE(wholeStraddleAfter.duration, uint32_t(100));
+    QVERIFY(document.findNote(wholeNeighborId, &wholeStraddleAfter));
+    QCOMPARE(wholeStraddleAfter.tick, Tick(3100));
+    QCOMPARE(wholeStraddleAfter.duration, uint32_t(100));
 }
 
 void EditCheckTest::timeRangeInsertBlankOverflow()

@@ -60,6 +60,66 @@ void EditCheckTest::rangeEdit()
                                               songdocument_test::tempo(base + step * 41, 155)));
     document.undoStack()->redo();
     QVERIFY(document.findNote(track, base + step * 40, 65, &note));
+
+    // Two same-destination groups write overlapping same-pitch spans; the
+    // combined eligible set refuses atomically — no removals, lane writes,
+    // tempo change, history entry or revision change.
+    const QByteArray baseline = document.smf().write();
+    const int trackCountBefore = document.engineTrackCount();
+    {
+        SongDocument::RangeEdit collision = edit;
+        collision.minimumEngineTrackCount = track + 2;
+        collision.addNotes.push_back({track, {{Tick(base + step * 40), 65, step * 2, 90}}});
+        const int refusalUndo = document.undoStack()->count();
+        const int refusalUndoIndex = document.undoStack()->index();
+        const uint64_t refusalRevision = document.revision();
+        document.applyRangeEdit(QStringLiteral("overlapping groups"), collision);
+        QCOMPARE(document.smf().write(), baseline);
+        QCOMPARE(document.engineTrackCount(), trackCountBefore);
+        QCOMPARE(document.undoStack()->count(), refusalUndo);
+        QCOMPARE(document.undoStack()->index(), refusalUndoIndex);
+        QCOMPARE(document.revision(), refusalRevision);
+        QVERIFY(songdocument_test::notePairsConsistent(document, track));
+    }
+
+    // Identical-twin paste notes in one group refuse identically.
+    {
+        SongDocument::RangeEdit twins = edit;
+        twins.addNotes.push_back({track,
+                                  {{Tick(base + step * 44), 66, step * 2, 90},
+                                   {Tick(base + step * 44), 66, step * 2, 90}}});
+        const int twinsUndo = document.undoStack()->count();
+        const uint64_t twinsRevision = document.revision();
+        document.applyRangeEdit(QStringLiteral("identical twins"), twins);
+        QCOMPARE(document.smf().write(), baseline);
+        QCOMPARE(document.engineTrackCount(), trackCountBefore);
+        QCOMPARE(document.undoStack()->count(), twinsUndo);
+        QCOMPARE(document.revision(), twinsRevision);
+        QVERIFY(songdocument_test::notePairsConsistent(document, track));
+    }
+
+    // Disjoint groups onto a freshly expanded track accept, land, and undo
+    // byte-exactly. Built fresh — the first paste is still applied after
+    // redo, so copying `edit` would re-write its same destination.
+    {
+        SongDocument::RangeEdit expansion;
+        // The destination is always the next new engine track after the
+        // pre-edit count, so every corpus row expands by exactly one track.
+        const int expansionTrack = trackCountBefore;
+        expansion.minimumEngineTrackCount = expansionTrack + 1;
+        expansion.addNotes.push_back(
+            {expansionTrack, {{Tick(base + step * 40), 67, step * 2, 90}}});
+        document.applyRangeEdit(QStringLiteral("expansion paste"), expansion);
+        QCOMPARE(document.engineTrackCount(), trackCountBefore + 1);
+        DocNote landed;
+        QVERIFY(document.findNote(expansionTrack, base + step * 40, 67, &landed));
+        QCOMPARE(document.undoStack()->count(), before + 2);
+        document.undoStack()->undo();
+        QCOMPARE(document.smf().write(), baseline);
+        QCOMPARE(document.engineTrackCount(), trackCountBefore);
+        document.undoStack()->redo();
+        QVERIFY(document.findNote(expansionTrack, base + step * 40, 67, &landed));
+    }
 }
 
 void EditCheckTest::rangeMove_data()
@@ -110,6 +170,49 @@ void EditCheckTest::rangeMove()
     QVERIFY(document.findNote(track, base + step * 82, 64, &second));
     document.undoStack()->redo();
     QVERIFY(document.findNote(track, base + step * 83, 60, &first));
+    // Stable note identity survives the accepted move; the stream stays
+    // invariant-clean and the geometry matches the emitted endpoints.
+    DocNote movedFirst;
+    QVERIFY(document.findNote(track, base + step * 83, 60, &movedFirst));
+    QCOMPARE(movedFirst.noteId, first.noteId);
+    QVERIFY(songdocument_test::notePairsConsistent(document, track));
+
+    // A left shift that would clamp both notes to tick zero collapses both
+    // positive spans to zero length (their first note-on reaches tick 0
+    // only when the shift is at least base + step * 85); the mixed move
+    // refuses with notes, lane points and tempo untouched.
+    const QByteArray moveBaseline = document.smf().write();
+    const int refusedUndo = document.undoStack()->count();
+    const int refusedUndoIndex = document.undoStack()->index();
+    const uint64_t refusedRevision = document.revision();
+    document.moveRange({first, second}, {point}, -int64_t(base + step * 85),
+                       {songdocument_test::tempo(base + step * 84, 140)});
+    QCOMPARE(document.smf().write(), moveBaseline);
+    QCOMPARE(document.revision(), refusedRevision);
+    QCOMPARE(document.undoStack()->count(), refusedUndo);
+    QCOMPARE(document.undoStack()->index(), refusedUndoIndex);
+    QVERIFY(document.findLanePoint(track, 7, base + step * 83, &point));
+    QCOMPARE(point.value, 45);
+    QVERIFY(songdocument_test::containsTempo(document,
+                                             songdocument_test::tempo(base + step * 84, 140)));
+    QVERIFY(songdocument_test::notePairsConsistent(document, track));
+
+    // A left shift that collides one surviving span with a stationary
+    // same-pitch note refuses as well. first sits at step*83 on key 60 up
+    // to step*85; a stationary note under it refuses a right shift of the
+    // pair.
+    document.addNote(track, Tick(base + step * 90), 60, step * 2, 90);
+    QCOMPARE(document.undoStack()->count(), refusedUndo + 1);
+    DocNote survivor;
+    QVERIFY(document.findNote(track, base + step * 90, 60, &survivor));
+    const QByteArray stationaryBaseline = document.smf().write();
+    const int stationaryUndo = document.undoStack()->count();
+    document.moveRange({first}, {point}, int64_t(step) * 6, {});
+    QCOMPARE(document.smf().write(), stationaryBaseline);
+    QCOMPARE(document.undoStack()->count(), stationaryUndo);
+    QVERIFY(document.findNote(track, base + step * 83, 60, &first));
+    QCOMPARE(first.duration, step * 2);
+    QVERIFY(songdocument_test::notePairsConsistent(document, track));
 }
 
 void EditCheckTest::rangeLaneBulk_data()

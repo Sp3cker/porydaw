@@ -437,6 +437,31 @@ bool SongDocument::TimeEditor::remove()
     // Only ticks at or after e shift left. e == s + span, so every shifted tick
     // stays at or above s: the plain subtraction cannot underflow.
     const TimeEditPlan plan = buildTimeEditPlan();
+    // The single collision rule over the ripple's participants: stationary
+    // notes before s are never touched (no trimming), so only overlaps
+    // between shifted spans or against those pre-range stationary notes
+    // refuse. Deleted notes starting inside [s, e) and shifted notes
+    // starting at/after e are both editNotes — every paired participant is
+    // exempt by NoteId, so a long note rippling past its own old span stays
+    // legal while real collisions with other notes still refuse. Only
+    // shifted terminated final spans land in written.
+    std::vector<PlannedNote> written;
+    std::vector<DocNote> editNotes;
+    for (const DocNote &note : plan.notes) {
+        if (note.unterminated())
+            continue;
+        if (note.tick < s)
+            continue;
+        editNotes.push_back(note);
+        if (note.tick >= e) {
+            const Tick endEventTick =
+                m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick;
+            written.push_back({m_document.engineTrackForChunk(size_t(note.smfTrack)), note.key,
+                               note.tick - span, endEventTick - span});
+        }
+    }
+    if (!m_document.noteEditAdmissible(written, editNotes))
+        return false;
     std::vector<std::vector<size_t>> removals(m_document.m_smf.tracks.size());
     std::vector<SongDocument::EditOp> inserts;
     std::vector<std::vector<bool>> taken = makeTimeEditTaken();
