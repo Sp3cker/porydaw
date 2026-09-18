@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include <QDeadlineTimer>
 #include <QGuiApplication>
+#include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -316,6 +317,75 @@ void verifyFixture(Scene &scene)
     pass("source-fixture-and-projected-boxes");
 }
 
+void verifyRaster(Scene &scene)
+{
+    const auto capture = [&] {
+        QTest::qWait(30ms);
+        QImage image = scene.window->grabWindow();
+        require(!image.isNull(), "native grid framebuffer is empty");
+        return image;
+    };
+    const auto pixelAt = [&](const QImage &image, QPointF content) {
+        const QPointF position = scene.surface->mapToScene(content) * image.devicePixelRatio();
+        const QPoint pixel(qRound(position.x()), qRound(position.y()));
+        require(image.rect().contains(pixel), "raster probe is outside the framebuffer");
+        return image.pixelColor(pixel);
+    };
+    const auto isBlack = [](QColor color) {
+        return color.red() <= 16 && color.green() <= 16 && color.blue() <= 16;
+    };
+
+    scene.reveal(scene.point(9, 60));
+    QImage image = capture();
+    require(pixelAt(image, scene.point(9, 62)) == QColor("#C9C1BB") &&
+                pixelAt(image, scene.point(9, 61)) == QColor("#B4ACA6"),
+            "natural and accidental row pixels differ from production colors");
+    const QRectF note = scene.expectedBox(0, 18, 60);
+    require(pixelAt(image, note.center()) == QColor("#C0625E"),
+            "velocity-98 note face differs from production OKLab fill");
+    const double pixel = 1.0 / scene.dpr;
+    const int borderPixels = qRound(scene.dpr);
+    for (int i = 0; i < borderPixels; ++i) {
+        require(isBlack(pixelAt(image, {note.center().x(), note.top() + i * pixel})) &&
+                    isBlack(pixelAt(image, {note.center().x(), note.bottom() - (i + 1) * pixel})),
+                "unselected note lacks its display-scaled black border");
+    }
+    pass("production-row-colors-note-fill-and-border-raster");
+
+    scene.click(note.center());
+    image = capture();
+    const int ringPixels = qMax(1, qRound(scene.baseFont / 8.0 * scene.dpr));
+    const QColor ring("#B9E8EE");
+    for (int i = 0; i < ringPixels; ++i) {
+        require(pixelAt(image, {note.center().x(), note.top() + i * pixel}) == ring &&
+                    pixelAt(image, {note.center().x(), note.bottom() - (i + 1) * pixel}) == ring,
+                "selected note ring is not contiguous at its production weight");
+    }
+    for (int i = 0; i < borderPixels; ++i) {
+        const double inset = (ringPixels + i) * pixel;
+        require(isBlack(pixelAt(image, {note.center().x(), note.top() + inset})) &&
+                    isBlack(pixelAt(image, {note.center().x(), note.bottom() - inset - pixel})) &&
+                    isBlack(pixelAt(image, {note.left() + inset, note.center().y()})) &&
+                    isBlack(pixelAt(image, {note.right() - inset - pixel, note.center().y()})),
+                "selected note lacks its inset black frame");
+    }
+    require(pixelAt(image, note.center()) == QColor("#C0625E"),
+            "selection frame swallowed the note face");
+    pass("production-selected-note-frame-raster");
+
+    const QRectF ghost = scene.expectedBox(12, 18, 48);
+    scene.reveal(ghost.center());
+    image = capture();
+    const QColor ghostFace = pixelAt(image, ghost.center());
+    require(!isBlack(ghostFace) && pixelAt(image, {ghost.center().x(), ghost.top()}) == ghostFace &&
+                pixelAt(image, {ghost.center().x(), ghost.bottom() - pixel}) == ghostFace,
+            "ghost note acquired an opaque border instead of an uninterrupted face");
+    pass("production-ghost-note-edge-raster");
+    require(QMetaObject::invokeMethod(scene.window, "resetDemo"),
+            "cannot reset the demo after raster probes");
+    QTest::qWait(30ms);
+}
+
 void exercise(Scene scene)
 {
     scene.baseFont = scene.model->property("baseFontPx").toDouble();
@@ -332,6 +402,7 @@ void exercise(Scene scene)
                 scene.model->property("lowestPitch").toInt() == 0,
             "grid metrics do not match the production 24 TPQN projection");
     verifyFixture(scene);
+    verifyRaster(scene);
 
     const QPointF pending = scene.point(98, 100);
     const QJsonArray beforePending = scene.notes();
