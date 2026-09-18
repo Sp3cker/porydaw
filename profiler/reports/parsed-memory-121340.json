@@ -1,0 +1,339 @@
+{
+  "range_events_total_ms": 261.15,
+  "total_events": 30122,
+  "by_type": [
+    {
+      "type": "Creating",
+      "count": 4014,
+      "total_ms": 261.15
+    }
+  ],
+  "hotspots": [
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 4,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:4",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 57.1,
+      "avg_ms": 14.276
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 247,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:247",
+      "details": "TimelineSceneBand",
+      "count": 2,
+      "total_ms": 35.11,
+      "avg_ms": 17.557
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 257,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:257",
+      "details": "PianoRollCanvas",
+      "count": 2,
+      "total_ms": 35.06,
+      "avg_ms": 17.529
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/PianoRollCanvas.qml",
+      "line": 4,
+      "type": "Creating",
+      "name": "PianoRollCanvas.qml:4",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 35.01,
+      "avg_ms": 8.752
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 271,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:271",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 11.41,
+      "avg_ms": 2.852
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 290,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:290",
+      "details": "EventListPage",
+      "count": 2,
+      "total_ms": 11.16,
+      "avg_ms": 5.581
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/EventListPage.qml",
+      "line": 4,
+      "type": "Creating",
+      "name": "EventListPage.qml:4",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 7.64,
+      "avg_ms": 1.911
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/AutomationTabs.qml",
+      "line": 40,
+      "type": "Creating",
+      "name": "AutomationTabs.qml:40",
+      "details": "QtQuick/Repeater",
+      "count": 4,
+      "total_ms": 7.27,
+      "avg_ms": 1.818
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/EventListPage.qml",
+      "line": 644,
+      "type": "Creating",
+      "name": "EventListPage.qml:644",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 4.51,
+      "avg_ms": 1.127
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/EventListPage.qml",
+      "line": 650,
+      "type": "Creating",
+      "name": "EventListPage.qml:650",
+      "details": "HoverHint",
+      "count": 2,
+      "total_ms": 4.12,
+      "avg_ms": 2.061
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 630,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:630",
+      "details": "TrackHeaderBand",
+      "count": 2,
+      "total_ms": 2.63,
+      "avg_ms": 1.314
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 723,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:723",
+      "details": "DrawerChromeLayer",
+      "count": 2,
+      "total_ms": 2.44,
+      "avg_ms": 1.219
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/AutomationTabs.qml",
+      "line": 43,
+      "type": "Creating",
+      "name": "AutomationTabs.qml:43",
+      "details": "TabButton",
+      "count": 26,
+      "total_ms": 2.43,
+      "avg_ms": 0.093
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 299,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:299",
+      "details": "TimelineSceneBand",
+      "count": 2,
+      "total_ms": 1.86,
+      "avg_ms": 0.928
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 382,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:382",
+      "details": "TimelineSceneBand",
+      "count": 2,
+      "total_ms": 1.7,
+      "avg_ms": 0.851
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/DrawerChromeLayer.qml",
+      "line": 168,
+      "type": "Creating",
+      "name": "DrawerChromeLayer.qml:168",
+      "details": "QtQuick/Image",
+      "count": 12,
+      "total_ms": 1.67,
+      "avg_ms": 0.139
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 321,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:321",
+      "details": "AutomationTabs",
+      "count": 2,
+      "total_ms": 1.29,
+      "avg_ms": 0.646
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 118,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:118",
+      "details": "QtQuick/Item",
+      "count": 24,
+      "total_ms": 1.27,
+      "avg_ms": 0.053
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/EventListPage.qml",
+      "line": 781,
+      "type": "Creating",
+      "name": "EventListPage.qml:781",
+      "details": "QtQuick/Repeater",
+      "count": 4,
+      "total_ms": 1.11,
+      "avg_ms": 0.278
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 198,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:198",
+      "details": "TimelineSceneBand",
+      "count": 2,
+      "total_ms": 0.96,
+      "avg_ms": 0.482
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 155,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:155",
+      "details": "QtQuick/Item",
+      "count": 22,
+      "total_ms": 0.94,
+      "avg_ms": 0.043
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TrackHeaderBand.qml",
+      "line": 153,
+      "type": "Creating",
+      "name": "TrackHeaderBand.qml:153",
+      "details": "QtQuick/Item",
+      "count": 34,
+      "total_ms": 0.91,
+      "avg_ms": 0.027
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/DrawerChromeLayer.qml",
+      "line": 4,
+      "type": "Creating",
+      "name": "DrawerChromeLayer.qml:4",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 0.88,
+      "avg_ms": 0.219
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 70,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:70",
+      "details": "QtQuick/Text",
+      "count": 118,
+      "total_ms": 0.85,
+      "avg_ms": 0.007
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TrackHeaderBand.qml",
+      "line": 4,
+      "type": "Creating",
+      "name": "TrackHeaderBand.qml:4",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 0.84,
+      "avg_ms": 0.21
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 185,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:185",
+      "details": "QtQuick/Item",
+      "count": 36,
+      "total_ms": 0.83,
+      "avg_ms": 0.023
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineScrollbar.qml",
+      "line": 6,
+      "type": "Creating",
+      "name": "TimelineScrollbar.qml:6",
+      "details": "Porydaw.Ui/TimelineGestureScrollbar",
+      "count": 20,
+      "total_ms": 0.82,
+      "avg_ms": 0.041
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 405,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:405",
+      "details": "TimelineTextLayer",
+      "count": 2,
+      "total_ms": 0.77,
+      "avg_ms": 0.383
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/HoverHint.qml",
+      "line": 17,
+      "type": "Creating",
+      "name": "HoverHint.qml:17",
+      "details": "QtQuick/HoverHandler",
+      "count": 88,
+      "total_ms": 0.74,
+      "avg_ms": 0.008
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 236,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:236",
+      "details": "RulerControls",
+      "count": 2,
+      "total_ms": 0.73,
+      "avg_ms": 0.366
+    }
+  ],
+  "memory": {
+    "heap_pages": {
+      "alloc_count": 30,
+      "alloc_bytes": 3108864,
+      "freed_bytes": 0,
+      "peak_live_bytes": 3108864,
+      "final_live_bytes": 3108864
+    },
+    "large_items": {
+      "alloc_count": 0,
+      "alloc_bytes": 0,
+      "freed_bytes": 0,
+      "peak_live_bytes": 0,
+      "final_live_bytes": 0
+    },
+    "small_items": {
+      "alloc_count": 25593,
+      "alloc_bytes": 3346976,
+      "freed_bytes": 385728,
+      "peak_live_bytes": 2961248,
+      "final_live_bytes": 2961248
+    },
+    "total_allocations": 25593,
+    "total_allocated_bytes": 3346976,
+    "peak_heap_bytes": 3108864
+  }
+}
