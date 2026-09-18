@@ -27,12 +27,12 @@
 #include <cmath>
 #include <span>
 
-#include "audio/audioengine.h"
 #include "audio/sampleimport.h"
 #include "audio/samplewav.h"
 #include "core/m4asemantics.h"
 #include "enginesettingsdialog.h"
 #include "project/samplereg.h"
+#include "ui/layout.h"
 #include "ui/soundbrowser/samplelibrarypanel.h"
 #include "waveformview.h"
 
@@ -183,12 +183,11 @@ void SampleEditorDialog::applyPitchPrefill()
 }
 
 SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator validator,
-                                       AudioEngine &engine, soundbrowser::SoundBrowser &browser,
+                                       soundbrowser::SoundBrowser &browser,
                                        const AuditionSlots::Adsr *destAdsr, QWidget *parent)
     : QDialog(parent)
     , m_doc(std::move(sample))
     , m_validator(std::move(validator))
-    , m_engine(engine)
     , m_soundBrowser(browser)
 {
     setWindowTitle(tr("Sample Editor"));
@@ -208,10 +207,12 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
     // ---- the waveform, dominant on top; it shares the vertical space
     // with the control column through a splitter so its height is
     // user-resizable ----
-    auto *split = new QSplitter(Qt::Vertical, this);
+    auto *outer = new QSplitter(Qt::Horizontal, this);
+    outer->setObjectName(QStringLiteral("sampleBrowserSplit"));
+    layout->addWidget(outer, 1);
+    auto *split = new QSplitter(Qt::Vertical, outer);
     split->setObjectName(QStringLiteral("sampleSplit"));
     split->setChildrenCollapsible(false);
-    layout->addWidget(split, 1);
     m_waveform = new WaveformView(this);
     m_waveform->setSample(&m_doc.source());
     split->addWidget(m_waveform);
@@ -548,7 +549,8 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
     installLibraryPanel();
     setSourceControlsEnabled(m_doc.source().frameCount() > 0);
     for (QWidget *w : findChildren<QWidget *>()) {
-        if (w->focusPolicy() != Qt::NoFocus)
+        if (w->focusPolicy() != Qt::NoFocus &&
+            w->objectName() != QStringLiteral("sampleLibraryFiles"))
             w->installEventFilter(this);
     }
 }
@@ -590,10 +592,9 @@ void SampleEditorDialog::done(int result)
     QDialog::done(result);
 }
 
-SampleEditorDialog::SampleEditorDialog(NameValidator validator, AudioEngine &engine,
-                                       soundbrowser::SoundBrowser &browser,
+SampleEditorDialog::SampleEditorDialog(NameValidator validator, soundbrowser::SoundBrowser &browser,
                                        const AuditionSlots::Adsr *destAdsr, QWidget *parent)
-    : SampleEditorDialog(ImportedSample{}, std::move(validator), engine, browser, destAdsr, parent)
+    : SampleEditorDialog(ImportedSample{}, std::move(validator), browser, destAdsr, parent)
 {}
 
 SampleEditorDialog::~SampleEditorDialog()
@@ -626,6 +627,7 @@ bool SampleEditorDialog::loadLibrarySample(const QString &path, QString *error)
     resetSample(std::move(sample));
     m_libraryPath = QFileInfo(path).absoluteFilePath();
     m_librarySha = sha;
+    m_libraryPanel->setLoadedPath(m_libraryPath);
     return true;
 }
 
@@ -634,9 +636,11 @@ void SampleEditorDialog::previewLibrarySample(const QString &path)
     stopAudition();
     const soundbrowser::AuditionResult result =
         m_soundBrowser.auditionExternalFile(this, path, uint8_t(m_auditionKey->value()));
-    if (m_libraryPanel)
-        m_libraryPanel->showMessage(
-            result.status == soundbrowser::AuditionStatus::Started ? QString() : result.message);
+    if (m_libraryPanel) {
+        const bool started = result.status == soundbrowser::AuditionStatus::Started;
+        m_libraryPanel->setPreviewingPath(started ? path : QString());
+        m_libraryPanel->showMessage(started ? QString() : result.message);
+    }
 }
 
 void SampleEditorDialog::saveAsNew()
@@ -661,13 +665,21 @@ void SampleEditorDialog::saveAsNew()
 
 void SampleEditorDialog::installLibraryPanel()
 {
-    auto *split = findChild<QSplitter *>(QStringLiteral("sampleSplit"));
+    auto *split = findChild<QSplitter *>(QStringLiteral("sampleBrowserSplit"));
     if (!split)
         return;
     m_libraryPanel = new SampleLibraryPanel(this);
-    split->addWidget(m_libraryPanel);
-    split->setCollapsible(split->indexOf(m_libraryPanel), true);
-    split->setStretchFactor(split->indexOf(m_libraryPanel), 0);
+    split->insertWidget(0, m_libraryPanel);
+    split->setCollapsible(0, true);
+    split->setCollapsible(1, false);
+    split->setStretchFactor(0, 0);
+    split->setStretchFactor(1, 1);
+    split->setSizes({layout::fontPx(22), layout::fontPx(58)});
+    m_libraryPanel->setLoadedPath(m_doc.source().sourcePath);
+    connect(m_libraryPanel, &SampleLibraryPanel::previewStopRequested, this, [this] {
+        m_soundBrowser.stop(this);
+        m_libraryPanel->setPreviewingPath(QString());
+    });
     connect(m_libraryPanel, &SampleLibraryPanel::previewRequested, this,
             &SampleEditorDialog::previewLibrarySample);
     connect(m_libraryPanel, &SampleLibraryPanel::loadRequested, this, [this](const QString &path) {
@@ -1164,8 +1176,8 @@ void SampleEditorDialog::startAudition(bool looped)
     const ProcessedSample &out = m_doc.processed();
     if (out.s8.isEmpty())
         return;
-    // The document audition supersedes this dialog's library preview.
-    m_soundBrowser.stop(this);
+    if (m_libraryPanel)
+        m_libraryPanel->setPreviewingPath(QString());
     if (looped && !out.looped)
         looped = false;
 
@@ -1177,7 +1189,13 @@ void SampleEditorDialog::startAudition(bool looped)
     if (m_hasDestAdsr && m_useDestAdsr->isChecked())
         adsr = m_destAdsr;
     const uint8_t key = uint8_t(m_auditionKey->value());
-    m_republishPending = !m_engine.auditionSample(bytes, out.freq, loopStart, loopFlag, key, adsr);
+    const auto result = m_soundBrowser.auditionRenderedSample(this, bytes, out.freq, loopStart,
+                                                              loopFlag, key, adsr);
+    m_republishPending = result.status == soundbrowser::AuditionStatus::Busy;
+    if (result.status != soundbrowser::AuditionStatus::Started && !m_republishPending) {
+        stopAudition();
+        return;
+    }
     m_auditionMode = looped ? AuditionMode::Loop : AuditionMode::Once;
     m_auditionLooped = loopFlag;
     m_auditionSize = quint32(bytes.size());
@@ -1195,10 +1213,9 @@ void SampleEditorDialog::startAudition(bool looped)
 
 void SampleEditorDialog::stopAudition()
 {
-    const bool ownAudition = m_auditionMode != AuditionMode::None || m_republishPending;
     m_soundBrowser.stop(this);
-    if (ownAudition)
-        m_engine.auditionSampleOff();
+    if (m_libraryPanel)
+        m_libraryPanel->setPreviewingPath(QString());
     m_auditionMode = AuditionMode::None;
     m_republishPending = false;
     m_auditionTimer.stop();

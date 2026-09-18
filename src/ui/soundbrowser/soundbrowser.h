@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QByteArray>
 #include <QList>
 #include <QObject>
 #include <QPair>
@@ -8,10 +9,10 @@
 #include <QStringList>
 
 #include <cstdint>
-#include <memory>
 
 #include "audio/auditionslots.h"
 #include "project/projectworkspace.h"
+#include <variant>
 
 class AudioEngine;
 
@@ -62,15 +63,38 @@ class SoundBrowser final : public QObject
     AuditionResult auditionSymbol(QObject *owner, const QString &symbol, VgAuditionKind kind,
                                   const AuditionSlots::Adsr &adsr);
     AuditionResult auditionExternalFile(QObject *owner, const QString &path, uint8_t key);
+    AuditionResult auditionRenderedSample(QObject *owner, const QByteArray &bytes, uint32_t freq,
+                                          uint32_t loopStart, bool looped, uint8_t key,
+                                          const AuditionSlots::Adsr &adsr, uint8_t toneKey = 60);
     void stop(QObject *owner);
     void stopAll();
 
   private:
-    enum class RequestKind { Program, Symbol, External };
+    struct Owner {
+        QPointer<QObject> object;
+        QObject *identity;
+        QMetaObject::Connection destroyed;
+    };
+    struct ProgramRequest {
+        Owner owner;
+        uint8_t program;
+        uint8_t key;
+    };
+    struct SymbolRequest {
+        Owner owner;
+    };
+    struct ExternalRequest {
+        Owner owner;
+    };
+    struct RenderedRequest {
+        Owner owner;
+    };
+    using ActiveRequest = std::variant<std::monostate, ProgramRequest, SymbolRequest,
+                                       ExternalRequest, RenderedRequest>;
 
-    void takeOwnership(QObject *owner, RequestKind kind);
-    void clearActive();
-    void releaseActive(); // clear ownership, then release both engine lanes
+    Owner trackOwner(QObject *owner);
+    const Owner *activeOwner() const;
+    void releaseActive();
     void onOwnerDestroyed(QObject *dead);
     AudioEngine &m_engine; // borrowed; outlives this coordinator
     SampleSetLease m_samples;
@@ -80,13 +104,7 @@ class SoundBrowser final : public QObject
     QStringList m_progWave;
     QList<QPair<QString, QString>> m_keysplits;
 
-    bool m_hasActive = false;
-    RequestKind m_kind = RequestKind::Program;
-    QPointer<QObject> m_owner;          // live handle for stop() matching
-    QObject *m_ownerIdentity = nullptr; // raw identity for destroyed() matching; never dereferenced
-    QMetaObject::Connection m_ownerGone;
-    int m_program = -1;
-    int m_key = -1;
+    ActiveRequest m_active;
 };
 
 } // namespace soundbrowser

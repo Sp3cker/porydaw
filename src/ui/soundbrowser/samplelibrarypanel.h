@@ -1,53 +1,64 @@
 #pragma once
 
+#include <QSet>
 #include <QStringList>
 #include <QWidget>
 
-class QComboBox;
 class QFileSystemModel;
 class QLabel;
 class QListView;
 class QPushButton;
+class QTreeWidget;
+class QTreeWidgetItem;
 
-// Folder browser for the Sample Editor's library-first import flow
-// (sound-browser-consolidation spec, "Sample library panel"). Used only
-// inside SampleEditorDialog: it lists saved folders' direct audio-file
-// children for preview (single click) and load (double click). It never
-// touches the audio engine; preview/load logic lives in the editor and
-// the soundbrowser::SoundBrowser coordinator.
+// Saved roots and their descendants are navigation only. Audio is requested
+// explicitly and remains owned by the editor's SoundBrowser coordinator.
 class SampleLibraryPanel : public QWidget
 {
     Q_OBJECT
+    Q_DISABLE_COPY_MOVE(SampleLibraryPanel)
 
   public:
     explicit SampleLibraryPanel(QWidget *parent = nullptr);
-
-    // Native directory dialog; appends/persists/navigates on accept.
     void addFolder();
-    // Programmatic equivalent (used by addFolder and tests): absolute
-    // QDir::cleanPath normalization, dedupe, persistence.
     void setFolders(const QStringList &dirs);
     QStringList savedFolders() const;
-    // Status-line notice (missing folders, preview/load failures).
     void showMessage(const QString &text);
+    void setLoadedPath(const QString &path);
+    void setPreviewingPath(const QString &path);
 
   signals:
     void previewRequested(const QString &path);
+    void previewStopRequested();
     void loadRequested(const QString &path);
+
+  protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
   private:
     void refreshFolders();
     void refreshFiles();
     void navigateTo(const QString &dir);
+    void populateFolders(QTreeWidgetItem *item);
+    QString selectedPath() const;
+    void updateState();
+    void togglePreview();
+    void loadSelected();
 
     QStringList m_folders;
     QString m_current;
-
-    QComboBox *m_folderCombo = nullptr;
-    QPushButton *m_addButton = nullptr;
+    QString m_loadedPath;
+    QString m_previewingPath;
+    QString m_message;
+    QSet<QString> m_listedFolders;
+    bool m_listing = false;
+    QTreeWidget *m_folderTree = nullptr;
     QPushButton *m_removeButton = nullptr;
-    QPushButton *m_upButton = nullptr;
+    QPushButton *m_previewButton = nullptr;
+    QPushButton *m_loadButton = nullptr;
     QListView *m_files = nullptr;
     QFileSystemModel *m_fileModel = nullptr;
     QLabel *m_status = nullptr;
+    QLabel *m_loaded = nullptr;
+    QLabel *m_previewing = nullptr;
 };

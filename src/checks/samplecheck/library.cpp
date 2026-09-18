@@ -14,7 +14,9 @@
 #include <QSettings>
 #include <QSignalSpy>
 #include <QSpinBox>
+#include <QSplitter>
 #include <QTemporaryDir>
+#include <QTreeWidget>
 #include <QtTest>
 
 #include <cmath>
@@ -134,98 +136,119 @@ void SampleProcessingTest::libraryFolders()
 {
     ScopedTestSettings settings;
     QTemporaryDir scratch;
-    QVERIFY2(scratch.isValid(), "library-folders scratch directory is available");
+    QVERIFY(scratch.isValid());
     const QString lib = scratch.filePath(QStringLiteral("lib"));
     QVERIFY(QDir().mkpath(lib + QStringLiteral("/sub")));
-    QVERIFY(writeFile(lib + QStringLiteral("/tone.wav"), preparedSampleWav()));
-    QVERIFY(writeFile(lib + QStringLiteral("/LOUDER.MP3"), preparedSampleWav()));
+    for (const QString &suffix :
+         {QStringLiteral("wav"), QStringLiteral("AIF"), QStringLiteral("aiff"),
+          QStringLiteral("MP3"), QStringLiteral("flac"), QStringLiteral("ogg")})
+        QVERIFY(writeFile(lib + QStringLiteral("/tone.") + suffix, preparedSampleWav()));
     QVERIFY(writeFile(lib + QStringLiteral("/notes.txt"), QByteArray("not audio")));
-    QVERIFY(writeFile(lib + QStringLiteral("/font.sf2"), QByteArray("not a soundfont")));
+    QVERIFY(writeFile(lib + QStringLiteral("/font.sf2"), QByteArray("not audio")));
     QVERIFY(writeFile(lib + QStringLiteral("/sub/inner.wav"), preparedSampleWav()));
-
     SampleLibraryPanel panel;
-    // Normalization and dedupe: trailing dots, repeats and dot-dots
-    // collapse to one absolute clean path.
+    auto *files = panel.findChild<QListView *>(QStringLiteral("sampleLibraryFiles"));
+    auto *folders = panel.findChild<QTreeWidget *>(QStringLiteral("sampleLibraryFolders"));
+    auto *status = panel.findChild<QLabel *>(QStringLiteral("sampleLibraryStatus"));
+    auto *previewButton = panel.findChild<QPushButton *>(QStringLiteral("sampleLibraryPreview"));
+    auto *loadButton = panel.findChild<QPushButton *>(QStringLiteral("sampleLibraryLoad"));
+    auto *remove = panel.findChild<QPushButton *>(QStringLiteral("sampleLibraryRemove"));
+    QVERIFY(files && folders && status && previewButton && loadButton && remove);
+    QVERIFY(!status->text().isEmpty());
+    QVERIFY(!loadButton->isEnabled() && !previewButton->isEnabled() && !remove->isEnabled());
     panel.setFolders({lib + QStringLiteral("/./"), lib, lib + QStringLiteral("/sub/..")});
     const QString clean = QDir::cleanPath(QDir(lib).absolutePath());
     QCOMPARE(panel.savedFolders(), QStringList({clean}));
-    // Persistence across recreation through the shared settings key.
     {
         SampleLibraryPanel recreated;
         QCOMPARE(recreated.savedFolders(), QStringList({clean}));
     }
-
-    auto *files = panel.findChild<QListView *>(QStringLiteral("sampleLibraryFiles"));
-    auto *status = panel.findChild<QLabel *>(QStringLiteral("sampleLibraryStatus"));
-    QVERIFY2(files && status, "library file list and status found");
     panel.show();
-    QApplication::processEvents();
-    QAbstractItemModel *model = files->model();
-    QVERIFY(model);
-    const QModelIndex root = files->rootIndex();
-    QTRY_VERIFY_WITH_TIMEOUT((model->rowCount(root) > 0), 5000);
-    QTRY_VERIFY_WITH_TIMEOUT((findRow(model, root, QStringLiteral("tone.wav")).isValid()), 5000);
-
-    // Case-insensitive audio filtering drops notes/soundfonts from the
-    // visible rows but keeps navigable subdirectories and upper-case
-    // suffixes.
-    QCOMPARE(model->rowCount(root), 3);
-    QVERIFY(findRow(model, root, QStringLiteral("LOUDER.MP3")).isValid());
-    QVERIFY(findRow(model, root, QStringLiteral("tone.wav")).isValid());
-    const QPersistentModelIndex subRow(findRow(model, root, QStringLiteral("sub")));
-    QVERIFY(subRow.isValid());
-    QVERIFY(!findRow(model, root, QStringLiteral("notes.txt")).isValid());
-    QVERIFY(!findRow(model, root, QStringLiteral("font.sf2")).isValid());
-
-    // Distinct preview/load actions on a file row.
+    auto *model = files->model();
+    QTRY_COMPARE_WITH_TIMEOUT(model->rowCount(files->rootIndex()), 6, 5000);
+    QVERIFY(!findRow(model, files->rootIndex(), QStringLiteral("sub")).isValid());
+    QVERIFY(!findRow(model, files->rootIndex(), QStringLiteral("notes.txt")).isValid());
+    QVERIFY(!findRow(model, files->rootIndex(), QStringLiteral("font.sf2")).isValid());
+    QVERIFY(findRow(model, files->rootIndex(), QStringLiteral("tone.MP3")).isValid());
+    QVERIFY(!loadButton->isEnabled() && !previewButton->isEnabled());
     QSignalSpy preview(&panel, &SampleLibraryPanel::previewRequested);
+    QSignalSpy stop(&panel, &SampleLibraryPanel::previewStopRequested);
     QSignalSpy load(&panel, &SampleLibraryPanel::loadRequested);
-    QVERIFY(preview.isValid() && load.isValid());
-    // QFileSystemModel populates asynchronously; persistent indexes survive
-    // the listing update while the test waits for the row.
-    const QPersistentModelIndex toneRow(
+    const QPersistentModelIndex tone(
         findRow(model, files->rootIndex(), QStringLiteral("tone.wav")));
-    files->scrollTo(toneRow);
-    QApplication::processEvents();
+    QVERIFY(tone.isValid());
+    files->scrollTo(tone);
     QTest::mouseClick(files->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      files->visualRect(toneRow).center());
+                      files->visualRect(tone).center());
     QCOMPARE(preview.count(), 1);
     QCOMPARE(load.count(), 0);
-    QCOMPARE(preview.constFirst().constFirst().toString(),
-             QFileInfo(lib + QStringLiteral("/tone.wav")).absoluteFilePath());
-    preview.clear();
-    QTest::mouseDClick(files->viewport(), Qt::LeftButton, Qt::NoModifier,
-                       files->visualRect(toneRow).center());
+    QVERIFY(previewButton->isEnabled() && loadButton->isEnabled());
+    previewButton->click();
+    QCOMPARE(preview.count(), 2);
+    QCOMPARE(preview.constFirst().constFirst().toString(), lib + QStringLiteral("/tone.wav"));
+    panel.setPreviewingPath(lib + QStringLiteral("/tone.wav"));
+    sendSpaceStroke(*files);
+    QCOMPARE(stop.count(), 1);
+    panel.setPreviewingPath(QString());
+    QTest::keyClick(files, Qt::Key_Return);
+    QCOMPARE(preview.count(), 3);
+    QCOMPARE(load.count(), 0);
+    loadButton->click();
     QCOMPARE(load.count(), 1);
-    QCOMPARE(load.constFirst().constFirst().toString(),
-             QFileInfo(lib + QStringLiteral("/tone.wav")).absoluteFilePath());
-
-    // Direct-child navigation in place, then back out with Up. A single
-    // click drives the real clicked path (the panel navigates on click);
-    // QTest::mouseDClick alone would not emit clicked first.
+    QTest::mouseDClick(files->viewport(), Qt::LeftButton, Qt::NoModifier,
+                       files->visualRect(tone).center());
+    QCOMPARE(load.count(), 2);
+    const int previewsAfterActivation = preview.count();
+    panel.showMessage(QStringLiteral("decode failed"));
+    QApplication::processEvents();
+    QCOMPARE(status->text(), QStringLiteral("decode failed"));
+    files->setCurrentIndex(findRow(model, files->rootIndex(), QStringLiteral("tone.MP3")));
+    QCOMPARE(preview.count(), previewsAfterActivation);
+    QCOMPARE(load.count(), 2);
+    QVERIFY(status->text() != QStringLiteral("decode failed"));
+    // A pointer click replaces an existing preview, rather than merely
+    // stopping it. Keyboard/current-index selection above remains silent.
+    panel.setPreviewingPath(lib + QStringLiteral("/tone.wav"));
+    const QModelIndex mp3 = files->currentIndex();
+    files->scrollTo(mp3);
     QTest::mouseClick(files->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      files->visualRect(subRow).center());
-    QTRY_VERIFY_WITH_TIMEOUT(
-        (findRow(model, files->rootIndex(), QStringLiteral("inner.wav")).isValid()), 5000);
-    QCOMPARE(model->rowCount(files->rootIndex()), 1);
-    QVERIFY(!findRow(model, files->rootIndex(), QStringLiteral("tone.wav")).isValid());
-    auto *up = panel.findChild<QPushButton *>(QStringLiteral("sampleLibraryUp"));
-    QVERIFY(up);
-    up->click();
-    QTRY_VERIFY_WITH_TIMEOUT(
-        (findRow(model, files->rootIndex(), QStringLiteral("tone.wav")).isValid()), 5000);
-    QCOMPARE(model->rowCount(files->rootIndex()), 3);
+                      files->visualRect(mp3).center());
+    QCOMPARE(preview.count(), previewsAfterActivation + 1);
+    QCOMPARE(preview.constLast().constFirst().toString(), lib + QStringLiteral("/tone.MP3"));
+    QCOMPARE(stop.count(), 1);
+    panel.setPreviewingPath(QString());
 
-    // Removal drops the folder; a missing folder stays listed with a
-    // visible notice instead of being silently dropped.
-    const QString lib2 = scratch.filePath(QStringLiteral("lib2"));
-    QVERIFY(QDir().mkpath(lib2));
-    panel.setFolders({clean, lib2});
-    QCOMPARE(panel.savedFolders().size(), 2);
-    panel.setFolders({clean});
-    QCOMPARE(panel.savedFolders(), QStringList({clean}));
+    // The only top-level navigation destinations are bookmarks. Descendants
+    // stay under that root and never expose a parent-directory entry.
+    QCOMPARE(folders->topLevelItemCount(), 1);
+    auto *root = folders->topLevelItem(0);
+    QCOMPARE(root->text(0), QStringLiteral("lib"));
+    QCOMPARE(root->toolTip(0), clean);
+    QVERIFY(root->isExpanded());
+    QCOMPARE(root->childCount(), 1);
+    folders->setCurrentItem(root->child(0));
+    QTRY_VERIFY_WITH_TIMEOUT(
+        findRow(model, files->rootIndex(), QStringLiteral("inner.wav")).isValid(), 5000);
+    QVERIFY(!loadButton->isEnabled());
+    folders->setCurrentItem(root);
+    QTRY_COMPARE_WITH_TIMEOUT(model->rowCount(files->rootIndex()), 6, 5000);
+    remove->click();
+    QVERIFY(panel.savedFolders().isEmpty());
+    QVERIFY(QFileInfo::exists(lib + QStringLiteral("/tone.wav")));
+    QVERIFY(!files->isVisible());
+    QVERIFY(!remove->isEnabled() && !loadButton->isEnabled());
+    const QString empty = scratch.filePath(QStringLiteral("empty"));
+    QVERIFY(QDir().mkpath(empty));
+    panel.setFolders({empty});
+    QTRY_VERIFY_WITH_TIMEOUT(!status->text().contains(QStringLiteral("Listing")), 5000);
+    QVERIFY(!status->text().isEmpty());
+    QCOMPARE(model->rowCount(files->rootIndex()), 0);
+    QVERIFY(!loadButton->isEnabled() && !previewButton->isEnabled());
     panel.setFolders({scratch.filePath(QStringLiteral("gone"))});
-    QVERIFY2(!status->text().isEmpty(), "missing folder produces a visible notice");
+    QVERIFY(!files->isVisible());
+    QVERIFY(!status->text().isEmpty());
+    QVERIFY(remove->isEnabled());
+    QVERIFY(!loadButton->isEnabled() && !previewButton->isEnabled());
 }
 
 void SampleProcessingTest::librarySourceLoad()
@@ -244,7 +267,18 @@ void SampleProcessingTest::librarySourceLoad()
         [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
+    auto *panel = dialog.findChild<SampleLibraryPanel *>();
+    auto *outer = dialog.findChild<QSplitter *>(QStringLiteral("sampleBrowserSplit"));
+    auto *editor = dialog.findChild<QSplitter *>(QStringLiteral("sampleSplit"));
+    QVERIFY(panel && outer && editor);
+    QCOMPARE(outer->orientation(), Qt::Horizontal);
+    QCOMPARE(outer->widget(0), panel);
+    QCOMPARE(outer->widget(1), editor);
+    QCOMPARE(editor->orientation(), Qt::Vertical);
+    QCOMPARE(editor->count(), 2);
+    QVERIFY(outer->isCollapsible(0));
+    QVERIFY(!outer->isCollapsible(1));
     auto *addButton = dialog.findChild<QPushButton *>(QStringLiteral("sampleAddButton"));
     auto *nameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
     QVERIFY2(addButton && nameEdit, "library load commit controls found");
@@ -259,11 +293,43 @@ void SampleProcessingTest::librarySourceLoad()
     QVERIFY2(dialog.loadLibrarySample(srcPath, &error), qPrintable(error));
     QCOMPARE(dialog.loadedSourceSha256(), SampleRegistrar::sourceHashHex(firstBytes));
     QCOMPARE(dialog.loadedSourcePath(), QFileInfo(srcPath).absoluteFilePath());
+    auto *loaded = panel->findChild<QLabel *>(QStringLiteral("sampleLibraryLoaded"));
+    QVERIFY(loaded);
+    QCOMPARE(loaded->toolTip(), QFileInfo(srcPath).absoluteFilePath());
+    QVERIFY(loaded->text().contains(QFileInfo(srcPath).fileName()));
     QCOMPARE(nameEdit->text(), QStringLiteral("hires_tone"));
     QVERIFY2(addButton->isEnabled(), "a successful load enables the commit");
     QVERIFY2(dialog.undoStack()->count() == 0, "a load resets the undo stack");
     QVERIFY2(playButton->isEnabled(), "a successful load enables document audition");
     QCOMPARE(cropEnd->maximum(), int(dialog.document()->source().frameCount()));
+
+    // Exercise routing inside the real dialog: its editor-wide Space
+    // filter must not supersede the file list's explicit preview surface.
+    panel->setFolders({QFileInfo(srcPath).absolutePath()});
+    auto *files = panel->findChild<QListView *>(QStringLiteral("sampleLibraryFiles"));
+    auto *previewSource = panel->findChild<QLabel *>(QStringLiteral("sampleLibraryPreviewing"));
+    QVERIFY(files && previewSource);
+    dialog.show();
+    QTRY_VERIFY_WITH_TIMEOUT(
+        findRow(files->model(), files->rootIndex(), QFileInfo(srcPath).fileName()).isValid(), 5000);
+    files->setCurrentIndex(
+        findRow(files->model(), files->rootIndex(), QFileInfo(srcPath).fileName()));
+    QSignalSpy preview(panel, &SampleLibraryPanel::previewRequested);
+    QSignalSpy stopPreview(panel, &SampleLibraryPanel::previewStopRequested);
+    const QString idlePlayText = playButton->text();
+    sendSpaceStroke(*files);
+    QCOMPARE(preview.count(), 1);
+    QCOMPARE(previewSource->toolTip(), srcPath);
+    QCOMPARE(playButton->text(), idlePlayText);
+    sendSpaceStroke(*files);
+    QCOMPARE(stopPreview.count(), 1);
+    QVERIFY(previewSource->toolTip().isEmpty());
+    QCOMPARE(playButton->text(), idlePlayText);
+    sendSpaceStroke(*nameEdit);
+    QVERIFY(playButton->text() != idlePlayText);
+    QCOMPARE(preview.count(), 1);
+    sendSpaceStroke(*nameEdit);
+    QCOMPARE(playButton->text(), idlePlayText);
 
     // Tweak, then load a second source: undo, loop chrome and the name
     // follow the new source while a corrupt load preserves everything.
@@ -319,7 +385,7 @@ void SampleProcessingTest::librarySourceLoad()
                 *refusal = QStringLiteral("the sample keeps its registered name.");
             return false;
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
     editDialog.setEditTarget(QStringLiteral("locked_tone"));
     QVERIFY2(editDialog.loadLibrarySample(secondPath, &error), qPrintable(error));
     auto *editName = editDialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
@@ -343,10 +409,8 @@ void SampleProcessingTest::libraryPreviewIsolation()
     QString error;
     QVERIFY2(importAudioBytes(previewBytes, previewPath, &docSource, &error), qPrintable(error));
     soundbrowser::SoundBrowser &browser = m_audio.browser();
-    SampleEditorDialog dialog(
-        docSource, [](const QString &, QString *) { return true; }, engine, browser);
-    SampleEditorDialog other(
-        docSource, [](const QString &, QString *) { return true; }, engine, browser);
+    SampleEditorDialog dialog(docSource, [](const QString &, QString *) { return true; }, browser);
+    SampleEditorDialog other(docSource, [](const QString &, QString *) { return true; }, browser);
     dialog.show();
     other.show();
     QApplication::processEvents();
@@ -382,6 +446,67 @@ void SampleProcessingTest::libraryPreviewIsolation()
     renderSeconds(engine, 4.0);
     QVERIFY2(peakOf(renderSeconds(engine, 0.1)) <= 1.0e-7,
              "closing the owning dialog releases its preview");
+
+    // Rendered PCM uses the same owner arbitration as raw-file preview.
+    const ProcessedSample &rendered = dialog.document()->processed();
+    const AuditionSlots::Adsr fast{255, 0, 255, 0};
+    QObject firstOwner;
+    QObject secondOwner;
+    const auto publish = [&](QObject *owner) {
+        return browser.auditionRenderedSample(owner, rendered.s8, rendered.freq, 0, true, 60, fast)
+            .status;
+    };
+    QCOMPARE(publish(&firstOwner), soundbrowser::AuditionStatus::Started);
+    QVERIFY(peakOf(renderSeconds(engine, 0.2)) >= 0.01);
+    browser.stop(&secondOwner);
+    QVERIFY2(peakOf(renderSeconds(engine, 0.2)) >= 0.01,
+             "a non-owner cannot stop rendered audition");
+    browser.clearProjectSamples();
+    QVERIFY2(peakOf(renderSeconds(engine, 0.2)) >= 0.01,
+             "rendered audition survives catalog clearing");
+    QCOMPARE(publish(&secondOwner), soundbrowser::AuditionStatus::Started);
+    browser.stop(&firstOwner);
+    QVERIFY2(peakOf(renderSeconds(engine, 0.2)) >= 0.01,
+             "a displaced rendered owner cannot release its successor");
+    browser.stop(&secondOwner);
+    renderSeconds(engine, 4.0);
+    QVERIFY(peakOf(renderSeconds(engine, 0.1)) <= 1.0e-7);
+    {
+        QObject temporaryOwner;
+        QCOMPARE(publish(&temporaryOwner), soundbrowser::AuditionStatus::Started);
+        QVERIFY(peakOf(renderSeconds(engine, 0.2)) >= 0.01);
+    }
+    renderSeconds(engine, 4.0);
+    QVERIFY2(peakOf(renderSeconds(engine, 0.1)) <= 1.0e-7,
+             "destroying the rendered owner releases its sample lane");
+
+    // With the real callback parked, a publication storm exhausts slots.
+    for (int i = 0; i < AuditionSlots::kSlots; ++i)
+        QCOMPARE(publish(&firstOwner), soundbrowser::AuditionStatus::Started);
+    QCOMPARE(publish(&firstOwner), soundbrowser::AuditionStatus::Busy);
+    SampleEditorDialog retryDialog(
+        docSource, [](const QString &, QString *) { return true; }, browser);
+    sendSpaceStroke(retryDialog);
+    QVERIFY2(peakOf(renderSeconds(engine, 0.2)) <= 1.0e-7,
+             "Busy does not publish a stale note while slots retire");
+    // Only the GUI timer may retry; the audio callback has now retired slots.
+    QTRY_VERIFY_WITH_TIMEOUT(peakOf(renderSeconds(engine, 0.1)) >= 0.01, 2000);
+    retryDialog.reject();
+    renderSeconds(engine, 4.0);
+    QVERIFY(peakOf(renderSeconds(engine, 0.1)) <= 1.0e-7);
+
+    // A processed-document owner must not release a newer library owner.
+    SampleEditorDialog displaced(
+        docSource, [](const QString &, QString *) { return true; }, browser);
+    sendSpaceStroke(displaced);
+    QVERIFY(peakOf(renderSeconds(engine, 0.2)) >= 0.01);
+    QCOMPARE(publish(&secondOwner), soundbrowser::AuditionStatus::Started);
+    displaced.reject();
+    QVERIFY2(peakOf(renderSeconds(engine, 0.2)) >= 0.01,
+             "closing a displaced document audition preserves the current owner");
+    browser.stop(&secondOwner);
+    renderSeconds(engine, 4.0);
+    QVERIFY(peakOf(renderSeconds(engine, 0.1)) <= 1.0e-7);
 }
 
 void SampleProcessingTest::librarySaveAsNew()
@@ -410,7 +535,7 @@ void SampleProcessingTest::librarySaveAsNew()
                 *refusal = QStringLiteral("the sample keeps its registered name.");
             return false;
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
     dialog.setEditTarget(
         QStringLiteral("orig_tone"), [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
@@ -451,7 +576,7 @@ void SampleProcessingTest::librarySaveAsNew()
         [](const QString &candidate, QString *) {
             return candidate == QStringLiteral("orig_tone");
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
     locked.show();
     QApplication::processEvents();
     auto *lockedButton = locked.findChild<QPushButton *>(QStringLiteral("sampleSaveAsNewButton"));

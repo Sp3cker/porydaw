@@ -79,7 +79,7 @@ void SampleProcessingTest::pipelinePrefillCollision()
         [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
     auto *nameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
     auto *addButton = dialog.findChild<QPushButton *>(QStringLiteral("sampleAddButton"));
     auto *status = dialog.findChild<QLabel *>(QStringLiteral("sampleNameStatus"));
@@ -104,8 +104,7 @@ void SampleProcessingTest::pipelinePreparedDefaults()
                               &prepared, &error),
              qPrintable(error));
     SampleEditorDialog dialog(
-        prepared, [](const QString &, QString *) { return true; }, m_audio.engine(),
-        m_audio.browser());
+        prepared, [](const QString &, QString *) { return true; }, m_audio.browser());
     auto *baseKey = dialog.findChild<QSpinBox *>(QStringLiteral("sampleBaseKey"));
     auto *fineTune = dialog.findChild<QDoubleSpinBox *>(QStringLiteral("sampleFineTune"));
     SampleDocument *document = dialog.document();
@@ -130,8 +129,7 @@ void SampleProcessingTest::pipelineKeyOverride()
                               &prepared, &error),
              qPrintable(error));
     SampleEditorDialog dialog(
-        prepared, [](const QString &, QString *) { return true; }, m_audio.engine(),
-        m_audio.browser());
+        prepared, [](const QString &, QString *) { return true; }, m_audio.browser());
     auto *baseKey = dialog.findChild<QSpinBox *>(QStringLiteral("sampleBaseKey"));
     SampleDocument *document = dialog.document();
     QVERIFY2(baseKey && document, "pipeline key controls found");
@@ -152,8 +150,7 @@ void SampleProcessingTest::pipelineLoopToggle()
                               &prepared, &error),
              qPrintable(error));
     SampleEditorDialog dialog(
-        prepared, [](const QString &, QString *) { return true; }, m_audio.engine(),
-        m_audio.browser());
+        prepared, [](const QString &, QString *) { return true; }, m_audio.browser());
     auto *loopOn = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
     SampleDocument *document = dialog.document();
     QVERIFY2(loopOn && document, "pipeline loop controls found");
@@ -179,8 +176,7 @@ void SampleProcessingTest::pipelineRateCommit()
                               &prepared, &error),
              qPrintable(error));
     SampleEditorDialog dialog(
-        prepared, [](const QString &, QString *) { return true; }, m_audio.engine(),
-        m_audio.browser());
+        prepared, [](const QString &, QString *) { return true; }, m_audio.browser());
     auto *loopOn = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
     auto *rateCombo = dialog.findChild<QComboBox *>(QStringLiteral("sampleRateCombo"));
     SampleDocument *document = dialog.document();
@@ -217,8 +213,7 @@ void SampleProcessingTest::pipelineCropNormalize()
                               &prepared, &error),
              qPrintable(error));
     SampleEditorDialog dialog(
-        prepared, [](const QString &, QString *) { return true; }, m_audio.engine(),
-        m_audio.browser());
+        prepared, [](const QString &, QString *) { return true; }, m_audio.browser());
     auto *loopOn = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
     auto *cropEnd = dialog.findChild<QSpinBox *>(QStringLiteral("sampleCropEnd"));
     auto *normalize = dialog.findChild<QComboBox *>(QStringLiteral("sampleNormalizeMode"));
@@ -250,7 +245,7 @@ void SampleProcessingTest::editorDrag()
         [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();
@@ -299,7 +294,7 @@ void SampleProcessingTest::editorPitchAdoption()
         [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();
@@ -333,7 +328,7 @@ void SampleProcessingTest::editorLoopPopulate()
         [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();
@@ -393,7 +388,7 @@ void SampleProcessingTest::editorLoopRefine()
         [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();
@@ -435,7 +430,7 @@ void SampleProcessingTest::editorCrossfade()
         [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();
@@ -479,7 +474,7 @@ void SampleProcessingTest::editorAuditionStrip()
         [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
     auto *play = dialog.findChild<QPushButton *>(QStringLiteral("sampleAuditionPlay"));
     QVERIFY2(play && play->isEnabled(), "audition strip enabled with initialized audio");
 }
@@ -501,7 +496,7 @@ void SampleProcessingTest::editorUndo()
         [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
     SampleDocument *document = dialog.document();
     QUndoStack *undo = dialog.undoStack();
     auto *baseKey = dialog.findChild<QSpinBox *>(QStringLiteral("sampleBaseKey"));
@@ -534,7 +529,7 @@ void SampleProcessingTest::editorScroll()
         [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();
@@ -564,7 +559,7 @@ void SampleProcessingTest::editorSplitter()
         [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();
@@ -607,7 +602,7 @@ void SampleProcessingTest::editorCommit()
         [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         },
-        m_audio.engine(), m_audio.browser());
+        m_audio.browser());
     auto *nameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
     auto *baseKey = dialog.findChild<QSpinBox *>(QStringLiteral("sampleBaseKey"));
     SampleDocument *document = dialog.document();
@@ -672,7 +667,7 @@ void SampleProcessingTest::spaceAudition()
     };
 
     SampleEditorDialog dialog(
-        hiRes, [](const QString &, QString *) { return true; }, engine, m_audio.browser());
+        hiRes, [](const QString &, QString *) { return true; }, m_audio.browser());
     dialog.resize(900, 640);
     dialog.show();
     QApplication::processEvents();

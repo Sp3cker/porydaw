@@ -6,6 +6,7 @@
 #include "audio/sampledoc.h"
 #include "audio/sampleimport.h"
 #include <algorithm>
+#include <type_traits>
 #include <utility>
 
 namespace soundbrowser {
@@ -39,7 +40,7 @@ void SoundBrowser::setProjectSamples(SampleSetLease samples, const VoicegroupCat
     // Replacing an existing snapshot invalidates a live project-symbol
     // request (its metadata indexed the old catalog); initial delivery
     // never stops a program or external-file request.
-    if (m_samples && m_hasActive && m_kind == RequestKind::Symbol)
+    if (std::holds_alternative<SymbolRequest>(m_active))
         releaseActive();
     m_samples = std::move(samples);
     m_directSound = catalog.directSound;
@@ -52,7 +53,7 @@ void SoundBrowser::clearProjectSamples()
     // A reset cannot leave metadata indexed against another catalog: a live
     // project-symbol request is released before the lease drops. Program
     // and external-file requests are unaffected.
-    if (m_hasActive && m_kind == RequestKind::Symbol)
+    if (std::holds_alternative<SymbolRequest>(m_active))
         releaseActive();
     m_samples.reset();
     m_directSound.clear();
@@ -87,16 +88,15 @@ void SoundBrowser::previewVoice(QObject *owner, int program, int key, int veloci
         // Releases match the active program/key: a late release from one
         // surface must not cut another surface's note, even for the same
         // program.
-        if (m_hasActive && m_kind == RequestKind::Program && m_owner && m_owner.data() == owner &&
-            m_program == program && m_key == key)
+        const auto *request = std::get_if<ProgramRequest>(&m_active);
+        if (request && request->owner.object == owner && request->program == program &&
+            request->key == key)
             releaseActive();
         return;
     }
     releaseActive();
     m_engine.previewVoice(uint8_t(program), uint8_t(key), uint8_t(velocity));
-    takeOwnership(owner, RequestKind::Program);
-    m_program = program;
-    m_key = key;
+    m_active = ProgramRequest{trackOwner(owner), uint8_t(program), uint8_t(key)};
 }
 
 AuditionResult SoundBrowser::auditionSymbol(QObject *owner, const QString &symbol,
@@ -185,7 +185,7 @@ AuditionResult SoundBrowser::auditionSymbol(QObject *owner, const QString &symbo
                                       resolved.looped, kAuditionKey, useAdsr, resolved.toneKey);
     if (!published)
         return {AuditionStatus::Busy, tr("The audition engine is busy.")};
-    takeOwnership(owner, RequestKind::Symbol);
+    m_active = SymbolRequest{trackOwner(owner)};
     return {AuditionStatus::Started, {}};
 }
 
@@ -214,13 +214,29 @@ AuditionResult SoundBrowser::auditionExternalFile(QObject *owner, const QString 
                                 /*looped=*/false, key, AuditionSlots::Adsr{}, toneKey);
     if (!published)
         return {AuditionStatus::Busy, tr("The audition engine is busy.")};
-    takeOwnership(owner, RequestKind::External);
+    m_active = ExternalRequest{trackOwner(owner)};
+    return {AuditionStatus::Started, {}};
+}
+
+AuditionResult SoundBrowser::auditionRenderedSample(QObject *owner, const QByteArray &bytes,
+                                                    uint32_t freq, uint32_t loopStart, bool looped,
+                                                    uint8_t key, const AuditionSlots::Adsr &adsr,
+                                                    uint8_t toneKey)
+{
+    if (!owner || bytes.isEmpty() || freq == 0 || key >= 128 || toneKey >= 128 ||
+        (looped && loopStart >= uint64_t(bytes.size())))
+        return {AuditionStatus::Unsupported, tr("Nothing to audition.")};
+    releaseActive();
+    if (!m_engine.auditionSample(bytes, freq, loopStart, looped, key, adsr, toneKey))
+        return {AuditionStatus::Busy, tr("The audition engine is busy.")};
+    m_active = RenderedRequest{trackOwner(owner)};
     return {AuditionStatus::Started, {}};
 }
 
 void SoundBrowser::stop(QObject *owner)
 {
-    if (!owner || !m_hasActive || !m_owner || m_owner.data() != owner)
+    const Owner *active = activeOwner();
+    if (!owner || !active || active->object != owner)
         return;
     releaseActive();
 }
@@ -230,53 +246,49 @@ void SoundBrowser::stopAll()
     releaseActive();
 }
 
-void SoundBrowser::takeOwnership(QObject *owner, RequestKind kind)
+SoundBrowser::Owner SoundBrowser::trackOwner(QObject *owner)
 {
-    clearActive();
-    m_hasActive = true;
-    m_kind = kind;
-    m_owner = owner;
-    m_ownerIdentity = owner;
-    // Qt clears the QPointer before destroyed() is delivered, so the match
-    // below compares the captured identity, never the cleared pointer.
-    m_ownerGone =
-        connect(owner, &QObject::destroyed, this, [this, owner] { onOwnerDestroyed(owner); });
+    // QPointer clears before destroyed is delivered; identity is compared
+    // only, never dereferenced.
+    return {owner, owner,
+            connect(owner, &QObject::destroyed, this, [this, owner] { onOwnerDestroyed(owner); })};
 }
 
-void SoundBrowser::clearActive()
+const SoundBrowser::Owner *SoundBrowser::activeOwner() const
 {
-    disconnect(m_ownerGone);
-    m_ownerGone = QMetaObject::Connection{};
-    m_owner.clear();
-    m_ownerIdentity = nullptr;
-    m_hasActive = false;
-    m_program = -1;
-    m_key = -1;
+    return std::visit(
+        [](const auto &request) -> const Owner * {
+            if constexpr (std::is_same_v<std::decay_t<decltype(request)>, std::monostate>)
+                return nullptr;
+            else
+                return &request.owner;
+        },
+        m_active);
 }
 
 void SoundBrowser::releaseActive()
 {
-    if (!m_hasActive) {
-        clearActive();
-        return;
-    }
-    const bool hadProgram = m_kind == RequestKind::Program;
-    const int program = m_program;
-    const int key = m_key;
-    // Ownership clears before the engine release methods run.
-    clearActive();
-    if (hadProgram)
-        m_engine.previewVoice(uint8_t(program), uint8_t(key), 0);
-    m_engine.auditionSampleOff();
+    // Clear ownership before any engine release call.
+    const ActiveRequest previous = std::exchange(m_active, std::monostate{});
+    std::visit(
+        [this](const auto &request) {
+            using Request = std::decay_t<decltype(request)>;
+            if constexpr (!std::is_same_v<Request, std::monostate>) {
+                disconnect(request.owner.destroyed);
+                if constexpr (std::is_same_v<Request, ProgramRequest>)
+                    m_engine.previewVoice(request.program, request.key, 0);
+                else
+                    m_engine.auditionSampleOff();
+            }
+        },
+        previous);
 }
 
 void SoundBrowser::onOwnerDestroyed(QObject *dead)
 {
-    // Destruction of a displaced owner does nothing; only the current owner
-    // releases its audition.
-    if (!m_hasActive || m_ownerIdentity != dead)
-        return;
-    releaseActive();
+    const Owner *active = activeOwner();
+    if (active && active->identity == dead)
+        releaseActive();
 }
 
 } // namespace soundbrowser

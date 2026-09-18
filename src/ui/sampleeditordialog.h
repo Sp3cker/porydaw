@@ -13,7 +13,6 @@
 #include "audio/sampledsp.h"
 #include "ui/soundbrowser/soundbrowser.h"
 
-class AudioEngine;
 class QCheckBox;
 class QComboBox;
 class QDoubleSpinBox;
@@ -36,10 +35,10 @@ class WaveformView;
 // enable, a green/amber/red seam badge, pitch-detect prefill, and an
 // engine audition strip (play / key) driven through the audition-slot
 // protocol (PLAN.md §4); one-shot auditions repeat with a half-second
-// gap until stopped, and plain Space toggles the audition from anywhere
-// in the dialog (the app-wide "Space is playback" convention — focusable
-// inputs are filtered so they can't swallow the key; nothing here
-// legitimately types a space). Expert rows live in a collapsed Advanced
+// gap until stopped, and plain Space toggles document audition except
+// while the library file list owns focus (where it toggles raw preview).
+// Focusable editor inputs are filtered so they cannot swallow the key.
+// Expert rows live in a collapsed Advanced
 // disclosure; the whole control column
 // below the waveform rides a squeeze-then-scroll area. Pure view: the
 // dialog renders and hands out the export bytes; MainWindow does the
@@ -57,7 +56,7 @@ class SampleEditorDialog : public QDialog
     // destAdsr, when given, is the destination voice's envelope
     // (browser-initiated flow) and enables the "use destination voice
     // ADSR" audition option.
-    SampleEditorDialog(ImportedSample sample, NameValidator validator, AudioEngine &engine,
+    SampleEditorDialog(ImportedSample sample, NameValidator validator,
                        soundbrowser::SoundBrowser &browser,
                        const AuditionSlots::Adsr *destAdsr = nullptr, QWidget *parent = nullptr);
 
@@ -65,8 +64,7 @@ class SampleEditorDialog : public QDialog
     // document-editing controls and document Play disabled until
     // loadLibrarySample succeeds. Library navigation, file preview and
     // the audition-key control stay usable throughout.
-    SampleEditorDialog(NameValidator validator, AudioEngine &engine,
-                       soundbrowser::SoundBrowser &browser,
+    SampleEditorDialog(NameValidator validator, soundbrowser::SoundBrowser &browser,
                        const AuditionSlots::Adsr *destAdsr = nullptr, QWidget *parent = nullptr);
     ~SampleEditorDialog() override;
 
@@ -144,7 +142,6 @@ class SampleEditorDialog : public QDialog
 
     SampleDocument m_doc;
     NameValidator m_validator;
-    AudioEngine &m_engine;
     bool m_hasDestAdsr = false;
     AuditionSlots::Adsr m_destAdsr;
     QUndoStack m_undo;

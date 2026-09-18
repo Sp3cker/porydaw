@@ -239,7 +239,7 @@ void WorkspaceUi::continueImportFlow(const SampleFormatProbe &probe)
         [this](const QString &name, QString *validationError) {
             return validateNewSampleName(name, validationError);
         },
-        m_audio, *m_soundBrowser, hasDestAdsr ? &destAdsr : nullptr, &m_host);
+        *m_soundBrowser, hasDestAdsr ? &destAdsr : nullptr, &m_host);
     m_soundBrowser->stopAll();
     if (dialog.exec() != QDialog::Accepted)
         return;
@@ -364,7 +364,7 @@ void WorkspaceUi::continueEditSampleFlow(const SampleRead &read)
                     QObject::tr("the sample keeps its registered name (%1).").arg(name);
             return false;
         },
-        m_audio, *m_soundBrowser, hasDestAdsr ? &destAdsr : nullptr, &m_host);
+        *m_soundBrowser, hasDestAdsr ? &destAdsr : nullptr, &m_host);
     dialog.setEditTarget(name, [this](const QString &candidate, QString *validationError) {
         return validateNewSampleName(candidate, validationError);
     });
