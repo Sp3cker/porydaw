@@ -191,6 +191,16 @@ ApplicationWindow {
         flick.contentY = root.gridModel.initialScrollY;
         console.log("SWIFT_GRID_READY");
     }
+    // Production ItemVisibleHasChanged entry: window hide() is Hidden
+    // (reason 2), matching the grid surface wire below. WindowDeactivate
+    // arrives only through the native window eventFilter (reason 3):
+    // isActive is app bookkeeping and is not synthesizable via sendEvent,
+    // so there is deliberately no onActiveChanged wire. Popup-owned
+    // surfaces keep their own input (spec deferral §8 — no popup teardown).
+    onVisibleChanged: {
+        if (!visible)
+            root.gridModel.cancelPointer(2);
+    }
 
     component ChromeButton: Rectangle {
         id: button
@@ -463,7 +473,12 @@ ApplicationWindow {
                         objectName: "pianoGridSurface"
                         width: Math.max(root.gridModel.gridWidth, 1)
                         height: Math.max(root.gridModel.gridHeight, 1)
-
+                        // Production ItemVisibleHasChanged entry: per-surface
+                        // hidden tears the grid gesture down (reason 2).
+                        onVisibleChanged: {
+                            if (!visible)
+                                root.gridModel.cancelPointer(2);
+                        }
                         PianoRollCanvas {
                             bandSide: rollBandContent
                             gutterSide: rollGutterSide
@@ -524,13 +539,26 @@ ApplicationWindow {
 
                         MouseArea {
                             id: inputArea
+                            objectName: "pianoGridInput"
                             anchors.fill: parent
                             acceptedButtons: Qt.LeftButton | Qt.RightButton
                             preventStealing: true
+                            // Focus home of the grid surface: press-driven
+                            // gestures hold active focus so a focus steal is
+                            // observable as production focusOutEvent (reason 0).
+                            focus: true
                             hoverEnabled: true
                             z: 10
-
                             property bool rightHeld: false
+                            // Production focusOutEvent entry: focus loss while
+                            // visible keeps a live gesture committable
+                            // (reason 0 is survival — zero state change). The
+                            // visible guard arbitrates the hidden case, which
+                            // owns its teardown through reason 2 instead.
+                            onActiveFocusChanged: {
+                                if (!activeFocus && visible)
+                                    root.gridModel.cancelPointer(0);
+                            }
 
                             cursorShape: {
                                 switch (root.gridModel.cursorKind) {
@@ -557,7 +585,7 @@ ApplicationWindow {
                             onDoubleClicked: function (mouse) {
                                 if (mouse.button === Qt.RightButton)
                                     return;
-                                root.gridModel.cancelPointer();
+                                root.gridModel.cancelPointer(1);
                                 root.gridModel.doublePointer(mouse.x, mouse.y);
                             }
                             onPositionChanged: function (mouse) {
@@ -580,9 +608,9 @@ ApplicationWindow {
                             onCanceled: function () {
                                 if (rightHeld) {
                                     rightHeld = false;
-                                    root.gridModel.cancelRightPointer();
+                                    root.gridModel.cancelRightPointer(1);
                                 } else {
-                                    root.gridModel.cancelPointer();
+                                    root.gridModel.cancelPointer(1);
                                 }
                             }
                             onWheel: function (e) {

@@ -1,0 +1,261 @@
+diff --git a/src/ui/songview/quick/swift-grid-prototype/Tick.swift b/src/ui/songview/quick/swift-grid-prototype/Tick.swift
+new file mode 100644
+index 00000000..d6858bd2
+--- /dev/null
++++ b/src/ui/songview/quick/swift-grid-prototype/Tick.swift
+@@ -0,0 +1,38 @@
++// Tick.swift — Swift port of the CoreTimeDefaults tick helpers
++// (src/core/timedefaults.h, the production oracle). Pure Swift; no imports.
++// Guard ordering is spec §7 verbatim: a reorder is a defect even when tests
++// pass. Later Wave-1 tasks add TimeAxis.swift and PitchProjection.swift.
++
++/// Canonical musical position; mirrors C++ `using Tick = uint32_t`.
++typealias Tick = UInt32
++
++/// Absent-loop marker / parse bound; never emitted by the helpers below.
++let kNoTick: Tick = Tick.max
++
++/// Highest representable tick; the saturation bound.
++let kMaxTick: Tick = kNoTick - 1
++
++/// Mathematical tick + delta saturated to [0, kMaxTick]; never emits kNoTick.
++/// Headroom is classified before any arithmetic (spec §7).
++func shiftTickClamped(_ tick: Tick, _ delta: Int64) -> Tick {
++    if delta <= -Int64(tick) {
++        return 0
++    }
++    if delta >= Int64(kMaxTick) - Int64(tick) {
++        return kMaxTick
++    }
++    return Tick(Int64(tick) + delta)
++}
++
++/// Floating position to Tick: NaN and non-positive map to 0; values at or
++/// above Double(kNoTick) (including +inf) saturate to kMaxTick; otherwise
++/// truncate toward zero. The bounds check precedes the conversion (spec §7).
++func tickFromDouble(_ tick: Double) -> Tick {
++    if !(tick > 0) {
++        return 0
++    }
++    if tick >= Double(kNoTick) {
++        return kMaxTick
++    }
++    return Tick(tick)
++}
+diff --git a/src/ui/songview/quick/swift-grid-prototype/MathSelftest.swift b/src/ui/songview/quick/swift-grid-prototype/MathSelftest.swift
+new file mode 100644
+index 00000000..3dc66096
+--- /dev/null
++++ b/src/ui/songview/quick/swift-grid-prototype/MathSelftest.swift
+@@ -0,0 +1,76 @@
++import Foundation
++import NativeGridSmoke
++
++// Wave-1 view-math selftest driver (spec §4, §6). Task 1 covers the tick
++// group (T1); Tasks 2–3 append the time-axis and pitch groups to this file.
++// Called from App.init before installGridSmoke so a mismatch fails fast,
++// before any window opens. A FAIL exits nonzero; the final
++// `SWIFT_GRID_SMOKE PASS` line still comes from the C++ exercise().
++
++/// No-op unless PORYDAW_SWIFT_GRID_SMOKE == "1".
++func runMathSelftestIfRequested() {
++    guard ProcessInfo.processInfo.environment["PORYDAW_SWIFT_GRID_SMOKE"] == "1" else {
++        return
++    }
++    runMathTickSelftest()
++}
++
++private func mathTickFail(_ detail: String) -> Never {
++    fputs("SWIFT_GRID_SMOKE math-tick FAIL: \(detail)\n", stderr)
++    fflush(stderr)
++    exit(EXIT_FAILURE)
++}
++
++// MARK: - Tick helpers (spec §6 T1, frozen)
++
++private func runMathTickSelftest() {
++    let shiftCases: [(tick: Tick, delta: Int64, expected: Tick)] = [
++        (0, 0, 0),
++        (100, 28, 128),
++        (100, -100, 0),
++        (100, -1000, 0),
++        (50, -49, 1),
++        (50, -51, 0),
++        (0, Int64.min, 0),
++        (kMaxTick, 0, kMaxTick),
++        (kMaxTick, 1, kMaxTick),
++        (kMaxTick, Int64.max, kMaxTick),
++        (kNoTick, 5, kMaxTick),
++    ]
++    for c in shiftCases {
++        let swiftValue = shiftTickClamped(c.tick, c.delta)
++        if swiftValue != c.expected {
++            mathTickFail("shiftTickClamped(\(c.tick), \(c.delta)) == \(swiftValue), want \(c.expected)")
++        }
++        let oracleValue = sgm_shift_tick_clamped(c.tick, c.delta)
++        if oracleValue != c.expected {
++            mathTickFail(
++                "sgm_shift_tick_clamped(\(c.tick), \(c.delta)) == \(oracleValue), want \(c.expected)"
++            )
++        }
++    }
++
++    let fromDoubleCases: [(x: Double, expected: Tick)] = [
++        (.nan, 0),
++        (-1.5, 0),
++        (0.0, 0),
++        (0.9, 0),
++        (127.9, 127),
++        (Double(kMaxTick), kMaxTick),
++        (Double(kNoTick), kMaxTick),
++        (.infinity, kMaxTick),
++    ]
++    for c in fromDoubleCases {
++        let swiftValue = tickFromDouble(c.x)
++        if swiftValue != c.expected {
++            mathTickFail("tickFromDouble(\(c.x)) == \(swiftValue), want \(c.expected)")
++        }
++        let oracleValue = sgm_tick_from_double(c.x)
++        if oracleValue != c.expected {
++            mathTickFail("sgm_tick_from_double(\(c.x)) == \(oracleValue), want \(c.expected)")
++        }
++    }
++
++    print("SWIFT_GRID_SMOKE math-tick PASS")
++    fflush(stdout)
++}
+diff --git a/src/checks/swiftgridprototype/math_smoke.h b/src/checks/swiftgridprototype/math_smoke.h
+new file mode 100644
+index 00000000..75ff3f4b
+--- /dev/null
++++ b/src/checks/swiftgridprototype/math_smoke.h
+@@ -0,0 +1,51 @@
++#pragma once
++
++// Parity seam for the Swift Wave-1 view-math ports (spec §4): C ABI over the
++// production C++ types, imported by Swift through the NativeGridSmoke module.
++// Swift drives, C++ answers — no @_cdecl, no C++→Swift calls.
++//
++// Declared incrementally: Task 1 declares only the tick pair. Tasks 2–3
++// append the time-axis and pitch groups below; the fixture structs are
++// declared here up front so those appends touch declarations only.
++
++#include <stddef.h>
++#include <stdint.h>
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++typedef struct SGSigPoint { // fixture mirror of TimeSigPoint
++    uint32_t tick;
++    uint8_t numerator;
++    uint8_t denomPow2;
++} SGSigPoint;
++
++typedef struct SGTimeMapFixture { // fixture mirror of TimeMap
++    uint32_t ticksPerBeat;
++    uint32_t lengthTicks;
++    uint32_t loopStartTick;
++    uint32_t loopEndTick;
++    const SGSigPoint *timeSigs; // tick-sorted; may be NULL when count == 0
++    size_t timeSigCount;
++} SGTimeMapFixture;
++
++typedef struct SGTimeAxisAnswer { // every scalar query in one struct
++    uint32_t ticksPerBeat, lengthTicks, loopStartTick, loopEndTick;
++    uint32_t segStart, segNext, segBeatTicks, segBeatsPerBar; // segmentAt(tick)
++    int32_t sigNumerator, sigDenomPow2, sigImplicit;          // signatureAt(tick); implicit 0/1
++} SGTimeAxisAnswer;
++
++typedef struct SGGridLine {
++    uint32_t tick;
++    uint8_t isBar;
++    int32_t bar;
++    int32_t beat;
++} SGGridLine;
++
++/* Task 1 */ uint32_t sgm_shift_tick_clamped(uint32_t tick, int64_t delta);
++/* Task 1 */ uint32_t sgm_tick_from_double(double tick);
++
++#ifdef __cplusplus
++} // extern "C"
++#endif
+diff --git a/src/checks/swiftgridprototype/math_smoke.cpp b/src/checks/swiftgridprototype/math_smoke.cpp
+new file mode 100644
+index 00000000..076fab40
+--- /dev/null
++++ b/src/checks/swiftgridprototype/math_smoke.cpp
+@@ -0,0 +1,17 @@
++// Parity-seam oracles for the Swift Wave-1 tick helpers (spec §4, Task 1):
++// thin forwarding over the production CoreTimeDefaults — no logic of its own.
++// Tasks 2–3 append the time-axis and pitch groups to this file.
++
++#include "math_smoke.h"
++
++#include "core/timedefaults.h"
++
++uint32_t sgm_shift_tick_clamped(uint32_t tick, int64_t delta)
++{
++    return CoreTimeDefaults::shiftTickClamped(static_cast<Tick>(tick), delta);
++}
++
++uint32_t sgm_tick_from_double(double tick)
++{
++    return CoreTimeDefaults::tickFromDouble(tick);
++}
+diff --git a/src/checks/swiftgridprototype/module.modulemap b/src/checks/swiftgridprototype/module.modulemap
+index ff6327d9..054d509a 100644
+--- a/src/checks/swiftgridprototype/module.modulemap
++++ b/src/checks/swiftgridprototype/module.modulemap
+@@ -1,4 +1,5 @@
+ module NativeGridSmoke {
+     header "grid_smoke.h"
++    header "math_smoke.h"
+     export *
+ }
+diff --git a/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt b/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt
+index ea8b86be..8f486bd9 100644
+--- a/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt
++++ b/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt
+@@ -113,20 +113,21 @@ target_link_libraries(swift_grid_typography PUBLIC Qt6::Gui)
+ # Kept as a separate static target so Qt6::Test's QT_TESTCASE_* compile
+ # definitions stay on C++ and never reach the Swift compilation.
+ set(SWIFT_GRID_SMOKE_DIR
+     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../checks/swiftgridprototype"
+ )
+ 
+ add_library(swift_grid_smoke STATIC
+     "${SWIFT_GRID_SMOKE_DIR}/grid_smoke.cpp"
+     "${SWIFT_GRID_SMOKE_DIR}/audio_smoke.cpp"
+     "${SWIFT_GRID_SMOKE_DIR}/interaction_smoke.cpp"
++    "${SWIFT_GRID_SMOKE_DIR}/math_smoke.cpp"
+ )
+ target_include_directories(swift_grid_smoke PRIVATE
+     "${SWIFT_GRID_SMOKE_DIR}"
+ )
+ target_link_libraries(swift_grid_smoke PRIVATE
+     Qt6::Quick
+     Qt6::Test
+     swift_grid_audio
+     swift_grid_curve
+ )
+diff --git a/src/ui/songview/quick/swift-grid-prototype/App.swift b/src/ui/songview/quick/swift-grid-prototype/App.swift
+index 4b08dff5..2a545e46 100644
+--- a/src/ui/songview/quick/swift-grid-prototype/App.swift
++++ b/src/ui/songview/quick/swift-grid-prototype/App.swift
+@@ -6,13 +6,14 @@ import QtBridge
+ struct SwiftGridApp: QApp {
+     let qmlFileName: String = "Main"
+ 
+     let gridModel = PianoGrid()
+ 
+     var initialProperties: [String: QObjectBuildable] {
+         ["gridModel": gridModel]
+     }
+ 
+     init() {
++        runMathSelftestIfRequested()
+         installGridSmoke()
+     }
+ }

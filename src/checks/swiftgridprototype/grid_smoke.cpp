@@ -635,6 +635,8 @@ void exercise(Scene scene)
     require(hoverAligned, "scrolled keyboard hover chip is not beside the hovered row");
     pass("scrolled-keyboard-hover-chip");
     verifyGridInteractions(scene.window, scene.model);
+    verifyGridUndo(scene.window, scene.model);
+    verifyGridCancel(scene.window, scene.model);
 
     std::puts("SWIFT_GRID_SMOKE PASS");
     std::fflush(stdout);

@@ -1,5 +1,6 @@
 import Foundation
 import NativeGridSmoke
+import NativeGridWindowCancel
 import QtBridge
 
 @main
@@ -13,6 +14,8 @@ struct SwiftGridApp: QApp {
     }
 
     init() {
+        runMathSelftestIfRequested()
+        sgw_installWindowCancelFilter()
         installGridSmoke()
     }
 }

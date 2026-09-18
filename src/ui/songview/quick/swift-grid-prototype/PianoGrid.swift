@@ -25,6 +25,18 @@ final class GridNote {
     }
 }
 
+// Input-jurisdiction vocabulary for the grid surface. Mirrors
+// songview::TimelineInputCancelReason declaration order (FocusLost,
+// PointerUngrabbed, Hidden, WindowDeactivated); QML entries pass the raw
+// value, Swift rehydrates with GridCancelReason(rawValue:) and treats
+// unknown codes as no-ops.
+public enum GridCancelReason: Int {
+    case focusLost = 0
+    case pointerUngrabbed = 1
+    case hidden = 2
+    case windowDeactivated = 3
+}
+
 @MainActor
 @QtBridgeable
 public final class PianoGrid {
@@ -85,6 +97,15 @@ public final class PianoGrid {
     private var selectionAtRightPress: Set<Int> = []
     @QtIgnored private var pitchEditor: PitchEditor?
     @QtIgnored private var pitchPreview: [GridControllerEvent] = []
+    @QtIgnored
+    private var undoStack = GridUndoStack()
+    // Plain public (not private(set)): this QtBridge version skips every
+    // variable carrying a `private` modifier token — including private(set)
+    // — so private(set) props never reach QML. Only pushCommand,
+    // syncUndoFlags, resetDemo, and applyUndoCommand write these.
+    public var canUndo: Bool = false
+    public var canRedo: Bool = false
+    public var revision: Int = 0
 
     var drawPreview: (tick: Int, duration: Int, pitch: Int)? {
         guard case .draw(let state) = gesture else { return nil }
@@ -151,7 +172,9 @@ public final class PianoGrid {
     }
 
     public func commitPitchCurves() {
+        let before = controllerEvents
         controllerEvents = pitchPreview
+        pushCommand(.controllerEvents(before: before, after: controllerEvents))
     }
 
     public func cancelPitchCurves() {
@@ -165,10 +188,49 @@ public final class PianoGrid {
     }
 
     public func deleteSelection() {
+        let beforeNotes = notes.map(GridNoteSnapshot.init)
         let before = notes.count
         notes.removeAll { !$0.ghost && isSelected($0.noteId) }
         guard notes.count != before else { return }
+        pushCommand(.notes(before: beforeNotes, after: notes.map(GridNoteSnapshot.init)))
         selection.removeAll()
+        noteSummaryDirty = true
+        refreshNotes()
+        publishOutputs()
+        synchronizeAudio()
+    }
+
+    public func undo() {
+        guard let command = undoStack.undo() else { return }
+        applyUndoCommand(command, undoing: true)
+        syncUndoFlags()
+    }
+
+    public func redo() {
+        guard let command = undoStack.redo() else { return }
+        applyUndoCommand(command, undoing: false)
+        syncUndoFlags()
+    }
+
+    private func pushCommand(_ command: GridEditCommand) {
+        let depth = undoStack.undoCount
+        undoStack.push(command)
+        if undoStack.undoCount != depth { revision += 1 }
+        syncUndoFlags()
+    }
+
+    private func syncUndoFlags() {
+        canUndo = undoStack.undoCount > 0
+        canRedo = undoStack.redoCount > 0
+    }
+
+    private func applyUndoCommand(_ command: GridEditCommand, undoing: Bool) {
+        switch command {
+        case .notes(let before, let after):
+            notes = (undoing ? before : after).map { $0.materialize() }
+        case .controllerEvents(let before, let after):
+            controllerEvents = undoing ? before : after
+        }
         noteSummaryDirty = true
         refreshNotes()
         publishOutputs()
@@ -351,6 +413,7 @@ public final class PianoGrid {
 
     public func endPointer() {
         guard let g = gesture, !g.isRight else { return }
+        let beforeNotes = notes.map(GridNoteSnapshot.init)
         var mutated = false
         switch g {
         case .pendingDraw(let state):
@@ -396,23 +459,46 @@ public final class PianoGrid {
         case .pendingMenu, .band:
             break
         }
+        if mutated {
+            pushCommand(.notes(before: beforeNotes, after: notes.map(GridNoteSnapshot.init)))
+        }
         gesture = nil
         activeNoteId = -1
         refreshNotes()
         publishOutputs()
         if mutated { synchronizeAudio() }
     }
-
-    public func cancelPointer() {
+    public func cancelPointer(reason: Int) {
         guard let g = gesture else { return }
+        guard let cancelReason = GridCancelReason(rawValue: reason) else { return }
+        // Focus loss keeps both gesture families alive with zero state
+        // change: a later updatePointer/endPointer still commits.
+        if cancelReason == .focusLost { return }
         gesture = nil
         activeNoteId = -1
         if g.isRight {
             selection = selectionAtRightPress
             noteSummaryDirty = true
         }
+        if cancelReason == .hidden || cancelReason == .windowDeactivated {
+            cancelHoverAndPreview()
+        }
         scene.rebuildNotes(sceneInput())
         publishOutputs()
+    }
+
+    // Hidden and window-deactivated teardown beyond the pointer-ungrab
+    // baseline: hover teardown plus pitch live-preview discard when an
+    // editor is open. Window-deactivated is identical for the grid surface
+    // by design; only the entry differs (per-surface visible vs
+    // window-level once, popup surfaces excluded by the host).
+    private func cancelHoverAndPreview() {
+        hoverKey = -1
+        cursorKind = 0
+        if pitchEditor != nil {
+            cancelPitchCurves()
+        }
+        scene.rebuildHover(sceneInput())
     }
 
     public func beginRightPointer(x: Double, y: Double, threshold: Double) {
@@ -465,11 +551,16 @@ public final class PianoGrid {
         publishOutputs()
     }
 
-    public func cancelRightPointer() {
+    public func cancelRightPointer(reason: Int) {
         guard let g = gesture, g.isRight else { return }
+        guard let cancelReason = GridCancelReason(rawValue: reason) else { return }
+        if cancelReason == .focusLost { return }
         gesture = nil
         selection = selectionAtRightPress
         noteSummaryDirty = true
+        if cancelReason == .hidden || cancelReason == .windowDeactivated {
+            cancelHoverAndPreview()
+        }
         scene.rebuildNotes(sceneInput())
         publishOutputs()
     }
@@ -493,6 +584,7 @@ public final class PianoGrid {
 
     public func doublePointer(x: Double, y: Double) {
         guard gesture == nil else { return }
+        let beforeNotes = notes.map(GridNoteSnapshot.init)
         if let hit = hitNote(x: x, y: y) {
             let id = notes[hit.index].noteId
             notes.remove(at: hit.index)
@@ -510,6 +602,7 @@ public final class PianoGrid {
             selection = [note.noteId]
         }
         noteSummaryDirty = true
+        pushCommand(.notes(before: beforeNotes, after: notes.map(GridNoteSnapshot.init)))
         refreshNotes()
         publishOutputs()
         synchronizeAudio()
@@ -559,6 +652,9 @@ public final class PianoGrid {
         notes = GridFixture.makeNotes()
         controllerEvents.removeAll()
         nextNoteId = GridFixture.nextNoteId
+        undoStack.removeAll()
+        revision = 0
+        syncUndoFlags()
         noteSummaryDirty = true
         recomputeGeometry()
         initialScrollY = defaultVerticalScroll()

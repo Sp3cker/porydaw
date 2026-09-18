@@ -1,4 +1,5 @@
 module NativeGridSmoke {
     header "grid_smoke.h"
+    header "math_smoke.h"
     export *
 }

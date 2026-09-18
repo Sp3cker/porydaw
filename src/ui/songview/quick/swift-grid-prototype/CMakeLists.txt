@@ -108,6 +108,9 @@ target_link_libraries(swift_grid_curve PUBLIC Qt6::Core)
 add_library(swift_grid_typography STATIC "${SWIFT_GRID_AUDIO_DIR}/font_metrics.cpp")
 target_include_directories(swift_grid_typography PUBLIC "${SWIFT_GRID_AUDIO_DIR}")
 target_link_libraries(swift_grid_typography PUBLIC Qt6::Gui)
+add_library(swift_grid_window_cancel STATIC "${SWIFT_GRID_AUDIO_DIR}/window_cancel.cpp")
+target_include_directories(swift_grid_window_cancel PUBLIC "${SWIFT_GRID_AUDIO_DIR}")
+target_link_libraries(swift_grid_window_cancel PUBLIC Qt6::Quick)
 
 # Verification-only native smoke driver (event injection; no UI/model logic).
 # Kept as a separate static target so Qt6::Test's QT_TESTCASE_* compile
@@ -120,6 +123,8 @@ add_library(swift_grid_smoke STATIC
     "${SWIFT_GRID_SMOKE_DIR}/grid_smoke.cpp"
     "${SWIFT_GRID_SMOKE_DIR}/audio_smoke.cpp"
     "${SWIFT_GRID_SMOKE_DIR}/interaction_smoke.cpp"
+    "${SWIFT_GRID_SMOKE_DIR}/math_smoke.cpp"
+    "${SWIFT_GRID_SMOKE_DIR}/jurisdiction_smoke.cpp"
 )
 target_include_directories(swift_grid_smoke PRIVATE
     "${SWIFT_GRID_SMOKE_DIR}"
@@ -164,6 +169,7 @@ target_link_libraries(swift_grid_prototype PRIVATE
     swift_grid_audio
     swift_grid_curve
     swift_grid_typography
+    swift_grid_window_cancel
     "$<LINK_ONLY:swift_grid_smoke>"
 )
 

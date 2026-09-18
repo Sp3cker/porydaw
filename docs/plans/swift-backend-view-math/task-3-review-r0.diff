@@ -1,0 +1,1073 @@
+diff --git a/src/ui/songview/quick/swift-grid-prototype/PitchProjection.swift b/src/ui/songview/quick/swift-grid-prototype/PitchProjection.swift
+new file mode 100644
+index 00000000..5423f75f
+--- /dev/null
++++ b/src/ui/songview/quick/swift-grid-prototype/PitchProjection.swift
+@@ -0,0 +1,169 @@
++// PitchProjection.swift — Swift port of the songview row↔pitch mapping
++// (src/ui/pitchprojection.h/.cpp, the production oracle). Pure Swift value
++// type; no Qt, no Foundation. Row 0 is the TOP row = HIGHEST pitch.
++// Later epics (TimeCamera feed, roll/paint surfaces) build on this at cutover.
++//
++// Deliberately deferred (spec §8): rowRect, buildRowEdges, revision().
++// Equatable replaces revision; consumers compare values instead of a counter.
++
++/// Piano-roll row↔pitch mapping; mirrors C++ `songview::PitchProjection`.
++struct PitchProjection: Equatable {
++    static let cMaxRows = 128
++    static let cHiddenRow = -1
++
++    /// Sorted high-to-low (pitch 127 at row 0).
++    private var visiblePitches: [UInt8] = []
++    /// Reverse lookup: pitch → row index or cHiddenRow; always 128 entries.
++    private var pitchToRow: [Int] = Array(repeating: cHiddenRow, count: cMaxRows)
++    /// Scale membership per visible row.
++    private var scalePitchRow: [Bool] = []
++
++    /// Default init = the chromatic build.
++    init() {
++        buildChromatic()
++    }
++
++    /// Full chromatic 0–127 projection; every row is a scale row.
++    mutating func buildChromatic() {
++        pitchToRow = Array(repeating: PitchProjection.cHiddenRow, count: PitchProjection.cMaxRows)
++        scalePitchRow = Array(repeating: true, count: PitchProjection.cMaxRows)
++        visiblePitches = Array(repeating: 0, count: PitchProjection.cMaxRows)
++        for row in 0..<PitchProjection.cMaxRows {
++            let pitch = PitchProjection.cMaxRows - 1 - row
++            visiblePitches[row] = UInt8(pitch)
++            pitchToRow[pitch] = row
++        }
++    }
++
++    /// Fold build over an explicit ascending pitch set. Preconditions (fail
++    /// loud in debug AND release — `precondition`, not `assert`): sorted
++    /// strictly ascending (hence unique), at most 128 entries, each < 128.
++    mutating func buildFromPitches(_ pitches: [UInt8]) {
++        precondition(pitches.count <= PitchProjection.cMaxRows, "fold exceeds cMaxRows")
++        for pitch in pitches {
++            precondition(pitch < 128, "fold pitch out of 0–127")
++        }
++        if pitches.count > 1 {
++            for i in 1..<pitches.count {
++                precondition(pitches[i] > pitches[i - 1], "fold pitches must be strictly ascending")
++            }
++        }
++        pitchToRow = Array(repeating: PitchProjection.cHiddenRow, count: PitchProjection.cMaxRows)
++        scalePitchRow = Array(repeating: true, count: pitches.count)
++        visiblePitches = Array(repeating: 0, count: pitches.count)
++        let count = pitches.count
++        for row in 0..<count {
++            let pitch = pitches[count - 1 - row]
++            visiblePitches[row] = pitch
++            pitchToRow[Int(pitch)] = row
++        }
++    }
++
++    var visibleRowCount: Int { visiblePitches.count }
++
++    /// Pitch at a visible row; row 0 = highest pitch.
++    func visiblePitch(at row: Int) -> Int {
++        precondition(row >= 0 && row < visiblePitches.count, "row out of range")
++        return Int(visiblePitches[row])
++    }
++
++    /// Row for a MIDI pitch, or cHiddenRow when hidden/out of 0–127.
++    func row(forPitch midiPitch: Int) -> Int {
++        if midiPitch < 0 || midiPitch >= 128 {
++            return PitchProjection.cHiddenRow
++        }
++        return pitchToRow[midiPitch]
++    }
++
++    /// Scale classification indexed BY PITCH (128 entries), mirroring
++    /// `m_scalePitchRow[row] = isScalePitch[m_visiblePitches[row]]`.
++    mutating func setScalePitchClassification(_ isScalePitch: [Bool]) {
++        precondition(isScalePitch.count == PitchProjection.cMaxRows, "classification needs 128 by-pitch entries")
++        for row in 0..<visiblePitches.count {
++            scalePitchRow[row] = isScalePitch[Int(visiblePitches[row])]
++        }
++    }
++
++    func isScalePitch(row: Int) -> Bool {
++        precondition(row >= 0 && row < visiblePitches.count, "row out of range")
++        return scalePitchRow[row]
++    }
++
++    /// Nearest visible pitch for anchoring; lower pitch wins ties,
++    /// below range → lowest visible, above range → highest visible,
++    /// empty build → cHiddenRow.
++    func nearestVisiblePitch(to midiPitch: Int) -> Int {
++        if visiblePitches.isEmpty {
++            return PitchProjection.cHiddenRow
++        }
++        // Binary search over the descending array for the first row whose
++        // pitch is not higher than the query (mirrors the C++ oracle loop).
++        var firstNotHigher = 0
++        var end = visiblePitches.count
++        while firstNotHigher < end {
++            let middle = firstNotHigher + (end - firstNotHigher) / 2
++            if Int(visiblePitches[middle]) > midiPitch {
++                firstNotHigher = middle + 1
++            } else {
++                end = middle
++            }
++        }
++        if firstNotHigher == 0 {
++            return Int(visiblePitches[0])
++        }
++        if firstNotHigher == visiblePitches.count {
++            return Int(visiblePitches[visiblePitches.count - 1])
++        }
++        let lower = Int(visiblePitches[firstNotHigher])
++        let higher = Int(visiblePitches[firstNotHigher - 1])
++        return abs(midiPitch - lower) <= abs(higher - midiPitch) ? lower : higher
++    }
++
++    /// Total content height at the given keyHeight.
++    func totalHeight(keyHeight: Double) -> Double {
++        return Double(visiblePitches.count) * keyHeight
++    }
++
++    /// DPR-snapped top edge of a row boundary (mirrors the C++ oracle's
++    /// snappedRowEdge: half AWAY from zero, scale 1 when dpr ≤ 0).
++    private func snappedRowEdge(_ row: Int, keyHeight: Double, scrollY: Double, dpr: Double) -> Double {
++        let scale = dpr > 0 ? dpr : 1
++        return ((Double(row) * keyHeight - scrollY) * scale).rounded(.toNearestOrAwayFromZero) / scale
++    }
++
++    func rowTop(_ row: Int, keyHeight: Double, scrollY: Double, dpr: Double) -> Double {
++        precondition(row >= 0 && row < visiblePitches.count, "row out of range")
++        return snappedRowEdge(row, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr)
++    }
++
++    func rowBottom(_ row: Int, keyHeight: Double, scrollY: Double, dpr: Double) -> Double {
++        precondition(row >= 0 && row < visiblePitches.count, "row out of range")
++        return snappedRowEdge(row + 1, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr)
++    }
++
++    /// Visible row containing y (half-open rows), or cHiddenRow.
++    func yToRow(_ y: Double, keyHeight: Double, scrollY: Double, dpr: Double) -> Int {
++        if visiblePitches.isEmpty || y < rowTop(0, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr)
++            || y >= rowBottom(visiblePitches.count - 1, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr)
++        {
++            return PitchProjection.cHiddenRow
++        }
++        var first = 0
++        var end = visiblePitches.count
++        while first < end {
++            let middle = first + (end - first) / 2
++            if y < snappedRowEdge(middle + 1, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr) {
++                end = middle
++            } else {
++                first = middle + 1
++            }
++        }
++        return first
++    }
++
++    /// MIDI pitch for the visible row under y, or cHiddenRow.
++    func yToPitch(_ y: Double, keyHeight: Double, scrollY: Double, dpr: Double) -> Int {
++        let row = yToRow(y, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr)
++        return row == PitchProjection.cHiddenRow ? PitchProjection.cHiddenRow : visiblePitch(at: row)
++    }
++}
+diff --git a/src/checks/swiftgridprototype/math_smoke.h b/src/checks/swiftgridprototype/math_smoke.h
+new file mode 100644
+index 00000000..090daa2a
+--- /dev/null
++++ b/src/checks/swiftgridprototype/math_smoke.h
+@@ -0,0 +1,61 @@
++#pragma once
++
++// Parity seam for the Swift Wave-1 view-math ports (spec §4): C ABI over the
++// production C++ types, imported by Swift through the NativeGridSmoke module.
++// Swift drives, C++ answers — no @_cdecl, no C++→Swift calls.
++//
++// Declared incrementally: Task 1 declares only the tick pair. Tasks 2–3
++// append the time-axis and pitch groups below; the fixture structs are
++// declared here up front so those appends touch declarations only.
++
++#include <stddef.h>
++#include <stdint.h>
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++typedef struct SGSigPoint { // fixture mirror of TimeSigPoint
++    uint32_t tick;
++    uint8_t numerator;
++    uint8_t denomPow2;
++} SGSigPoint;
++
++typedef struct SGTimeMapFixture { // fixture mirror of TimeMap
++    uint32_t ticksPerBeat;
++    uint32_t lengthTicks;
++    uint32_t loopStartTick;
++    uint32_t loopEndTick;
++    const SGSigPoint *timeSigs; // tick-sorted; may be NULL when count == 0
++    size_t timeSigCount;
++} SGTimeMapFixture;
++
++typedef struct SGTimeAxisAnswer { // every scalar query in one struct
++    uint32_t ticksPerBeat, lengthTicks, loopStartTick, loopEndTick;
++    uint32_t segStart, segNext, segBeatTicks, segBeatsPerBar; // segmentAt(tick)
++    int32_t sigNumerator, sigDenomPow2, sigImplicit;          // signatureAt(tick); implicit 0/1
++} SGTimeAxisAnswer;
++
++typedef struct SGGridLine {
++    uint32_t tick;
++    uint8_t isBar;
++    int32_t bar;
++    int32_t beat;
++} SGGridLine;
++
++/* Task 1 */ uint32_t sgm_shift_tick_clamped(uint32_t tick, int64_t delta);
++/* Task 1 */ uint32_t sgm_tick_from_double(double tick);
++/* Task 2 */ void sgm_timeaxis_answer(const SGTimeMapFixture *map, uint32_t tick,
++                                      SGTimeAxisAnswer *out);
++/* Task 2 */ size_t sgm_timeaxis_grid_lines(const SGTimeMapFixture *map, uint32_t begin,
++                                            uint32_t end, SGGridLine *out, size_t capacity);
++/* Task 3 */ int32_t sgm_pitch_row_for_pitch(const uint8_t *pitches, size_t count, int32_t pitch);
++/* Task 3 */ int32_t sgm_pitch_nearest_visible(const uint8_t *pitches, size_t count, int32_t pitch);
++/* Task 3 */ double sgm_pitch_row_top(const uint8_t *pitches, size_t count, int32_t row,
++                                      double keyHeight, double scrollY, double dpr);
++/* Task 3 */ int32_t sgm_pitch_y_to_pitch(const uint8_t *pitches, size_t count, double y,
++                                          double keyHeight, double scrollY, double dpr);
++
++#ifdef __cplusplus
++} // extern "C"
++#endif
+diff --git a/src/checks/swiftgridprototype/math_smoke.cpp b/src/checks/swiftgridprototype/math_smoke.cpp
+new file mode 100644
+index 00000000..b4dd25f2
+--- /dev/null
++++ b/src/checks/swiftgridprototype/math_smoke.cpp
+@@ -0,0 +1,131 @@
++// Parity-seam oracles for the Swift Wave-1 tick helpers (spec §4, Task 1):
++// thin forwarding over the production CoreTimeDefaults — no logic of its own.
++// Tasks 2–3 append the time-axis and pitch groups to this file.
++
++#include "math_smoke.h"
++
++#include "core/miditimeline.h"
++#include "core/timedefaults.h"
++#include "ui/pitchprojection.h"
++#include "ui/songview/timeaxis.h"
++
++uint32_t sgm_shift_tick_clamped(uint32_t tick, int64_t delta)
++{
++    return CoreTimeDefaults::shiftTickClamped(static_cast<Tick>(tick), delta);
++}
++
++uint32_t sgm_tick_from_double(double tick)
++{
++    return CoreTimeDefaults::tickFromDouble(tick);
++}
++
++// Parity-seam oracles for the Swift Wave-1 TimeAxis port (spec §4, Task 2):
++// thin forwarding over the production songview::TimeAxis bound to a
++// stack-constructed MidiTimeline whose viewer fields are filled from the
++// SGTimeMapFixture — no logic of its own. Swift never sees MidiTimeline.
++
++namespace {
++
++void fillTimelineFromFixture(const SGTimeMapFixture *map, MidiTimeline &timeline)
++{
++    timeline.ticksPerBeat = map->ticksPerBeat;
++    timeline.lengthTicks = static_cast<Tick>(map->lengthTicks);
++    timeline.loopStartTick = static_cast<Tick>(map->loopStartTick);
++    timeline.loopEndTick = static_cast<Tick>(map->loopEndTick);
++    timeline.timeSigs.clear();
++    for (size_t i = 0; i < map->timeSigCount; ++i) {
++        TimeSigPoint point;
++        point.tick = static_cast<Tick>(map->timeSigs[i].tick);
++        point.numerator = map->timeSigs[i].numerator;
++        point.denomPow2 = map->timeSigs[i].denomPow2;
++        timeline.timeSigs.push_back(point);
++    }
++}
++
++} // namespace
++
++void sgm_timeaxis_answer(const SGTimeMapFixture *map, uint32_t tick, SGTimeAxisAnswer *out)
++{
++    MidiTimeline timeline;
++    fillTimelineFromFixture(map, timeline);
++    songview::TimeAxis axis;
++    axis.bind(&timeline);
++    const songview::TimeAxis::GridSegment seg = axis.segmentAt(static_cast<Tick>(tick));
++    const songview::TimeAxis::ResolvedTimeSignature sig = axis.signatureAt(static_cast<Tick>(tick));
++    out->ticksPerBeat = axis.ticksPerBeat();
++    out->lengthTicks = static_cast<uint32_t>(axis.lengthTicks());
++    out->loopStartTick = static_cast<uint32_t>(axis.loopStartTick());
++    out->loopEndTick = static_cast<uint32_t>(axis.loopEndTick());
++    out->segStart = static_cast<uint32_t>(seg.start);
++    out->segNext = static_cast<uint32_t>(seg.next);
++    out->segBeatTicks = seg.beatTicks;
++    out->segBeatsPerBar = seg.beatsPerBar;
++    out->sigNumerator = static_cast<int32_t>(sig.numerator);
++    out->sigDenomPow2 = static_cast<int32_t>(sig.denomPow2);
++    out->sigImplicit = sig.implicit ? 1 : 0;
++}
++
++size_t sgm_timeaxis_grid_lines(const SGTimeMapFixture *map, uint32_t begin, uint32_t end,
++                               SGGridLine *out, size_t capacity)
++{
++    MidiTimeline timeline;
++    fillTimelineFromFixture(map, timeline);
++    songview::TimeAxis axis;
++    axis.bind(&timeline);
++    size_t needed = 0;
++    axis.forEachGridLine(static_cast<Tick>(begin), static_cast<Tick>(end),
++                         [&](Tick tick, bool isBar, int barNumber, int beatNumber) {
++                             if (needed < capacity && out != nullptr) {
++                                 out[needed].tick = static_cast<uint32_t>(tick);
++                                 out[needed].isBar = static_cast<uint8_t>(isBar ? 1 : 0);
++                                 out[needed].bar = static_cast<int32_t>(barNumber);
++                                 out[needed].beat = static_cast<int32_t>(beatNumber);
++                             }
++                             ++needed;
++                         });
++    return needed;
++}
++
++// Parity-seam oracles for the Swift Wave-1 PitchProjection port (spec §4,
++// Task 3): thin forwarding over the production songview::PitchProjection —
++// no logic of its own. pitches == NULL (count 0) selects the chromatic
++// build; otherwise buildFromPitches over the ascending list.
++
++namespace {
++
++songview::PitchProjection makePitchProjection(const uint8_t *pitches, size_t count)
++{
++    songview::PitchProjection projection;
++    if (pitches == nullptr || count == 0) {
++        projection.buildChromatic();
++    } else {
++        projection.buildFromPitches(std::span<const uint8_t>(pitches, count));
++    }
++    return projection;
++}
++
++} // namespace
++
++int32_t sgm_pitch_row_for_pitch(const uint8_t *pitches, size_t count, int32_t pitch)
++{
++    return static_cast<int32_t>(makePitchProjection(pitches, count).rowForPitch(pitch));
++}
++
++int32_t sgm_pitch_nearest_visible(const uint8_t *pitches, size_t count, int32_t pitch)
++{
++    return static_cast<int32_t>(makePitchProjection(pitches, count).nearestVisiblePitch(pitch));
++}
++
++double sgm_pitch_row_top(const uint8_t *pitches, size_t count, int32_t row, double keyHeight,
++                         double scrollY, double dpr)
++{
++    return static_cast<double>(
++        makePitchProjection(pitches, count).rowTop(row, keyHeight, scrollY, dpr));
++}
++
++int32_t sgm_pitch_y_to_pitch(const uint8_t *pitches, size_t count, double y, double keyHeight,
++                             double scrollY, double dpr)
++{
++    return static_cast<int32_t>(
++        makePitchProjection(pitches, count).yToPitch(y, keyHeight, scrollY, dpr));
++}
+diff --git a/src/ui/songview/quick/swift-grid-prototype/MathSelftest.swift b/src/ui/songview/quick/swift-grid-prototype/MathSelftest.swift
+new file mode 100644
+index 00000000..f2d1ae4a
+--- /dev/null
++++ b/src/ui/songview/quick/swift-grid-prototype/MathSelftest.swift
+@@ -0,0 +1,688 @@
++import Foundation
++import NativeGridSmoke
++
++// Wave-1 view-math selftest driver (spec §4, §6). Task 1 covers the tick
++// group (T1); Tasks 2–3 append the time-axis and pitch groups to this file.
++// Called from App.init before installGridSmoke so a mismatch fails fast,
++// before any window opens. A FAIL exits nonzero; the final
++// `SWIFT_GRID_SMOKE PASS` line still comes from the C++ exercise().
++
++/// No-op unless PORYDAW_SWIFT_GRID_SMOKE == "1".
++func runMathSelftestIfRequested() {
++    guard ProcessInfo.processInfo.environment["PORYDAW_SWIFT_GRID_SMOKE"] == "1" else {
++        return
++    }
++    runMathTickSelftest()
++    runMathTimeaxisSelftest()
++    runMathPitchSelftest()
++}
++
++private func mathTickFail(_ detail: String) -> Never {
++    fputs("SWIFT_GRID_SMOKE math-tick FAIL: \(detail)\n", stderr)
++    fflush(stderr)
++    exit(EXIT_FAILURE)
++}
++
++// MARK: - Tick helpers (spec §6 T1, frozen)
++
++private func runMathTickSelftest() {
++    let shiftCases: [(tick: Tick, delta: Int64, expected: Tick)] = [
++        (0, 0, 0),
++        (100, 28, 128),
++        (100, -100, 0),
++        (100, -1000, 0),
++        (50, -49, 1),
++        (50, -51, 0),
++        (0, Int64.min, 0),
++        (kMaxTick, 0, kMaxTick),
++        (kMaxTick, 1, kMaxTick),
++        (kMaxTick, Int64.max, kMaxTick),
++        (kNoTick, 5, kMaxTick),
++    ]
++    for c in shiftCases {
++        let swiftValue = shiftTickClamped(c.tick, c.delta)
++        if swiftValue != c.expected {
++            mathTickFail("shiftTickClamped(\(c.tick), \(c.delta)) == \(swiftValue), want \(c.expected)")
++        }
++        let oracleValue = sgm_shift_tick_clamped(c.tick, c.delta)
++        if oracleValue != c.expected {
++            mathTickFail(
++                "sgm_shift_tick_clamped(\(c.tick), \(c.delta)) == \(oracleValue), want \(c.expected)"
++            )
++        }
++    }
++
++    let fromDoubleCases: [(x: Double, expected: Tick)] = [
++        (.nan, 0),
++        (-1.5, 0),
++        (0.0, 0),
++        (0.9, 0),
++        (127.9, 127),
++        (Double(kMaxTick), kMaxTick),
++        (Double(kNoTick), kMaxTick),
++        (.infinity, kMaxTick),
++    ]
++    for c in fromDoubleCases {
++        let swiftValue = tickFromDouble(c.x)
++        if swiftValue != c.expected {
++            mathTickFail("tickFromDouble(\(c.x)) == \(swiftValue), want \(c.expected)")
++        }
++        let oracleValue = sgm_tick_from_double(c.x)
++        if oracleValue != c.expected {
++            mathTickFail("sgm_tick_from_double(\(c.x)) == \(oracleValue), want \(c.expected)")
++        }
++    }
++
++    print("SWIFT_GRID_SMOKE math-tick PASS")
++    fflush(stdout)
++}
++
++// MARK: - TimeAxis (spec §6 T2 literals + T4 parity sweep, frozen)
++//
++// Literal tables first: a port bug fails against the literals before the
++// parity sweep runs, so it is attributed to Swift, not the ABI. Two spec §6
++// literals contradict the normative timeaxis.cpp source (spec §1: the source
++// wins) and are asserted here per the source; both are filed as spec defects:
++// (a) F2 `segmentAt(95).next`: the governing signature at 95 is (60,3,2) with
++// nothing after it, so `next` is kNoTick — asserted as segmentAt(95) ==
++// (60, kNoTick, 24, 3), identical to segmentAt(60). (b) F3 tick-0 triple
++// [(0,3,2),(0,7,3),(0,2,4)]: last same-tick wins, so the (0,2,4) entry governs
++// (segment (0, kNoTick, 6, 2), signature (0, 2, 4, explicit)); the printed
++// expectations match a 2-entry map [(0,3,2),(0,7,3)] exactly.
++
++private func mathTimeaxisFail(_ detail: String) -> Never {
++    fputs("SWIFT_GRID_SMOKE math-timeaxis FAIL: \(detail)\n", stderr)
++    fflush(stderr)
++    exit(EXIT_FAILURE)
++}
++
++private func timeSigPoint(_ tick: Tick, _ numerator: UInt8, _ denomPow2: UInt8) -> TimeSigPoint {
++    return TimeSigPoint(tick: tick, numerator: numerator, denomPow2: denomPow2)
++}
++
++private func collectedGridLines(_ axis: TimeAxis, from tickBegin: Tick, to tickEnd: Tick)
++    -> [(tick: Tick, isBar: Bool, bar: Int, beat: Int)]
++{
++    var out: [(tick: Tick, isBar: Bool, bar: Int, beat: Int)] = []
++    axis.forEachGridLine(from: tickBegin, to: tickEnd) { tick, isBar, bar, beat in
++        out.append((tick: tick, isBar: isBar, bar: bar, beat: beat))
++    }
++    return out
++}
++
++private func expectGridLines(_ axis: TimeAxis, from tickBegin: Tick, to tickEnd: Tick,
++                             _ want: [(Tick, Bool, Int, Int)], _ label: String) {
++    let got = collectedGridLines(axis, from: tickBegin, to: tickEnd)
++    if got.count != want.count {
++        mathTimeaxisFail("\(label) line count \(got.count), want \(want.count)")
++    }
++    for (i, w) in want.enumerated() {
++        let g = got[i]
++        if g.tick != w.0 || g.isBar != w.1 || g.bar != w.2 || g.beat != w.3 {
++            mathTimeaxisFail(
++                "\(label) line \(i) (\(g.tick),\(g.isBar),\(g.bar),\(g.beat)), "
++                    + "want (\(w.0),\(w.1),\(w.2),\(w.3))")
++        }
++    }
++}
++
++/// Passes the Swift map to the C++ oracle: the fixture → MidiTimeline field
++/// copy stays on the C++ side (Swift never sees MidiTimeline).
++private func withSGTimeMapFixture<R>(_ map: TimeMap, _ body: (SGTimeMapFixture) -> R) -> R {
++    let sigs = map.timeSigs.map {
++        SGSigPoint(tick: $0.tick, numerator: $0.numerator, denomPow2: $0.denomPow2)
++    }
++    return sigs.withUnsafeBufferPointer { buffer in
++        let fixture = SGTimeMapFixture(
++            ticksPerBeat: map.ticksPerBeat,
++            lengthTicks: map.lengthTicks,
++            loopStartTick: map.loopStartTick,
++            loopEndTick: map.loopEndTick,
++            timeSigs: buffer.baseAddress, // nil when empty, matching the seam contract
++            timeSigCount: buffer.count)
++        return body(fixture)
++    }
++}
++
++private func checkTimeaxisAnswerParity(_ label: String, _ map: TimeMap, _ ticks: [Tick]) {
++    let axis = TimeAxis(map: map)
++    for tick in ticks {
++        var answer = SGTimeAxisAnswer(
++            ticksPerBeat: 0, lengthTicks: 0, loopStartTick: 0, loopEndTick: 0,
++            segStart: 0, segNext: 0, segBeatTicks: 0, segBeatsPerBar: 0,
++            sigNumerator: 0, sigDenomPow2: 0, sigImplicit: 0)
++        withSGTimeMapFixture(map) { fixture in
++            var mutableFixture = fixture
++            sgm_timeaxis_answer(&mutableFixture, tick, &answer)
++        }
++        let segment = axis.segmentAt(tick)
++        let signature = axis.signatureAt(tick)
++        func check(_ field: String, _ swiftValue: Int, _ oracleValue: Int) {
++            if swiftValue != oracleValue {
++                mathTimeaxisFail(
++                    "\(label) answer@\(tick) \(field) swift=\(swiftValue) oracle=\(oracleValue)")
++            }
++        }
++        check("ticksPerBeat", Int(axis.ticksPerBeat), Int(answer.ticksPerBeat))
++        check("lengthTicks", Int(axis.lengthTicks), Int(answer.lengthTicks))
++        check("loopStartTick", Int(axis.loopStartTick), Int(answer.loopStartTick))
++        check("loopEndTick", Int(axis.loopEndTick), Int(answer.loopEndTick))
++        check("segStart", Int(segment.start), Int(answer.segStart))
++        check("segNext", Int(segment.next), Int(answer.segNext))
++        check("segBeatTicks", Int(segment.beatTicks), Int(answer.segBeatTicks))
++        check("segBeatsPerBar", Int(segment.beatsPerBar), Int(answer.segBeatsPerBar))
++        check("sigNumerator", signature.numerator, Int(answer.sigNumerator))
++        check("sigDenomPow2", signature.denomPow2, Int(answer.sigDenomPow2))
++        check("sigImplicit", signature.implicit ? 1 : 0, Int(answer.sigImplicit))
++    }
++}
++
++private func checkGridLinesParity(_ label: String, _ map: TimeMap, from tickBegin: Tick, to tickEnd: Tick) {
++    let axis = TimeAxis(map: map)
++    let swiftLines = collectedGridLines(axis, from: tickBegin, to: tickEnd)
++    // Spec §4: the Swift caller passes its own count as capacity; a returned
++    // count different from the Swift count is a failure.
++    var oracleLines = [SGGridLine](
++        repeating: SGGridLine(tick: 0, isBar: 0, bar: 0, beat: 0), count: swiftLines.count)
++    let needed = withSGTimeMapFixture(map) { fixture -> Int in
++        var mutableFixture = fixture
++        return oracleLines.withUnsafeMutableBufferPointer { out in
++            sgm_timeaxis_grid_lines(&mutableFixture, tickBegin, tickEnd, out.baseAddress, out.count)
++        }
++    }
++    if needed != swiftLines.count {
++        mathTimeaxisFail("\(label) grid(\(tickBegin),\(tickEnd)) count swift=\(swiftLines.count) oracle=\(needed)")
++    }
++    for i in 0..<swiftLines.count {
++        let swiftLine = swiftLines[i]
++        let oracleLine = oracleLines[i]
++        if swiftLine.tick != oracleLine.tick || swiftLine.isBar != (oracleLine.isBar != 0)
++            || swiftLine.bar != Int(oracleLine.bar) || swiftLine.beat != Int(oracleLine.beat)
++        {
++            mathTimeaxisFail(
++                "\(label) grid(\(tickBegin),\(tickEnd)) line \(i) "
++                    + "swift=(\(swiftLine.tick),\(swiftLine.isBar),\(swiftLine.bar),\(swiftLine.beat)) "
++                    + "oracle=(\(oracleLine.tick),\(oracleLine.isBar),\(oracleLine.bar),\(oracleLine.beat))")
++        }
++    }
++}
++
++private func runMathTimeaxisSelftest() {
++    // Fixtures F0–F8 (spec §6 T2): map (tpb, len, loopS, loopE, sigs) with
++    // sigs as (tick, numerator, denomPow2).
++    let f0 = TimeMap()
++    let f1 = TimeMap(
++        ticksPerBeat: 0, lengthTicks: 0, loopStartTick: kNoTick, loopEndTick: kNoTick, timeSigs: [])
++    let f2 = TimeMap(
++        ticksPerBeat: 24, lengthTicks: 0, loopStartTick: kNoTick, loopEndTick: kNoTick,
++        timeSigs: [timeSigPoint(0, 4, 2), timeSigPoint(60, 3, 2)])
++    let f3 = TimeMap(
++        ticksPerBeat: 24, lengthTicks: 0, loopStartTick: kNoTick, loopEndTick: kNoTick,
++        timeSigs: [timeSigPoint(0, 3, 2), timeSigPoint(0, 7, 3), timeSigPoint(0, 2, 4)])
++    let f3b = TimeMap(
++        ticksPerBeat: 24, lengthTicks: 0, loopStartTick: kNoTick, loopEndTick: kNoTick,
++        timeSigs: [timeSigPoint(0, 4, 2), timeSigPoint(96, 4, 2), timeSigPoint(96, 3, 2)])
++    let f4 = TimeMap(
++        ticksPerBeat: 24, lengthTicks: 0, loopStartTick: kNoTick, loopEndTick: kNoTick,
++        timeSigs: [timeSigPoint(0, 0, 2)])
++    let f5a = TimeMap(
++        ticksPerBeat: 24, lengthTicks: 0, loopStartTick: kNoTick, loopEndTick: kNoTick,
++        timeSigs: [timeSigPoint(0, 4, 31)])
++    let f5b = TimeMap(
++        ticksPerBeat: 24, lengthTicks: 0, loopStartTick: kNoTick, loopEndTick: kNoTick,
++        timeSigs: [timeSigPoint(0, 4, 0)])
++    let f5c = TimeMap(
++        ticksPerBeat: 24, lengthTicks: 0, loopStartTick: kNoTick, loopEndTick: kNoTick,
++        timeSigs: [timeSigPoint(0, 4, 255)])
++    let f6 = TimeMap(
++        ticksPerBeat: 48, lengthTicks: 0, loopStartTick: kNoTick, loopEndTick: kNoTick,
++        timeSigs: [timeSigPoint(0, 4, 2), timeSigPoint(96, 7, 3)])
++    let f7 = TimeMap(
++        ticksPerBeat: 24, lengthTicks: 384, loopStartTick: 48, loopEndTick: 192, timeSigs: [])
++    let f8 = TimeMap(
++        ticksPerBeat: 48, lengthTicks: 0, loopStartTick: kNoTick, loopEndTick: kNoTick,
++        timeSigs: [timeSigPoint(0, 4, 2), timeSigPoint(37, 5, 3)])
++
++    // F0 fallback.
++    let axis0 = TimeAxis()
++    if axis0.ticksPerBeat != 24 || axis0.lengthTicks != 0 || axis0.loopStartTick != kNoTick
++        || axis0.loopEndTick != kNoTick || !axis0.hasImplicitOpeningSignature
++    {
++        mathTimeaxisFail("F0 fallback scalars")
++    }
++    if axis0.signatureAt(0) != ResolvedTimeSignature(tick: 0, numerator: 4, denomPow2: 2, implicit: true)
++    {
++        mathTimeaxisFail("F0 signatureAt(0) == \(axis0.signatureAt(0))")
++    }
++    if axis0.signatureAt(kMaxTick)
++        != ResolvedTimeSignature(tick: 0, numerator: 4, denomPow2: 2, implicit: true)
++    {
++        mathTimeaxisFail("F0 signatureAt(kMaxTick) == \(axis0.signatureAt(kMaxTick))")
++    }
++    if axis0.segmentAt(0) != GridSegment(start: 0, next: kNoTick, beatTicks: 24, beatsPerBar: 4) {
++        mathTimeaxisFail("F0 segmentAt(0) == \(axis0.segmentAt(0))")
++    }
++    if axis0.segmentAt(4_000_000_000)
++        != GridSegment(start: 0, next: kNoTick, beatTicks: 24, beatsPerBar: 4)
++    {
++        mathTimeaxisFail("F0 segmentAt(4000000000) == \(axis0.segmentAt(4_000_000_000))")
++    }
++
++    // F0b fallback grid walk: 16 lines, line i = (24·i, i % 4 == 0, i/4 + 1, i % 4 + 1).
++    var f0bWant: [(Tick, Bool, Int, Int)] = []
++    for i in 0..<16 {
++        f0bWant.append((Tick(24 * i), i % 4 == 0, i / 4 + 1, i % 4 + 1))
++    }
++    expectGridLines(axis0, from: 0, to: 384, f0bWant, "F0b grid(0,384)")
++
++    // F1 zero timebase.
++    let axis1 = TimeAxis(map: f1)
++    if axis1.ticksPerBeat != 1 {
++        mathTimeaxisFail("F1 ticksPerBeat == \(axis1.ticksPerBeat)")
++    }
++    if axis1.segmentAt(0) != GridSegment(start: 0, next: kNoTick, beatTicks: 1, beatsPerBar: 4) {
++        mathTimeaxisFail("F1 segmentAt(0) == \(axis1.segmentAt(0))")
++    }
++    expectGridLines(
++        axis1, from: 0, to: 4, [(0, true, 1, 1), (1, false, 1, 2), (2, false, 1, 3), (3, false, 1, 4)],
++        "F1 grid(0,4)")
++
++    // F2 mid-song 3/4 over implicit 4/4, partial-measure carry.
++    let axis2 = TimeAxis(map: f2)
++    if axis2.segmentAt(0) != GridSegment(start: 0, next: 60, beatTicks: 24, beatsPerBar: 4) {
++        mathTimeaxisFail("F2 segmentAt(0) == \(axis2.segmentAt(0))")
++    }
++    if axis2.segmentAt(59) != GridSegment(start: 0, next: 60, beatTicks: 24, beatsPerBar: 4) {
++        mathTimeaxisFail("F2 segmentAt(59) == \(axis2.segmentAt(59))")
++    }
++    if axis2.segmentAt(60) != GridSegment(start: 60, next: kNoTick, beatTicks: 24, beatsPerBar: 3) {
++        mathTimeaxisFail("F2 segmentAt(60) == \(axis2.segmentAt(60))")
++    }
++    // Spec defect (a): printed `segmentAt(95).next = 60`; the source governs 95
++    // by (60,3,2) with nothing after, so next is kNoTick.
++    if axis2.segmentAt(95) != GridSegment(start: 60, next: kNoTick, beatTicks: 24, beatsPerBar: 3) {
++        mathTimeaxisFail("F2 segmentAt(95) == \(axis2.segmentAt(95))")
++    }
++    if axis2.hasImplicitOpeningSignature {
++        mathTimeaxisFail("F2 hasImplicitOpeningSignature == true")
++    }
++    if axis2.signatureAt(10) != ResolvedTimeSignature(tick: 0, numerator: 4, denomPow2: 2, implicit: false)
++    {
++        mathTimeaxisFail("F2 signatureAt(10) == \(axis2.signatureAt(10))")
++    }
++    if axis2.signatureAt(100)
++        != ResolvedTimeSignature(tick: 60, numerator: 3, denomPow2: 2, implicit: false)
++    {
++        mathTimeaxisFail("F2 signatureAt(100) == \(axis2.signatureAt(100))")
++    }
++    expectGridLines(
++        axis2, from: 0, to: 200,
++        [(0, true, 1, 1), (24, false, 1, 2), (48, false, 1, 3), (60, true, 2, 1), (84, false, 2, 2),
++         (108, false, 2, 3), (132, true, 3, 1), (156, false, 3, 2), (180, false, 3, 3)],
++        "F2 grid(0,200)")
++    expectGridLines(
++        axis2, from: 25, to: 200,
++        [(48, false, 1, 3), (60, true, 2, 1), (84, false, 2, 2), (108, false, 2, 3), (132, true, 3, 1),
++         (156, false, 3, 2), (180, false, 3, 3)],
++        "F2 grid(25,200)")
++    expectGridLines(
++        axis2, from: 0, to: 60, [(0, true, 1, 1), (24, false, 1, 2), (48, false, 1, 3)],
++        "F2 grid(0,60)")
++    expectGridLines(axis2, from: 96, to: 96, [], "F2 grid(96,96)")
++    expectGridLines(axis2, from: 200, to: 100, [], "F2 grid(200,100)")
++
++    // F3 last same-tick wins. Spec defect (b): the printed tick-0 expectations
++    // match a 2-entry map [(0,3,2),(0,7,3)]; with the frozen 3-entry map the
++    // last entry (0,2,4) governs per the source.
++    let axis3 = TimeAxis(map: f3)
++    if axis3.segmentAt(0) != GridSegment(start: 0, next: kNoTick, beatTicks: 6, beatsPerBar: 2) {
++        mathTimeaxisFail("F3 segmentAt(0) == \(axis3.segmentAt(0))")
++    }
++    if axis3.signatureAt(0) != ResolvedTimeSignature(tick: 0, numerator: 2, denomPow2: 4, implicit: false)
++    {
++        mathTimeaxisFail("F3 signatureAt(0) == \(axis3.signatureAt(0))")
++    }
++    expectGridLines(axis3, from: 0, to: 12, [(0, true, 1, 1), (6, false, 1, 2)], "F3 grid(0,12)")
++    let axis3b = TimeAxis(map: f3b)
++    if axis3b.segmentAt(96) != GridSegment(start: 96, next: kNoTick, beatTicks: 24, beatsPerBar: 3) {
++        mathTimeaxisFail("F3b segmentAt(96) == \(axis3b.segmentAt(96))")
++    }
++    if axis3b.segmentAt(95) != GridSegment(start: 0, next: 96, beatTicks: 24, beatsPerBar: 4) {
++        mathTimeaxisFail("F3b segmentAt(95) == \(axis3b.segmentAt(95))")
++    }
++
++    // F4 blank numerator reads as 4.
++    let axis4 = TimeAxis(map: f4)
++    if axis4.signatureAt(5) != ResolvedTimeSignature(tick: 0, numerator: 4, denomPow2: 2, implicit: false)
++    {
++        mathTimeaxisFail("F4 signatureAt(5) == \(axis4.signatureAt(5))")
++    }
++    if axis4.segmentAt(5) != GridSegment(start: 0, next: kNoTick, beatTicks: 24, beatsPerBar: 4) {
++        mathTimeaxisFail("F4 segmentAt(5) == \(axis4.segmentAt(5))")
++    }
++
++    // F5 denominator clamp with raw exponent preservation.
++    if TimeAxis(map: f5a).segmentAt(0).beatTicks != 1 {
++        mathTimeaxisFail("F5a segmentAt(0).beatTicks == \(TimeAxis(map: f5a).segmentAt(0).beatTicks)")
++    }
++    if TimeAxis(map: f5b).segmentAt(0).beatTicks != 96 {
++        mathTimeaxisFail("F5b segmentAt(0).beatTicks == \(TimeAxis(map: f5b).segmentAt(0).beatTicks)")
++    }
++    if TimeAxis(map: f5c).segmentAt(0).beatTicks != 1 {
++        mathTimeaxisFail("F5c segmentAt(0).beatTicks == \(TimeAxis(map: f5c).segmentAt(0).beatTicks)")
++    }
++    if TimeAxis(map: f5c).signatureAt(0).denomPow2 != 255 {
++        mathTimeaxisFail("F5c signatureAt(0).denomPow2 == \(TimeAxis(map: f5c).signatureAt(0).denomPow2)")
++    }
++
++    // F6 7/8 acceptance.
++    if TimeAxis(map: f6).segmentAt(96)
++        != GridSegment(start: 96, next: kNoTick, beatTicks: 24, beatsPerBar: 7)
++    {
++        mathTimeaxisFail("F6 segmentAt(96) == \(TimeAxis(map: f6).segmentAt(96))")
++    }
++
++    // F7 loops and length passthrough.
++    let axis7 = TimeAxis(map: f7)
++    if axis7.lengthTicks != 384 || axis7.loopStartTick != 48 || axis7.loopEndTick != 192 {
++        mathTimeaxisFail(
++            "F7 length/loops == \(axis7.lengthTicks)/\(axis7.loopStartTick)/\(axis7.loopEndTick)")
++    }
++
++    // F8 odd mid-measure seam.
++    let axis8 = TimeAxis(map: f8)
++    if axis8.segmentAt(36) != GridSegment(start: 0, next: 37, beatTicks: 48, beatsPerBar: 4) {
++        mathTimeaxisFail("F8 segmentAt(36) == \(axis8.segmentAt(36))")
++    }
++    if axis8.segmentAt(37) != GridSegment(start: 37, next: kNoTick, beatTicks: 24, beatsPerBar: 5) {
++        mathTimeaxisFail("F8 segmentAt(37) == \(axis8.segmentAt(37))")
++    }
++    expectGridLines(axis8, from: 30, to: 44, [(37, true, 2, 1)], "F8 grid(30,44)")
++
++    // T4 parity sweep: every fixture × tick through sgm_timeaxis_answer.
++    let sweepTicks: [Tick] = [0, 1, 24, 36, 37, 48, 59, 60, 95, 96, 100, 384, 1_000_000, kMaxTick]
++    let sweepMaps: [(String, TimeMap)] = [
++        ("F0", f0), ("F1", f1), ("F2", f2), ("F3", f3), ("F3b", f3b), ("F4", f4),
++        ("F5a", f5a), ("F5b", f5b), ("F5c", f5c), ("F6", f6), ("F7", f7), ("F8", f8),
++    ]
++    for (label, map) in sweepMaps {
++        checkTimeaxisAnswerParity(label, map, sweepTicks)
++    }
++
++    // T4 grid-walk parity: the five F2/F0b/F8 walks plus the named extras.
++    checkGridLinesParity("F2", f2, from: 0, to: 200)
++    checkGridLinesParity("F2", f2, from: 25, to: 200)
++    checkGridLinesParity("F2", f2, from: 0, to: 60)
++    checkGridLinesParity("F2", f2, from: 96, to: 96)
++    checkGridLinesParity("F2", f2, from: 200, to: 100)
++    checkGridLinesParity("F0b", f0, from: 0, to: 384)
++    checkGridLinesParity("F8", f8, from: 30, to: 44)
++    checkGridLinesParity("F0", f0, from: 0, to: 5000)
++    checkGridLinesParity("F1", f1, from: 0, to: 4)
++    checkGridLinesParity("F3", f3, from: 0, to: 12)
++    checkGridLinesParity("F5a", f5a, from: 0, to: 200)
++    let edgeMap = TimeMap(
++        ticksPerBeat: 1, lengthTicks: kMaxTick, loopStartTick: kNoTick, loopEndTick: kNoTick,
++        timeSigs: [])
++    checkGridLinesParity("edge", edgeMap, from: kMaxTick - 5, to: kMaxTick)
++
++    print("SWIFT_GRID_SMOKE math-timeaxis PASS")
++    fflush(stdout)
++}
++
++// MARK: - PitchProjection (spec §6 T3 literals + T4 parity sweep, frozen)
++//
++// Literal tables first: a port bug fails against the literals before the
++// parity sweep runs, so it is attributed to Swift, not the ABI.
++
++private func mathPitchFail(_ detail: String) -> Never {
++    fputs("SWIFT_GRID_SMOKE math-pitch FAIL: \(detail)\n", stderr)
++    fflush(stderr)
++    exit(EXIT_FAILURE)
++}
++
++/// Builds the Swift projection for a fixture: nil = chromatic, else the fold.
++private func pitchProjection(for pitches: [UInt8]?) -> PitchProjection {
++    if let pitches {
++        var projection = PitchProjection()
++        projection.buildFromPitches(pitches)
++        return projection
++    }
++    return PitchProjection()
++}
++
++/// Passes the fixture to the C++ oracle: nil (count 0) selects the chromatic
++/// build per the seam contract; otherwise the ascending fold list.
++private func withSGPitchList<R>(_ pitches: [UInt8]?, _ body: (UnsafePointer<UInt8>?, Int) -> R) -> R {
++    guard let pitches else {
++        return body(nil, 0)
++    }
++    return pitches.withUnsafeBufferPointer { buffer in
++        body(buffer.baseAddress, buffer.count)
++    }
++}
++
++private func checkPitchRowParity(_ label: String, _ pitches: [UInt8]?, _ queries: [Int]) {
++    let projection = pitchProjection(for: pitches)
++    for query in queries {
++        let swiftValue = projection.row(forPitch: query)
++        let oracleValue = withSGPitchList(pitches) { pointer, count in
++            Int(sgm_pitch_row_for_pitch(pointer, count, Int32(query)))
++        }
++        if swiftValue != oracleValue {
++            mathPitchFail(
++                "\(label) row(forPitch:\(query)) swift=\(swiftValue) oracle=\(oracleValue)")
++        }
++    }
++}
++
++private func checkPitchNearestParity(_ label: String, _ pitches: [UInt8]?, _ queries: [Int]) {
++    let projection = pitchProjection(for: pitches)
++    for query in queries {
++        let swiftValue = projection.nearestVisiblePitch(to: query)
++        let oracleValue = withSGPitchList(pitches) { pointer, count in
++            Int(sgm_pitch_nearest_visible(pointer, count, Int32(query)))
++        }
++        if swiftValue != oracleValue {
++            mathPitchFail(
++                "\(label) nearestVisiblePitch(to:\(query)) swift=\(swiftValue) oracle=\(oracleValue)")
++        }
++    }
++}
++
++private func checkPitchGeometryParity(_ label: String, _ pitches: [UInt8]?) {
++    let projection = pitchProjection(for: pitches)
++    let keyHeights: [Double] = [13, 1.25, 7]
++    let scrollYs: [Double] = [0, 6.5, 100.75]
++    let dprs: [Double] = [1, 2, 1.5, 3, 0]
++    let rowQueries: [Int] = [0, 1, 5, 127]
++    let epsilon = 0.000001
++    for keyHeight in keyHeights {
++        for scrollY in scrollYs {
++            for dpr in dprs {
++                for row in rowQueries {
++                    if row >= projection.visibleRowCount {
++                        continue
++                    }
++                    let swiftTop = projection.rowTop(
++                        row, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr)
++                    let oracleTop = withSGPitchList(pitches) { pointer, count in
++                        sgm_pitch_row_top(pointer, count, Int32(row), keyHeight, scrollY, dpr)
++                    }
++                    if swiftTop != oracleTop {
++                        mathPitchFail(
++                            "\(label) rowTop(\(row),\(keyHeight),\(scrollY),\(dpr)) "
++                                + "swift=\(swiftTop) oracle=\(oracleTop)")
++                    }
++                }
++                let lastRow = projection.visibleRowCount - 1
++                let edgeRows: [Int] = [0, lastRow]
++                for row in edgeRows {
++                    let top = projection.rowTop(
++                        row, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr)
++                    let bottom = projection.rowBottom(
++                        row, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr)
++                    let ys: [Double] = [top, top + epsilon, bottom - epsilon]
++                    for y in ys {
++                        let swiftPitch = projection.yToPitch(
++                            y, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr)
++                        let oraclePitch = withSGPitchList(pitches) { pointer, count in
++                            Int(sgm_pitch_y_to_pitch(pointer, count, y, keyHeight, scrollY, dpr))
++                        }
++                        if swiftPitch != oraclePitch {
++                            mathPitchFail(
++                                "\(label) yToPitch(\(y),\(keyHeight),\(scrollY),\(dpr)) "
++                                    + "swift=\(swiftPitch) oracle=\(oraclePitch)")
++                        }
++                    }
++                }
++            }
++        }
++    }
++}
++
++private func runMathPitchSelftest() {
++    // Chromatic (default init).
++    let chromatic = PitchProjection()
++    if chromatic.visibleRowCount != 128 {
++        mathPitchFail("chromatic visibleRowCount == \(chromatic.visibleRowCount)")
++    }
++    if chromatic.visiblePitch(at: 0) != 127 || chromatic.visiblePitch(at: 127) != 0 {
++        mathPitchFail(
++            "chromatic visiblePitch(at:0/at:127) == \(chromatic.visiblePitch(at: 0))/\(chromatic.visiblePitch(at: 127))"
++        )
++    }
++    if chromatic.row(forPitch: 127) != 0 || chromatic.row(forPitch: 0) != 127
++        || chromatic.row(forPitch: 60) != 67
++    {
++        mathPitchFail("chromatic row(forPitch:) mapping")
++    }
++    if chromatic.row(forPitch: -1) != PitchProjection.cHiddenRow
++        || chromatic.row(forPitch: 128) != PitchProjection.cHiddenRow
++    {
++        mathPitchFail("chromatic row(forPitch:) out-of-domain")
++    }
++    for query in [0, 60, 127] {
++        if chromatic.nearestVisiblePitch(to: query) != query {
++            mathPitchFail("chromatic nearestVisiblePitch(to:\(query))")
++        }
++    }
++    for row in 0..<128 {
++        if !chromatic.isScalePitch(row: row) {
++            mathPitchFail("chromatic isScalePitch(row:\(row)) == false")
++        }
++    }
++    if chromatic.totalHeight(keyHeight: 13) != 1664 {
++        mathPitchFail("chromatic totalHeight(keyHeight:13) == \(chromatic.totalHeight(keyHeight: 13))")
++    }
++
++    // Folded [60, 64, 67].
++    var folded = PitchProjection()
++    folded.buildFromPitches([60, 64, 67])
++    if folded.visibleRowCount != 3 {
++        mathPitchFail("folded visibleRowCount == \(folded.visibleRowCount)")
++    }
++    if folded.visiblePitch(at: 0) != 67 || folded.visiblePitch(at: 1) != 64
++        || folded.visiblePitch(at: 2) != 60
++    {
++        mathPitchFail("folded visiblePitch order")
++    }
++    if folded.row(forPitch: 60) != 2 || folded.row(forPitch: 64) != 1
++        || folded.row(forPitch: 67) != 0 || folded.row(forPitch: 61) != PitchProjection.cHiddenRow
++    {
++        mathPitchFail("folded row(forPitch:) mapping")
++    }
++    let nearestCases: [(query: Int, expected: Int)] = [
++        (62, 60), (65, 64), (59, 60), (68, 67),
++    ]
++    for c in nearestCases {
++        let swiftValue = folded.nearestVisiblePitch(to: c.query)
++        if swiftValue != c.expected {
++            mathPitchFail(
++                "folded nearestVisiblePitch(to:\(c.query)) == \(swiftValue), want \(c.expected)")
++        }
++    }
++    for row in 0..<3 {
++        if !folded.isScalePitch(row: row) {
++            mathPitchFail("folded isScalePitch(row:\(row)) == false before classification")
++        }
++    }
++    var classifiedFlags = Array(repeating: false, count: 128)
++    classifiedFlags[64] = true
++    folded.setScalePitchClassification(classifiedFlags)
++    if folded.isScalePitch(row: 0) || !folded.isScalePitch(row: 1) || folded.isScalePitch(row: 2) {
++        mathPitchFail("folded by-pitch scale classification")
++    }
++
++    // Empty fold.
++    var empty = PitchProjection()
++    empty.buildFromPitches([])
++    if empty.visibleRowCount != 0 {
++        mathPitchFail("empty visibleRowCount == \(empty.visibleRowCount)")
++    }
++    if empty.nearestVisiblePitch(to: 60) != PitchProjection.cHiddenRow {
++        mathPitchFail("empty nearestVisiblePitch(to:60)")
++    }
++    if empty.yToPitch(0, keyHeight: 13, scrollY: 0, dpr: 1) != PitchProjection.cHiddenRow
++        || empty.yToPitch(100, keyHeight: 13, scrollY: 0, dpr: 1) != PitchProjection.cHiddenRow
++    {
++        mathPitchFail("empty yToPitch")
++    }
++
++    // DPR-snapped edges: the half-away-from-zero tie case leads the table —
++    // it is the only guard against a to-nearest-or-even port.
++    let edges = PitchProjection()
++    if edges.rowTop(1, keyHeight: 1.25, scrollY: 0, dpr: 2) != 1.5 {
++        mathPitchFail(
++            "edge 2.5 tie rowTop(1,1.25,0,2) == \(edges.rowTop(1, keyHeight: 1.25, scrollY: 0, dpr: 2))")
++    }
++    if edges.rowTop(0, keyHeight: 13, scrollY: 0, dpr: 1) != 0
++        || edges.rowBottom(0, keyHeight: 13, scrollY: 0, dpr: 1) != 13
++    {
++        mathPitchFail("edge chromatic unit-dpr row 0")
++    }
++    if edges.yToPitch(12.9, keyHeight: 13, scrollY: 0, dpr: 1) != 127
++        || edges.yToPitch(13.0, keyHeight: 13, scrollY: 0, dpr: 1) != 126
++    {
++        mathPitchFail("edge half-open row hit test")
++    }
++    if edges.rowTop(0, keyHeight: 13, scrollY: 6.5, dpr: 2) != -6.5
++        || edges.rowBottom(0, keyHeight: 13, scrollY: 6.5, dpr: 2) != 6.5
++    {
++        mathPitchFail("edge scrolled dpr-2 row 0")
++    }
++    if edges.yToPitch(-6.5, keyHeight: 13, scrollY: 6.5, dpr: 2) != 127
++        || edges.yToPitch(-6.51, keyHeight: 13, scrollY: 6.5, dpr: 2) != PitchProjection.cHiddenRow
++        || edges.yToPitch(6.49, keyHeight: 13, scrollY: 6.5, dpr: 2) != 127
++        || edges.yToPitch(6.5, keyHeight: 13, scrollY: 6.5, dpr: 2) != 126
++    {
++        mathPitchFail("edge scrolled top-inclusive hit test")
++    }
++    if edges.rowTop(5, keyHeight: 13, scrollY: 0, dpr: 0) != 65 {
++        mathPitchFail(
++            "edge dpr-0 rowTop(5,13,0,0) == \(edges.rowTop(5, keyHeight: 13, scrollY: 0, dpr: 0))")
++    }
++
++    // T4 parity sweep: chromatic full sweeps, then the three fold sets.
++    var chromaticQueries: [Int] = []
++    for query in 0...127 {
++        chromaticQueries.append(query)
++    }
++    checkPitchRowParity("chromatic", nil, chromaticQueries)
++    var nearestQueries: [Int] = []
++    for query in -2...129 {
++        nearestQueries.append(query)
++    }
++    checkPitchNearestParity("chromatic", nil, nearestQueries)
++    let foldSets: [[UInt8]] = [[60, 64, 67], [0, 127], [69]]
++    let foldLabels: [String] = ["fold606467", "fold0127", "fold69"]
++    for index in 0..<foldSets.count {
++        checkPitchNearestParity(foldLabels[index], foldSets[index], nearestQueries)
++        checkPitchRowParity(foldLabels[index], foldSets[index], chromaticQueries)
++    }
++    checkPitchGeometryParity("chromatic", nil)
++    checkPitchGeometryParity("fold606467", [60, 64, 67])
++
++    print("SWIFT_GRID_SMOKE math-pitch PASS")
++    fflush(stdout)
++}
