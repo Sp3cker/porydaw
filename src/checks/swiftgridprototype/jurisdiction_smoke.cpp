@@ -229,6 +229,7 @@ struct UndoScene {
     int revision() const { return model->property("revision").toInt(); }
     bool canUndo() const { return model->property("canUndo").toBool(); }
     bool canRedo() const { return model->property("canRedo").toBool(); }
+    int lastCancelReason() const { return model->property("lastCancelReason").toInt(); }
 
     QJsonObject note(int id) const
     {
@@ -533,6 +534,15 @@ bool cancelIdle(const UndoScene &scene)
     return cancelStatus(scene).contains(QStringLiteral("notes,"));
 }
 
+void requireFreshDrawCommits(const UndoScene &scene, const char *reason)
+{
+    const int before = scene.revision();
+    scene.press(scene.point(168, 100));
+    scene.move(scene.point(146, 102));
+    scene.release(scene.point(146, 102));
+    require(scene.revision() == before + 1, reason);
+}
+
 void verifyCancelUngrabRow(const UndoScene &scene)
 {
     scene.reset();
@@ -628,17 +638,16 @@ void verifyCancelHiddenRow(const UndoScene &scene)
             "hidden cancel did not clear keyboard hover");
     require(scene.model->property("cursorKind").toInt() == 0,
             "hidden cancel did not reset the cursor");
-    require(undoSummary(scene.model) == fixture, "hidden cancel mutated notes or selection");
     require(scene.revision() == 0 && !scene.canUndo(), "hidden cancel pushed an undo command");
+    require(scene.lastCancelReason() == 2, "surface hide did not record Hidden");
     require(scene.surface->setProperty("visible", true), "cannot restore the grid surface");
     QTest::qWait(50ms);
     scene.release(scene.point(146, 102));
     require(undoSummary(scene.model) == fixture && scene.revision() == 0,
             "post-teardown release committed after the hidden cancel");
-    // Window-level Hidden proof (spec S3.2: window hide() plus
-    // onVisibleChanged is Hidden, reason 2 — not WindowDeactivated). The
-    // native Hide entry carries reason 3 with identical teardown, so
-    // whichever entry runs first owns the cancel and the other no-ops.
+    requireFreshDrawCommits(scene, "fresh draw did not commit after the surface hidden cancel");
+    // Window-level Hidden: QEvent::Hide on the host window. The filter
+    // names Hidden (2). No QML onVisibleChanged on the window.
     scene.reset();
     scene.press(scene.point(168, 100));
     scene.move(scene.point(146, 102));
@@ -649,6 +658,7 @@ void verifyCancelHiddenRow(const UndoScene &scene)
                "window hide left the draw preview");
     require(cancelIdle(scene), "window hide left a live gesture");
     require(!scene.window->isVisible(), "window hide left the window visible");
+    require(scene.lastCancelReason() == 2, "window hide did not record Hidden");
     require(undoSummary(scene.model) == fixture, "window hide mutated notes or selection");
     require(scene.revision() == 0 && !scene.canUndo(), "window hide pushed an undo command");
     scene.window->show();
@@ -658,6 +668,7 @@ void verifyCancelHiddenRow(const UndoScene &scene)
     scene.release(scene.point(146, 102));
     require(undoSummary(scene.model) == fixture && scene.revision() == 0,
             "post-teardown release committed after window hide");
+    requireFreshDrawCommits(scene, "fresh draw did not commit after the window hidden cancel");
     // Editor-open coverage (spec S6.2: pitch preview discarded when the
     // editor is open). The modal popup precludes a live grid gesture, so
     // this phase selects, opens the editor with G, and hides the grid:
@@ -712,12 +723,8 @@ void verifyCancelWindowDeactivatedRow(const UndoScene &scene)
     scene.move(scene.point(146, 102));
     require(cancelStatus(scene).startsWith(QStringLiteral("Drawing")),
             "draw did not preview before window deactivate");
-    // Production WindowDeactivate entry (spec S5.2): the native window
-    // eventFilter delivers reason 3 once. A synthesized deactivate flips
-    // neither isActive nor visible, so no QML wire can observe it — the
-    // smoke sends a real QEvent::WindowDeactivate (production
-    // sendWindowDeactivate). The window stays visible throughout: Hidden
-    // ends !isVisible, WindowDeactivate ends isVisible.
+    // Host filter names WindowDeactivated (3). Visibility is the scenario
+    // distinction, not the reason separator. Do not assert !isActive.
     QEvent deactivate(QEvent::WindowDeactivate);
     QCoreApplication::sendEvent(scene.window, &deactivate);
     awaitState([&] { return !namedItem(scene.surface, QStringLiteral("drawPreview")); },
@@ -730,9 +737,11 @@ void verifyCancelWindowDeactivatedRow(const UndoScene &scene)
     require(undoSummary(scene.model) == fixture, "window deactivate mutated notes or selection");
     require(scene.revision() == 0 && !scene.canUndo(), "window deactivate pushed an undo command");
     require(scene.window->isVisible(), "window deactivate hid the window");
+    require(scene.lastCancelReason() == 3, "window deactivate did not record WindowDeactivated");
     scene.release(scene.point(146, 102));
     require(undoSummary(scene.model) == fixture && scene.revision() == 0,
             "post-teardown release committed after window deactivate");
+    requireFreshDrawCommits(scene, "fresh draw did not commit after window deactivate");
     // Host arbitration: with the pitch popup open and no grid gesture, the
     // same window event must leave the popup session alone.
     scene.reset();
@@ -745,6 +754,8 @@ void verifyCancelWindowDeactivatedRow(const UndoScene &scene)
     QEvent popupDeactivate(QEvent::WindowDeactivate);
     QCoreApplication::sendEvent(scene.window, &popupDeactivate);
     QTest::qWait(50ms);
+    require(scene.lastCancelReason() == 3,
+            "popup window deactivate did not record WindowDeactivated");
     require(scene.window->property("pitchBridge").value<QObject *>() != nullptr,
             "window deactivate tore down the pitch popup");
     require(scene.revision() == 0, "window deactivate pushed a command with no grid gesture");

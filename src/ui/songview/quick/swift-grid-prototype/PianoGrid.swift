@@ -106,6 +106,10 @@ public final class PianoGrid {
     public var canUndo: Bool = false
     public var canRedo: Bool = false
     public var revision: Int = 0
+    // Host-named cancel delivery. -1 = none this session. Written only by
+    // inputCancelled and resetDemo. Raw values match GridCancelReason /
+    // TimelineInputCancelReason.
+    public var lastCancelReason: Int = -1
 
     var drawPreview: (tick: Int, duration: Int, pitch: Int)? {
         guard case .draw(let state) = gesture else { return nil }
@@ -468,6 +472,11 @@ public final class PianoGrid {
         publishOutputs()
         if mutated { synchronizeAudio() }
     }
+    public func inputCancelled(reason: Int) {
+        lastCancelReason = reason
+        cancelPointer(reason: reason)
+    }
+
     public func cancelPointer(reason: Int) {
         guard let g = gesture else { return }
         guard let cancelReason = GridCancelReason(rawValue: reason) else { return }
@@ -654,6 +663,7 @@ public final class PianoGrid {
         nextNoteId = GridFixture.nextNoteId
         undoStack.removeAll()
         revision = 0
+        lastCancelReason = -1
         syncUndoFlags()
         noteSummaryDirty = true
         recomputeGeometry()

@@ -191,16 +191,6 @@ ApplicationWindow {
         flick.contentY = root.gridModel.initialScrollY;
         console.log("SWIFT_GRID_READY");
     }
-    // Production ItemVisibleHasChanged entry: window hide() is Hidden
-    // (reason 2), matching the grid surface wire below. WindowDeactivate
-    // arrives only through the native window eventFilter (reason 3):
-    // isActive is app bookkeeping and is not synthesizable via sendEvent,
-    // so there is deliberately no onActiveChanged wire. Popup-owned
-    // surfaces keep their own input (spec deferral §8 — no popup teardown).
-    onVisibleChanged: {
-        if (!visible)
-            root.gridModel.cancelPointer(2);
-    }
 
     component ChromeButton: Rectangle {
         id: button
@@ -477,7 +467,7 @@ ApplicationWindow {
                         // hidden tears the grid gesture down (reason 2).
                         onVisibleChanged: {
                             if (!visible)
-                                root.gridModel.cancelPointer(2);
+                                root.gridModel.inputCancelled(2);
                         }
                         PianoRollCanvas {
                             bandSide: rollBandContent

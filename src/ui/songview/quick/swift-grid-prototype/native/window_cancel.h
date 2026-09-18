@@ -1,19 +1,21 @@
 #pragma once
 
-// Native window eventFilter for the Swift grid prototype: mirrors the
-// production TimelineQuickView::eventFilter Hide/WindowDeactivate entry
-// (timelinequickview_window.cpp), which delivers one cancelActiveGestures
-// pass for the grid surface. QML must not wire reason 3: isActive is app
-// bookkeeping and is not synthesizable via sendEvent.
+// Host-owned window cancel filter. Mirrors TimelineQuickView::eventFilter:
+// QEvent::Hide → Hidden (2), QEvent::WindowDeactivate → WindowDeactivated (3).
+// Raw values match songview::TimelineInputCancelReason.
+//
+// The filter QObject is parented to the QQuickWindow it watches. The sink is
+// a typed function pointer (the prototype stand-in for
+// TimelineBandInteraction::inputCancelled). No property handshake, no
+// invokeMethod, no app-global event-filter singleton.
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Installs the singleton filter on the application object (deferred via a
-// pre-routine when called before QCoreApplication exists, as in App.init).
-// Safe to call more than once; only the first call installs.
-void sgw_installWindowCancelFilter(void);
+typedef void (*SgwInputCancelledFn)(int reason, void *context);
+
+void sgw_installWindowCancelHost(SgwInputCancelledFn fn, void *context);
 
 #ifdef __cplusplus
 }

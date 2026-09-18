@@ -1,49 +1,87 @@
-// Native window eventFilter for the Swift grid prototype.
+// Host-owned window cancel filter for the Swift piano-grid.
 //
-// Production entry (timelinequickview_window.cpp TimelineQuickView::
-// eventFilter): QEvent::Hide and QEvent::WindowDeactivate cancel every live
-// Quick interaction exactly once. The prototype mirrors it: either event on
-// the grid window forwards cancelPointer(3) to the grid model. The first
-// delivery clears the live gesture, so a trailing Hide or WindowDeactivate
-// for the same transition is a Swift-side no-op (guard let gesture).
-//
-// Only windows carrying the prototype's gridModel property are forwarded:
-// popup-owned and foreign windows keep their own input (spec defers
-// popup-session parity, so the grid's window path never tears them down).
-// Window hide() additionally reaches QML onVisibleChanged (reason 2,
-// Hidden); teardown is identical to reason 3 by design, so whichever entry
-// runs first owns the cancel.
+// Production analog: TimelineQuickView::eventFilter
+// (timelinequickview_window.cpp). Hide and WindowDeactivate are distinct
+// named deliveries (charter S-4). The filter is parented to the window it
+// watches and calls the typed sink with TimelineInputCancelReason raw values.
 
 #include "window_cancel.h"
 
 #include <QCoreApplication>
 #include <QEvent>
-#include <QMetaObject>
+#include <QGuiApplication>
 #include <QObject>
 #include <QQuickWindow>
-#include <QVariant>
+#include <QWindow>
 
 namespace {
 
-// QObject subclass without Q_OBJECT: the virtual eventFilter override needs
-// no meta-object code, so no moc run is required for this TU.
+constexpr int kHidden = 2;
+constexpr int kWindowDeactivated = 3;
+
 class GridWindowCancelFilter final : public QObject
+{
+  public:
+    GridWindowCancelFilter(QObject *window, SgwInputCancelledFn fn, void *context)
+        : QObject(window)
+        , m_fn(fn)
+        , m_context(context)
+    {
+        window->installEventFilter(this);
+    }
+
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        if (watched != parent() || m_fn == nullptr)
+            return false;
+        switch (event->type()) {
+        case QEvent::Hide:
+            m_fn(kHidden, m_context);
+            break;
+        case QEvent::WindowDeactivate:
+            m_fn(kWindowDeactivated, m_context);
+            break;
+        default:
+            break;
+        }
+        return false;
+    }
+
+  private:
+    SgwInputCancelledFn m_fn = nullptr;
+    void *m_context = nullptr;
+};
+
+SgwInputCancelledFn g_fn = nullptr;
+void *g_context = nullptr;
+bool g_attached = false;
+
+void attachToWindow(QQuickWindow *window)
+{
+    if (g_attached || window == nullptr || g_fn == nullptr)
+        return;
+    new GridWindowCancelFilter(window, g_fn, g_context);
+    g_attached = true;
+    g_fn = nullptr;
+    g_context = nullptr;
+}
+
+class AttachOnShow final : public QObject
 {
   public:
     using QObject::QObject;
 
     bool eventFilter(QObject *watched, QEvent *event) override
     {
-        const QEvent::Type type = event->type();
-        if (type != QEvent::Hide && type != QEvent::WindowDeactivate)
-            return false;
-        const auto *window = qobject_cast<QQuickWindow *>(watched);
-        if (!window)
-            return false;
-        QObject *model = window->property("gridModel").value<QObject *>();
-        if (!model)
-            return false;
-        QMetaObject::invokeMethod(model, "cancelPointer", Q_ARG(int, 3));
+        if (event->type() == QEvent::Show) {
+            if (auto *window = qobject_cast<QQuickWindow *>(watched)) {
+                attachToWindow(window);
+                if (g_attached) {
+                    qApp->removeEventFilter(this);
+                    deleteLater();
+                }
+            }
+        }
         return false;
     }
 };
@@ -51,24 +89,26 @@ class GridWindowCancelFilter final : public QObject
 void installNow()
 {
     QCoreApplication *app = QCoreApplication::instance();
-    if (!app)
+    if (!app || g_fn == nullptr)
         return;
-    static GridWindowCancelFilter *installed = nullptr;
-    if (installed)
-        return;
-    installed = new GridWindowCancelFilter(app);
-    app->installEventFilter(installed);
+    for (QWindow *window : QGuiApplication::allWindows()) {
+        attachToWindow(qobject_cast<QQuickWindow *>(window));
+        if (g_attached)
+            return;
+    }
+    app->installEventFilter(new AttachOnShow(app));
 }
 
 } // namespace
 
-extern "C" void sgw_installWindowCancelFilter(void)
+extern "C" void sgw_installWindowCancelHost(SgwInputCancelledFn fn, void *context)
 {
+    g_fn = fn;
+    g_context = context;
+    g_attached = false;
     if (QCoreApplication::instance()) {
         installNow();
         return;
     }
-    // App.init runs before QtBridge creates the application object; defer
-    // to the pre-routine phase like the smoke driver does.
     qAddPreRoutine(installNow);
 }

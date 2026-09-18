@@ -135,11 +135,12 @@ Teardown semantics matrix (normative; production sources §9):
 | `hidden` | same teardown as `pointerUngrabbed` | same | `hoverKey` cleared, `cursorKind` = 0 | discarded (`cancelPitchCurves()` resync) when an editor is open |
 | `windowDeactivated` | identical teardown to `hidden` for the grid surface | identical | identical | identical |
 
-`hidden` and `windowDeactivated` differ only in **entry**: `hidden` is
-per-surface visibility; `windowDeactivated` is window-level, delivered
-once, and must not tear down popup-owned surfaces (the pitch popup and
-note menu keep their own input; their teardown is theirs, not the grid's
-— exactly the production foreign-grab/popup-session protection).
+`hidden` and `windowDeactivated` have identical grid-surface teardown.
+They differ in **named delivery** (charter S-4): `QEvent::Hide` arrives as
+Hidden; `QEvent::WindowDeactivate` arrives as WindowDeactivated.
+WindowDeactivate must not tear down popup-owned surfaces (the pitch popup
+and note menu keep their own input; their teardown is theirs, not the
+grid's — production foreign-grab/popup-session protection).
 
 Entry wiring (production path in brackets):
 
@@ -147,17 +148,18 @@ Entry wiring (production path in brackets):
   `cancelRightPointer(1)` [TimelineInputItem::mouseUngrabEvent]
 - grid input surface `onActiveFocusChanged` → lost focus while visible →
   `cancelPointer(0)` [focusOutEvent]
-- `onVisibleChanged` → false → `cancelPointer(2)` on the grid surface
-  **and** on the window [ItemVisibleHasChanged]. Window `hide()` plus
-  `onVisibleChanged` is a legitimate Hidden proof; do not treat it as
-  WindowDeactivated.
-- Native window `eventFilter`: `QEvent::Hide` and
-  `QEvent::WindowDeactivate` → `cancelPointer(3)` once
-  [TimelineQuickView::eventFilter Hide/WindowDeactivate →
-  `cancelActiveGestures`; popup surfaces excluded by host arbitration].
-  Installed by the prototype host (`App.swift` and/or a small native
-  helper it owns). **Not** QML `onActiveChanged`: `isActive` is app
-  bookkeeping and is not synthesizable via `sendEvent`.
+- grid surface `onVisibleChanged` → false → `inputCancelled(2)`
+  [ItemVisibleHasChanged]. Window `onVisibleChanged` is **not** a cancel
+  path — one owner per reason.
+- Host-owned window eventFilter (QObject parented to the QQuickWindow):
+  `QEvent::Hide` → `inputCancelled(Hidden=2)`;
+  `QEvent::WindowDeactivate` → `inputCancelled(WindowDeactivated=3)`
+  [TimelineQuickView::eventFilter]. Typed C sink
+  (`SgwInputCancelledFn`) is the prototype stand-in for
+  `TimelineBandInteraction::inputCancelled`. No `gridModel` property
+  handshake, no `invokeMethod`, no app-global event-filter singleton.
+  Popup-owned surfaces excluded because the filter is installed only on
+  the first QQuickWindow (the grid host).
 
 ### 3.3 Policy table (Task 3)
 
@@ -319,15 +321,15 @@ exit; the final `SWIFT_GRID_SMOKE PASS` still comes from `grid_smoke.cpp`
 
 Production entries (normative sources §9): per-item focus-out →
 FocusLost; per-item mouse ungrab → PointerUngrabbed; per-item hidden →
-Hidden (+ focus drop, hover teardown at the item); window Hide/Deactivate
-→ one `cancelActiveGestures()` pass, each interaction exactly once,
-foreign-window grabs and popup-session grabs released by nobody but their
-owner. The prototype mirrors these four entries (§3.2): three QML
-surfaces plus a native window eventFilter. The smoke drives each with a
-real Qt event (focus steal, `ungrabMouse()`, `visible=false` / window
-`hide()`, synthesized `QEvent::WindowDeactivate`) — never by calling
-Swift cancel methods directly, except where noted in §6.2. Do not assert
-`!QWindow::isActive()` after `sendEvent`; that property does not flip.
+Hidden (+ focus drop, hover teardown at the item); window Hide → Hidden
+and window Deactivate → WindowDeactivated as distinct named reasons
+(charter S-4). The prototype mirrors these entries (§3.2). The smoke
+drives each with a real Qt event (focus steal, `ungrabMouse()`, surface
+`visible=false` / window `hide()`, synthesized `QEvent::WindowDeactivate`)
+— never by calling Swift cancel methods directly. Assert delivery truth
+via `lastCancelReason` (Hidden=2, WindowDeactivated=3). `isVisible` is a
+scenario distinction, not the reason separator. Do not assert
+`!QWindow::isActive()` after `sendEvent`.
 
 ### 5.3 Production extraction bounds (Task 3)
 
@@ -364,8 +366,8 @@ is the exact-restore oracle (production analog: `smf().write()` equality).
 | --- | --- | --- |
 | `cancel-ungrab-discards-move-preview` | mid-move-drag, `ungrabMouse()` on the grabber | notes unmoved, gesture gone (statusText idle), selection unchanged, `revision` unchanged |
 | `cancel-focuslost-keeps-live-gesture` | mid-move-drag, steal focus (`forceActiveFocus` on transport Stop) | gesture alive (statusText still Moving); a further move + release **commits**; undo restores — the survival is behavioral, not cosmetic |
-| `cancel-hidden-tears-down-and-clears-hover` | mid-draw + keyboard hover set, hide (grid `visible = false` and/or window `hide()` + `onVisibleChanged`) | draw preview gone, `hoverKey` cleared, notes unchanged, pitch preview discarded when editor open; **ends `!isVisible`** on the object that was hidden |
-| `cancel-window-deactivated-matches-hidden` | mid-draw, send `QEvent::WindowDeactivate` to the window | same teardown as hidden; delivered once; pitch popup (when open) stays open — host arbitration; **ends `isVisible`** (window still shown). Do not assert `!isActive`. |
+| `cancel-hidden-tears-down-and-clears-hover` | mid-draw + keyboard hover set, hide (grid `visible = false` and/or window `hide()`) | draw preview gone, `hoverKey` cleared, notes unchanged, `lastCancelReason == Hidden`; **ends `!isVisible`** on the hidden object; a fresh draw afterwards commits |
+| `cancel-window-deactivated-matches-hidden` | mid-draw, send `QEvent::WindowDeactivate` to the window | same teardown as hidden; `lastCancelReason == WindowDeactivated`; pitch popup (when open) stays open; **ends `isVisible`**; a fresh draw afterwards commits. Do not assert `!isActive`. |
 | `cancel-right-ungrab-restores-captured-selection` | band-select over 2 notes, `ungrabMouse()` | selection back to pre-press exactly |
 
 ### 6.3 Policy parity + dimensions (Tasks 3–4, `PolicySelftest.swift`)
