@@ -2,7 +2,8 @@
 
 Status: normative. Every wave spec, task brief, and review under the Swift
 backend track inherits this document. Where a spec and this charter
-disagree, the charter wins and the spec is a defect.
+disagree, the charter wins and the spec is a defect. Successor wave specs
+(document seam, surfaces) must name this file in their Global Constraints.
 
 ## Prime directive
 
@@ -29,6 +30,7 @@ of window-tier key bindings. Every Quick surface binds keys generated from
 the registry; hand-written `Shortcut`/`Keys` bindings in QML are forbidden.
 A second keymap is a silent fork of the global priority contract.
 
+
 **INV-2 — Arbitration moves wholesale or not at all.** Window-tier key
 arbitration lives in exactly one tier. Mixed tiers — some surfaces
 dispatching through `QAction`s, others through QML dispatch — are forbidden.
@@ -42,6 +44,24 @@ snapshots; it returns intents and geometry. Window-tier arbitration, focus
 chains, pointer grabs, popup stacking, and platform events stay in the
 C++/QML host forever. Swift never becomes a dispatcher of window input
 (AGENTS.md: no second dispatcher).
+
+## Platform decision (2026-09-18): Windows deferred, MinGW incidental
+
+The rewrite proceeds macOS-first. Windows is **deferred, not dropped**:
+existing users are frozen on the last C++ release until Windows returns.
+MinGW was never a decision — it is an incidental toolchain fact and binds
+nothing. Binding consequences:
+
+- No MinGW accommodations, loader workarounds, or check tolerances are
+  added or maintained anywhere in this track.
+- No dual implementations to preserve Windows: the C++ roll band's
+  retirement is unconditional. Windows returns **on the Swift codebase** —
+  its own later wave covering toolchain selection (MSVC or otherwise),
+  packaging, and CI — never by keeping C++ surfaces alive.
+- Repo de-Windows-ification (Windows CI/release jobs, AGENTS.md toolchain
+  section, windeployqt packaging, MinGW check handling) is one mechanical
+  plan executed after the current wave; nothing blocks on it and no new
+  work depends on it.
 
 ## Seam rules
 
