@@ -84,7 +84,7 @@ ApplicationWindow {
         padding: 0
         margins: 0
         background: null
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        closePolicy: Popup.CloseOnPressOutside
         width: root.pitchBridge ? root.pitchBridge.metrics.popupWidth : 0
         height: root.pitchBridge ? root.pitchBridge.metrics.popupHeight : 0
         x: {
@@ -131,7 +131,8 @@ ApplicationWindow {
         function onCommitRequested() {
             root.gridModel.commitPitchCurves();
         }
-        function onCloseRequested() {
+        function onCancelRequested() {
+            root.gridModel.cancelPitchCurves();
             pitchHost.close();
         }
         function onAuditionRequested() {
@@ -174,62 +175,6 @@ ApplicationWindow {
     height: 800
     title: "Porydaw — Swift Grid Prototype"
     color: root.gridPalette.windowBackground
-    property int servedMetricsVersion: 0
-
-    function serveMetrics() {
-        var request = root.gridModel.metricsRequest;
-        var fonts = root.gridModel.measurementFonts;
-        var lines = request.split("\n");
-        for (var i = 0; i < lines.length; ++i) {
-            var line = lines[i];
-            var tab = line.indexOf("\t");
-            var key = line.slice(0, tab);
-            var text = line.slice(tab + 1);
-            var dot = key.indexOf(".");
-            var fontName = key.slice(0, dot);
-            var what = key.slice(dot + 1);
-            var spec = fonts[fontName];
-            if (what === "fit") {
-                var fitted = 1;
-                for (var px = Math.max(1, spec.pixelSize); px > 0; --px) {
-                    metricMeter.font = Qt.font({
-                        family: spec.family,
-                        pixelSize: px,
-                        weight: spec.weight,
-                        letterSpacing: spec.letterSpacing
-                    });
-                    if (metricMeter.ascent + metricMeter.descent <= root.gridModel.rowHeight) {
-                        fitted = px;
-                        break;
-                    }
-                }
-                root.gridModel.provideMetric(key, fitted);
-                continue;
-            }
-            metricMeter.font = Qt.font(spec);
-            if (what === "ascent")
-                root.gridModel.provideMetric(key, metricMeter.ascent);
-            else if (what === "height")
-                root.gridModel.provideMetric(key, metricMeter.height);
-            else if (what.indexOf("advance.") === 0)
-                root.gridModel.provideMetric(key, metricMeter.advanceWidth(text));
-        }
-        root.gridModel.metricsSubmitted();
-    }
-
-    FontMetrics {
-        id: metricMeter
-    }
-
-    Connections {
-        target: root.gridModel
-        function onMetricsVersionChanged() {
-            if (root.gridModel.metricsVersion !== root.servedMetricsVersion) {
-                root.servedMetricsVersion = root.gridModel.metricsVersion;
-                root.serveMetrics();
-            }
-        }
-    }
 
     function configureViewport() {
         root.gridModel.configureViewport(root.baseFontPx, Screen.devicePixelRatio, rollPlot.width, rollPlot.height);
@@ -401,6 +346,7 @@ ApplicationWindow {
                                 required property int labelHorizontalAlignment
                                 required property int labelVerticalAlignment
 
+                                objectName: "rulerLabel_" + labelText
                                 x: labelRect.x
                                 y: labelRect.y
                                 width: labelRect.width

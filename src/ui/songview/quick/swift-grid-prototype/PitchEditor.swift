@@ -47,7 +47,7 @@ public final class PitchEditor {
 
     @QtSignal public func previewRequested()
     @QtSignal public func commitRequested()
-    @QtSignal public func closeRequested()
+    @QtSignal public func cancelRequested()
     @QtSignal public func auditionRequested()
 
     @QtIgnored private let baseline: [GridControllerEvent]
@@ -173,10 +173,9 @@ public final class PitchEditor {
     public func resetModCurve() { modGraph.resetCurve() }
 
     public func cancelAndClose() {
-        pitchGraph.cancelPointer()
-        modGraph.cancelPointer()
-        commitRequested()
-        closeRequested()
+        pitchGraph.cancelPointerSilently()
+        modGraph.cancelPointerSilently()
+        cancelRequested()
     }
 
     public func routeUnclaimedKey(key: Int, modifiers: Int, autoRepeat: Bool) {

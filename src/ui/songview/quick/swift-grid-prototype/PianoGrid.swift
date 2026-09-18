@@ -25,14 +25,6 @@ final class GridNote {
     }
 }
 
-enum GridFontKind: String {
-    case ruler, beat, bold, sig, chip, keyLabel
-
-    var prefix: String {
-        self == .keyLabel ? "keylabel" : rawValue
-    }
-}
-
 @MainActor
 @QtBridgeable
 public final class PianoGrid {
@@ -74,16 +66,10 @@ public final class PianoGrid {
     public var statusText: String = ""
     public var noteSummary: String = "[]"
 
-    public var measurementFonts: [String: QVariantSettable] = [:]
+    private var measurementFonts: [GridFontKind: GridFontSpec] = [:]
 
-    public var metricsRequest: String = ""
-
-    public var metricsVersion: Int = 0
-
-    public var metricsReady: Bool = false
-
-    private var providedMetrics: [String: Double] = [:]
-    private var pendingMetrics: Set<String> = []
+    @QtIgnored
+    private var typography: GridTypography?
 
     // Sole geometry authority for all Swift-side computation.
     var metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 0, height: 0)
@@ -117,7 +103,7 @@ public final class PianoGrid {
     public init() {
         notes = GridFixture.makeNotes()
         recomputeGridWidth()
-        publishMetricsRequest()
+        measurementFonts = GridTypography.fonts(metrics: metrics)
         scene.hoverChipFont = fontSpec(.chip)
         publishOutputs()
         synchronizeAudio()
@@ -168,6 +154,11 @@ public final class PianoGrid {
         controllerEvents = pitchPreview
     }
 
+    public func cancelPitchCurves() {
+        pitchPreview = controllerEvents
+        synchronizeAudio()
+    }
+
     public func closePitchEditor() {
         pitchEditor = nil
         pitchPreview.removeAll()
@@ -179,8 +170,7 @@ public final class PianoGrid {
         guard notes.count != before else { return }
         selection.removeAll()
         noteSummaryDirty = true
-        recomputeGridWidth()
-        scene.rebuildNotes(sceneInput())
+        refreshNotes()
         publishOutputs()
         synchronizeAudio()
     }
@@ -189,14 +179,12 @@ public final class PianoGrid {
         baseFontPx: Double, devicePixelRatio: Double,
         width: Double, height: Double
     ) {
-        guard baseFontPx > 0, devicePixelRatio > 0, width >= 0, height >= 0 else { return }
         metrics = GridMetrics(
             baseFontPx: baseFontPx, dpr: devicePixelRatio,
             width: width, height: height)
         initialScrollY = defaultVerticalScroll()
-        recomputeGridWidth()
         publishGeometry()
-        publishMetricsRequest()
+        recomputeGeometry()
         rebuildScene()
         publishOutputs()
     }
@@ -220,8 +208,7 @@ public final class PianoGrid {
             palette: palette,
             gridWidth: gridWidth,
             rulerHeight: rulerHeight,
-            metricsReady: metricsReady,
-            metric: { self.metric($0) },
+            typography: typography,
             fontSpec: { self.fontSpec($0) },
             notes: notes,
             displayedNote: { self.displayedNote($0) },
@@ -236,6 +223,16 @@ public final class PianoGrid {
     private func rebuildScene() {
         let input = sceneInput()
         scene.rebuildStatic(input)
+        scene.rebuildNotes(input)
+    }
+
+    private func refreshNotes() {
+        let previousWidth = gridWidth
+        let measured = recomputeGeometry()
+        let input = sceneInput()
+        if measured || gridWidth != previousWidth {
+            scene.rebuildStatic(input)
+        }
         scene.rebuildNotes(input)
     }
 
@@ -265,110 +262,43 @@ public final class PianoGrid {
         gridWidth =
             metrics.leadPadWidth + Double(end) * metrics.pxPerTick
             + metrics.viewportWidth
-        extendRulerMetrics()
     }
 
-    private var requestedRulerBar = 0
+    @discardableResult
+    private func recomputeGeometry() -> Bool {
+        recomputeGridWidth()
+        return updateTypography()
+    }
 
-    private func extendRulerMetrics() {
-        let maxBar = metrics.maxRulerBar(gridWidth: gridWidth)
-        guard maxBar > requestedRulerBar else { return }
-        var added: [(String, String)] = []
-        for bar in (requestedRulerBar + 1)...maxBar {
-            added.append(("ruler.advance.\(bar)", "\(bar)"))
-            for beat in 1...4 {
-                added.append(("beat.advance.\(bar).\(beat)", "\(bar).\(beat)"))
-            }
+    private var typographyKey: (fontPx: Double, dpr: Double, maxBar: Int)?
+
+    @discardableResult
+    private func updateTypography() -> Bool {
+        let key = (
+            fontPx: metrics.baseFontPx, dpr: metrics.dpr,
+            maxBar: metrics.maxRulerBar(gridWidth: gridWidth)
+        )
+        if let current = typographyKey,
+            current.fontPx == key.fontPx && current.dpr == key.dpr
+                && current.maxBar == key.maxBar
+        {
+            return false
         }
-        requestedRulerBar = maxBar
-        guard !added.isEmpty else { return }
-        if !metricsRequest.isEmpty { metricsRequest += "\n" }
-        metricsRequest += added.map { "\($0.0)\t\($0.1)" }.joined(separator: "\n")
-        for (key, _) in added { pendingMetrics.insert(key) }
-        metricsReady = false
-        metricsVersion += 1
-    }
-
-    private func publishMetricsRequest() {
-        let m = metrics
-        let bodyPx = max(1.0, (m.baseFontPx * 1.125).rounded())
-        let next = "Atkinson Hyperlegible Next"
-        let mono = "Atkinson Hyperlegible Mono"
-        func spec(
-            _ family: String, _ px: Double, _ weight: Int,
-            _ spacing: Double = 0
-        ) -> [String: QVariantSettable] {
-            [
-                "family": family, "pixelSize": Int(px), "weight": weight,
-                "letterSpacing": spacing,
-            ]
-        }
-        let rulerPx = max(m.rulerMinFontPx, bodyPx - 1)
-        measurementFonts = [
-            "ruler": spec(mono, rulerPx, 400, m.rulerLetterSpacing),
-            "beat": spec(
-                mono, max(m.rulerMinFontPx, rulerPx - 1), 400,
-                m.rulerLetterSpacing),
-            "bold": spec(mono, rulerPx, 600, m.rulerLetterSpacing),
-            "sig": spec(next, bodyPx, 600),
-            "chip": spec(next, m.baseFontPx, 400),
-            "keylabel": spec(next, min(bodyPx, m.baseFontPx), 400),
-        ]
-
-        var keys: [(String, String)] = [
-            ("ruler.ascent", ""), ("ruler.height", ""), ("beat.ascent", ""),
-            ("beat.height", ""), ("bold.ascent", ""), ("bold.height", ""),
-            ("chip.ascent", ""), ("chip.height", ""),
-            ("sig.advance.4/4", "4/4"), ("keylabel.fit", ""),
-        ]
-        let maxBar = m.maxRulerBar(gridWidth: gridWidth)
-        requestedRulerBar = maxBar
-        for bar in 1...maxBar {
-            keys.append(("ruler.advance.\(bar)", "\(bar)"))
-            for beat in 1...4 {
-                keys.append(("beat.advance.\(bar).\(beat)", "\(bar).\(beat)"))
-            }
-        }
-        for key in 0..<128 {
-            keys.append(
-                (
-                    "chip.advance.\(GridScene.keyName(key))",
-                    GridScene.keyName(key)
-                ))
-        }
-        metricsRequest = keys.map { "\($0.0)\t\($0.1)" }.joined(separator: "\n")
-        pendingMetrics = Set(keys.map { $0.0 })
-        providedMetrics.removeAll(keepingCapacity: true)
-        metricsReady = false
-        metricsVersion += 1
-    }
-
-    public func provideMetric(key: String, value: Double) {
-        providedMetrics[key] = value
-        pendingMetrics.remove(key)
-    }
-
-    public func metricsSubmitted() {
-        guard !metricsReady else { return }
-        metricsReady = pendingMetrics.isEmpty
-        guard metricsReady else { return }
-
-        rulerHeight = metric("bold.height") + 1 + metric("ruler.height") + 1
-        rebuildScene()
-    }
-
-    @QtIgnored
-    func metric(_ key: String) -> Double {
-        providedMetrics[key]!
+        measurementFonts = GridTypography.fonts(metrics: metrics)
+        let measured = GridTypography(
+            fonts: measurementFonts, rowHeight: metrics.rowHeight, maxBar: key.maxBar)
+        typography = measured
+        typographyKey = key
+        rulerHeight = measured.boldHeight + 1 + measured.rulerHeight + 1
+        return true
     }
 
     @QtIgnored
     func fontSpec(_ kind: GridFontKind) -> [String: QVariantSettable] {
-        var spec = measurementFonts[kind.prefix] as! [String: QVariantSettable]
-        if kind == .keyLabel, metricsReady {
-            spec["pixelSize"] = max(1, Int(metric("keylabel.fit")))
+        if let t = typography {
+            return t.fontMap(kind)
         }
-        return spec
+        return measurementFonts[kind]!.map
     }
 
     public func beginPointer(x: Double, y: Double) {
@@ -415,8 +345,7 @@ public final class PianoGrid {
     public func updatePointer(x: Double, y: Double) {
         guard let g = gesture, !g.isRight else { return }
         gesture = g.updated(x: x, y: y, metrics: metrics)
-        recomputeGridWidth()
-        scene.rebuildNotes(sceneInput())
+        refreshNotes()
         publishOutputs()
     }
 
@@ -469,8 +398,7 @@ public final class PianoGrid {
         }
         gesture = nil
         activeNoteId = -1
-        recomputeGridWidth()
-        scene.rebuildNotes(sceneInput())
+        refreshNotes()
         publishOutputs()
         if mutated { synchronizeAudio() }
     }
@@ -582,8 +510,7 @@ public final class PianoGrid {
             selection = [note.noteId]
         }
         noteSummaryDirty = true
-        recomputeGridWidth()
-        scene.rebuildNotes(sceneInput())
+        refreshNotes()
         publishOutputs()
         synchronizeAudio()
     }
@@ -633,7 +560,7 @@ public final class PianoGrid {
         controllerEvents.removeAll()
         nextNoteId = GridFixture.nextNoteId
         noteSummaryDirty = true
-        recomputeGridWidth()
+        recomputeGeometry()
         initialScrollY = defaultVerticalScroll()
         rebuildScene()
         publishOutputs()

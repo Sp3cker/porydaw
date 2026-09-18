@@ -105,6 +105,10 @@ target_include_directories(swift_grid_curve PUBLIC
 )
 target_link_libraries(swift_grid_curve PUBLIC Qt6::Core)
 
+add_library(swift_grid_typography STATIC "${SWIFT_GRID_AUDIO_DIR}/font_metrics.cpp")
+target_include_directories(swift_grid_typography PUBLIC "${SWIFT_GRID_AUDIO_DIR}")
+target_link_libraries(swift_grid_typography PUBLIC Qt6::Gui)
+
 # Verification-only native smoke driver (event injection; no UI/model logic).
 # Kept as a separate static target so Qt6::Test's QT_TESTCASE_* compile
 # definitions stay on C++ and never reach the Swift compilation.
@@ -124,6 +128,7 @@ target_link_libraries(swift_grid_smoke PRIVATE
     Qt6::Quick
     Qt6::Test
     swift_grid_audio
+    swift_grid_curve
 )
 if(APPLE)
     set_target_properties(swift_grid_smoke PROPERTIES
@@ -158,6 +163,7 @@ target_link_libraries(swift_grid_prototype PRIVATE
     Qt6::Quick
     swift_grid_audio
     swift_grid_curve
+    swift_grid_typography
     "$<LINK_ONLY:swift_grid_smoke>"
 )
 

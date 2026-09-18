@@ -98,6 +98,7 @@ class PitchBendGraph : public QQuickItem
     QPoint vertexPosition(Tick tick, int value) const;
     void setKeyboardFraction(double fraction);
     void cancelGesture();
+    void disarmGesture();
     bool handleKeyPress(QKeyEvent *event);
 
     QRect canvasRect() const;

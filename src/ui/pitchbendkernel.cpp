@@ -39,7 +39,7 @@ void PitchBendKernel::setCurve(const std::map<Tick, int> &points, int endValue)
     m_points[m_endTick] = m_endValue;
     if (m_selectedTick && !m_points.contains(*m_selectedTick))
         m_selectedTick.reset();
-    cancelGesture();
+    endGesture();
     m_keyboardTick = m_startTick;
     m_liveValue = valueAtTick(m_keyboardTick);
 }
@@ -50,7 +50,7 @@ void PitchBendKernel::resetCurve()
     m_points[m_startTick] = defaultValue();
     m_points[m_endTick] = m_endValue;
     m_selectedTick.reset();
-    cancelGesture();
+    endGesture();
     m_keyboardTick = m_startTick;
     m_liveValue = defaultValue();
 }
@@ -200,8 +200,8 @@ void PitchBendKernel::beginStroke(const QPointF &position, bool lineGesture)
     m_strokeState.emplace();
     auto &state = *m_strokeState;
     state.mode = lineGesture ? StrokeMode::AngledLine : StrokeMode::Freehand;
-    if (isLineGesture())
-        state.snapshot = m_points;
+    state.snapshot = m_points;
+    state.initialKeyboardTick = m_keyboardTick;
     state.previousTick = tickAtX(position.x(), gestureSampling());
     state.previousValue = valueAtY(position.y());
     state.anchorTick = state.previousTick;
@@ -313,8 +313,17 @@ void PitchBendKernel::endGesture()
 
 void PitchBendKernel::cancelGesture()
 {
-    m_strokeState.reset();
-    m_vertexDragState.reset();
+    if (m_vertexDragState) {
+        m_points = std::move(m_vertexDragState->snapshot);
+        m_selectedTick = m_vertexDragState->originalTick;
+        m_keyboardTick = m_vertexDragState->originalTick;
+        m_liveValue = valueAtTick(m_keyboardTick);
+    } else if (m_strokeState) {
+        m_points = std::move(m_strokeState->snapshot);
+        m_keyboardTick = m_strokeState->initialKeyboardTick;
+        m_liveValue = valueAtTick(m_keyboardTick);
+    }
+    endGesture();
 }
 
 std::optional<PitchBendKernel::LinePreview> PitchBendKernel::linePreview() const

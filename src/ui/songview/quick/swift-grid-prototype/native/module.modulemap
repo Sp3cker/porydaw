@@ -7,3 +7,8 @@ module NativeGridCurve {
     header "curve_session.h"
     export *
 }
+
+module NativeGridTypography {
+    header "font_metrics.h"
+    export *
+}

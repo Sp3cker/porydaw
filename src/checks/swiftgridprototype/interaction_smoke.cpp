@@ -1,3 +1,4 @@
+#include "curve_session.h"
 #include "grid_smoke.h"
 
 #include <QCoreApplication>
@@ -10,6 +11,8 @@
 #include <QQuickWindow>
 #include <QTest>
 
+#include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -101,10 +104,54 @@ int colorCount(const QImage &image, QRectF logical, QRgb color)
     }
     return count;
 }
+
+void verifyCurveExport()
+{
+    constexpr std::array<SGCurveValue, 6> input{
+        {{0, 0}, {6, 0}, {13, 0}, {14, 4096}, {18, 4096}, {24, 0}}};
+    constexpr std::array<SGCurveValue, 4> expected{{{0, 0}, {13, 0}, {14, 4096}, {24, 0}}};
+    auto *session = sgc_create(0, 0, 24, input.data(), input.size(), 0, {0, 0, 481, 129, 1, 2});
+    std::array<SGCurveValue, input.size()> output;
+    auto requireCanonical = [&] {
+        const size_t count = sgc_copy_curve_points(session, output.data());
+        require(count == expected.size(),
+                "canonical curve export kept redundant plateaus or removed fine samples");
+        for (size_t i = 0; i < count; ++i)
+            require(output[i].tick == expected[i].tick && output[i].value == expected[i].value,
+                    "canonical curve export changed an endpoint or fine interpolation anchor");
+    };
+    requireCanonical();
+    pass("canonical-curve-export-preserves-fine-samples");
+    sgc_press(session, sgc_x_at_tick(session, 13), sgc_y_at_value(session, 0), 0);
+    sgc_move(session, sgc_x_at_tick(session, 16), sgc_y_at_value(session, 8191), 1);
+    const size_t movedCount = sgc_copy_curve_points(session, output.data());
+    require(std::any_of(
+                output.begin(), output.begin() + movedCount,
+                [](const SGCurveValue &point) { return point.tick == 16 && point.value == 8191; }),
+            "vertex drag did not preview the moved controller event");
+    sgc_cancel(session);
+    requireCanonical();
+    pass("cancelled-vertex-drag-restores-controller-curve");
+    const SGCurveState beforeStroke = sgc_state(session);
+    sgc_press(session, sgc_x_at_tick(session, 8), sgc_y_at_value(session, 0), 0);
+    require(sgc_state(session).has_gesture && sgc_state(session).selected_tick == -1,
+            "stroke press did not open a selection-free curve gesture");
+    sgc_move(session, sgc_x_at_tick(session, 10), sgc_y_at_value(session, 8191), 0);
+    require(sgc_state(session).live_value == 8191,
+            "stroke move did not preview the live controller value");
+    sgc_cancel(session);
+    require(sgc_state(session).keyboard_tick == beforeStroke.keyboard_tick &&
+                sgc_state(session).live_value == beforeStroke.live_value,
+            "cancelled stroke did not restore the keyboard cursor and live value");
+    requireCanonical();
+    sgc_destroy(session);
+    pass("cancelled-stroke-restores-cursor-and-curve");
+}
 } // namespace
 
 void verifyGridInteractions(QQuickWindow *window, QObject *model)
 {
+    verifyCurveExport();
     auto item = [window](const char *name) {
         return namedItem(window->contentItem(), QString::fromLatin1(name));
     };
@@ -252,6 +299,38 @@ void verifyGridInteractions(QQuickWindow *window, QObject *model)
         },
         "pitch bend range did not survive popup reopen");
     pass("pitch-popup-numeric-range-reset-and-persistence");
+
+    auto previewCurve = [&] {
+        QTest::mousePress(window, Qt::LeftButton, Qt::ShiftModifier, low);
+        QTest::mouseMove(window, high);
+        QTest::qWait(40ms);
+        require(colorCount(window->grabWindow(), upperCurve, qRgb(205, 84, 84)) > 5,
+                "unreleased pitch gesture did not produce a live preview");
+    };
+    previewCurve();
+    auto *pitchGrabber = window->mouseGrabberItem();
+    require(pitchGrabber, "pitch gesture did not acquire the native mouse grab");
+    pitchGrabber->ungrabMouse();
+    QTest::mouseRelease(window, Qt::LeftButton, Qt::ShiftModifier, high);
+    QTest::qWait(40ms);
+    require(colorCount(window->grabWindow(), upperCurve, qRgb(205, 84, 84)) == 0,
+            "aborted pitch gesture did not restore the committed curve");
+    for (const char *focusTarget : std::array{"pitchBendGraph", "pitchBendPopup"}) {
+        previewCurve();
+        item(focusTarget)->forceActiveFocus();
+        QTest::keyClick(window, Qt::Key_Escape);
+        awaitState([&] { return !window->property("pitchBridge").value<QObject *>(); },
+                   "Escape did not dismiss an active pitch gesture");
+        QTest::mouseRelease(window, Qt::LeftButton, Qt::ShiftModifier, high);
+        QTest::keyClick(window, Qt::Key_G);
+        awaitState([&] { return item("pitchBendGraph") && item("pitchBendGraph")->isVisible(); },
+                   "pitch popup did not reopen after cancelling a live gesture");
+        QTest::qWait(40ms);
+        require(colorCount(window->grabWindow(), upperCurve, qRgb(205, 84, 84)) == 0 &&
+                    item("bendRangeInput")->property("text").toString() == "7",
+                "Escape persisted a live preview or discarded a previously committed numeric edit");
+    }
+    pass("pitch-abort-and-escape-discard-live-preview");
     graph = item("modWheelGraph");
     const QRectF modPlot = graph->property("canvasRect").toRectF();
     const QPoint modLow = graph

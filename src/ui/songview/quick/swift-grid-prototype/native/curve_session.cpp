@@ -80,6 +80,19 @@ void sgc_copy_vertices(const SGCurveSession *session, SGCurveVertex *vertices)
     }
 }
 
+size_t sgc_copy_curve_points(const SGCurveSession *session, SGCurveValue *points)
+{
+    size_t count = 0;
+    session->kernel.forEachCurvePoint(
+        [&](Tick tick, int value) { points[count++] = {int64_t(tick), value}; });
+    return count;
+}
+
+uint32_t sgc_fine_ticks(const SGCurveSession *session)
+{
+    return session->kernel.fineGridTicks();
+}
+
 SGCurveState sgc_state(const SGCurveSession *session)
 {
     const auto &kernel = session->kernel;

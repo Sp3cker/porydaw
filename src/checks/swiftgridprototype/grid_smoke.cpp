@@ -594,12 +594,15 @@ void exercise(Scene scene)
     const int extentTick =
         (int((oldWidth - scene.leadPad) / scene.beatWidth * scene.ticksPerBeat) / scene.snap - 2) *
         scene.snap;
+    const QString addedBar =
+        QString::number(int((oldWidth - scene.leadPad) / scene.beatWidth / 4) + 2);
     const QJsonArray beforeGrowth = scene.notes();
     scene.doubleClick(scene.point(extentTick + 1, 106));
     awaitState(
         [&] {
-            return scene.viewport->property("contentWidth").toDouble() > oldWidth &&
-                   scene.model->property("metricsReady").toBool();
+            auto *label = namedItem(scene.window->contentItem(), "rulerLabel_" + addedBar);
+            return scene.viewport->property("contentWidth").toDouble() > oldWidth && label &&
+                   label->width() >= label->property("contentWidth").toDouble();
         },
         "extending the song did not publish complete ruler metrics");
     scene.expectPublished(addedNoteId(beforeGrowth, scene.notes()), extentTick, scene.snap, 106,
@@ -653,8 +656,8 @@ void startSmoke()
             auto *model = window->property("gridModel").value<QObject *>();
             if (!surface || !viewport || !model || viewport->width() <= 0 ||
                 model->property("noteSummary").toString().isEmpty() ||
-                !model->property("metricsReady").toBool() ||
-                !namedItem(surface, QStringLiteral("gridNote_1")))
+                !namedItem(surface, QStringLiteral("gridNote_1")) ||
+                !namedItem(window->contentItem(), QStringLiteral("rulerLabel_1")))
                 continue;
             poll->stop();
             poll->deleteLater();

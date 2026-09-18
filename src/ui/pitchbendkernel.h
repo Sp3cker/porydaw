@@ -67,12 +67,32 @@ class PitchBendKernel
     Tick nextSnapTickAfter(Tick tick) const;
     Tick segmentStartAt(Tick tick) const;
     uint32_t fineGridTicks() const;
+    template <typename Visitor>
+    void forEachCurvePoint(Visitor &&visit) const
+    {
+        const Tick fineTick(fineGridTicks());
+        auto previous = m_points.end();
+        for (auto point = m_points.begin(); point != m_points.end(); ++point) {
+            const auto &[tick, value] = *point;
+            bool keep = previous == m_points.end() || tick == m_startTick || tick == m_endTick ||
+                        value != previous->second;
+            if (!keep) {
+                auto next = point;
+                if (++next != m_points.end() && next->first - tick == fineTick &&
+                    next->second != value)
+                    keep = true;
+            }
+            if (keep)
+                visit(tick, value);
+            previous = point;
+        }
+    }
 
     // Semantic gesture operations. beginStroke clears any selection and opens
     // a freehand or straight-line stroke at the event position; beginVertexDrag
     // pins the existing vertex under the press. Updates return whether a
-    // gesture was active. endGesture settles a release (keeps the preview);
-    // cancelGesture abandons one. The host owns every redraw/notification tail.
+    // gesture was active. endGesture keeps the preview; cancelGesture restores
+    // the pre-gesture snapshot. The host owns every redraw/notification tail.
     void beginStroke(const QPointF &position, bool lineGesture);
     bool beginVertexDrag(Tick tick);
     bool updateStroke(const QPointF &position);
@@ -96,6 +116,7 @@ class PitchBendKernel
     struct StrokeState {
         StrokeMode mode = StrokeMode::Freehand;
         std::map<Tick, int> snapshot;
+        Tick initialKeyboardTick = 0;
         Tick anchorTick = 0;
         int anchorValue = 0;
         Tick previousTick = 0;

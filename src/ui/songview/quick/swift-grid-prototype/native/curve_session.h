@@ -41,6 +41,10 @@ void sgc_destroy(SGCurveSession *session);
 void sgc_set_metrics(SGCurveSession *session, SGCurveMetrics metrics);
 size_t sgc_point_count(const SGCurveSession *session);
 void sgc_copy_vertices(const SGCurveSession *session, SGCurveVertex *vertices);
+// Caller must supply a buffer with capacity >= sgc_point_count(); returns the canonical
+// point count (<= capacity). Canonical export drops redundant plateau interiors.
+size_t sgc_copy_curve_points(const SGCurveSession *session, SGCurveValue *points);
+uint32_t sgc_fine_ticks(const SGCurveSession *session);
 SGCurveState sgc_state(const SGCurveSession *session);
 void sgc_press(SGCurveSession *session, double x, double y, int line_gesture);
 void sgc_move(SGCurveSession *session, double x, double y, int fine);

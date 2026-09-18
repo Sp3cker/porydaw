@@ -83,7 +83,7 @@ void PitchBendGraph::setCurve(const std::map<Tick, int> &points, int endValue)
     if (!m_kernel)
         return;
     m_kernel->setCurve(points, endValue);
-    cancelGesture();
+    disarmGesture();
     redraw();
     notifyLiveValueChanged();
 }
@@ -93,7 +93,7 @@ void PitchBendGraph::resetCurve()
     if (!m_kernel)
         return;
     m_kernel->resetCurve();
-    cancelGesture();
+    disarmGesture();
     notifyPreviewChanged();
     forceActiveFocus(Qt::MouseFocusReason);
     redraw();
@@ -153,8 +153,15 @@ void PitchBendGraph::cancelGesture()
 {
     if (m_kernel)
         m_kernel->cancelGesture();
-    // Every cancel path — Escape, curve replacement, editor undo/dispose —
-    // settles the retained profile by the actual cursor position.
+    // Aborting (Escape, editor undo) and disarming (replacement, ungrab,
+    // teardown) both settle the retained profile by the actual cursor.
+    settleMouseHintAtCursor();
+}
+
+void PitchBendGraph::disarmGesture()
+{
+    if (m_kernel)
+        m_kernel->endGesture();
     settleMouseHintAtCursor();
 }
 
@@ -213,20 +220,7 @@ std::vector<SongDocument::LanePointValue> PitchBendGraph::curvePoints() const
         return {};
     std::vector<SongDocument::LanePointValue> points;
     points.reserve(m_kernel->points().size());
-    const uint32_t fineTick = m_kernel->fineGridTicks();
-    int previous = 0;
-    Tick previousTick = 0;
-    bool havePrevious = false;
-    for (const auto &[tick, value] : m_kernel->points()) {
-        const bool endpoint = tick == m_kernel->startTick() || tick == m_kernel->endTick();
-        const bool fineSample =
-            havePrevious && tick > previousTick && tick - previousTick == fineTick;
-        if (endpoint || !havePrevious || value != previous || fineSample)
-            points.push_back({tick, value});
-        previous = value;
-        previousTick = tick;
-        havePrevious = true;
-    }
+    m_kernel->forEachCurvePoint([&](Tick tick, int value) { points.push_back({tick, value}); });
     return points;
 }
 
@@ -390,7 +384,7 @@ void PitchBendGraph::mouseUngrabEvent()
         return; // Normal release already settled the gesture; never double-fire.
     // Keep the drawn preview; the session resolves the unsettled preview by
     // close reason instead of treating grab loss as Escape or commit.
-    cancelGesture();
+    disarmGesture();
     redraw();
     notifyGrabLost();
 }

@@ -77,8 +77,7 @@ struct GridSceneInput {
     var palette: GridPalette
     var gridWidth: Double
     var rulerHeight: Double
-    var metricsReady: Bool
-    var metric: (String) -> Double
+    var typography: GridTypography?
     var fontSpec: (GridFontKind) -> [String: QVariantSettable]
     var notes: [GridNote] = []
     var displayedNote: (GridNote) -> (tick: Int, end: Int, pitch: Int) = {
@@ -371,12 +370,12 @@ public final class GridScene {
         }
         sync(rulerChrome, chrome)
 
-        guard input.metricsReady else {
+        guard let t = input.typography else {
             sync(rulerMarks, [])
             rulerTextModel.reset(to: [])
             return
         }
-        let markerHeight = input.metric("bold.height") + 1
+        let markerHeight = t.boldHeight + 1
         let tickBottom = rulerH - 1
         let tickCenter = (markerHeight + tickBottom) / 2
         let indicatorRise = m.spaceHalf
@@ -404,15 +403,10 @@ public final class GridScene {
         }
 
         let drawBeatTicks = m.beatWidth >= m.detailMinPxPerBeat
-        var widest = 0.0
-        let maxBar = m.maxRulerBar(gridWidth: gridW)
-        for bar in 1...maxBar {
-            for beat in 1...4 {
-                widest = max(widest, input.metric("beat.advance.\(bar).\(beat)"))
-            }
-        }
         let showBeatLabels =
-            m.beatWidth >= m.rulerBeatLabelZoomFactor * (barCap + 2 * labelGap + reserve + widest)
+            m.beatWidth
+            >= m.rulerBeatLabelZoomFactor
+            * (barCap + 2 * labelGap + reserve + t.widestBeatAdvance)
 
         var lastLabelRight = -labelGap
         tick = 0
@@ -443,8 +437,14 @@ public final class GridScene {
                 }
                 continue
             }
-            let label = isBar ? "\(barNumber)" : "\(barNumber).\(beatNumber)"
-            let labelW = input.metric((isBar ? "ruler.advance." : "beat.advance.") + label)
+            let label =
+                isBar
+                ? GridTypography.barLabel(barNumber)
+                : GridTypography.beatLabel(barNumber, beatNumber)
+            let labelW =
+                isBar
+                ? t.rulerAdvance(bar: barNumber)
+                : t.beatAdvance(bar: barNumber, beat: beatNumber)
             if isBar {
                 let top = markerHeight - indicatorRise
                 marks.append(
@@ -462,11 +462,11 @@ public final class GridScene {
                         width: 1, height: tickBottom - (tickCenter - indicatorRise),
                         fillColor: indicator))
             }
-            let fontKey = isBar ? "ruler" : "beat"
-            let y = markerHeight + input.metric("ruler.ascent") - input.metric("\(fontKey).ascent")
+
+            let y = markerHeight + t.rulerAscent - (isBar ? t.rulerAscent : t.beatAscent)
             labels.append(
                 SceneText(
-                    rect: (labelX, y, labelW, input.metric("\(fontKey).height")),
+                    rect: (labelX, y, labelW, isBar ? t.rulerHeight : t.beatHeight),
                     text: label,
                     color: isBar ? p.primaryText : p.rulerDetailText,
                     font: input.fontSpec(isBar ? .ruler : .beat)))
@@ -478,12 +478,12 @@ public final class GridScene {
             SceneRect(
                 x: sigX - 0.5, y: 0, width: 1, height: markerHeight - 1,
                 fillColor: p.implicitSignature))
-        let sigW = input.metric("sig.advance.4/4")
+        let sigW = t.sigAdvance
         if sigW > 0 {
-            let y = (markerHeight - input.metric("bold.height")) / 2
+            let y = (markerHeight - t.boldHeight) / 2
             labels.append(
                 SceneText(
-                    rect: (sigX + m.spaceHalf, y, sigW, input.metric("bold.height")),
+                    rect: (sigX + m.spaceHalf, y, sigW, t.boldHeight),
                     text: "4/4", color: p.implicitSignature, font: input.fontSpec(.bold)))
         }
 
@@ -492,7 +492,7 @@ public final class GridScene {
     }
 
     private func rebuildKeyboardText(_ input: GridSceneInput) {
-        guard input.metricsReady else { return }
+        guard input.typography != nil else { return }
         let m = input.metrics
         var records: [SceneText] = []
         for row in 0..<128 {
@@ -609,7 +609,7 @@ public final class GridScene {
         var highlights: [SceneRect] = []
         var chipVisible = false
 
-        if input.hoverKey >= 0, input.metricsReady {
+        if input.hoverKey >= 0, let t = input.typography {
             let key = input.hoverKey
             let row = 127 - key
             let top = m.rowEdge(row)
@@ -627,8 +627,8 @@ public final class GridScene {
             }
 
             let name = GridScene.keyName(key)
-            let chipW = input.metric("chip.advance.\(name)") + m.chipHPadding
-            let chipH = input.metric("chip.height") + m.chipVPadding
+            let chipW = t.chipAdvance(pitch: key) + m.chipHPadding
+            let chipH = t.chipHeight + m.chipVPadding
             let chipY = min(
                 max(input.viewportScrollY, (top + bottom) / 2 - chipH / 2),
                 input.viewportScrollY + max(0.0, m.viewportHeight - chipH))

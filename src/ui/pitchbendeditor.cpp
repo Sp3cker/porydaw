@@ -525,10 +525,12 @@ void PitchBendEditor::dispose(DismissAction action, CloseFocus focus, bool defer
     // settles exactly once on every close, tab, document, and path where the
     // session itself initiated the cancellation.
     m_lifecycle = Lifecycle::Closed;
+    // Teardown never rolls back: Cancel discards the pending document write
+    // below while Commit preserves the previewed points for writeCurve.
     if (m_pitchGraph)
-        m_pitchGraph->cancelGesture();
+        m_pitchGraph->disarmGesture();
     if (m_modGraph)
-        m_modGraph->cancelGesture();
+        m_modGraph->disarmGesture();
     if (action == DismissAction::Cancel)
         cancelCurve();
     else
