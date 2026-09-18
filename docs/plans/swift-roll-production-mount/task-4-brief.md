@@ -2,94 +2,99 @@
 
 ## Context
 
-The wave's deliverable: with `PORYDAW_SWIFT_ROLL=1`, the production
-`TimelineQuickView` window hosts the Swift roll overlay rendering the
-real document (spec §4). Consumer of Task 1's `swiftgrid` target and
-Task 3's read-only grid. Qt-heavy: item parenting inside the embedded
-production window, engine type registration, lifecycle under
-`takeWindowForEmbedding()`/`detachWindow()` — reviewed by qt-cpp-reviewer.
+Mount the real read-only grid using QtBridge's QML-owned nonvisual model and
+existing visual canvas, not an invented Swift QQuickItem or proxy accessor.
+Read [plan.md Global Constraints](plan.md) and [spec.md §4](spec.md).
+Task 1 supplies the approved public registration API; Tasks 2/3 supply the
+per-feed value handshake and read-only document rendering.
 
 ## Exact write set
 
-- `src/ui/songview/quick/timelinequickview.h` / `timelinequickview.cpp`
-  — mount point (flag read, overlay load, feed construction, teardown).
-- `src/ui/songview/quick/swift-grid-prototype/SwiftRollOverlay.qml`
-  (new) — overlay component.
-- Root `CMakeLists.txt` or the Task 1 target section — qrc embedding of
-  `SwiftRollOverlay.qml` into `swiftgrid`.
-- `src/checks/swiftrollgated/` (new dir) + the three registration points
-  (`src/checks/CMakeLists.txt`, `src/checks/checkcatalog.cpp`,
-  `src/checks/fwd.hpp`).
+- `src/ui/songview/quick/timelinequickview.h`, `timelinequickview.cpp`, and
+  `timelinequickview_window.cpp`: mount and the actual `detachWindow()` /
+  transferred-window lifecycle owner; no unrelated window/input rewrites.
+- `src/ui/songview/quick/swiftgrid/grid_host.h` (new): sole registration ABI.
+- `src/ui/songview/quick/swift-grid-prototype/SwiftGridHost.swift` (new):
+  one-time `sg_register_grid_types` implementation.
+- `src/ui/songview/quick/swift-grid-prototype/SwiftRollOverlay.qml` (new):
+  nonvisual model creation plus visual roll renderer and viewing input.
+- `src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt`: only add the
+  host Swift source to the explicit production list and qrc embedding of
+  overlay plus its existing local QML renderer dependencies. Task 1 owns
+  import/link/ABI compilation setup; do not duplicate it here.
+- `src/checks/swiftrollgated/` (new harness directory),
+  `src/checks/CMakeLists.txt`, `src/checks/checkcatalog.cpp`,
+  `src/checks/fwd.hpp`: APPLE-only production integration registration.
 
 ## Prerequisites
 
-Task 1 (`swiftgrid` target linked into `porydaw`), Task 3 (`readOnly`
-grid + `loadDocument` + feed auto-apply).
+Task 1's `swiftgrid` / `SwiftGrid` module, public
+`QmlInstantiable.registerQmlElement()` patch, and production linkage;
+Task 2's per-token routing ABI and observer; Task 3's QML completion binding
+and read-only grid. No private/package QtBridge access remains necessary.
 
 ## Interface contract
 
-- Mount: in `TimelineQuickView`'s window-setup path, when
-  `qEnvironmentVariableIsSet("PORYDAW_SWIFT_ROLL")` and `APPLE`: load
-  `SwiftRollOverlay.qml` through the window's existing `QQmlEngine`
-  (`quickEngine()`), parent to `contentItem`, position/size bound to the
-  roll band geometry the scene already computes, above the C++ roll
-  painting, opaque background.
-- Overlay properties: `noteCount` (int, read-only, exposed for the
-  harness), tracks the `SongView::selectedTrack` via
-  `selectedTrackChanged(int)` and re-filters (calls `loadDocument` with
-  the new track index from the applied snapshot).
-- Feed: construct `SwiftGridDocumentFeed` on the `SongDocument` the view
-  renders at mount; destroy at teardown; ordering with
-  `detachWindow()` idempotent — no delivery after destruction.
-- Input: overlay `focusPolicy: Qt.NoFocus`, pointer events accepted and
-  discarded; nothing forwards into the C++ scene beneath (the C++ roll
-  band's input item is NOT covered by the overlay's event handling —
-  the overlay sits above and consumes; no key events are listened to).
-- Flag off: no component load, no feed construction, no measurable
-  startup cost beyond the linked library.
+Spec §4 fixes the sole `void sg_register_grid_types(void)` C entry point,
+QML properties, full-width token string, component-completion binding,
+ownership and ordered mount/teardown. `PianoGrid` remains a QObject model;
+`SwiftRollOverlay.qml` is the visual item. QML/QtBridge owns model retention
+and release; no `SgGridHandle`, custom retain/factory or proxy extraction.
+
+Use the existing `m_quickView->engine()` / `m_view` QQuickView and ordinary
+`QQmlComponent::createWithInitialProperties`; no `quickEngine()` API exists.
+Overlay exposes read-only `noteCount` and a decimal-string applied revision
+for harness observation without narrowing UInt64 through QML numbers.
+Canonical roll-band geometry/visibility remains host-owned. Track changes
+set the overlay's selected-track value; Swift re-filters the current accepted
+snapshot. Flag off allocates/registers no Swift mount state.
 
 ## Implementation steps
 
-1. Add the mount point in the window-setup path; keep it a single
-   coherent block (flag check → engine load → geometry bind → feed
-   construct → initial `loadDocument`), no scattering into band code.
-2. `SwiftRollOverlay.qml`: minimal — a container instantiating the grid
-   component from the linked Swift types with `readOnly: true`, sized by
-   its parent, `SwiftGridDocumentFeed` wiring done from C++ via
-   context properties or the registered types (follow the existing
-   production QML context conventions; do not invent a second context
-   object).
-3. qrc-embed the overlay in the `swiftgrid` target so the production
-   binary is source-tree-independent.
-4. Harness `swiftrollgated` (spec §5 last block): boot `WorkspaceUi` with
-   `qputenv("PORYDAW_SWIFT_ROLL", "1")` before window construction, open
-   the staged fixture song, assert overlay present, `noteCount` equals
-   the fixture's selected-track note count, `selectedTrackChanged`
-   re-filters (count changes to the other track's count), a C++-side
-   document mutation bumps the overlay revision, pointer press on the
-   overlay leaves document revision and focus unchanged. One negative
-   row: without the flag, no overlay exists and behavior matches
-   production canaries.
+1. Implement one-time type registration through the Task 1 public API. Add
+   source/resource registration only in the existing target section; include
+   the existing visual renderer components and their local dependencies so
+   the production binary needs no source tree. The module name in both lanes
+   is `SwiftGrid`; load `import SwiftGrid 1.0` after registration.
+2. Implement spec §4's ordered mount. Feed endpoint exists before QML creation;
+   component completion binds the model's receiver; host verifies a nonnull
+   callback and explicitly calls `pushSnapshot()` after visual setup. If
+   component creation/binding fails, report the error and unwind all partial
+   state, never show demo data or silently substitute the old renderer.
+3. Build an opaque, clipped roll overlay with ordinary QtObject `gridModel`
+   and existing visual canvas. Host/QML handles pointer grabs and normalized
+   viewing input: pan/zoom/hover remain live, mutation gestures are absorbed,
+   nothing reaches the underlying editor, no focus acquisition or key
+   listener/Shortcut is added. Keep window/engine/document objects out of Swift.
+4. Integrate cleanup at the actual `detachWindow()` and externally destroyed
+   transferred-window paths in `timelinequickview_window.cpp`: disconnect track
+   forwarding and observer, clear/unregister/destroy feed before deleting QML.
+   Handle partial mount and repeated teardown; QML-owned model destruction
+   releases receiver/snapshot with no retained callback or closed document.
+5. Register `swiftrollgated`: boot real `WorkspaceUi` with flag set before
+   construction; assert initial selected-track rendering without edits,
+   track-follow, edit/undo/redo refresh, non-24/signature geometry, no mutation
+   or focus change on editing input, and real viewport/hover changes. Open two
+   documents, interleave updates and track changes, close one and update the
+   other; remount gets a fresh binding. Exercise transferred-window teardown
+   and a flag-off row. Inspect the actual mounted renderer, not a duplicate
+   Swift test grid.
 
 ## Acceptance predicate
 
-- `deno task verify --filter swiftrollgated --verbose` green (native
-  desktop session required).
-- `deno task verify --filter selectionkey-core --filter rollcheck-static
-  --verbose` green (production regression).
-- `deno task build:app` green.
-- Controller final gate (whole plan): the two above plus
+- `deno task build:app` — production registration, resources and observer link.
+- `deno task verify --filter swiftrollgated --verbose` — actual mounted surface,
+  concurrent-document isolation, real input and ordered lifecycle.
+- `deno task verify --filter selectionkey-core --filter rollcheck-static --verbose`
+  — unchanged host arbitration and production geometry oracle.
+- Final controller gate also runs
   `deno task verify --filter swiftdocfeed --verbose` and
-  `deno task prototype:swift-grid --smoke`.
+  `deno task prototype:swift-grid --smoke` per plan verification policy.
+  Native desktop is required for interactive/rendering checks.
 
 ## Task-specific constraints
 
-- `timelinequickview` edits are additive around the existing setup path;
-  do not reorder existing window/scene setup. If the mount cannot be
-  expressed additively, escalate — the embed path is
-  `takeWindowForEmbedding()`-transferred ownership; wrong parenting is
-  the exact failure class this seat exists to catch.
-- No key routing, no ShortcutOverride interaction, no band-contract
-  changes (read-only scope lock, plan Global Constraints).
-- Do not delete or disable any C++ roll code — the C++ roll remains the
-  shipping surface; the overlay is additive.
+Preserve the existing one-way `takeWindowForEmbedding()` ownership transfer
+and canonical layout. No key routing, undo crossing or band-contract changes.
+Do not delete/disable shipping C++ roll code: read-only mount does not satisfy
+its charter retirement gate. No root CMake ownership duplication.
