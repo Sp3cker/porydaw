@@ -33,3 +33,36 @@ diff --git a/Sources/QtBridge/QmlInstantiable.swift b/Sources/QtBridge/QmlInstan
          metaObjectBuilder.registerInitializer(initFn: self.init)
          metaObjectBuilder.registerQmlElement(from: Self.self)
      }
+diff --git a/Sources/QtBridge/QVariant.swift b/Sources/QtBridge/QVariant.swift
+--- a/Sources/QtBridge/QVariant.swift
++++ b/Sources/QtBridge/QVariant.swift
+@@ -95,6 +95,17 @@ public struct QVariant
+     public init(value: QObjectBuildable) {
+         self.variant = value.objectHolder.proxy.toVariant()
+     }
+ 
++    /// Creates a variant containing an optional Swift object exposed to QML.
++    /// A missing value is stored as a typed null QObject pointer.
++    public init<Wrapped: QObjectBuildable>(value: Wrapped?) {
++        if let value {
++            self.variant = value.objectHolder.proxy.toVariant()
++        } else {
++            self.variant = QtBridgeCpp.QVariant.fromMetaType(
++                QMetaType(Wrapped.metaType()), nil)
++        }
++    }
++
+     /// Creates a variant from a Swift dictionary.
+     ///
+@@ -181,6 +192,11 @@ public protocol QVariantSettable : QVariantGettable {
+     /// - Parameter variant: The variant containing the QML value.
+     /// - Returns: A Swift value converted from the variant.
+     static func value(from variant: QVariant) -> Self
+ }
+ 
++extension Optional: QVariantGettable where Wrapped: QObjectBuildable {
++    public func toVariant() -> QVariant { QVariant(value: self) }
++    public static func metaType() -> Int32 { Wrapped.metaType() }
++}
++
+ extension Bool: QVariantSettable {

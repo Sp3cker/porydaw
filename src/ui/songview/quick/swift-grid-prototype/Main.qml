@@ -463,6 +463,7 @@ ApplicationWindow {
 
                     contentWidth: pianoGridSurface.width
                     contentHeight: pianoGridSurface.height
+                    onContentXChanged: root.gridModel.setViewportScrollX(contentX)
                     onContentYChanged: root.gridModel.setViewportScroll(contentY)
 
                     ScrollBar.vertical: ScrollBar {

@@ -17,6 +17,7 @@ struct GridMetrics {
     var dpr: Double = 1
     var viewportWidth: Double = 0
     var viewportHeight: Double = 0
+    var timeAxis = TimeAxis()
 
     var rowHeight: Double = 13
     var beatWidth: Double = 35
@@ -52,18 +53,23 @@ struct GridMetrics {
     static let ticksPerBeat = 24
     static let songLengthTicks = 384
 
-    var pxPerTick: Double { beatWidth / Double(Self.ticksPerBeat) }
+    var documentTicksPerBeat: Int { Int(timeAxis.ticksPerBeat) }
+    var pxPerTick: Double { beatWidth / Double(documentTicksPerBeat) }
     var gridHeight: Double { 128.0 * rowHeight }
 
     static func leadPad(viewportWidth: Double) -> Double {
         min(256.0, max(48.0, (viewportWidth * 0.10).rounded()))
     }
 
-    init(baseFontPx: Double, dpr: Double, width: Double, height: Double) {
+    init(
+        baseFontPx: Double, dpr: Double, width: Double, height: Double,
+        timeAxis: TimeAxis = TimeAxis()
+    ) {
         self.baseFontPx = baseFontPx
         self.dpr = dpr
         viewportWidth = width
         viewportHeight = height
+        self.timeAxis = timeAxis
         let b = baseFontPx
         rowHeight = fontPx(b, 1.0)
         beatWidth = fontPx(b, 8.0 / 3.0)
@@ -125,15 +131,22 @@ struct GridMetrics {
     }
 
     func maxRulerBar(gridWidth: Double) -> Int {
-        Int(contentEndTick(gridWidth: gridWidth) / 96) + 2
+        let end = tickFromDouble(contentEndTick(gridWidth: gridWidth))
+        var bar = 1
+        let segment = timeAxis.segmentAt(end)
+        let beat = segment.start + (end - segment.start) / segment.beatTicks * segment.beatTicks
+        timeAxis.forEachGridLine(from: beat, to: end < kMaxTick ? end + 1 : kNoTick) {
+            _, _, number, _ in bar = number
+        }
+        return bar + 1
     }
 
     // Index into the subdivision ladder whose cell is the coarsest one still
     // at least autoGridMinCell wide on screen.
-    private var gridLadderStep: Int {
+    private func gridLadderStep(beatTicks: Int) -> Int {
         var step = Self.gridLadder.count - 1
         for i in 0..<Self.gridLadder.count
-        where beatWidth / Double(Self.gridLadder[i]) >= autoGridMinCell {
+        where Double(beatTicks) * pxPerTick / Double(Self.gridLadder[i]) >= autoGridMinCell {
             step = i
             break
         }
@@ -143,14 +156,47 @@ struct GridMetrics {
     private static let gridLadder = [32, 16, 8, 4, 2, 1]
 
     var visibleGridTicks: Int {
-        max(1, Self.ticksPerBeat / Self.gridLadder[gridLadderStep])
+        visibleGridTicks(in: timeAxis.segmentAt(0))
+    }
+
+    func visibleGridTicks(in segment: GridSegment) -> Int {
+        let beat = Int(segment.beatTicks)
+        return max(1, beat / Self.gridLadder[gridLadderStep(beatTicks: beat)])
+    }
+
+    // Signature-relative subdivisions share the existing ladder. TimeAxis owns
+    // segment normalization; only visible segments and ticks are visited here.
+    func forEachSubdivision(
+        from begin: Tick, to end: Tick, _ visit: (Tick, Int) -> Void
+    ) {
+        var start = begin
+        while start < end {
+            let segment = timeAxis.segmentAt(start)
+            let stop = min(end, segment.next)
+            let beat = UInt64(segment.beatTicks)
+            let stride = UInt64(visibleGridTicks(in: segment))
+            let anchor = UInt64(segment.start)
+            let offset = UInt64(start) - anchor
+            var tick = anchor + ((offset + stride - 1) / stride) * stride
+            while tick < UInt64(stop) {
+                let relative = (tick - anchor) % beat
+                if relative != 0 {
+                    let level = (relative * 2) % beat == 0 ? 1
+                        : ((relative * 4) % beat == 0 ? 2 : 3)
+                    visit(Tick(tick), level)
+                }
+                tick += stride
+            }
+            start = stop
+        }
     }
 
     var snapTicks: Int {
-        let step = gridLadderStep
-        let vis = max(1, Self.ticksPerBeat / Self.gridLadder[step])
+        let beat = Int(timeAxis.segmentAt(0).beatTicks)
+        let step = gridLadderStep(beatTicks: beat)
+        let vis = max(1, beat / Self.gridLadder[step])
         guard step > 0 else { return vis }
-        let fine = max(1, Self.ticksPerBeat / Self.gridLadder[step - 1])
+        let fine = max(1, beat / Self.gridLadder[step - 1])
         func gcd(_ a: Int, _ b: Int) -> Int { b == 0 ? a : gcd(b, a % b) }
         return max(1, gcd(vis, fine))
     }

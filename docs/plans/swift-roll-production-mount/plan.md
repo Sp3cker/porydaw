@@ -23,7 +23,7 @@ accommodations). Behavior contract: [spec.md](spec.md).
 | 4 | [Gated production mount + integration harness](task-4-brief.md) | SDD-track / qt-cpp-reviewer | QML model ownership, production window lifecycle and concurrent-tab isolation | 1's public registration API/target; 2's observer; 3's read-only model |
 
 Execution order: **{1 ∥ 2} → 3 → 4.** Task 1 solely owns root/prototype
-CMake import/link/feed-source registration and dependency patch; Task 2 owns
+CMake import/link/feed-source registration and initial dependency patch; Task 2 owns
 new feed files/module map/Swift values and checks registration. Their writers
 share no files; integrated verification waits for both. Task 3 never edits
 `SgdDocument.swift`. Task 4 reuses prototype CMake for host-source/resources
@@ -31,9 +31,9 @@ only and checks registration for its harness, after the accepted prior writers
 are checkpointed. It owns the real `timelinequickview_window.cpp` teardown
 path as well as the constructor/header.
 
-Sizing exceptions: Task 3's grid, geometry/scene and explicit demo/audio
-initialization form one real-document-rendering change proved by the existing
-native smoke surface. Task 4's model registration, mount, resources and
+Sizing exceptions: Task 3's grid, geometry/scene/typography, explicit demo/audio
+initialization and nullable factory bridge form one real-document-rendering
+change proved by the existing native smoke surface. Task 4's model registration, mount, resources and
 integration harness form one production behavior proved by `swiftrollgated`.
 Both exceed the file-count signal deliberately; no artificial microtasks.
 
@@ -76,7 +76,8 @@ Both exceed the file-count signal deliberately; no artificial microtasks.
 - **Seam naming:** this wave owns `sgd_` values/routing and
   `sg_register_grid_types` registration only. `sgm_`/`sgp_`/`sga_`/`sgw_`
   native seams and Wave-1 Tick/TimeAxis/PitchProjection sources remain frozen.
-  GridGeometry/GridScene may consume real document timebase/signatures while
+  GridGeometry/GridScene/GridTypography may consume real document timebase and
+  signatures with viewport-bounded marks and on-demand label measurement while
   preserving demo-default raster behavior; no TimeCamera/Grid/PitchBendKernel
   conversion or duplicate math. AudioSession may stop eager demo initialization,
   not migrate production audio.
@@ -84,6 +85,9 @@ Both exceed the file-count signal deliberately; no artificial microtasks.
   `QmlInstantiable.registerQmlElement` as public through the preserved dependency
   patch mechanism. QML owns the nonvisual model. No package/private proxy access,
   manually retained grid factory or second app/engine. Task 1 owns this patch.
+  Task 3 additionally owns user-approved nullable QObject QVariant conversion:
+  rejected editor factories return a typed null, not a dummy object or an
+  invalid variant. Existing generic Optional syntax needs no macro extension.
 - **Exact identity boundary:** minted nonzero UInt64 per feed lifetime; copied
   document snapshots only. The active endpoint routing table retains no document
   or snapshot and erases entries on unmount; no singleton active document.
@@ -130,9 +134,10 @@ User approved checkpoint commits and pushes. Batch coherent accepted work:
 
 - Checkpoint the accepted prerequisite focus fix, retirement contracts and
   repaired wave contracts before implementation.
-- Checkpoint accepted Tasks 1–3 before Task 4 reuses prototype CMake and the
-  check registration files. Task 3 consumes Task 2 values without file reuse;
-  it does not require an artificial intervening commit.
+- Checkpoint accepted Tasks 1–2 before Task 3 extends the dependency patch for
+  nullable factories. Task 3 consumes Task 2 values without editing that seam.
+- Checkpoint accepted Task 3 before Task 4 reuses prototype CMake and the check
+  registration files.
 - Checkpoint remaining accepted work after Task 4 and the final gate.
 
 ## Source anchors

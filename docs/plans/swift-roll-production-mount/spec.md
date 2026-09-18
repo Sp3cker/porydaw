@@ -191,7 +191,7 @@ import is `SwiftGrid 1.0`. It never launches prototype `Main.qml`.
 not a QObject address. This avoids narrowing through QtBridge's Qt `UInt`
 variant conversion or QML numeric precision. `documentTrack: Int` is the
 engine-track index. `componentComplete()` calls public scalar
-`bindDocument(_ documentToken: String)`, which parses a nonzero token,
+`bindDocument(documentToken: String)`, which parses a nonzero token,
 constructs/binds one receiver and calls `connect()`. The same binding method
 supports a host-created grid; snapshot mapping itself remains Swift-internal.
 A missing/invalid/unregistered token or duplicate recipient is a mount error,

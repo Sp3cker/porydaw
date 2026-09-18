@@ -1,9 +1,10 @@
-# Check each file independently so a checkout with the earlier object-return
-# fixes can receive the registration access change without reapplying them.
+# Check each file independently so earlier fixes remain applied when a checkout
+# receives newly added source patches.
 foreach(patched_file IN ITEMS
     Sources/QtBridgeMacros/Extensions.swift
     CMakeLists.txt
     Sources/QtBridge/QmlInstantiable.swift
+    Sources/QtBridge/QVariant.swift
 )
     execute_process(
         COMMAND git apply "--include=${patched_file}" --reverse --check "${PATCH}"

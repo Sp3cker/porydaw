@@ -21,8 +21,18 @@ with imported notes overlaid on them.
   and existing math APIs.
 - `src/ui/songview/quick/swift-grid-prototype/GridScene.swift`: consume those
   metrics/signatures in grid/ruler generation instead of literal 24/96/4/4.
+- `src/ui/songview/quick/swift-grid-prototype/GridTypography.swift`: measure
+  visible bar/beat/signature labels on demand; no whole-song width arrays or
+  fixed four-beat indexing.
+- `src/ui/songview/quick/swift-grid-prototype/Main.qml`: forward horizontal
+  viewport origin through `setViewportScrollX(x:)`; preserve other input routing.
 - `src/checks/swiftgridprototype/grid_smoke.cpp` and `grid_smoke.h`: read-only,
   document-rendering, and viewport regression rows.
+- `src/ui/songview/quick/swift-grid-prototype/qtbridge-object-return.patch`
+  and `PatchQtBridge.cmake`: approved nullable QObject return support and
+  application of its QVariant source change; preserve existing patch behavior.
+- `cmake/QtBridge.cmake`: track the patch and application script as configure
+  inputs so ordinary incremental production builds apply dependency changes.
 
 `SgdDocument.swift` is consumed unchanged; grid-facing mapping/subscription
 belongs in `PianoGrid.swift`, not a second Task 2 edit.
@@ -41,7 +51,7 @@ Task 2's `SgdDocument` / per-instance `DocumentFeed` public contract and Task
   `initializeDemo()` alone performs the current fixture/native-session setup.
 - Conform `PianoGrid` to `QmlInstantiableStatus`; add `documentToken: String`
   and `documentTrack: Int`. `componentComplete()` calls the same public scalar
-  `bindDocument(_ documentToken: String)` used by a host-created model. This
+  `bindDocument(documentToken: String)` used by a host-created model. This
   parses/binds once, installs the receiver and connects the per-token callback.
   `loadDocument(SgdDocument, ...)` and receiver mapping remain Swift-internal;
   they are not QML variant APIs. Track property changes re-filter.
@@ -65,6 +75,12 @@ Task 2's `SgdDocument` / per-instance `DocumentFeed` public contract and Task
   normalization, bounded beat-stride shifts and precedence; do not reject
   imported signatures or expand denominators in the feed. No re-quantization,
   parallel geometry implementation or frozen Wave-1 edits.
+- QtBridge's scalar macro requires named Swift arguments; QML invocation is
+  positional and unchanged. `makePitchEditor` returns `Optional<PitchEditor>`
+  (the existing macro accepts this generic type spelling). Read-only or invalid
+  selection returns nil without constructing an editor. The bridge must
+  produce a typed null QObject QVariant, never an invalid QVariant that leaves
+  meta-call return storage unwritten. Existing successful factory behavior stays.
 
 ## Implementation steps
 
@@ -82,6 +98,9 @@ Task 2's `SgdDocument` / per-instance `DocumentFeed` public contract and Task
    Consume existing Swift `TimeAxis` semantics for raw signature values,
    including numerator zero and denomPow2 >=31; production remains the oracle.
    No edits to Tick/TimeAxis/PitchProjection or C++ math.
+   Iterate only visible time marks and measure only needed labels. Horizontal
+   scroll delivery drives that visible range. Keep raw signatures in the feed;
+   signature text follows production normalization and denominator display clamp.
 4. Add real input smoke rows covering mutation inertness, view pan/zoom/hover,
    track-filtered loads and higher-revision refresh on the existing window's
    grid. At the end of editable smoke, C++ registers a synthetic endpoint slot,
@@ -94,6 +113,10 @@ Task 2's `SgdDocument` / per-instance `DocumentFeed` public contract and Task
    signatures, raw zero numerator/high exponent, and empty/invalid-track data;
    assert rendered positions and
    marks against production semantics, not just note counts.
+   Initialize the nullable factory return destination with the existing model
+   pointer and require null afterward; an initially null destination cannot
+   prove delivery. Zoom coverage uses the existing configured metric-scale API;
+   no standalone wheel-zoom gesture is implied or added.
 5. Preserve every existing editable smoke outcome, including raster/typography,
    input and standalone audio; explicit demo initialization reproduces the
    original lane's behavior without touching production audio ownership.
