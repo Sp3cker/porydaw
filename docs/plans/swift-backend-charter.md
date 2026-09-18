@@ -38,6 +38,11 @@ surfaces. Production implementations and interfaces are designed to stay:
   avoidable copy-on-write detachment. Reject stale snapshots before copying.
 - Review these properties in every Swift task. Use modern features for a
   concrete benefit, not feature-count churn or unrelated rewrites.
+- Declarations before implementation: every Swift file opens with its
+  public surface — types, enums, protocol conformances, and entry points —
+  before private helpers and bodies. Swift has no headers; this ordering is
+  what preserves C++'s one interface-read advantage. An agent must be able
+  to learn a file's contract from its top without loading implementation.
 
 ## Compatibility and retirement decision (2026-09-18)
 

@@ -1,0 +1,1591 @@
+diff --git a/src/ui/songview/quick/swift-grid-prototype/PianoGrid.swift b/src/ui/songview/quick/swift-grid-prototype/PianoGrid.swift
+index e6c305b2..d6e26c15 100644
+--- a/src/ui/songview/quick/swift-grid-prototype/PianoGrid.swift
++++ b/src/ui/songview/quick/swift-grid-prototype/PianoGrid.swift
+@@ -18,20 +18,32 @@ final class GridNote {
+         self.noteId = noteId
+         self.tick = tick
+         self.duration = duration
+         self.pitch = pitch
+         self.track = track
+         self.velocity = velocity
+         self.ghost = ghost
+     }
+ }
+ 
++// Input-jurisdiction vocabulary for the grid surface. Mirrors
++// songview::TimelineInputCancelReason declaration order (FocusLost,
++// PointerUngrabbed, Hidden, WindowDeactivated); QML entries pass the raw
++// value, Swift rehydrates with GridCancelReason(rawValue:) and treats
++// unknown codes as no-ops.
++public enum GridCancelReason: Int {
++    case focusLost = 0
++    case pointerUngrabbed = 1
++    case hidden = 2
++    case windowDeactivated = 3
++}
++
+ @MainActor
+ @QtBridgeable
+ public final class PianoGrid {
+ 
+     @QtIgnored
+     private(set) var notes: [GridNote] = []
+     @QtIgnored
+     var controllerEvents: [GridControllerEvent] = []
+     @QtTracked public var audio: AudioSession = AudioSession()
+     @QtTracked public var scene: GridScene = GridScene()
+@@ -78,20 +90,29 @@ public final class PianoGrid {
+     private var selection: Set<Int> = []
+     var lastVelocity: Int = 100
+     var hoverKey: Int = -1
+     @QtIgnored
+     var viewportScrollY: Double = 0
+     private var nextNoteId = GridFixture.nextNoteId
+     private var noteSummaryDirty = true
+     private var selectionAtRightPress: Set<Int> = []
+     @QtIgnored private var pitchEditor: PitchEditor?
+     @QtIgnored private var pitchPreview: [GridControllerEvent] = []
++    @QtIgnored
++    private var undoStack = GridUndoStack()
++    // Plain public (not private(set)): this QtBridge version skips every
++    // variable carrying a `private` modifier token — including private(set)
++    // — so private(set) props never reach QML. Only pushCommand,
++    // syncUndoFlags, resetDemo, and applyUndoCommand write these.
++    public var canUndo: Bool = false
++    public var canRedo: Bool = false
++    public var revision: Int = 0
+ 
+     var drawPreview: (tick: Int, duration: Int, pitch: Int)? {
+         guard case .draw(let state) = gesture else { return nil }
+         return (state.tick, state.duration, state.key)
+     }
+ 
+     private var selectionBand: (x: Double, y: Double, w: Double, h: Double)? {
+         guard case .band(let state) = gesture else { return nil }
+         let x0 = min(state.pressX, state.curX)
+         let x1 = max(state.pressX, state.curX)
+@@ -144,44 +165,85 @@ public final class PianoGrid {
+             pitch: note.pitch)
+         return ["x": rect.x, "y": rect.y, "width": rect.w, "height": rect.h]
+     }
+ 
+     public func previewPitchCurves() {
+         pitchPreview = pitchEditor!.controllerEvents()
+         audio.sync(notes: notes, controllers: pitchPreview)
+     }
+ 
+     public func commitPitchCurves() {
++        let before = controllerEvents
+         controllerEvents = pitchPreview
++        pushCommand(.controllerEvents(before: before, after: controllerEvents))
+     }
+ 
+     public func cancelPitchCurves() {
+         pitchPreview = controllerEvents
+         synchronizeAudio()
+     }
+ 
+     public func closePitchEditor() {
+         pitchEditor = nil
+         pitchPreview.removeAll()
+     }
+ 
+     public func deleteSelection() {
++        let beforeNotes = notes.map(GridNoteSnapshot.init)
+         let before = notes.count
+         notes.removeAll { !$0.ghost && isSelected($0.noteId) }
+         guard notes.count != before else { return }
++        pushCommand(.notes(before: beforeNotes, after: notes.map(GridNoteSnapshot.init)))
+         selection.removeAll()
+         noteSummaryDirty = true
+         refreshNotes()
+         publishOutputs()
+         synchronizeAudio()
+     }
+ 
++    public func undo() {
++        guard let command = undoStack.undo() else { return }
++        applyUndoCommand(command, undoing: true)
++        syncUndoFlags()
++    }
++
++    public func redo() {
++        guard let command = undoStack.redo() else { return }
++        applyUndoCommand(command, undoing: false)
++        syncUndoFlags()
++    }
++
++    private func pushCommand(_ command: GridEditCommand) {
++        let depth = undoStack.undoCount
++        undoStack.push(command)
++        if undoStack.undoCount != depth { revision += 1 }
++        syncUndoFlags()
++    }
++
++    private func syncUndoFlags() {
++        canUndo = undoStack.undoCount > 0
++        canRedo = undoStack.redoCount > 0
++    }
++
++    private func applyUndoCommand(_ command: GridEditCommand, undoing: Bool) {
++        switch command {
++        case .notes(let before, let after):
++            notes = (undoing ? before : after).map { $0.materialize() }
++        case .controllerEvents(let before, let after):
++            controllerEvents = undoing ? before : after
++        }
++        noteSummaryDirty = true
++        refreshNotes()
++        publishOutputs()
++        synchronizeAudio()
++    }
++
+     public func configureViewport(
+         baseFontPx: Double, devicePixelRatio: Double,
+         width: Double, height: Double
+     ) {
+         metrics = GridMetrics(
+             baseFontPx: baseFontPx, dpr: devicePixelRatio,
+             width: width, height: height)
+         initialScrollY = defaultVerticalScroll()
+         publishGeometry()
+         recomputeGeometry()
+@@ -344,20 +406,21 @@ public final class PianoGrid {
+ 
+     public func updatePointer(x: Double, y: Double) {
+         guard let g = gesture, !g.isRight else { return }
+         gesture = g.updated(x: x, y: y, metrics: metrics)
+         refreshNotes()
+         publishOutputs()
+     }
+ 
+     public func endPointer() {
+         guard let g = gesture, !g.isRight else { return }
++        let beforeNotes = notes.map(GridNoteSnapshot.init)
+         var mutated = false
+         switch g {
+         case .pendingDraw(let state):
+             editCursorTick = metrics.snapTick(state.pressTick)
+         case .draw(let state):
+             let note = GridNote(
+                 noteId: nextNoteId, tick: state.tick,
+                 duration: state.duration, pitch: state.key,
+                 track: 0, velocity: lastVelocity, ghost: false)
+             nextNoteId += 1
+@@ -389,39 +452,62 @@ public final class PianoGrid {
+                         let note = notes[i]
+                         note.duration = max(1, note.duration + state.delta)
+                     }
+                 }
+                 noteSummaryDirty = true
+                 mutated = true
+             }
+         case .pendingMenu, .band:
+             break
+         }
++        if mutated {
++            pushCommand(.notes(before: beforeNotes, after: notes.map(GridNoteSnapshot.init)))
++        }
+         gesture = nil
+         activeNoteId = -1
+         refreshNotes()
+         publishOutputs()
+         if mutated { synchronizeAudio() }
+     }
+-
+-    public func cancelPointer() {
++    public func cancelPointer(reason: Int) {
+         guard let g = gesture else { return }
++        guard let cancelReason = GridCancelReason(rawValue: reason) else { return }
++        // Focus loss keeps both gesture families alive with zero state
++        // change: a later updatePointer/endPointer still commits.
++        if cancelReason == .focusLost { return }
+         gesture = nil
+         activeNoteId = -1
+         if g.isRight {
+             selection = selectionAtRightPress
+             noteSummaryDirty = true
+         }
++        if cancelReason == .hidden || cancelReason == .windowDeactivated {
++            cancelHoverAndPreview()
++        }
+         scene.rebuildNotes(sceneInput())
+         publishOutputs()
+     }
+ 
++    // Hidden and window-deactivated teardown beyond the pointer-ungrab
++    // baseline: hover teardown plus pitch live-preview discard when an
++    // editor is open. Window-deactivated is identical for the grid surface
++    // by design; only the entry differs (per-surface visible vs
++    // window-level once, popup surfaces excluded by the host).
++    private func cancelHoverAndPreview() {
++        hoverKey = -1
++        cursorKind = 0
++        if pitchEditor != nil {
++            cancelPitchCurves()
++        }
++        scene.rebuildHover(sceneInput())
++    }
++
+     public func beginRightPointer(x: Double, y: Double, threshold: Double) {
+         if let g = gesture, !g.isRight {
+             gesture = nil
+             activeNoteId = -1
+         }
+         guard gesture == nil else { return }
+         selectionAtRightPress = selection
+         var hitId = -1
+         if let hit = hitNote(x: x, y: y) {
+             let note = notes[hit.index]
+@@ -458,25 +544,30 @@ public final class PianoGrid {
+             } else {
+                 if !selection.isEmpty { noteSummaryDirty = true }
+                 selection.removeAll()
+             }
+         }
+         gesture = nil
+         scene.rebuildNotes(sceneInput())
+         publishOutputs()
+     }
+ 
+-    public func cancelRightPointer() {
++    public func cancelRightPointer(reason: Int) {
+         guard let g = gesture, g.isRight else { return }
++        guard let cancelReason = GridCancelReason(rawValue: reason) else { return }
++        if cancelReason == .focusLost { return }
+         gesture = nil
+         selection = selectionAtRightPress
+         noteSummaryDirty = true
++        if cancelReason == .hidden || cancelReason == .windowDeactivated {
++            cancelHoverAndPreview()
++        }
+         scene.rebuildNotes(sceneInput())
+         publishOutputs()
+     }
+ 
+     private func applyBandSelection(_ band: (x: Double, y: Double, w: Double, h: Double)) {
+         var covered: Set<Int> = []
+         for note in notes where !note.ghost {
+             let r = metrics.noteRect(
+                 x0: metrics.displayX(Double(note.tick)),
+                 x1: metrics.displayX(Double(note.tick + note.duration)),
+@@ -486,37 +577,39 @@ public final class PianoGrid {
+                 && r.y < band.y + band.h && r.y + r.h > band.y
+             if overlaps { covered.insert(note.noteId) }
+         }
+         guard covered != selection else { return }
+         selection = covered
+         noteSummaryDirty = true
+     }
+ 
+     public func doublePointer(x: Double, y: Double) {
+         guard gesture == nil else { return }
++        let beforeNotes = notes.map(GridNoteSnapshot.init)
+         if let hit = hitNote(x: x, y: y) {
+             let id = notes[hit.index].noteId
+             notes.remove(at: hit.index)
+             selection.remove(id)
+         } else {
+             let key = metrics.yToPitch(y)
+             guard key >= 0 else { return }
+             let note = GridNote(
+                 noteId: nextNoteId,
+                 tick: metrics.snapTickDown(metrics.tickAtContentX(x)),
+                 duration: metrics.snapTicks, pitch: key,
+                 track: 0, velocity: lastVelocity, ghost: false)
+             nextNoteId += 1
+             notes.append(note)
+             selection = [note.noteId]
+         }
+         noteSummaryDirty = true
++        pushCommand(.notes(before: beforeNotes, after: notes.map(GridNoteSnapshot.init)))
+         refreshNotes()
+         publishOutputs()
+         synchronizeAudio()
+     }
+ 
+     public func hoverPointer(x: Double, y: Double) {
+         guard gesture == nil else { return }
+         clearKeyboardHover()
+         guard let hit = hitNote(x: x, y: y) else {
+             cursorKind = 0
+@@ -552,20 +645,23 @@ public final class PianoGrid {
+         gesture = nil
+         activeNoteId = -1
+         selection.removeAll()
+         lastVelocity = 100
+         hoverKey = -1
+         cursorKind = 0
+         editCursorTick = 0
+         notes = GridFixture.makeNotes()
+         controllerEvents.removeAll()
+         nextNoteId = GridFixture.nextNoteId
++        undoStack.removeAll()
++        revision = 0
++        syncUndoFlags()
+         noteSummaryDirty = true
+         recomputeGeometry()
+         initialScrollY = defaultVerticalScroll()
+         rebuildScene()
+         publishOutputs()
+         synchronizeAudio()
+     }
+ 
+     @QtIgnored
+     func isSelected(_ noteId: Int) -> Bool { selection.contains(noteId) }
+diff --git a/src/ui/songview/quick/swift-grid-prototype/Main.qml b/src/ui/songview/quick/swift-grid-prototype/Main.qml
+index c2ab736e..eef4807a 100644
+--- a/src/ui/songview/quick/swift-grid-prototype/Main.qml
++++ b/src/ui/songview/quick/swift-grid-prototype/Main.qml
+@@ -184,20 +184,30 @@ ApplicationWindow {
+         root.gridModel.resetDemo();
+         flick.contentX = 0;
+         flick.contentY = root.gridModel.initialScrollY;
+     }
+ 
+     Component.onCompleted: {
+         root.configureViewport();
+         flick.contentY = root.gridModel.initialScrollY;
+         console.log("SWIFT_GRID_READY");
+     }
++    // Production ItemVisibleHasChanged entry: window hide() is Hidden
++    // (reason 2), matching the grid surface wire below. WindowDeactivate
++    // arrives only through the native window eventFilter (reason 3):
++    // isActive is app bookkeeping and is not synthesizable via sendEvent,
++    // so there is deliberately no onActiveChanged wire. Popup-owned
++    // surfaces keep their own input (spec deferral §8 — no popup teardown).
++    onVisibleChanged: {
++        if (!visible)
++            root.gridModel.cancelPointer(2);
++    }
+ 
+     component ChromeButton: Rectangle {
+         id: button
+         required property string text
+         signal clicked
+         implicitWidth: caption.implicitWidth + Math.round(root.baseFontPx)
+         implicitHeight: Math.round(root.baseFontPx * 2)
+         activeFocusOnTab: true
+         opacity: enabled ? 1 : 0.5
+         color: pointer.pressed ? "#F5B61C" : pointer.containsMouse ? "#E7E2DC" : root.gridPalette.windowBackground
+@@ -456,21 +466,26 @@ ApplicationWindow {
+                     }
+                     ScrollBar.horizontal: ScrollBar {
+                         policy: ScrollBar.AsNeeded
+                     }
+ 
+                     Item {
+                         id: pianoGridSurface
+                         objectName: "pianoGridSurface"
+                         width: Math.max(root.gridModel.gridWidth, 1)
+                         height: Math.max(root.gridModel.gridHeight, 1)
+-
++                        // Production ItemVisibleHasChanged entry: per-surface
++                        // hidden tears the grid gesture down (reason 2).
++                        onVisibleChanged: {
++                            if (!visible)
++                                root.gridModel.cancelPointer(2);
++                        }
+                         PianoRollCanvas {
+                             bandSide: rollBandContent
+                             gutterSide: rollGutterSide
+                             plotSide: pianoGridSurface
+                             timelineScene: root.scene
+                         }
+                         Item {
+                             objectName: "gridPlayhead"
+                             visible: root.audio.ready
+                             x: root.playheadX - root.playheadGlowLeft
+@@ -517,27 +532,40 @@ ApplicationWindow {
+                                 x: root.playheadGlowLeft - 0.5
+                                 width: 1
+                                 anchors.top: parent.top
+                                 anchors.bottom: parent.bottom
+                                 color: root.gridPalette.playhead
+                             }
+                         }
+ 
+                         MouseArea {
+                             id: inputArea
++                            objectName: "pianoGridInput"
+                             anchors.fill: parent
+                             acceptedButtons: Qt.LeftButton | Qt.RightButton
+                             preventStealing: true
++                            // Focus home of the grid surface: press-driven
++                            // gestures hold active focus so a focus steal is
++                            // observable as production focusOutEvent (reason 0).
++                            focus: true
+                             hoverEnabled: true
+                             z: 10
+-
+                             property bool rightHeld: false
++                            // Production focusOutEvent entry: focus loss while
++                            // visible keeps a live gesture committable
++                            // (reason 0 is survival — zero state change). The
++                            // visible guard arbitrates the hidden case, which
++                            // owns its teardown through reason 2 instead.
++                            onActiveFocusChanged: {
++                                if (!activeFocus && visible)
++                                    root.gridModel.cancelPointer(0);
++                            }
+ 
+                             cursorShape: {
+                                 switch (root.gridModel.cursorKind) {
+                                 case 1:
+                                     return Qt.OpenHandCursor;
+                                 case 2:
+                                 case 3:
+                                     return Qt.SizeHorCursor;
+                                 default:
+                                     return Qt.ArrowCursor;
+@@ -550,21 +578,21 @@ ApplicationWindow {
+                                 if (mouse.button === Qt.RightButton) {
+                                     rightHeld = true;
+                                     root.gridModel.beginRightPointer(mouse.x, mouse.y, Qt.styleHints.startDragDistance);
+                                 } else {
+                                     root.gridModel.beginPointer(mouse.x, mouse.y);
+                                 }
+                             }
+                             onDoubleClicked: function (mouse) {
+                                 if (mouse.button === Qt.RightButton)
+                                     return;
+-                                root.gridModel.cancelPointer();
++                                root.gridModel.cancelPointer(1);
+                                 root.gridModel.doublePointer(mouse.x, mouse.y);
+                             }
+                             onPositionChanged: function (mouse) {
+                                 if (rightHeld)
+                                     root.gridModel.updateRightPointer(mouse.x, mouse.y);
+                                 else if (pressed)
+                                     root.gridModel.updatePointer(mouse.x, mouse.y);
+                                 else
+                                     root.gridModel.hoverPointer(mouse.x, mouse.y);
+                             }
+@@ -573,23 +601,23 @@ ApplicationWindow {
+                                     rightHeld = false;
+                                     root.gridModel.endRightPointer(mouse.x, mouse.y);
+                                 } else {
+                                     root.gridModel.updatePointer(mouse.x, mouse.y);
+                                     root.gridModel.endPointer();
+                                 }
+                             }
+                             onCanceled: function () {
+                                 if (rightHeld) {
+                                     rightHeld = false;
+-                                    root.gridModel.cancelRightPointer();
++                                    root.gridModel.cancelRightPointer(1);
+                                 } else {
+-                                    root.gridModel.cancelPointer();
++                                    root.gridModel.cancelPointer(1);
+                                 }
+                             }
+                             onWheel: function (e) {
+                                 flick.contentX = Math.max(0, Math.min(flick.contentWidth - flick.width, flick.contentX - e.angleDelta.x));
+                                 flick.contentY = Math.max(0, Math.min(flick.contentHeight - flick.height, flick.contentY - e.angleDelta.y));
+                                 e.accepted = true;
+                             }
+                         }
+                     }
+                 }
+diff --git a/src/ui/songview/quick/swift-grid-prototype/App.swift b/src/ui/songview/quick/swift-grid-prototype/App.swift
+index 4b08dff5..b91cdd1f 100644
+--- a/src/ui/songview/quick/swift-grid-prototype/App.swift
++++ b/src/ui/songview/quick/swift-grid-prototype/App.swift
+@@ -1,18 +1,21 @@
+ import Foundation
+ import NativeGridSmoke
++import NativeGridWindowCancel
+ import QtBridge
+ 
+ @main
+ struct SwiftGridApp: QApp {
+     let qmlFileName: String = "Main"
+ 
+     let gridModel = PianoGrid()
+ 
+     var initialProperties: [String: QObjectBuildable] {
+         ["gridModel": gridModel]
+     }
+ 
+     init() {
++        runMathSelftestIfRequested()
++        sgw_installWindowCancelFilter()
+         installGridSmoke()
+     }
+ }
+diff --git a/src/ui/songview/quick/swift-grid-prototype/native/window_cancel.h b/src/ui/songview/quick/swift-grid-prototype/native/window_cancel.h
+new file mode 100644
+index 00000000..dd0085f3
+--- /dev/null
++++ b/src/ui/songview/quick/swift-grid-prototype/native/window_cancel.h
+@@ -0,0 +1,20 @@
++#pragma once
++
++// Native window eventFilter for the Swift grid prototype: mirrors the
++// production TimelineQuickView::eventFilter Hide/WindowDeactivate entry
++// (timelinequickview_window.cpp), which delivers one cancelActiveGestures
++// pass for the grid surface. QML must not wire reason 3: isActive is app
++// bookkeeping and is not synthesizable via sendEvent.
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++// Installs the singleton filter on the application object (deferred via a
++// pre-routine when called before QCoreApplication exists, as in App.init).
++// Safe to call more than once; only the first call installs.
++void sgw_installWindowCancelFilter(void);
++
++#ifdef __cplusplus
++}
++#endif
+diff --git a/src/ui/songview/quick/swift-grid-prototype/native/window_cancel.cpp b/src/ui/songview/quick/swift-grid-prototype/native/window_cancel.cpp
+new file mode 100644
+index 00000000..d7bd236a
+--- /dev/null
++++ b/src/ui/songview/quick/swift-grid-prototype/native/window_cancel.cpp
+@@ -0,0 +1,74 @@
++// Native window eventFilter for the Swift grid prototype.
++//
++// Production entry (timelinequickview_window.cpp TimelineQuickView::
++// eventFilter): QEvent::Hide and QEvent::WindowDeactivate cancel every live
++// Quick interaction exactly once. The prototype mirrors it: either event on
++// the grid window forwards cancelPointer(3) to the grid model. The first
++// delivery clears the live gesture, so a trailing Hide or WindowDeactivate
++// for the same transition is a Swift-side no-op (guard let gesture).
++//
++// Only windows carrying the prototype's gridModel property are forwarded:
++// popup-owned and foreign windows keep their own input (spec defers
++// popup-session parity, so the grid's window path never tears them down).
++// Window hide() additionally reaches QML onVisibleChanged (reason 2,
++// Hidden); teardown is identical to reason 3 by design, so whichever entry
++// runs first owns the cancel.
++
++#include "window_cancel.h"
++
++#include <QCoreApplication>
++#include <QEvent>
++#include <QMetaObject>
++#include <QObject>
++#include <QQuickWindow>
++#include <QVariant>
++
++namespace {
++
++// QObject subclass without Q_OBJECT: the virtual eventFilter override needs
++// no meta-object code, so no moc run is required for this TU.
++class GridWindowCancelFilter final : public QObject
++{
++  public:
++    using QObject::QObject;
++
++    bool eventFilter(QObject *watched, QEvent *event) override
++    {
++        const QEvent::Type type = event->type();
++        if (type != QEvent::Hide && type != QEvent::WindowDeactivate)
++            return false;
++        const auto *window = qobject_cast<QQuickWindow *>(watched);
++        if (!window)
++            return false;
++        QObject *model = window->property("gridModel").value<QObject *>();
++        if (!model)
++            return false;
++        QMetaObject::invokeMethod(model, "cancelPointer", Q_ARG(int, 3));
++        return false;
++    }
++};
++
++void installNow()
++{
++    QCoreApplication *app = QCoreApplication::instance();
++    if (!app)
++        return;
++    static GridWindowCancelFilter *installed = nullptr;
++    if (installed)
++        return;
++    installed = new GridWindowCancelFilter(app);
++    app->installEventFilter(installed);
++}
++
++} // namespace
++
++extern "C" void sgw_installWindowCancelFilter(void)
++{
++    if (QCoreApplication::instance()) {
++        installNow();
++        return;
++    }
++    // App.init runs before QtBridge creates the application object; defer
++    // to the pre-routine phase like the smoke driver does.
++    qAddPreRoutine(installNow);
++}
+diff --git a/src/ui/songview/quick/swift-grid-prototype/native/module.modulemap b/src/ui/songview/quick/swift-grid-prototype/native/module.modulemap
+index 1b7b7019..10905edd 100644
+--- a/src/ui/songview/quick/swift-grid-prototype/native/module.modulemap
++++ b/src/ui/songview/quick/swift-grid-prototype/native/module.modulemap
+@@ -5,10 +5,14 @@ module NativeGridAudio {
+ 
+ module NativeGridCurve {
+     header "curve_session.h"
+     export *
+ }
+ 
+ module NativeGridTypography {
+     header "font_metrics.h"
+     export *
+ }
++module NativeGridWindowCancel {
++    header "window_cancel.h"
++    export *
++}
+diff --git a/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt b/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt
+index ea8b86be..13a638c2 100644
+--- a/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt
++++ b/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt
+@@ -101,32 +101,37 @@ add_library(swift_grid_curve STATIC
+ )
+ target_include_directories(swift_grid_curve PUBLIC
+     "${SWIFT_GRID_AUDIO_DIR}"
+     "${SWIFT_GRID_ROOT}/src"
+ )
+ target_link_libraries(swift_grid_curve PUBLIC Qt6::Core)
+ 
+ add_library(swift_grid_typography STATIC "${SWIFT_GRID_AUDIO_DIR}/font_metrics.cpp")
+ target_include_directories(swift_grid_typography PUBLIC "${SWIFT_GRID_AUDIO_DIR}")
+ target_link_libraries(swift_grid_typography PUBLIC Qt6::Gui)
++add_library(swift_grid_window_cancel STATIC "${SWIFT_GRID_AUDIO_DIR}/window_cancel.cpp")
++target_include_directories(swift_grid_window_cancel PUBLIC "${SWIFT_GRID_AUDIO_DIR}")
++target_link_libraries(swift_grid_window_cancel PUBLIC Qt6::Quick)
+ 
+ # Verification-only native smoke driver (event injection; no UI/model logic).
+ # Kept as a separate static target so Qt6::Test's QT_TESTCASE_* compile
+ # definitions stay on C++ and never reach the Swift compilation.
+ set(SWIFT_GRID_SMOKE_DIR
+     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../checks/swiftgridprototype"
+ )
+ 
+ add_library(swift_grid_smoke STATIC
+     "${SWIFT_GRID_SMOKE_DIR}/grid_smoke.cpp"
+     "${SWIFT_GRID_SMOKE_DIR}/audio_smoke.cpp"
+     "${SWIFT_GRID_SMOKE_DIR}/interaction_smoke.cpp"
++    "${SWIFT_GRID_SMOKE_DIR}/math_smoke.cpp"
++    "${SWIFT_GRID_SMOKE_DIR}/jurisdiction_smoke.cpp"
+ )
+ target_include_directories(swift_grid_smoke PRIVATE
+     "${SWIFT_GRID_SMOKE_DIR}"
+ )
+ target_link_libraries(swift_grid_smoke PRIVATE
+     Qt6::Quick
+     Qt6::Test
+     swift_grid_audio
+     swift_grid_curve
+ )
+@@ -157,20 +162,21 @@ target_compile_options(swift_grid_prototype PRIVATE
+     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_AUDIO_DIR}>"
+     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_ROOT}/src>"
+ )
+ 
+ target_link_libraries(swift_grid_prototype PRIVATE
+     QtBridge
+     Qt6::Quick
+     swift_grid_audio
+     swift_grid_curve
+     swift_grid_typography
++    swift_grid_window_cancel
+     "$<LINK_ONLY:swift_grid_smoke>"
+ )
+ 
+ set(SWIFT_GRID_FONT_QRC
+     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../resources/fonts.qrc"
+ )
+ 
+ set_target_properties(swift_grid_prototype PROPERTIES AUTORCC ON)
+ target_sources(swift_grid_prototype PRIVATE "${SWIFT_GRID_FONT_QRC}")
+ 
+diff --git a/src/checks/swiftgridprototype/jurisdiction_smoke.cpp b/src/checks/swiftgridprototype/jurisdiction_smoke.cpp
+new file mode 100644
+index 00000000..0cc4a687
+--- /dev/null
++++ b/src/checks/swiftgridprototype/jurisdiction_smoke.cpp
+@@ -0,0 +1,835 @@
++#include "grid_smoke.h"
++
++#include <QCoreApplication>
++#include <QEvent>
++#include <QImage>
++#include <QJsonArray>
++#include <QJsonDocument>
++#include <QJsonObject>
++#include <QPointer>
++#include <QQuickItem>
++#include <QQuickWindow>
++#include <QTest>
++
++#include <chrono>
++#include <cmath>
++#include <cstdio>
++#include <cstdlib>
++
++namespace {
++using namespace std::chrono_literals;
++
++void require(bool condition, const char *reason)
++{
++    if (!condition) {
++        std::fprintf(stderr, "SWIFT_GRID_SMOKE FAIL: %s\n", reason);
++        std::fflush(stderr);
++        std::exit(EXIT_FAILURE);
++    }
++}
++
++template <typename Predicate>
++void awaitState(Predicate predicate, const char *reason)
++{
++    require(QTest::qWaitFor(predicate, 3s), reason);
++}
++
++void pass(const char *scenario)
++{
++    std::printf("SWIFT_GRID_SMOKE %s PASS\n", scenario);
++    std::fflush(stdout);
++}
++
++QQuickItem *namedItem(QQuickItem *parent, const QString &name)
++{
++    if (parent->objectName() == name)
++        return parent;
++    for (QQuickItem *child : parent->childItems()) {
++        if (auto *found = namedItem(child, name))
++            return found;
++    }
++    return nullptr;
++}
++
++QRectF sceneRect(QQuickItem *item)
++{
++    return item->mapRectToScene(QRectF(0, 0, item->width(), item->height()));
++}
++
++QPoint center(QQuickItem *item)
++{
++    require(item, "missing native undo target");
++    return sceneRect(item).center().toPoint();
++}
++
++QJsonArray undoNotes(QObject *model)
++{
++    return QJsonDocument::fromJson(model->property("noteSummary").toString().toUtf8()).array();
++}
++
++QString undoSummary(QObject *model)
++{
++    return model->property("noteSummary").toString();
++}
++
++int undoSelectedCount(QObject *model)
++{
++    int count = 0;
++    for (const QJsonValue value : undoNotes(model)) {
++        if (value.toObject().value("selected").toBool())
++            ++count;
++    }
++    return count;
++}
++
++int undoAddedNoteId(const QJsonArray &before, const QJsonArray &after)
++{
++    for (const QJsonValue value : after) {
++        const int id = value.toObject().value("id").toInt(-1);
++        bool found = false;
++        for (const QJsonValue prior : before) {
++            if (prior.toObject().value("id").toInt(-2) == id) {
++                found = true;
++                break;
++            }
++        }
++        if (!found)
++            return id;
++    }
++    return -1;
++}
++
++int undoColorCount(const QImage &image, QRectF logical, QRgb color)
++{
++    const double dpr = image.devicePixelRatio();
++    const QRect region = QRectF(logical.topLeft() * dpr, logical.size() * dpr)
++                             .toAlignedRect()
++                             .intersected(image.rect());
++    int count = 0;
++    for (int y = region.top(); y <= region.bottom(); ++y) {
++        for (int x = region.left(); x <= region.right(); ++x) {
++            if (image.pixelColor(x, y).rgb() == color)
++                ++count;
++        }
++    }
++    return count;
++}
++
++struct UndoScene {
++    QPointer<QQuickWindow> window;
++    QPointer<QQuickItem> viewport;
++    QPointer<QQuickItem> surface;
++    QPointer<QObject> model;
++    double baseFont = 0;
++    double dpr = 1;
++    double beatWidth = 0;
++    double rowHeight = 0;
++    double leadPad = 0;
++    int ticksPerBeat = 0;
++
++    QQuickItem *item(const char *name) const
++    {
++        return namedItem(window->contentItem(), QString::fromLatin1(name));
++    }
++
++    QPointF point(double tick, int pitch) const
++    {
++        return {leadPad + tick * beatWidth / ticksPerBeat, (127.0 - pitch + 0.5) * rowHeight};
++    }
++
++    double pixelSnap(double value) const { return std::round(value * dpr) / dpr; }
++
++    QRectF expectedBox(int tick, int duration, int pitch) const
++    {
++        const double pixel = 1.0 / dpr;
++        const double x0 = pixelSnap(leadPad + tick * beatWidth / ticksPerBeat);
++        const double x1 = pixelSnap(leadPad + (tick + duration) * beatWidth / ticksPerBeat);
++        const double top = pixelSnap((127 - pitch) * rowHeight);
++        const double bottom = pixelSnap((128 - pitch) * rowHeight);
++        return {x0, top + pixel, qMax(std::round(baseFont / 6.0), x1 - x0),
++                bottom - top - 2 * pixel};
++    }
++
++    void reveal(QPointF content) const
++    {
++        require(viewport && surface && window, "grid scene destroyed during undo smoke");
++        const double maxX =
++            qMax(0.0, viewport->property("contentWidth").toDouble() - viewport->width());
++        const double maxY =
++            qMax(0.0, viewport->property("contentHeight").toDouble() - viewport->height());
++        require(viewport->setProperty("contentX",
++                                      qBound(0.0, content.x() - viewport->width() / 2, maxX)),
++                "cannot scroll horizontal viewport");
++        require(viewport->setProperty("contentY",
++                                      qBound(0.0, content.y() - viewport->height() / 2, maxY)),
++                "cannot scroll vertical viewport");
++        QTest::qWait(20ms);
++        const QPointF scenePoint = surface->mapToScene(content);
++        require(scenePoint.x() >= 0 && scenePoint.x() < window->width() && scenePoint.y() >= 0 &&
++                    scenePoint.y() < window->height(),
++                "undo gesture target is outside the native window");
++    }
++
++    QPoint windowPoint(QPointF content) const { return surface->mapToScene(content).toPoint(); }
++
++    void press(QPointF content) const
++    {
++        reveal(content);
++        QTest::mousePress(window, Qt::LeftButton, Qt::NoModifier, windowPoint(content));
++        QTest::qWait(30ms);
++    }
++
++    void move(QPointF content) const
++    {
++        QTest::mouseMove(window, windowPoint(content));
++        QTest::qWait(30ms);
++    }
++
++    void release(QPointF content) const
++    {
++        QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, windowPoint(content));
++        awaitState([this] { return model->property("activeNoteId").toInt() == -1; },
++                   "pointer release did not finish the undo gesture");
++    }
++
++    void click(QPointF content) const
++    {
++        press(content);
++        release(content);
++    }
++
++    void doubleClick(QPointF content) const
++    {
++        reveal(content);
++        QTest::mouseDClick(window, Qt::LeftButton, Qt::NoModifier, windowPoint(content));
++        QTest::qWait(50ms);
++    }
++
++    void reset() const
++    {
++        require(QMetaObject::invokeMethod(window, "resetDemo"), "cannot reset the prototype");
++        awaitState(
++            [&] { return undoNotes(model).size() == 30 && namedItem(surface, "gridNote_1"); },
++            "reset did not restore the musical fixture");
++        QTest::qWait(50ms);
++    }
++
++    void undo() const
++    {
++        require(QMetaObject::invokeMethod(model, "undo"), "cannot invoke undo");
++        QTest::qWait(30ms);
++    }
++
++    void redo() const
++    {
++        require(QMetaObject::invokeMethod(model, "redo"), "cannot invoke redo");
++        QTest::qWait(30ms);
++    }
++
++    int revision() const { return model->property("revision").toInt(); }
++    bool canUndo() const { return model->property("canUndo").toBool(); }
++    bool canRedo() const { return model->property("canRedo").toBool(); }
++
++    QJsonObject note(int id) const
++    {
++        for (const QJsonValue &value : undoNotes(model)) {
++            if (value.toObject().value("id").toInt(-1) == id)
++                return value.toObject();
++        }
++        return {};
++    }
++};
++
++void verifyDrawRow(const UndoScene &scene)
++{
++    scene.reset();
++    const QString fixture = undoSummary(scene.model);
++    require(scene.revision() == 0 && !scene.canUndo() && !scene.canRedo(),
++            "reset did not clear undo history");
++    const QJsonArray before = undoNotes(scene.model);
++    scene.press(scene.point(168, 100));
++    scene.move(scene.point(146, 102));
++    scene.release(scene.point(146, 102));
++    awaitState([&] { return undoNotes(scene.model).size() == before.size() + 1; },
++               "draw did not commit exactly one note");
++    const QString drawn = undoSummary(scene.model);
++    require(scene.revision() == 1 && scene.canUndo() && !scene.canRedo(),
++            "draw commit did not push exactly one command");
++    scene.undo();
++    awaitState([&] { return undoNotes(scene.model).size() == before.size(); },
++               "undo did not remove the drawn note");
++    require(undoSummary(scene.model) == fixture, "undo did not restore the exact fixture");
++    require(scene.canRedo() && !scene.canUndo(), "undo left canUndo/canRedo inconsistent");
++    require(scene.revision() == 1, "undo changed the monotonic revision");
++    require(undoSelectedCount(scene.model) == 0, "stale draw selection is not inert");
++    scene.redo();
++    awaitState([&] { return undoSummary(scene.model) == drawn; },
++               "redo did not restore the drawn note");
++    require(scene.canUndo() && !scene.canRedo(), "redo left canUndo/canRedo inconsistent");
++    require(scene.revision() == 1, "redo changed the monotonic revision");
++    pass("undo-draw-commit-restores-fixture");
++}
++
++void verifyMoveRow(const UndoScene &scene)
++{
++    scene.reset();
++    const QRectF firstBox = scene.expectedBox(0, 18, 60);
++    const QPointF moved = firstBox.center() + QPointF(scene.beatWidth * 6 / 24, -scene.rowHeight);
++    scene.press(firstBox.center());
++    // Undo restores note state but not selection (spec section 3.1), and the
++    // press selected note 1, so the exact-restore reference is captured with
++    // that selection established and the notes still at fixture positions.
++    const QString fixture = undoSummary(scene.model);
++    require(undoNotes(scene.model).size() == 30 && scene.revision() == 0,
++            "press selected without committing");
++    scene.move(moved);
++    scene.release(moved);
++    awaitState(
++        [&] {
++            const QJsonObject value = scene.note(1);
++            return value.value("tick").toInt(-1) == 6 && value.value("pitch").toInt(-1) == 61;
++        },
++        "move did not commit source-rounded movement");
++    const QString movedSummary = undoSummary(scene.model);
++    require(scene.revision() == 1, "move commit did not push exactly one command");
++    scene.undo();
++    awaitState([&] { return undoSummary(scene.model) == fixture; },
++               "move undo did not restore the exact fixture");
++    scene.redo();
++    awaitState([&] { return undoSummary(scene.model) == movedSummary; },
++               "move redo did not restore the moved summary");
++    pass("undo-move-commit");
++}
++
++void verifyResizeRow(const UndoScene &scene)
++{
++    // Undo restores note state but not selection (spec section 3.1), so each
++    // drag is an independent sub-row: reset, press to establish that drag's
++    // selection, capture the reference, then commit/undo/redo exactly.
++    const double reach = scene.baseFont * 0.25;
++    scene.reset();
++    const QRectF trailingBox = scene.expectedBox(24, 18, 64);
++    const QPointF gripRight(trailingBox.right() + reach / 2, trailingBox.center().y());
++    const QPointF longer = gripRight + QPointF(scene.beatWidth * 6 / 24, 0);
++    scene.press(gripRight);
++    const QString trailingFixture = undoSummary(scene.model);
++    scene.move(longer);
++    scene.release(longer);
++    awaitState([&] { return scene.note(2).value("duration").toInt(-1) == 24; },
++               "trailing resize did not commit");
++    const QString afterTrailing = undoSummary(scene.model);
++    require(scene.revision() == 1, "trailing resize did not push exactly one command");
++    scene.undo();
++    awaitState([&] { return undoSummary(scene.model) == trailingFixture; },
++               "trailing-resize undo did not restore the exact fixture");
++    scene.redo();
++    awaitState([&] { return undoSummary(scene.model) == afterTrailing; },
++               "trailing-resize redo did not restore the trailing state");
++
++    scene.reset();
++    const QRectF leadingBox = scene.expectedBox(72, 18, 71);
++    const QPointF gripLeft(leadingBox.left() - reach / 2, leadingBox.center().y());
++    const QPointF earlier = gripLeft - QPointF(scene.beatWidth * 6 / 24, 0);
++    scene.press(gripLeft);
++    const QString leadingFixture = undoSummary(scene.model);
++    scene.move(earlier);
++    scene.release(earlier);
++    awaitState(
++        [&] {
++            const QJsonObject value = scene.note(4);
++            return value.value("tick").toInt(-1) == 66 && value.value("duration").toInt(-1) == 24;
++        },
++        "leading resize did not commit");
++    const QString afterLeading = undoSummary(scene.model);
++    require(scene.revision() == 1, "leading resize did not push exactly one command");
++    scene.undo();
++    awaitState([&] { return undoSummary(scene.model) == leadingFixture; },
++               "leading-resize undo did not restore the exact fixture");
++    scene.redo();
++    awaitState([&] { return undoSummary(scene.model) == afterLeading; },
++               "leading-resize redo did not restore the leading state");
++    pass("undo-resize-leading-and-trailing");
++}
++
++void verifyMenuDeleteRow(const UndoScene &scene)
++{
++    scene.reset();
++    const QString fixture = undoSummary(scene.model);
++    const QRectF band = sceneRect(scene.item("gridNote_1"))
++                            .united(sceneRect(scene.item("gridNote_2")))
++                            .adjusted(-6, -6, 6, 6);
++    const QPoint start = band.topLeft().toPoint();
++    const QPoint end = band.bottomRight().toPoint();
++    QTest::mousePress(scene.window, Qt::RightButton, Qt::NoModifier, start);
++    QTest::mouseMove(scene.window, end);
++    awaitState([&] { return undoSelectedCount(scene.model) == 2; },
++               "right-drag did not select two notes");
++    QTest::mouseRelease(scene.window, Qt::RightButton, Qt::NoModifier, end);
++    require(undoSelectedCount(scene.model) == 2, "released reticle discarded its selection");
++    QTest::mouseClick(scene.window, Qt::RightButton, Qt::NoModifier,
++                      center(scene.item("gridNote_1")));
++    awaitState([&] { return scene.item("noteContextMenu")->property("opened").toBool(); },
++               "right click did not open the note menu");
++    QTest::keyClick(scene.window, Qt::Key_Down);
++    QTest::keyClick(scene.window, Qt::Key_Down);
++    QTest::keyClick(scene.window, Qt::Key_Return);
++    awaitState([&] { return undoNotes(scene.model).size() == 28; },
++               "menu Delete did not delete selection");
++    const QString deleted = undoSummary(scene.model);
++    require(scene.revision() == 1, "menu delete did not push exactly one command");
++    require(undoSelectedCount(scene.model) == 0, "menu delete kept a selection");
++    scene.undo();
++    awaitState([&] { return undoSummary(scene.model) == fixture; },
++               "menu-delete undo did not restore both notes exactly");
++    scene.redo();
++    awaitState([&] { return undoSummary(scene.model) == deleted; },
++               "menu-delete redo did not restore the deleted state");
++    pass("undo-menu-delete-selection");
++}
++
++void verifyDoubleClickRow(const UndoScene &scene)
++{
++    scene.reset();
++    const QString fixture = undoSummary(scene.model);
++    const QJsonArray before = undoNotes(scene.model);
++    scene.doubleClick(scene.point(420, 110));
++    awaitState([&] { return undoNotes(scene.model).size() == before.size() + 1; },
++               "double-click did not add one note");
++    const QString added = undoSummary(scene.model);
++    require(scene.revision() == 1, "double-click add did not push exactly one command");
++    const int addedId = undoAddedNoteId(before, undoNotes(scene.model));
++    require(addedId > 0, "added double-click note has no identity");
++    scene.doubleClick(scene.expectedBox(420, 6, 110).center());
++    awaitState([&] { return undoNotes(scene.model).size() == before.size(); },
++               "double-click on an existing note did not delete it");
++    const QString removed = undoSummary(scene.model);
++    require(scene.revision() == 2, "double-click remove did not push exactly one command");
++    require(removed == fixture, "double-click add-then-remove did not return to the fixture");
++    scene.undo();
++    awaitState([&] { return undoNotes(scene.model).size() == before.size() + 1; },
++               "double-click-remove undo did not restore the added note");
++    // Undo restores note state but not selection (spec section 3.1): the
++    // remove cleared the selection, so re-select the restored note with a
++    // no-command click before comparing against `added`.
++    scene.click(scene.expectedBox(420, 6, 110).center());
++    require(scene.revision() == 2, "selecting the restored note pushed a command");
++    awaitState([&] { return undoSummary(scene.model) == added; },
++               "double-click-remove undo did not restore the added note");
++    scene.undo();
++    awaitState([&] { return undoSummary(scene.model) == fixture; },
++               "double-click-add undo did not restore the exact fixture");
++    scene.redo();
++    awaitState([&] { return undoSummary(scene.model) == added; },
++               "double-click-add redo did not restore the added note");
++    scene.redo();
++    awaitState([&] { return undoSummary(scene.model) == removed; },
++               "double-click-remove redo did not restore the removed state");
++    pass("undo-doubleclick-add-and-remove");
++}
++
++void verifyPitchCurveRow(const UndoScene &scene)
++{
++    scene.reset();
++    scene.click(scene.expectedBox(0, 18, 60).center());
++    require(undoSelectedCount(scene.model) == 1, "click did not select one note for the popup");
++    QTest::keyClick(scene.window, Qt::Key_G);
++    awaitState(
++        [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
++        "G did not open a functional pitch popup");
++    auto *graph = scene.item("pitchBendGraph");
++    const QRectF plot = graph->property("canvasRect").toRectF();
++    require(plot.width() > 0 && plot.height() > 0, "pitch graph has no native canvas geometry");
++    const QRectF curveRegion = graph->mapRectToScene(plot).adjusted(6, 6, -6, -6);
++    const QRectF upperCurve(curveRegion.x(), curveRegion.y(), curveRegion.width(),
++                            curveRegion.height() / 3);
++    const int preCount = undoColorCount(scene.window->grabWindow(), upperCurve, qRgb(205, 84, 84));
++    const QPoint low = graph
++                           ->mapToScene(QPointF(plot.x() + (plot.width() - 1) * 2 / 18,
++                                                plot.y() + (plot.height() - 1) * 0.8))
++                           .toPoint();
++    const QPoint high = graph
++                            ->mapToScene(QPointF(plot.x() + (plot.width() - 1) * 16 / 18,
++                                                 plot.y() + (plot.height() - 1) * 0.2))
++                            .toPoint();
++    QTest::mousePress(scene.window, Qt::LeftButton, Qt::ShiftModifier, low);
++    QTest::mouseMove(scene.window, high);
++    QTest::mouseRelease(scene.window, Qt::LeftButton, Qt::ShiftModifier, high);
++    QTest::qWait(40ms);
++    require(undoColorCount(scene.window->grabWindow(), upperCurve, qRgb(205, 84, 84)) > 5,
++            "pitch gesture did not change the committed curve");
++    QTest::keyClick(scene.window, Qt::Key_Escape);
++    awaitState([&] { return !scene.window->property("pitchBridge").value<QObject *>(); },
++               "Escape did not dismiss the pitch popup");
++    require(scene.revision() == 1 && scene.canUndo(),
++            "pitch commit did not push exactly one controller command");
++    QTest::keyClick(scene.window, Qt::Key_G);
++    awaitState(
++        [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
++        "pitch popup did not reopen");
++    QTest::qWait(40ms);
++    require(undoColorCount(scene.window->grabWindow(), upperCurve, qRgb(205, 84, 84)) > 5,
++            "edited pitch curve did not survive popup close and reopen");
++    QTest::keyClick(scene.window, Qt::Key_Escape);
++    awaitState([&] { return !scene.window->property("pitchBridge").value<QObject *>(); },
++               "Escape did not dismiss the reopened pitch popup");
++    scene.undo();
++    require(scene.canRedo() && !scene.canUndo(), "pitch undo left canUndo/canRedo inconsistent");
++    QTest::keyClick(scene.window, Qt::Key_G);
++    awaitState(
++        [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
++        "pitch popup did not reopen after undo");
++    QTest::qWait(40ms);
++    require(undoColorCount(scene.window->grabWindow(), upperCurve, qRgb(205, 84, 84)) == preCount,
++            "pitch undo did not restore the pre-commit curve on reopen");
++    QTest::keyClick(scene.window, Qt::Key_Escape);
++    awaitState([&] { return !scene.window->property("pitchBridge").value<QObject *>(); },
++               "Escape did not dismiss the pitch popup after undo");
++    pass("undo-pitch-curve-commit");
++}
++
++void verifyNoCommandRow(const UndoScene &scene)
++{
++    scene.reset();
++    scene.click(scene.point(98, 100));
++    require(scene.model->property("editCursorTick").toInt() == 96,
++            "empty click did not snap its edit cursor");
++    scene.click(scene.expectedBox(0, 18, 60).center());
++    require(undoSelectedCount(scene.model) == 1, "click did not select one note");
++    require(undoNotes(scene.model).size() == 30, "cursor and selection changed the note count");
++    require(!scene.canUndo() && !scene.canRedo() && scene.revision() == 0,
++            "cursor and selection pushed an undo command");
++    pass("undo-no-command-for-cursor-and-selection");
++}
++
++void verifyResetRow(const UndoScene &scene)
++{
++    scene.reset();
++    const QString fixture = undoSummary(scene.model);
++    const QJsonArray before = undoNotes(scene.model);
++    scene.press(scene.point(168, 100));
++    scene.move(scene.point(146, 102));
++    scene.release(scene.point(146, 102));
++    awaitState([&] { return undoNotes(scene.model).size() == before.size() + 1; },
++               "draw did not commit exactly one note");
++    require(scene.canUndo() && scene.revision() == 1, "draw commit did not push one command");
++    scene.reset();
++    require(!scene.canUndo() && !scene.canRedo() && scene.revision() == 0,
++            "reset did not clear undo history");
++    require(undoNotes(scene.model).size() == 30, "reset did not restore the fixture count");
++    require(undoSummary(scene.model) == fixture, "reset did not restore the exact fixture");
++    scene.undo();
++    require(undoNotes(scene.model).size() == 30 && scene.revision() == 0,
++            "undo after reset is not inert");
++    pass("undo-reset-clears-history");
++}
++
++QString cancelStatus(const UndoScene &scene)
++{
++    return scene.model->property("statusText").toString();
++}
++
++bool cancelIdle(const UndoScene &scene)
++{
++    return cancelStatus(scene).contains(QStringLiteral("notes,"));
++}
++
++void verifyCancelUngrabRow(const UndoScene &scene)
++{
++    scene.reset();
++    const QRectF firstBox = scene.expectedBox(0, 18, 60);
++    const QPointF moved = firstBox.center() + QPointF(scene.beatWidth * 6 / 24, -scene.rowHeight);
++    scene.press(firstBox.center());
++    const QString pressed = undoSummary(scene.model);
++    require(scene.revision() == 0, "press committed before the ungrab cancel");
++    scene.move(moved);
++    require(cancelStatus(scene).startsWith(QStringLiteral("Moving")),
++            "move did not preview before the ungrab cancel");
++    QQuickItem *grabber = scene.window->mouseGrabberItem();
++    require(grabber, "pressed QML input item has no native mouse grab");
++    grabber->ungrabMouse();
++    awaitState([&] { return scene.model->property("activeNoteId").toInt() == -1; },
++               "native mouse ungrab did not cancel the move gesture");
++    QTest::mouseRelease(scene.window, Qt::LeftButton, Qt::NoModifier, scene.windowPoint(moved));
++    QTest::qWait(30ms);
++    require(undoSummary(scene.model) == pressed,
++            "ungrab cancel moved notes or changed the selection");
++    require(cancelIdle(scene), "ungrab cancel left a live gesture");
++    require(scene.revision() == 0 && !scene.canUndo(), "ungrab cancel pushed an undo command");
++    pass("cancel-ungrab-discards-move-preview");
++}
++
++void verifyCancelFocusLostRow(const UndoScene &scene)
++{
++    scene.reset();
++    const QRectF firstBox = scene.expectedBox(0, 18, 60);
++    const QPointF moved = firstBox.center() + QPointF(scene.beatWidth * 6 / 24, -scene.rowHeight);
++    scene.press(firstBox.center());
++    const QString pressed = undoSummary(scene.model);
++    QQuickItem *input = scene.item("pianoGridInput");
++    require(input && input->hasActiveFocus(),
++            "grid input did not hold active focus during the drag");
++    scene.move(moved);
++    require(cancelStatus(scene).startsWith(QStringLiteral("Moving")),
++            "move did not preview before the focus steal");
++    QQuickItem *stop = scene.item("transportStop");
++    require(stop, "missing transport stop for the focus steal");
++    stop->forceActiveFocus();
++    QTest::qWait(50ms);
++    require(cancelStatus(scene).startsWith(QStringLiteral("Moving")),
++            "focus loss tore down a live gesture instead of surviving");
++    require(scene.model->property("activeNoteId").toInt() == 1,
++            "focus loss dropped the active note");
++    const QPointF further = moved + QPointF(scene.beatWidth * 6 / 24, 0);
++    scene.move(further);
++    scene.release(further);
++    awaitState(
++        [&] {
++            const QJsonObject value = scene.note(1);
++            return value.value("tick").toInt(-1) == 12 && value.value("pitch").toInt(-1) == 61;
++        },
++        "move after focus loss did not commit");
++    require(scene.revision() == 1, "post-focus-loss commit did not push exactly one command");
++    scene.undo();
++    awaitState([&] { return undoSummary(scene.model) == pressed; },
++               "undo did not restore the pre-move state after focus loss");
++    input->forceActiveFocus();
++    QTest::qWait(30ms);
++    pass("cancel-focuslost-keeps-live-gesture");
++}
++
++void verifyCancelHiddenRow(const UndoScene &scene)
++{
++    scene.reset();
++    const QString fixture = undoSummary(scene.model);
++    scene.reveal(scene.expectedBox(0, 18, 60).center());
++    QTest::mouseMove(scene.window, scene.windowPoint(scene.expectedBox(0, 18, 60).center()));
++    QTest::qWait(30ms);
++    require(scene.model->property("cursorKind").toInt() == 1,
++            "note hover did not arm the move cursor before the hidden cancel");
++    scene.reveal(scene.point(24, 60));
++    const QPoint gutterTarget(qRound(scene.model->property("keyboardWidth").toDouble() / 2),
++                              scene.windowPoint(scene.point(24, 60)).y());
++    QTest::mouseMove(scene.window, gutterTarget);
++    awaitState([&] { return scene.model->property("hoverKey").toInt() >= 0; },
++               "keyboard hover did not arm before the hidden cancel");
++    scene.press(scene.point(168, 100));
++    scene.move(scene.point(146, 102));
++    require(cancelStatus(scene).startsWith(QStringLiteral("Drawing")),
++            "draw did not preview before the hidden cancel");
++    require(namedItem(scene.surface, QStringLiteral("drawPreview")),
++            "draw preview item is missing before the hidden cancel");
++    require(scene.revision() == 0, "draw preview committed before the hidden cancel");
++    require(scene.surface->setProperty("visible", false), "cannot hide the grid surface");
++    require(!scene.surface->isVisible(), "surface hide did not report !isVisible");
++    awaitState([&] { return !namedItem(scene.surface, QStringLiteral("drawPreview")); },
++               "hidden cancel left the draw preview");
++    require(cancelIdle(scene), "hidden cancel left a live gesture");
++    require(scene.model->property("hoverKey").toInt() == -1,
++            "hidden cancel did not clear keyboard hover");
++    require(scene.model->property("cursorKind").toInt() == 0,
++            "hidden cancel did not reset the cursor");
++    require(undoSummary(scene.model) == fixture, "hidden cancel mutated notes or selection");
++    require(scene.revision() == 0 && !scene.canUndo(), "hidden cancel pushed an undo command");
++    require(scene.surface->setProperty("visible", true), "cannot restore the grid surface");
++    QTest::qWait(50ms);
++    scene.release(scene.point(146, 102));
++    require(undoSummary(scene.model) == fixture && scene.revision() == 0,
++            "post-teardown release committed after the hidden cancel");
++    // Window-level Hidden proof (spec S3.2: window hide() plus
++    // onVisibleChanged is Hidden, reason 2 — not WindowDeactivated). The
++    // native Hide entry carries reason 3 with identical teardown, so
++    // whichever entry runs first owns the cancel and the other no-ops.
++    scene.reset();
++    scene.press(scene.point(168, 100));
++    scene.move(scene.point(146, 102));
++    require(cancelStatus(scene).startsWith(QStringLiteral("Drawing")),
++            "draw did not preview before window hide");
++    scene.window->hide();
++    awaitState([&] { return !namedItem(scene.surface, QStringLiteral("drawPreview")); },
++               "window hide left the draw preview");
++    require(cancelIdle(scene), "window hide left a live gesture");
++    require(!scene.window->isVisible(), "window hide left the window visible");
++    require(undoSummary(scene.model) == fixture, "window hide mutated notes or selection");
++    require(scene.revision() == 0 && !scene.canUndo(), "window hide pushed an undo command");
++    scene.window->show();
++    awaitState([&] { return scene.window->isVisible(); },
++               "window did not reshow after the hide cancel");
++    QTest::qWait(50ms);
++    scene.release(scene.point(146, 102));
++    require(undoSummary(scene.model) == fixture && scene.revision() == 0,
++            "post-teardown release committed after window hide");
++    // Editor-open coverage (spec S6.2: pitch preview discarded when the
++    // editor is open). The modal popup precludes a live grid gesture, so
++    // this phase selects, opens the editor with G, and hides the grid:
++    // notes and revision must be untouched, the popup session must
++    // survive, and dismissal must commit no controller command.
++    scene.reset();
++    scene.click(scene.expectedBox(0, 18, 60).center());
++    require(undoSelectedCount(scene.model) == 1, "click did not select one note for the editor");
++    const QString selected = undoSummary(scene.model);
++    QTest::keyClick(scene.window, Qt::Key_G);
++    awaitState(
++        [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
++        "G did not open the pitch popup before the hidden cancel");
++    require(scene.window->property("pitchBridge").value<QObject *>() != nullptr,
++            "pitch editor is missing at the hidden cancel");
++    require(scene.surface->setProperty("visible", false),
++            "cannot hide the grid surface with editor open");
++    QTest::qWait(50ms);
++    require(undoSummary(scene.model) == selected, "hidden cancel mutated notes with editor open");
++    require(scene.revision() == 0 && !scene.canUndo(),
++            "hidden cancel pushed a command with editor open");
++    require(scene.window->property("pitchBridge").value<QObject *>() != nullptr,
++            "hidden cancel tore down the pitch popup");
++    require(scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(),
++            "hidden cancel hid the pitch popup");
++    require(scene.surface->setProperty("visible", true), "cannot restore the grid surface");
++    QTest::qWait(50ms);
++    QTest::keyClick(scene.window, Qt::Key_Escape);
++    awaitState([&] { return !scene.window->property("pitchBridge").value<QObject *>(); },
++               "Escape did not dismiss the pitch popup after the hidden cancel");
++    require(scene.revision() == 0 && !scene.canUndo(),
++            "hidden cancel with editor open fabricated a controller command");
++    pass("cancel-hidden-tears-down-and-clears-hover");
++}
++
++void verifyCancelWindowDeactivatedRow(const UndoScene &scene)
++{
++    scene.reset();
++    const QString fixture = undoSummary(scene.model);
++    scene.reveal(scene.expectedBox(0, 18, 60).center());
++    QTest::mouseMove(scene.window, scene.windowPoint(scene.expectedBox(0, 18, 60).center()));
++    QTest::qWait(30ms);
++    require(scene.model->property("cursorKind").toInt() == 1,
++            "note hover did not arm the move cursor before window deactivate");
++    scene.reveal(scene.point(24, 60));
++    const QPoint gutterTarget(qRound(scene.model->property("keyboardWidth").toDouble() / 2),
++                              scene.windowPoint(scene.point(24, 60)).y());
++    QTest::mouseMove(scene.window, gutterTarget);
++    awaitState([&] { return scene.model->property("hoverKey").toInt() >= 0; },
++               "keyboard hover did not arm before window deactivate");
++    scene.press(scene.point(168, 100));
++    scene.move(scene.point(146, 102));
++    require(cancelStatus(scene).startsWith(QStringLiteral("Drawing")),
++            "draw did not preview before window deactivate");
++    // Production WindowDeactivate entry (spec S5.2): the native window
++    // eventFilter delivers reason 3 once. A synthesized deactivate flips
++    // neither isActive nor visible, so no QML wire can observe it — the
++    // smoke sends a real QEvent::WindowDeactivate (production
++    // sendWindowDeactivate). The window stays visible throughout: Hidden
++    // ends !isVisible, WindowDeactivate ends isVisible.
++    QEvent deactivate(QEvent::WindowDeactivate);
++    QCoreApplication::sendEvent(scene.window, &deactivate);
++    awaitState([&] { return !namedItem(scene.surface, QStringLiteral("drawPreview")); },
++               "window deactivate left the draw preview");
++    require(cancelIdle(scene), "window deactivate left a live gesture");
++    require(scene.model->property("hoverKey").toInt() == -1,
++            "window deactivate did not clear keyboard hover");
++    require(scene.model->property("cursorKind").toInt() == 0,
++            "window deactivate did not reset the cursor");
++    require(undoSummary(scene.model) == fixture, "window deactivate mutated notes or selection");
++    require(scene.revision() == 0 && !scene.canUndo(), "window deactivate pushed an undo command");
++    require(scene.window->isVisible(), "window deactivate hid the window");
++    scene.release(scene.point(146, 102));
++    require(undoSummary(scene.model) == fixture && scene.revision() == 0,
++            "post-teardown release committed after window deactivate");
++    // Host arbitration: with the pitch popup open and no grid gesture, the
++    // same window event must leave the popup session alone.
++    scene.reset();
++    scene.click(scene.expectedBox(0, 18, 60).center());
++    require(undoSelectedCount(scene.model) == 1, "click did not select one note for the popup");
++    QTest::keyClick(scene.window, Qt::Key_G);
++    awaitState(
++        [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
++        "G did not open the pitch popup before window deactivate");
++    QEvent popupDeactivate(QEvent::WindowDeactivate);
++    QCoreApplication::sendEvent(scene.window, &popupDeactivate);
++    QTest::qWait(50ms);
++    require(scene.window->property("pitchBridge").value<QObject *>() != nullptr,
++            "window deactivate tore down the pitch popup");
++    require(scene.revision() == 0, "window deactivate pushed a command with no grid gesture");
++    require(scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(),
++            "window deactivate hid the pitch popup");
++    scene.item("pitchBendGraph")->forceActiveFocus();
++    QTest::keyClick(scene.window, Qt::Key_Escape);
++    awaitState([&] { return !scene.window->property("pitchBridge").value<QObject *>(); },
++               "Escape did not dismiss the pitch popup after window deactivate");
++    pass("cancel-window-deactivated-matches-hidden");
++}
++
++void verifyCancelRightUngrabRow(const UndoScene &scene)
++{
++    scene.reset();
++    const QString fixture = undoSummary(scene.model);
++    const QRectF band = sceneRect(scene.item("gridNote_1"))
++                            .united(sceneRect(scene.item("gridNote_2")))
++                            .adjusted(-6, -6, 6, 6);
++    const QPoint start = band.topLeft().toPoint();
++    const QPoint end = band.bottomRight().toPoint();
++    QTest::mousePress(scene.window, Qt::RightButton, Qt::NoModifier, start);
++    QTest::mouseMove(scene.window, end);
++    awaitState([&] { return undoSelectedCount(scene.model) == 2; },
++               "right-drag did not select two notes before the ungrab cancel");
++    QQuickItem *grabber = scene.window->mouseGrabberItem();
++    require(grabber, "right-drag did not acquire the native mouse grab");
++    grabber->ungrabMouse();
++    awaitState([&] { return undoSelectedCount(scene.model) == 0; },
++               "right ungrab did not restore the captured selection");
++    QTest::mouseRelease(scene.window, Qt::RightButton, Qt::NoModifier, end);
++    QTest::qWait(30ms);
++    require(undoSummary(scene.model) == fixture,
++            "right ungrab did not restore the exact pre-press selection");
++    require(cancelIdle(scene), "right ungrab left a live gesture");
++    require(scene.revision() == 0 && !scene.canUndo(), "right ungrab pushed an undo command");
++    pass("cancel-right-ungrab-restores-captured-selection");
++}
++} // namespace
++
++void verifyGridUndo(QQuickWindow *window, QObject *model)
++{
++    UndoScene scene{window, nullptr, nullptr, model};
++    scene.surface = namedItem(window->contentItem(), QStringLiteral("pianoGridSurface"));
++    scene.viewport = namedItem(window->contentItem(), QStringLiteral("pianoGridViewport"));
++    require(scene.surface && scene.viewport, "grid scene is missing for the undo smoke");
++    scene.baseFont = model->property("baseFontPx").toDouble();
++    scene.dpr = model->property("devicePixelRatio").toDouble();
++    scene.beatWidth = model->property("beatWidth").toDouble();
++    scene.rowHeight = model->property("rowHeight").toDouble();
++    scene.leadPad = model->property("leadPadWidth").toDouble();
++    scene.ticksPerBeat = model->property("ticksPerBeat").toInt();
++    require(scene.baseFont > 0 && scene.dpr > 0 && scene.beatWidth > 0 && scene.rowHeight > 0 &&
++                scene.leadPad >= 48 && scene.ticksPerBeat == 24,
++            "grid metrics do not match the production 24 TPQN projection");
++
++    verifyDrawRow(scene);
++    verifyMoveRow(scene);
++    verifyResizeRow(scene);
++    verifyMenuDeleteRow(scene);
++    verifyDoubleClickRow(scene);
++    verifyPitchCurveRow(scene);
++    verifyNoCommandRow(scene);
++    verifyResetRow(scene);
++}
++
++void verifyGridCancel(QQuickWindow *window, QObject *model)
++{
++    UndoScene scene{window, nullptr, nullptr, model};
++    scene.surface = namedItem(window->contentItem(), QStringLiteral("pianoGridSurface"));
++    scene.viewport = namedItem(window->contentItem(), QStringLiteral("pianoGridViewport"));
++    require(scene.surface && scene.viewport, "grid scene is missing for the cancel smoke");
++    scene.baseFont = model->property("baseFontPx").toDouble();
++    scene.dpr = model->property("devicePixelRatio").toDouble();
++    scene.beatWidth = model->property("beatWidth").toDouble();
++    scene.rowHeight = model->property("rowHeight").toDouble();
++    scene.leadPad = model->property("leadPadWidth").toDouble();
++    scene.ticksPerBeat = model->property("ticksPerBeat").toInt();
++    require(scene.baseFont > 0 && scene.dpr > 0 && scene.beatWidth > 0 && scene.rowHeight > 0 &&
++                scene.leadPad >= 48 && scene.ticksPerBeat == 24,
++            "grid metrics do not match the production 24 TPQN projection");
++
++    verifyCancelUngrabRow(scene);
++    verifyCancelFocusLostRow(scene);
++    verifyCancelHiddenRow(scene);
++    verifyCancelWindowDeactivatedRow(scene);
++    verifyCancelRightUngrabRow(scene);
++}
+diff --git a/src/checks/swiftgridprototype/grid_smoke.h b/src/checks/swiftgridprototype/grid_smoke.h
+index e3e8f429..0fbf15c8 100644
+--- a/src/checks/swiftgridprototype/grid_smoke.h
++++ b/src/checks/swiftgridprototype/grid_smoke.h
+@@ -5,11 +5,13 @@ extern "C" {
+ #endif
+ 
+ void installGridSmoke(void);
+ 
+ #ifdef __cplusplus
+ }
+ void verifyGridAudio();
+ class QObject;
+ class QQuickWindow;
+ void verifyGridInteractions(QQuickWindow *window, QObject *model);
++void verifyGridUndo(QQuickWindow *window, QObject *model);
++void verifyGridCancel(QQuickWindow *window, QObject *model);
+ #endif
+diff --git a/src/checks/swiftgridprototype/grid_smoke.cpp b/src/checks/swiftgridprototype/grid_smoke.cpp
+index e01c8892..525ca9bc 100644
+--- a/src/checks/swiftgridprototype/grid_smoke.cpp
++++ b/src/checks/swiftgridprototype/grid_smoke.cpp
+@@ -628,20 +628,22 @@ void exercise(Scene scene)
+         std::fprintf(
+             stderr, "hover target=%d chipCenter=%g visible=%d key=%d scroll=%g grabber=%s\n",
+             hoverTarget.y(), chip ? chip->mapToScene(QPointF(0, chip->height() / 2)).y() : -1,
+             chip && chip->isVisible(), scene.model->property("hoverKey").toInt(),
+             scene.viewport->property("contentY").toDouble(),
+             grabber ? grabber->metaObject()->className() : "none");
+     }
+     require(hoverAligned, "scrolled keyboard hover chip is not beside the hovered row");
+     pass("scrolled-keyboard-hover-chip");
+     verifyGridInteractions(scene.window, scene.model);
++    verifyGridUndo(scene.window, scene.model);
++    verifyGridCancel(scene.window, scene.model);
+ 
+     std::puts("SWIFT_GRID_SMOKE PASS");
+     std::fflush(stdout);
+     QCoreApplication::exit(EXIT_SUCCESS);
+ }
+ 
+ void startSmoke()
+ {
+     auto *app = QCoreApplication::instance();
+     require(app, "pre-routine ran without application");
