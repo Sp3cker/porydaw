@@ -914,19 +914,18 @@ void verifyEscapeNoteMenuRow(const UndoScene &scene)
 
 void verifyEscapeIdleRow(const UndoScene &scene)
 {
-    // Arbiter decision through the model API (spec D1). Grid-surface
-    // Escape delivery is the gesture-row wiring; idle keyClick needs
-    // focus restoration the sandbox must not grow.
+    // The preceding pointer click gives the grid its production-equivalent
+    // input focus, so this row exercises real key delivery through QML.
     scene.reset();
     scene.click(scene.expectedBox(0, 18, 60).center());
     require(undoSelectedCount(scene.model) == 1, "click did not select one note");
     const int rev = scene.revision();
-    int action = -1;
-    require(QMetaObject::invokeMethod(scene.model, "escapePressed", Qt::DirectConnection,
-                                      Q_RETURN_ARG(int, action), Q_ARG(bool, false)),
-            "cannot invoke escapePressed");
-    require(action == 4, "idle escapePressed did not return clearSelection");
-    require(undoSelectedCount(scene.model) == 0, "idle Escape did not clear the selection");
+    QQuickItem *input = scene.item("pianoGridInput");
+    require(input && input->hasActiveFocus(),
+            "grid input did not hold active focus for idle Escape");
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+    awaitState([&] { return undoSelectedCount(scene.model) == 0; },
+               "idle Escape did not clear the selection through the grid input");
     require(scene.revision() == rev && !scene.canUndo(), "idle Escape pushed an undo command");
     pass("escape-idle-clears-selection");
 }

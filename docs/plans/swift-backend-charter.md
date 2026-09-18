@@ -8,18 +8,54 @@ disagree, the charter wins and the spec is a defect. Successor wave specs
 ## Prime directive
 
 This is not a prototype. The Swift backend track converts production
-surfaces. Every seam, rule, and check is designed as it will ship:
+surfaces. Production implementations and interfaces are designed to stay:
 
 - No temporary workarounds. A workaround here means what it means in
   AGENTS.md: stop, name the root cause, recommend the root-cause fix, and
   request approval. Accommodating a broken invariant with a guard or
   fallback is not an option.
-- No "transitional" implementations scheduled for rework at cutover. If a
-  design cannot survive cutover unchanged, it is the wrong design now.
+- No "transitional" production implementations scheduled for rework at
+  cutover. If a production design cannot survive cutover unchanged, it is
+  the wrong design now. The enumerated migration verification and mount
+  machinery below is not a license for temporary production implementations.
 - No parallel implementations kept "until later." Widget twins inside the
-  song tab are cut over and deleted, not maintained beside their successors.
+  song tab are cut over and deleted at their named retirement gate, not
+  maintained beside their successors indefinitely.
 - Production focus applies to checks too: a check that only passes in the
   sandbox proves nothing about production.
+
+## Compatibility and retirement decision (2026-09-18)
+
+Required user behavior and explicitly permanent host interfaces create
+compatibility obligations; migration-only machinery creates **none**.
+Demo APIs, fixture loaders, sandbox checks, and parity adapters are not
+public contracts merely because code or tests call them. Preserve the
+behavior they help prove, not their implementation shape or entry points.
+INV-3's root host window/focus/input boundary remains permanent, as do
+INV-1 and INV-2's single keymap and arbitration authority.
+
+The table is the authoritative, exhaustive permission for migration-only
+verification and mount machinery. Each row has a removal gate, not an
+open-ended exception to the prime directive. Production grid logic, value
+feeds, and host integration must still be built to stay; being introduced
+during migration does not make them disposable. Reaching a gate requires
+evidence on the replacement surface, not a changed plan status.
+
+| Migration-only machinery | Read-only production mount obligation | Removal gate |
+| --- | --- | --- |
+| Standalone demo entry point and demo fixture setup | Exclude the standalone app entry point and selftest drivers from the production library. Production content comes from the real document feed, not demo fixture initialization. Keep the standalone lane and fixtures still required by this wave's acceptance. | Remove the standalone lane and demo-only fixture hooks when production acceptance exercises all required behavior they still verify, including editable behavior. Delete a fixture only when no retained acceptance check needs it; production regression fixtures are not disposable merely because the demo also used them. |
+| Duplicate local undo (`GridUndo` in the demo) | Read-only production mode records no local edits or undo entries. Keep demo undo for still-required editable sandbox acceptance; it is not a second production undo authority. | At editable cutover, connect Swift edits to the authoritative document undo path and prove production mutation/undo/redo behavior before deleting duplicate local undo and its demo callers in the same cutover. This does not authorize a rewrite of production undo in the read-only wave. |
+| Rollout flag, read-only overlay mounting, and old C++ rendering path | Keep the flag and flag-off renderer while the opt-in mount is read-only. Use the shared production grid implementation, not a separate temporary grid implementation. | At default editable cutover, production rendering, editing, focus/key arbitration, cancellation, and undo acceptance must pass on Swift-backed surfaces. Then remove the rollout flag, overlay-only mounting/absorption machinery, and replaced C++ rendering path atomically; preserve normal production mounting and the permanent host boundary. Windows deferral cannot extend this gate. |
+| Duplicate sandbox behavioral checks | Retain rows still required by prototype regression; a read-only mount cannot replace editable, keyboard, menu, or cancellation acceptance. | Delete each `cutover-disposable` row when its required behavior is covered and passing on the actual production replacement surface. Retire the duplicate harness when its last such row retires; never keep a parallel behavioral acceptance suite after cutover. |
+| Callable parity adapters and dual-run oracle plumbing | Keep adapters needed by live parity sweeps. Distinguish oracle/test adapters from production seams even when colocated or sharing a prefix. | At the corresponding oracle implementation's cutover, pass the final dual-run sweep and replacement production acceptance, then remove oracle-only adapters and sweep plumbing with the retired oracle. Retain needed independent numeric regression coverage without a duplicate production implementation. Production value feeds and permanent host input/cancel interfaces do not retire with test adapters. |
+
+These gates permit verification scaffolding and staged mounting, not
+workarounds, backward-compatibility shims, or production code written to be
+replaced later. A gate not reached means its acceptance machinery remains
+necessary, not that its API becomes permanent. The current C++ document
+and undo ownership is the production authority for these waves, not a
+decision that the current document seam must exist forever; any later
+ownership change requires its own explicit contract and acceptance gate.
 
 ## The three migration invariants
 
@@ -80,6 +116,8 @@ staleness is guarded by document identity plus revision (the
 mutates musical state through the Swift seam produces an undoable document
 edit on the C++ side. In-place mutation with "undo later" is forbidden;
 non-undoable edits fail cutover regardless of raster parity.
+This preserves the current production document/undo authority; it does not
+freeze that authority's implementation language or seam for all future waves.
 
 **S-4 — The four cancel reasons are contract.** `FocusLost`,
 `PointerUngrabbed`, `Hidden`, `WindowDeactivate` arrive as distinct named
@@ -95,12 +133,16 @@ production check carries a live dual-run sweep counterpart against the
 production oracle (the `sgm_*` pattern), or a written justification of why
 the value is not callable. Frozen literals name their source check in
 brackets; a sweep mismatch names both sides loudly.
+This dual-run obligation lasts until the corresponding oracle retirement
+gate in the retirement table is satisfied.
 
 ## Verification rules
 
 **V-1 — Checks are the contract; implementations swap beneath them.** At
 cutover, production suites run unmodified against Swift-backed surfaces.
 That run is the acceptance gate — not a port of the suites.
+The compatibility obligation is required observable behavior, not demo
+entry points or migration-only test APIs.
 
 **V-2 — Copied checks verify nothing but their copy.** Production checks are
 never rewritten against sandbox surfaces as acceptance evidence. Parity for
@@ -108,9 +150,10 @@ callable values is proven by dual-run sweeps; behavior parity is proven by
 the production suites at cutover.
 
 **V-3 — Sandbox scenarios are cutover-disposable.** Smoke scenarios that
-mirror production behavior (key priority, menu behavior, transport) exist
-only until the real surfaces exist, are tagged `cutover-disposable`, and are
-deleted at cutover. A permanent parallel suite is a defect.
+mirror production behavior (key priority, menu behavior, transport) are
+tagged `cutover-disposable` and retire at the table's behavioral-coverage
+gate. Merely mounting a read-only production surface does not satisfy it.
+A permanent parallel suite is a defect.
 
 ## End-state architecture (decided)
 

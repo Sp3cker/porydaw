@@ -588,6 +588,7 @@ ApplicationWindow {
                             onPressed: function (mouse) {
                                 if (mouse.wasHeld)
                                     return;
+                                inputArea.forceActiveFocus(Qt.MouseFocusReason);
                                 if (mouse.button === Qt.RightButton) {
                                     rightHeld = true;
                                     root.gridModel.beginRightPointer(mouse.x, mouse.y, Qt.styleHints.startDragDistance);
