@@ -1,0 +1,155 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 684,
+        "width": 1104
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 23,
+            "name": "shell.status-bar",
+            "w": 1104,
+            "x": 0,
+            "y": 661
+        },
+        {
+            "h": 622,
+            "name": "shell.tabs",
+            "w": 834,
+            "x": 270,
+            "y": 39
+        },
+        {
+            "h": 26,
+            "name": "songListCategory",
+            "w": 139,
+            "x": 4,
+            "y": 101
+        },
+        {
+            "h": 27,
+            "name": "songListSearch",
+            "w": 256,
+            "x": 4,
+            "y": 70
+        },
+        {
+            "h": 26,
+            "name": "songListSort",
+            "w": 113,
+            "x": 147,
+            "y": 101
+        },
+        {
+            "h": 326,
+            "name": "songsDock",
+            "w": 264,
+            "x": 0,
+            "y": 39
+        },
+        {
+            "h": 27,
+            "name": "songsDock.title",
+            "w": 264,
+            "x": 0,
+            "y": 39
+        },
+        {
+            "h": 30,
+            "name": "transportMasterVolume",
+            "w": 111,
+            "x": 971,
+            "y": 4
+        },
+        {
+            "h": 35,
+            "name": "transportMasterVolumeCaption",
+            "w": 72,
+            "x": 898,
+            "y": 2
+        },
+        {
+            "h": 27,
+            "name": "transportScaleFold",
+            "w": 54,
+            "x": 795,
+            "y": 6
+        },
+        {
+            "h": 33,
+            "name": "transportScaleHighlight",
+            "w": 33,
+            "x": 761,
+            "y": 3
+        },
+        {
+            "h": 26,
+            "name": "transportScaleRoot",
+            "w": 71,
+            "x": 458,
+            "y": 6
+        },
+        {
+            "h": 26,
+            "name": "transportScaleType",
+            "w": 230,
+            "x": 530,
+            "y": 6
+        },
+        {
+            "h": 35,
+            "name": "transportTimeLabel",
+            "w": 217,
+            "x": 240,
+            "y": 2
+        },
+        {
+            "h": 39,
+            "name": "transportToolbar",
+            "w": 1104,
+            "x": 0,
+            "y": 0
+        },
+        {
+            "h": 35,
+            "name": "transportVolumeSpacer",
+            "w": 40,
+            "x": 850,
+            "y": 2
+        },
+        {
+            "h": 26,
+            "name": "vgArgCombo",
+            "w": 160,
+            "x": 100,
+            "y": 400
+        },
+        {
+            "h": 290,
+            "name": "voicegroupDock",
+            "w": 264,
+            "x": 0,
+            "y": 371
+        },
+        {
+            "h": 201,
+            "name": "voicegroupDock.position-indicator",
+            "w": 8,
+            "x": 255,
+            "y": 429
+        },
+        {
+            "h": 27,
+            "name": "voicegroupDock.title",
+            "w": 264,
+            "x": 0,
+            "y": 371
+        }
+    ]
+}

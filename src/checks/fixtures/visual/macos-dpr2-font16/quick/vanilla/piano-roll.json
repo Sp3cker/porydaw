@@ -1,0 +1,57 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 800,
+        "width": 1280
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 558,
+            "name": "piano-roll.band",
+            "w": 992,
+            "x": 280,
+            "y": 30
+        },
+        {
+            "h": 558,
+            "name": "piano-roll.grid.rows",
+            "w": 923,
+            "x": 349,
+            "y": 30
+        },
+        {
+            "h": 558,
+            "name": "piano-roll.grid.time",
+            "w": 923,
+            "x": 349,
+            "y": 30
+        },
+        {
+            "h": 558,
+            "name": "piano-roll.note-fills",
+            "w": 923,
+            "x": 349,
+            "y": 30
+        },
+        {
+            "h": 558,
+            "name": "piano-roll.note-borders-selection",
+            "w": 923,
+            "x": 349,
+            "y": 30
+        },
+        {
+            "h": 558,
+            "name": "piano-roll.keyboard.keys",
+            "w": 69,
+            "x": 280,
+            "y": 30
+        }
+    ]
+}

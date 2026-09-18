@@ -830,6 +830,94 @@ const std::vector<CheckDefinition> &catalog()
                      return runThemeLayoutScaleCheck(application, args[1].toInt(), qtArgs);
                  },
              .startup = StartupKind::HandlerOwned},
+            {.name = "visual-chrome",
+             // frozen chrome appearance: exact named bounds and rendered colors against
+             // reviewed baselines at a 12px base font; the staged decomp project root
+             // reaches the runner via PORYDAW_VISUAL_PROJECT_ROOT
+             .argv = strings({"--visual-chrome", "{scratch}"}),
+             .handler =
+                 [](QApplication &application, const QStringList &args, const QStringList &qtArgs) {
+                     qputenv("PORYDAW_VISUAL_PROJECT_ROOT", args.value(1).toUtf8());
+                     return runVisualChromeCheck(application, qtArgs);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = decompProjectFiles + decompMidiFiles + voicegroupEditorFiles,
+             .environment = {{QStringLiteral("PORYDAW_VISUAL_FONT_PX"), QStringLiteral("12")}},
+             .startup = StartupKind::HandlerOwned,
+             .windowing = Windowing::WindowSystem},
+            {.name = "visual-chrome-16",
+             // same frozen chrome appearance at a 16px base font
+             .argv = strings({"--visual-chrome", "{scratch}"}),
+             .handler =
+                 [](QApplication &application, const QStringList &args, const QStringList &qtArgs) {
+                     qputenv("PORYDAW_VISUAL_PROJECT_ROOT", args.value(1).toUtf8());
+                     return runVisualChromeCheck(application, qtArgs);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = decompProjectFiles + decompMidiFiles + voicegroupEditorFiles,
+             .environment = {{QStringLiteral("PORYDAW_VISUAL_FONT_PX"), QStringLiteral("16")}},
+             .startup = StartupKind::HandlerOwned,
+             .windowing = Windowing::WindowSystem},
+            {.name = "visual-browsers",
+             // frozen browser appearance at a 12px base font; the staged decomp
+             // project root reaches the runner via PORYDAW_VISUAL_PROJECT_ROOT
+             .argv = strings({"--visual-browsers", "{scratch}"}),
+             .handler =
+                 [](QApplication &application, const QStringList &args, const QStringList &qtArgs) {
+                     qputenv("PORYDAW_VISUAL_PROJECT_ROOT", args.value(1).toUtf8());
+                     return runVisualBrowsersCheck(application, qtArgs);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = decompProjectFiles + decompMidiFiles + voicegroupEditorFiles,
+             .environment = {{QStringLiteral("PORYDAW_VISUAL_FONT_PX"), QStringLiteral("12")}},
+             .startup = StartupKind::HandlerOwned,
+             .windowing = Windowing::WindowSystem},
+            {.name = "visual-browsers-16",
+             // same frozen browser appearance at a 16px base font
+             .argv = strings({"--visual-browsers", "{scratch}"}),
+             .handler =
+                 [](QApplication &application, const QStringList &args, const QStringList &qtArgs) {
+                     qputenv("PORYDAW_VISUAL_PROJECT_ROOT", args.value(1).toUtf8());
+                     return runVisualBrowsersCheck(application, qtArgs);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = decompProjectFiles + decompMidiFiles + voicegroupEditorFiles,
+             .environment = {{QStringLiteral("PORYDAW_VISUAL_FONT_PX"), QStringLiteral("16")}},
+             .startup = StartupKind::HandlerOwned,
+             .windowing = Windowing::WindowSystem},
+            {.name = "visual-dialogs",
+             // frozen dialog appearance at a 12px base font
+             .argv = strings({"--visual-dialogs"}),
+             .handler = qtWithApplication<runVisualDialogsCheck>,
+             .environment = {{QStringLiteral("PORYDAW_VISUAL_FONT_PX"), QStringLiteral("12")}},
+             .startup = StartupKind::HandlerOwned,
+             .windowing = Windowing::WindowSystem},
+            {.name = "visual-dialogs-16",
+             // same frozen dialog appearance at a 16px base font
+             .argv = strings({"--visual-dialogs"}),
+             .handler = qtWithApplication<runVisualDialogsCheck>,
+             .environment = {{QStringLiteral("PORYDAW_VISUAL_FONT_PX"), QStringLiteral("16")}},
+             .startup = StartupKind::HandlerOwned,
+             .windowing = Windowing::WindowSystem},
+            {.name = "visual-quick",
+             // frozen Qt Quick surfaces: native QQuickWindow framebuffer against reviewed
+             // baselines at a 12px base font
+             .argv = strings({"--visual-quick"}),
+             .handler = qtWithApplication<runVisualQuickCheck>,
+             .environment = {{QStringLiteral("PORYDAW_VISUAL_FONT_PX"), QStringLiteral("12")}},
+             .startup = StartupKind::HandlerOwned,
+             .windowing = Windowing::WindowSystem},
+            {.name = "visual-quick-16",
+             // same frozen Qt Quick surfaces at a 16px base font
+             .argv = strings({"--visual-quick"}),
+             .handler = qtWithApplication<runVisualQuickCheck>,
+             .environment = {{QStringLiteral("PORYDAW_VISUAL_FONT_PX"), QStringLiteral("16")}},
+             .startup = StartupKind::HandlerOwned,
+             .windowing = Windowing::WindowSystem},
         };
     }();
     return definitions;

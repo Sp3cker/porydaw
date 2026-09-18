@@ -187,3 +187,11 @@ int runSelectionKeyWindowCheck(const QString &projectRoot, const QString &songA,
                                const QString &songB, const QStringList &qtArguments);
 int runSelectionKeyLocalInputCheck(const QString &projectRoot, const QString &songLabel,
                                    const QStringList &qtArguments);
+
+// Frozen visual baselines (src/checks/visual). Handler-owned startup: each
+// runner installs the canonical Fusion/bundled-font presentation itself via
+// checks::visual::prepare and must run in a dedicated process.
+int runVisualChromeCheck(QApplication &application, const QStringList &qtArguments);
+int runVisualBrowsersCheck(QApplication &application, const QStringList &qtArguments);
+int runVisualDialogsCheck(QApplication &application, const QStringList &qtArguments);
+int runVisualQuickCheck(QApplication &application, const QStringList &qtArguments);

@@ -1,0 +1,99 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 1,
+        "height": 132,
+        "width": 261
+    },
+    "profile": "macos-dpr1-font12",
+    "regions": [
+        {
+            "h": 16,
+            "name": "darkNeutralHighModeButton",
+            "w": 239,
+            "x": 11,
+            "y": 33
+        },
+        {
+            "h": 20,
+            "name": "gridLineContrastSlider",
+            "w": 84,
+            "x": 133,
+            "y": 77
+        },
+        {
+            "h": 16,
+            "name": "immaterialModeButton",
+            "w": 239,
+            "x": 11,
+            "y": 55
+        },
+        {
+            "h": 18,
+            "name": "themeApplyButton",
+            "w": 51,
+            "x": 142,
+            "y": 103
+        },
+        {
+            "h": 18,
+            "name": "themeCloseButton",
+            "w": 51,
+            "x": 199,
+            "y": 103
+        },
+        {
+            "h": 16,
+            "name": "vanillaModeButton",
+            "w": 239,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 16,
+            "name": "mode-vanilla",
+            "w": 239,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 16,
+            "name": "mode-dark",
+            "w": 239,
+            "x": 11,
+            "y": 33
+        },
+        {
+            "h": 16,
+            "name": "mode-immaterial",
+            "w": 239,
+            "x": 11,
+            "y": 55
+        },
+        {
+            "h": 20,
+            "name": "contrast-slider",
+            "w": 84,
+            "x": 133,
+            "y": 77
+        },
+        {
+            "h": 18,
+            "name": "apply",
+            "w": 51,
+            "x": 142,
+            "y": 103
+        },
+        {
+            "h": 18,
+            "name": "close",
+            "w": 51,
+            "x": 199,
+            "y": 103
+        }
+    ]
+}

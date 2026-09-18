@@ -1,0 +1,678 @@
+// Visual baselines for the modal dialog family: SettingsDialog (engine and
+// song tabs), ThemeDialog, SampleEditorDialog (waveform, handles, seam
+// region, splitter), Sf2ZonePicker (grouped rows), and NewSongWizard
+// (new-song and MIDI-import pages). Every scenario shows the real dialog in
+// the canonical check environment and compares the actual render against
+// frozen geometry + PNG baselines recorded from the unmodified UI
+// (PORYDAW_RECORD_VISUAL_BASELINES=1). Nothing here exec()s a modal loop,
+// opens a file dialog, or touches audio playback.
+
+#include "checks/visual/visualbaseline.h"
+
+#include <QApplication>
+#include <QCheckBox>
+#include <QDialogButtonBox>
+#include <QFormLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QSet>
+#include <QSettings>
+#include <QSplitter>
+#include <QTabBar>
+#include <QTabWidget>
+#include <QTemporaryDir>
+#include <QTreeWidget>
+#include <QWizard>
+#include <QWizardPage>
+#include <QtTest>
+
+#include "audio/sampleimport.h"
+#include "audio/sf2reader.h"
+#include "checks/samplecheck/samplecheck.h"
+#include "core/smf.h"
+#include "ui/newsongwizard.h"
+#include "ui/sampleeditordialog.h"
+#include "ui/settingsdialog.h"
+#include "ui/sf2zonepicker.h"
+#include "ui/theme/themecontroller.h"
+#include "ui/theme/themedialog.h"
+#include "ui/theme/themeresolver.h"
+#include "ui/theme/themeruntime.h"
+#include "ui/waveformview.h"
+
+namespace {
+
+// Deterministic engine settings: fixed mixer/rate/channel values so the
+// engine tab renders identical rows on every run.
+EngineSettings visualEngineSettings()
+{
+    EngineSettings settings;
+    settings.pcmMixer = M4A_PCM_MIXER_SAPPY;
+    settings.maxPcmChannels = 8;
+    settings.pcmMixRate = 13379.0f;
+    settings.analogFilter = false;
+    return settings;
+}
+
+SongTarget visualSongTarget()
+{
+    SongCfg cfg;
+    cfg.voicegroupArg = QStringLiteral("_abandoned_ship");
+    cfg.masterVolume = 110;
+    cfg.reverb = 50;
+    cfg.priority = 0;
+    cfg.exactGate = true;
+    return {cfg, QStringLiteral("mus_route101")};
+}
+
+QStringList visualVoicegroups()
+{
+    return {QStringLiteral("_abandoned_ship"), QStringLiteral("_route101")};
+}
+
+// A parsed-font stand-in with populated rows: two instrument groups plus
+// ungrouped zones, matching the shape Sf2ZonePicker renders in production.
+Sf2File visualSoundFont()
+{
+    Sf2File font;
+    font.sourcePath = QStringLiteral("fix/visual_zones.sf2");
+    const auto zone = [](const char *name, const char *instrument, const char *preset,
+                         quint32 start, quint32 end, quint32 loopStart, quint32 loopEnd,
+                         quint32 rate, int pitch, quint16 type) {
+        Sf2Zone z;
+        z.name = QString::fromLatin1(name);
+        z.instrument = QString::fromLatin1(instrument);
+        z.preset = QString::fromLatin1(preset);
+        z.start = start;
+        z.end = end;
+        z.loopStart = loopStart;
+        z.loopEndExcl = loopEnd;
+        z.sampleRate = rate;
+        z.originalPitch = pitch;
+        z.sampleType = type;
+        return z;
+    };
+    font.zones.push_back(
+        zone("Lead Tone", "LeadInst", "LeadPreset", 0, 400, 100, 300, 22050, 69, 1));
+    font.zones.push_back(
+        zone("Lead Octave", "LeadInst", "LeadPreset", 400, 700, 450, 650, 22050, 60, 1));
+    font.zones.push_back(
+        zone("Pad Left", "PadInst", "PadPreset", 700, 1100, 750, 1050, 32000, 60, 4));
+    font.zones.push_back(
+        zone("Pad Right", "PadInst", "PadPreset", 1100, 1500, 1150, 1450, 32000, 60, 8));
+    font.zones.push_back(zone("Loose One", "", "", 1500, 1800, 0, 0, 22050, 60, 1));
+    font.zones.push_back(zone("Loose Two", "", "", 1800, 2400, 1900, 2300, 22050, 62, 1));
+    return font;
+}
+
+// A small deterministic SMF for the import wizard: conductor tempo track
+// plus two note tracks so the analysis page renders a real table.
+SmfFile visualImportSmf()
+{
+    SmfFile smf;
+    smf.format = 1;
+    smf.division = 24;
+    smf.tracks.resize(3);
+
+    SmfEvent tempo;
+    tempo.tick = 0;
+    tempo.status = 0xFF;
+    tempo.metaType = 0x51;
+    tempo.blob = QByteArray("\x07\xA1\x20", 3);
+    smf.tracks[0].events.push_back(tempo);
+    smf.tracks[0].endTick = 0;
+
+    const auto note = [](SmfTrack &track, uint64_t tick, uint8_t status, uint8_t d0, uint8_t d1) {
+        SmfEvent ev;
+        ev.tick = tick;
+        ev.status = status;
+        ev.data0 = d0;
+        ev.data1 = d1;
+        track.events.push_back(ev);
+    };
+    note(smf.tracks[1], 0, 0xC0, 12, 0);
+    note(smf.tracks[1], 0, 0xB0, 7, 100);
+    for (int i = 0; i < 8; ++i) {
+        note(smf.tracks[1], uint64_t(i * 48), 0x90, uint8_t(60 + (i % 5)), 96);
+        note(smf.tracks[1], uint64_t(i * 48 + 40), 0x80, uint8_t(60 + (i % 5)), 64);
+    }
+    smf.tracks[1].endTick = 8 * 48;
+    note(smf.tracks[2], 0, 0xC1, 33, 0);
+    for (int i = 0; i < 4; ++i) {
+        note(smf.tracks[2], uint64_t(i * 96), 0x91, uint8_t(36 + i), 100);
+        note(smf.tracks[2], uint64_t(i * 96 + 80), 0x81, uint8_t(36 + i), 64);
+    }
+    smf.tracks[2].endTick = 4 * 96;
+    return smf;
+}
+
+NewSongWizard::ProjectData visualProjectData()
+{
+    NewSongWizard::ProjectData data;
+    data.players.append({QStringLiteral("MUSIC_PLAYER_BGM"), 0, -1});
+    data.players.append({QStringLiteral("MUSIC_PLAYER_SE"), 1, 1});
+    data.voicegroupArgs = visualVoicegroups();
+    data.canCreateVoicegroup = true;
+    SongInfo existing;
+    existing.id = 0;
+    existing.label = QStringLiteral("mus_route101");
+    existing.constant = QStringLiteral("MUS_ROUTE101");
+    existing.player = QStringLiteral("MUSIC_PLAYER_BGM");
+    data.songs.append(existing);
+    return data;
+}
+
+// Rendered bounds of a child widget in root image coordinates: the widget's
+// visibleRegion (already clipped by scroll areas and ancestor masks) mapped
+// to root space. Empty when the widget is scrolled entirely out of view.
+checks::visual::Region childRegion(const QString &name, QWidget &root, const QWidget &child)
+{
+    const QPoint offset = child.mapTo(&root, QPoint(0, 0));
+    return {name, child.visibleRegion().boundingRect().translated(offset)};
+}
+
+// Appends the region of a named descendant; false when the widget is absent
+// so the caller can QVERIFY with a useful message. A widget that exists but
+// is scrolled out of its viewport contributes no region — it renders no
+// pixels in the grab.
+bool appendNamedRegion(QList<checks::visual::Region> &regions, const QString &name, QWidget &root,
+                       const QString &objectName)
+{
+    const QWidget *child = root.findChild<QWidget *>(objectName);
+    if (!child)
+        return false;
+    const checks::visual::Region region = childRegion(name, root, *child);
+    if (!region.bounds.isEmpty())
+        regions.append(region);
+    return true;
+}
+
+// Appends a structural child's rendered region; false when the widget is
+// absent or renders nothing — required chrome must fail setup, not skip.
+bool appendRequiredRegion(QList<checks::visual::Region> &regions, const QString &name,
+                          QWidget &root, const QWidget *child)
+{
+    if (!child)
+        return false;
+    const checks::visual::Region region = childRegion(name, root, *child);
+    if (region.bounds.isEmpty())
+        return false;
+    regions.append(region);
+    return true;
+}
+// Park focus on stable non-input chrome so no blinking caret lands in the
+// grab. QWidget::clearFocus() only drops focus when the widget itself holds
+// it — a focused descendant (e.g. the editable voicegroup combo's line
+// edit) keeps its caret, so focus is moved to a tab bar or button instead.
+void parkFocus(QWidget &widget)
+{
+    QWidget *anchor = widget.findChild<QTabBar *>();
+    if (!anchor)
+        if (auto *buttons = widget.findChild<QDialogButtonBox *>())
+            anchor = buttons->button(QDialogButtonBox::Cancel);
+    if (!anchor)
+        anchor = widget.findChild<QPushButton *>();
+    if (anchor && anchor->isVisible() && anchor->focusPolicy() != Qt::NoFocus)
+        anchor->setFocus(Qt::OtherFocusReason);
+    else if (QWidget *focused = QApplication::focusWidget())
+        if (focused == &widget || widget.isAncestorOf(focused))
+            focused->clearFocus();
+    QApplication::processEvents();
+}
+
+// Show a top-level dialog non-modally, let layout/focus settle, then park
+// focus before the grab.
+void showSettled(QWidget &widget)
+{
+    widget.show();
+    QApplication::processEvents();
+    parkFocus(widget);
+}
+
+// Compare the shown widget against its frozen baseline: automatic named
+// descendant regions plus the caller's semantic subregions. Semantic names
+// win on collision so a scenario can re-pin a named widget under a stable
+// identifier.
+void compareShown(const QString &id, QWidget &widget, const QList<checks::visual::Region> &extra)
+{
+    QSet<QString> semanticNames;
+    for (const checks::visual::Region &region : extra)
+        semanticNames.insert(region.name);
+    QList<checks::visual::Region> regions;
+    for (const checks::visual::Region &region : checks::visual::widgetRegions(widget))
+        if (!semanticNames.contains(region.name))
+            regions.append(region);
+    regions.append(extra);
+    QString error;
+    QVERIFY2(checks::visual::compareWidget(id, widget, regions, &error), qPrintable(error));
+}
+
+// Finds the field widget a QFormLayout places beside the row whose label
+// reads `labelText` (mnemonic '&' stripped). Null when no row matches.
+QWidget *formField(QWidget &container, const QString &labelText)
+{
+    const QString wanted = QString(labelText).remove(QLatin1Char('&'));
+    for (QFormLayout *form : container.findChildren<QFormLayout *>()) {
+        for (int row = 0; row < form->rowCount(); ++row) {
+            QLayoutItem *labelItem = form->itemAt(row, QFormLayout::LabelRole);
+            auto *label = labelItem ? qobject_cast<QLabel *>(labelItem->widget()) : nullptr;
+            if (!label || label->text().remove(QLatin1Char('&')) != wanted)
+                continue;
+            QLayoutItem *fieldItem = form->itemAt(row, QFormLayout::FieldRole);
+            return fieldItem ? fieldItem->widget() : nullptr;
+        }
+    }
+    return nullptr;
+}
+
+// Appends the rendered region of a form field identified by its row label;
+// false when the row or its field is absent or renders nothing.
+bool appendFieldRegion(QList<checks::visual::Region> &regions, const QString &name, QWidget &root,
+                       QWidget &container, const QString &labelText)
+{
+    return appendRequiredRegion(regions, name, root, formField(container, labelText));
+}
+
+// Appends the rendered region of a checkbox identified by its text; false
+// when absent or invisible.
+bool appendCheckRegion(QList<checks::visual::Region> &regions, const QString &name, QWidget &root,
+                       QWidget &container, const QString &text)
+{
+    for (QCheckBox *box : container.findChildren<QCheckBox *>())
+        if (box->text() == text)
+            return appendRequiredRegion(regions, name, root, box);
+    return false;
+}
+
+// Settings dialog chrome plus the visible tab's fields. Engine tab pins
+// polyphony/mixer/rate/filter/defaults; song tab pins voicegroup/volume/
+// reverb/priority and the three flag checkboxes. Fields on the hidden tab
+// are never pinned; a required field that renders nothing fails setup.
+bool settingsRegions(QDialog &dialog, QList<checks::visual::Region> &regions)
+{
+    auto *tabs = dialog.findChild<QTabWidget *>();
+    if (!appendRequiredRegion(regions, QStringLiteral("tabs"), dialog, tabs) ||
+        !appendRequiredRegion(regions, QStringLiteral("tab-bar"), dialog,
+                              dialog.findChild<QTabBar *>()) ||
+        !appendRequiredRegion(regions, QStringLiteral("button-box"), dialog,
+                              dialog.findChild<QDialogButtonBox *>()))
+        return false;
+    QWidget *page = tabs->currentWidget();
+    if (!page)
+        return false;
+    if (tabs->currentIndex() == 0) {
+        QPushButton *restore = nullptr;
+        for (QPushButton *button : page->findChildren<QPushButton *>())
+            if (button->text() == QStringLiteral("Restore Defaults"))
+                restore = button;
+        return appendFieldRegion(regions, QStringLiteral("engine.polyphony"), dialog, *page,
+                                 QStringLiteral("&PCM polyphony:")) &&
+               appendFieldRegion(regions, QStringLiteral("engine.mixer"), dialog, *page,
+                                 QStringLiteral("PCM &mixer:")) &&
+               appendFieldRegion(regions, QStringLiteral("engine.mix-rate"), dialog, *page,
+                                 QStringLiteral("PCM &mix rate:")) &&
+               appendCheckRegion(regions, QStringLiteral("engine.analog-filter"), dialog, *page,
+                                 QStringLiteral("GBA analog output filter (low-pass)")) &&
+               appendRequiredRegion(regions, QStringLiteral("engine.restore-defaults"), dialog,
+                                    restore);
+    }
+    return appendFieldRegion(regions, QStringLiteral("song.voicegroup"), dialog, *page,
+                             QStringLiteral("&Voicegroup:")) &&
+           appendFieldRegion(regions, QStringLiteral("song.volume"), dialog, *page,
+                             QStringLiteral("&Master volume (-V):")) &&
+           appendFieldRegion(regions, QStringLiteral("song.reverb"), dialog, *page,
+                             QStringLiteral("&Reverb (-R):")) &&
+           appendFieldRegion(regions, QStringLiteral("song.priority"), dialog, *page,
+                             QStringLiteral("&Priority (-P):")) &&
+           appendCheckRegion(regions, QStringLiteral("song.exact-gate"), dialog, *page,
+                             QStringLiteral("Exact gate time (-E)")) &&
+           appendCheckRegion(regions, QStringLiteral("song.extended-clocks"), dialog, *page,
+                             QStringLiteral("48 clocks per beat (-X)")) &&
+           appendCheckRegion(regions, QStringLiteral("song.no-compression"), dialog, *page,
+                             QStringLiteral("Disable compression (-N)"));
+}
+
+// Semantic subregions inside the sample editor: the waveform surface, its
+// painted handle glyphs, the seam inset, the splitter, and the named control
+// rows. Geometry mirrors WaveformView::paintEvent: each handle is a 7x8 grip
+// (top edge for crop, bottom edge for loop) plus a 1px full-height marker
+// line, and the seam overlay is the fixed 228x56 inset at the top-right.
+bool sampleEditorRegions(SampleEditorDialog &dialog, QList<checks::visual::Region> &regions)
+{
+    WaveformView *wave = dialog.waveform();
+    if (!wave)
+        return false;
+    if (!appendRequiredRegion(regions, QStringLiteral("waveform"), dialog, wave))
+        return false;
+    const QRect waveBounds = childRegion(QStringLiteral("waveform"), dialog, *wave).bounds;
+    const auto handle = [&dialog, wave, waveBounds](const QString &name, WaveformView::Handle h) {
+        const int hx = wave->mapTo(&dialog, wave->handlePoint(h)).x();
+        const int waveTop = waveBounds.top();
+        const int waveH = wave->height();
+        const bool loop = h == WaveformView::LoopStartHandle || h == WaveformView::LoopEndHandle;
+        const bool leftGrip =
+            h == WaveformView::CropStartHandle || h == WaveformView::LoopStartHandle;
+        const int gy = loop ? waveTop + waveH - 8 : waveTop;
+        const QRect grip(leftGrip ? hx : hx - 6, gy, 7, 8);
+        const QRect marker(hx, waveTop, 1, waveH);
+        return checks::visual::Region{name, (grip | marker) & waveBounds};
+    };
+    regions.append(handle(QStringLiteral("waveform.crop-start"), WaveformView::CropStartHandle));
+    regions.append(handle(QStringLiteral("waveform.crop-end"), WaveformView::CropEndHandle));
+    regions.append(handle(QStringLiteral("waveform.loop-start"), WaveformView::LoopStartHandle));
+    regions.append(handle(QStringLiteral("waveform.loop-end"), WaveformView::LoopEndHandle));
+    regions.append({QStringLiteral("waveform.seam"),
+                    QRect(waveBounds.topLeft() + QPoint(wave->width() - 236, 6), QSize(228, 56)) &
+                        waveBounds});
+
+    if (!appendRequiredRegion(regions, QStringLiteral("splitter"), dialog,
+                              dialog.findChild<QSplitter *>(QStringLiteral("sampleSplit"))) ||
+        !appendRequiredRegion(regions, QStringLiteral("button-box"), dialog,
+                              dialog.findChild<QDialogButtonBox *>()))
+        return false;
+    for (const char *name : {"sampleNameEdit", "sampleLoopOn", "sampleLoopBody", "sampleSeamBadge",
+                             "sampleBaseKey", "sampleAuditionPlay", "sampleRateCombo",
+                             "sampleFineTune", "sampleNormalizeMode", "sampleAddButton"})
+        if (!appendNamedRegion(regions, QString::fromLatin1(name), dialog,
+                               QString::fromLatin1(name)))
+            return false;
+    return true;
+}
+
+bool zonePickerRegions(QDialog &dialog, QList<checks::visual::Region> &regions)
+{
+    if (!appendNamedRegion(regions, QStringLiteral("search"), dialog,
+                           QStringLiteral("sf2SearchEdit")))
+        return false;
+    auto *tree = dialog.findChild<QTreeWidget *>(QStringLiteral("sf2ZoneTree"));
+    if (!tree)
+        return false;
+    if (!appendRequiredRegion(regions, QStringLiteral("zone-tree"), dialog, tree))
+        return false;
+    const QRect viewportBounds = childRegion(QStringLiteral("zone-tree"), dialog, *tree).bounds;
+    const auto itemRegion = [&dialog, tree, viewportBounds](const QString &name,
+                                                            QTreeWidgetItem *item) {
+        const QRect rect = tree->visualItemRect(item);
+        return checks::visual::Region{
+            name,
+            QRect(tree->viewport()->mapTo(&dialog, rect.topLeft()), rect.size()) & viewportBounds};
+    };
+    QTreeWidgetItem *group = tree->topLevelItem(0);
+    if (!group || group->childCount() == 0)
+        return false;
+    regions.append(itemRegion(QStringLiteral("zone-tree.group-row"), group));
+    regions.append(itemRegion(QStringLiteral("zone-tree.zone-row"), group->child(0)));
+    return appendNamedRegion(regions, QStringLiteral("button-box"), dialog,
+                             QStringLiteral("sf2ButtonBox"));
+}
+
+// Wizard chrome: current page area plus the button row, so page geometry and
+// navigation buttons are pinned independently of page content.
+bool wizardRegions(QWizard &wizard, QList<checks::visual::Region> &regions)
+{
+    if (!appendRequiredRegion(regions, QStringLiteral("page"), wizard, wizard.currentPage()))
+        return false;
+    const struct {
+        QWizard::WizardButton button;
+        const char *name;
+    } buttons[] = {{QWizard::BackButton, "button-back"},
+                   {QWizard::NextButton, "button-next"},
+                   {QWizard::FinishButton, "button-finish"},
+                   {QWizard::CancelButton, "button-cancel"}};
+    for (const auto &entry : buttons)
+        if (QWidget *button = wizard.button(entry.button))
+            if (button->isVisible() &&
+                !appendRequiredRegion(regions, QString::fromLatin1(entry.name), wizard, button))
+                return false;
+    return true;
+}
+
+} // namespace
+
+class VisualDialogsTest final : public QObject
+{
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(VisualDialogsTest)
+
+  public:
+    VisualDialogsTest() = default;
+
+  private slots:
+    void initTestCase();
+    void cleanup();
+
+    void settingsDialogVanilla();
+    void settingsDialogDark();
+    void themeDialog();
+    void sampleEditorVanilla();
+    void sampleEditorDark();
+    void sf2ZonePicker();
+    void newSongWizardPages();
+    void midiImportWizardPages();
+
+  private:
+    QApplication *app() const;
+    QTemporaryDir m_settingsDirectory;
+};
+
+QApplication *VisualDialogsTest::app() const
+{
+    return qobject_cast<QApplication *>(QCoreApplication::instance());
+}
+
+void VisualDialogsTest::initTestCase()
+{
+    QVERIFY2(m_settingsDirectory.isValid(), "could not create isolated QSettings directory");
+    QSettings::setDefaultFormat(QSettings::IniFormat);
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, m_settingsDirectory.path());
+    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, m_settingsDirectory.path());
+}
+
+void VisualDialogsTest::cleanup()
+{
+    // Every scenario returns the app to the committed vanilla baseline so
+    // theme state never leaks between tests.
+    if (app())
+        themes::apply(*app(), themes::vanilla());
+}
+
+void VisualDialogsTest::settingsDialogVanilla()
+{
+    themes::apply(*app(), themes::vanilla());
+    SettingsDialog dialog(visualEngineSettings(), visualSongTarget(), visualVoicegroups());
+    auto *tabs = dialog.findChild<QTabWidget *>();
+    QVERIFY(tabs);
+    // Pin the constructor's requested size before show: Qt shrinks
+    // first-show top-levels to available screen geometry, which would make
+    // the baseline depend on the recording monitor.
+    dialog.setFixedSize(560, 580); // SettingsDialog ctor resize(560, 580)
+
+    tabs->setCurrentIndex(0);
+    showSettled(dialog);
+    QList<checks::visual::Region> regions;
+    QVERIFY2(settingsRegions(dialog, regions), "settings dialog widgets not found");
+    compareShown(QStringLiteral("settings/engine-vanilla"), dialog, regions);
+
+    tabs->setCurrentIndex(1);
+    QApplication::processEvents();
+    parkFocus(dialog);
+    QApplication::processEvents();
+    regions.clear();
+    QVERIFY2(settingsRegions(dialog, regions), "settings dialog widgets not found");
+    compareShown(QStringLiteral("settings/song-vanilla"), dialog, regions);
+}
+
+void VisualDialogsTest::settingsDialogDark()
+{
+    themes::apply(*app(), themes::darkNeutralHigh());
+    SettingsDialog dialog(visualEngineSettings(), visualSongTarget(), visualVoicegroups());
+    auto *tabs = dialog.findChild<QTabWidget *>();
+    QVERIFY(tabs);
+    // Pin the constructor's requested size before show: Qt shrinks
+    // first-show top-levels to available screen geometry, which would make
+    // the baseline depend on the recording monitor.
+    dialog.setFixedSize(560, 580); // SettingsDialog ctor resize(560, 580)
+
+    tabs->setCurrentIndex(0);
+    showSettled(dialog);
+    QList<checks::visual::Region> regions;
+    QVERIFY2(settingsRegions(dialog, regions), "settings dialog widgets not found");
+    compareShown(QStringLiteral("settings/engine-darkneutralhigh"), dialog, regions);
+
+    tabs->setCurrentIndex(1);
+    QApplication::processEvents();
+    parkFocus(dialog);
+    QApplication::processEvents();
+    regions.clear();
+    QVERIFY2(settingsRegions(dialog, regions), "settings dialog widgets not found");
+    compareShown(QStringLiteral("settings/song-darkneutralhigh"), dialog, regions);
+}
+
+void VisualDialogsTest::themeDialog()
+{
+    themes::apply(*app(), themes::vanilla());
+    QSettings settings;
+    themes::ThemeController controller(*app(), settings);
+    controller.restore();
+    themes::ThemeDialog dialog(controller);
+    dialog.setFixedSize(dialog.size()); // ctor already resize(sizeHint())
+    showSettled(dialog);
+
+    QList<checks::visual::Region> regions;
+    for (const auto &entry : {std::pair{"mode-vanilla", "vanillaModeButton"},
+                              {"mode-dark", "darkNeutralHighModeButton"},
+                              {"mode-immaterial", "immaterialModeButton"},
+                              {"contrast-slider", "gridLineContrastSlider"},
+                              {"apply", "themeApplyButton"},
+                              {"close", "themeCloseButton"}})
+        QVERIFY2(appendNamedRegion(regions, QString::fromLatin1(entry.first), dialog,
+                                   QString::fromLatin1(entry.second)),
+                 entry.second);
+    compareShown(QStringLiteral("theme/dialog-vanilla"), dialog, regions);
+}
+
+void VisualDialogsTest::sampleEditorVanilla()
+{
+    themes::apply(*app(), themes::vanilla());
+    ImportedSample prepared;
+    QString error;
+    QVERIFY2(importAudioBytes(samplecheck::preparedSampleWav(),
+                              QStringLiteral("fix/prepared_tone.wav"), &prepared, &error),
+             qPrintable(error));
+    SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
+    auto *loopOn = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
+    QVERIFY(loopOn);
+    loopOn->setChecked(true); // deterministic loop chrome + seam badge
+    dialog.setFixedSize(900, 640);
+    showSettled(dialog);
+    QList<checks::visual::Region> regions;
+    QVERIFY2(sampleEditorRegions(dialog, regions), "sample editor widgets not found");
+    compareShown(QStringLiteral("sample-editor/dialog-vanilla"), dialog, regions);
+}
+
+void VisualDialogsTest::sampleEditorDark()
+{
+    themes::apply(*app(), themes::darkNeutralHigh());
+    ImportedSample prepared;
+    QString error;
+    QVERIFY2(importAudioBytes(samplecheck::preparedSampleWav(),
+                              QStringLiteral("fix/prepared_tone.wav"), &prepared, &error),
+             qPrintable(error));
+    SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
+    auto *loopOn = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
+    QVERIFY(loopOn);
+    loopOn->setChecked(true);
+    dialog.setFixedSize(900, 640);
+    showSettled(dialog);
+    QList<checks::visual::Region> regions;
+    QVERIFY2(sampleEditorRegions(dialog, regions), "sample editor widgets not found");
+    compareShown(QStringLiteral("sample-editor/dialog-darkneutralhigh"), dialog, regions);
+}
+
+void VisualDialogsTest::sf2ZonePicker()
+{
+    themes::apply(*app(), themes::vanilla());
+    const Sf2File font = visualSoundFont();
+    Sf2ZonePicker picker(font);
+    picker.setFixedSize(720, 480); // ctor resize(720, 480)
+    showSettled(picker);
+    QList<checks::visual::Region> regions;
+    QVERIFY2(zonePickerRegions(picker, regions), "zone picker widgets not found");
+    compareShown(QStringLiteral("sf2-zone-picker/dialog-vanilla"), picker, regions);
+}
+
+void VisualDialogsTest::newSongWizardPages()
+{
+    themes::apply(*app(), themes::vanilla());
+    NewSongWizard wizard(visualProjectData());
+    // Pin the size Qt would choose pre-screen-fit: sizeHint expanded to
+    // the ctor's fontPx-derived minimum.
+    wizard.setFixedSize(wizard.sizeHint().expandedTo(wizard.minimumSize()));
+    // The blank wizard's identity page is incomplete until a name is typed;
+    // fill it so Next advances deterministically.
+    QLineEdit *name = nullptr;
+    for (QLineEdit *edit : wizard.findChildren<QLineEdit *>())
+        if (edit->placeholderText() == QStringLiteral("mus_my_song"))
+            name = edit;
+    QVERIFY2(name, "identity name field not found");
+    name->setText(QStringLiteral("mus_visual_check"));
+    showSettled(wizard);
+    QCOMPARE(wizard.currentId(), 0);
+    QList<checks::visual::Region> regions;
+    QVERIFY2(wizardRegions(wizard, regions), "wizard chrome not found");
+    compareShown(QStringLiteral("wizard/new-identity-vanilla"), wizard, regions);
+
+    wizard.next();
+    QApplication::processEvents();
+    parkFocus(wizard);
+    QApplication::processEvents();
+    QCOMPARE(wizard.currentId(), 1);
+    regions.clear();
+    QVERIFY2(wizardRegions(wizard, regions), "wizard chrome not found");
+    compareShown(QStringLiteral("wizard/new-sound-vanilla"), wizard, regions);
+}
+
+void VisualDialogsTest::midiImportWizardPages()
+{
+    themes::apply(*app(), themes::vanilla());
+    NewSongWizard wizard(visualProjectData(), visualImportSmf(),
+                         QStringLiteral("fix/external_import.mid"));
+    // Pin the size Qt would choose pre-screen-fit: sizeHint expanded to
+    // the ctor's fontPx-derived minimum.
+    wizard.setFixedSize(wizard.sizeHint().expandedTo(wizard.minimumSize()));
+    showSettled(wizard);
+    QCOMPARE(wizard.currentId(), 0);
+    QList<checks::visual::Region> regions;
+    QVERIFY2(wizardRegions(wizard, regions), "wizard chrome not found");
+    compareShown(QStringLiteral("wizard/import-analysis-vanilla"), wizard, regions);
+
+    wizard.next();
+    QApplication::processEvents();
+    parkFocus(wizard);
+    QApplication::processEvents();
+    QCOMPARE(wizard.currentId(), 1);
+    regions.clear();
+    QVERIFY2(wizardRegions(wizard, regions), "wizard chrome not found");
+    compareShown(QStringLiteral("wizard/import-identity-vanilla"), wizard, regions);
+
+    wizard.next();
+    QApplication::processEvents();
+    parkFocus(wizard);
+    QApplication::processEvents();
+    QCOMPARE(wizard.currentId(), 2);
+    regions.clear();
+    QVERIFY2(wizardRegions(wizard, regions), "wizard chrome not found");
+    compareShown(QStringLiteral("wizard/import-sound-vanilla"), wizard, regions);
+}
+
+int runVisualDialogsCheck(QApplication &application, const QStringList &qtArguments)
+{
+    checks::visual::prepare(application); // canonical style, font, theme, app init
+    VisualDialogsTest test;
+    QStringList arguments{QStringLiteral("visual-dialogs")};
+    arguments.append(qtArguments);
+    return QTest::qExec(&test, arguments);
+}
+
+#include "dialogs.moc"

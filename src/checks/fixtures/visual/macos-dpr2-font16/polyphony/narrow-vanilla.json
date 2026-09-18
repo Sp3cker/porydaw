@@ -1,0 +1,106 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 760,
+        "width": 380
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 72,
+            "name": "poly.event-log",
+            "w": 358,
+            "x": 11,
+            "y": 677
+        },
+        {
+            "h": 20,
+            "name": "poly.invert",
+            "w": 358,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 18,
+            "name": "poly.log-heading",
+            "w": 358,
+            "x": 11,
+            "y": 651
+        },
+        {
+            "h": 22,
+            "name": "poly.overflow-heading",
+            "w": 146,
+            "x": 11,
+            "y": 493
+        },
+        {
+            "h": 120,
+            "name": "poly.overflow-table",
+            "w": 358,
+            "x": 11,
+            "y": 523
+        },
+        {
+            "h": 22,
+            "name": "poly.reset",
+            "w": 65,
+            "x": 304,
+            "y": 493
+        },
+        {
+            "h": 18,
+            "name": "poly.usage-heading",
+            "w": 358,
+            "x": 11,
+            "y": 39
+        },
+        {
+            "h": 150,
+            "name": "poly.overflow-section",
+            "w": 358,
+            "x": 11,
+            "y": 493
+        },
+        {
+            "h": 29,
+            "name": "poly.overflow-row.0",
+            "w": 122,
+            "x": 12,
+            "y": 550
+        },
+        {
+            "h": 29,
+            "name": "poly.overflow-row.1",
+            "w": 122,
+            "x": 12,
+            "y": 580
+        },
+        {
+            "h": 18,
+            "name": "poly.log-row.0",
+            "w": 356,
+            "x": 12,
+            "y": 678
+        },
+        {
+            "h": 18,
+            "name": "poly.log-row.1",
+            "w": 356,
+            "x": 12,
+            "y": 696
+        },
+        {
+            "h": 18,
+            "name": "poly.log-row.2",
+            "w": 356,
+            "x": 12,
+            "y": 714
+        }
+    ]
+}

@@ -12,12 +12,12 @@
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
-#include <QRectF>
+#include <QScopeGuard>
 #include <QString>
 #include <QTimer>
 #include <QVariant>
 #include <QtTest/QTest>
-
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -386,6 +386,125 @@ void verifyRaster(Scene &scene)
     QTest::qWait(30ms);
 }
 
+void verifyChromeRaster(Scene &scene)
+{
+    const auto capture = [&] {
+        QTest::qWait(30ms);
+        QImage image = scene.window->grabWindow();
+        require(!image.isNull(), "native grid framebuffer is empty");
+        return image;
+    };
+    const auto windowPixel = [](const QImage &image, QPointF scenePoint) {
+        const QPoint pixel(qRound(scenePoint.x() * image.devicePixelRatio()),
+                           qRound(scenePoint.y() * image.devicePixelRatio()));
+        require(image.rect().contains(pixel), "chrome raster probe is outside the framebuffer");
+        return image.pixelColor(pixel);
+    };
+    const auto gutterPoint = [&](QQuickItem *gutter, double x, double y) {
+        return gutter->mapToScene(QPointF(x, y));
+    };
+
+    auto *rulerGutter =
+        namedItem(scene.window->contentItem(), QStringLiteral("timelineQuickRulerGutter"));
+    auto *rollGutter =
+        namedItem(scene.window->contentItem(), QStringLiteral("timelineQuickRollGutter"));
+    require(rulerGutter && rollGutter, "ruler or keyboard gutter is missing");
+
+    // Read-only visual probe: preserve the flickable scroll position so later
+    // gesture scenarios observe the same camera state verifyRaster left.
+    const double priorContentX = scene.viewport->property("contentX").toDouble();
+    const double priorContentY = scene.viewport->property("contentY").toDouble();
+    const auto restoreScroll = qScopeGuard([&] {
+        scene.viewport->setProperty("contentX", priorContentX);
+        scene.viewport->setProperty("contentY", priorContentY);
+    });
+
+    scene.reveal(scene.point(9, 60));
+    QImage image = capture();
+    const double keyboardWidth = scene.model->property("keyboardWidth").toDouble();
+    const double rulerHeight = scene.model->property("rulerHeight").toDouble();
+    require(windowPixel(image, gutterPoint(rulerGutter, keyboardWidth / 2, rulerHeight / 2)) ==
+                QColor("#BDB5AF"),
+            "ruler gutter chrome diverged from the production chrome background");
+    // The ruler separator is a 1-logical-pixel rect centered on rulerHeight
+    // (GridScene.swift:351), clipped by the gutter item's own height. The
+    // scene-graph rect has no antialiasing: a device row is filled when its
+    // pixel center falls inside the mapped clipped span. Probe the first row
+    // whose center is inside for the exact production color.
+    {
+        const double dpr = image.devicePixelRatio();
+        const QPointF gutterOrigin = rulerGutter->mapToScene(QPointF{});
+        const double clipBottom = std::min(rulerHeight + 0.5, rulerGutter->height());
+        const double devTop = (gutterOrigin.y() + rulerHeight - 0.5) * dpr;
+        const double devBottom = (gutterOrigin.y() + clipBottom) * dpr;
+        const int row = int(std::ceil(devTop - 0.5));
+        require(row + 0.5 < devBottom,
+                "ruler gutter separator has no device row inside its clipped span");
+        const QColor actual =
+            windowPixel(image, QPointF(gutterOrigin.x() + keyboardWidth / 2, double(row) / dpr));
+        if (actual != QColor("#5B5652"))
+            std::fprintf(stderr,
+                         "ruler separator actual=%s row=%d devSpan=[%g,%g] dpr=%g "
+                         "gutterY=%g gutterH=%g\n",
+                         qPrintable(actual.name()), row, devTop, devBottom, dpr, gutterOrigin.y(),
+                         rulerGutter->height());
+        require(actual == QColor("#5B5652"),
+                "ruler gutter separator diverged from the production separator color");
+    }
+    // A scene-graph rect without antialiasing fills exactly the device rows
+    // whose pixel centers fall inside its mapped span; returns that row.
+    const auto rowInsideSpan = [](double originY, double localTop, double localBottom, double dpr) {
+        const double devTop = (originY + localTop) * dpr;
+        const double devBottom = (originY + localBottom) * dpr;
+        const int row = int(std::ceil(devTop - 0.5));
+        require(row + 0.5 < devBottom, "separator strip has no device row inside its mapped span");
+        return row;
+    };
+    // rollBandContent already carries -contentY, so gutter-local y is the
+    // content-space row coordinate directly.
+    const auto keyboardY = [&](int pitch) { return (127.0 - pitch + 0.5) * scene.rowHeight; };
+    require(windowPixel(image, gutterPoint(rollGutter, keyboardWidth / 2, keyboardY(60))) ==
+                    QColor("#F4F4F4") &&
+                windowPixel(image, gutterPoint(rollGutter, keyboardWidth / 2, keyboardY(61))) ==
+                    QColor("#202224"),
+            "keyboard natural/black key fills diverged from production colors");
+    // The C-boundary separator is one physical pixel (m.pixel = 1/dpr) ending
+    // at the snapped row edge; probe the device row whose center falls inside
+    // its mapped span for the exact production color.
+    const double cEdge = (127.0 - 60 + 1.0) * scene.rowHeight;
+    const double pixel = 1.0 / scene.dpr;
+    const QPointF rollOrigin = rollGutter->mapToScene(QPointF{});
+    const int sepRow =
+        rowInsideSpan(rollOrigin.y(), cEdge - pixel, cEdge, image.devicePixelRatio());
+    require(windowPixel(image, QPointF(rollOrigin.x() + keyboardWidth / 2,
+                                       double(sepRow) / image.devicePixelRatio())) ==
+                QColor("#BCB4AF"),
+            "keyboard C-boundary separator diverged from its production color");
+
+    const auto pixelAt = [&](const QImage &frame, QPointF content) {
+        const QPointF position = scene.surface->mapToScene(content) * frame.devicePixelRatio();
+        const QPoint point(qRound(position.x()), qRound(position.y()));
+        require(frame.rect().contains(point), "grid raster probe is outside the framebuffer");
+        return frame.pixelColor(point);
+    };
+    const double probeY = scene.point(9, 62).y();
+    // The first bar line sits at leadPad + 4 beats (tick 96); the leadPad edge
+    // itself is a red start marker, not a bar line.
+    const double barX = scene.leadPad + 4 * scene.beatWidth;
+    const QColor rowBackground = pixelAt(image, {barX + 24, probeY});
+    const QColor barLine = pixelAt(image, {barX, probeY});
+    require(barLine != rowBackground && barLine.red() < rowBackground.red() &&
+                barLine.green() < rowBackground.green() && barLine.blue() < rowBackground.blue(),
+            "bar grid line is not a darkened overlay over the row background");
+    const QPointF surfaceOrigin = scene.surface->mapToScene(QPointF{});
+    const int gridSepRow =
+        rowInsideSpan(surfaceOrigin.y(), cEdge - pixel, cEdge, image.devicePixelRatio());
+    require(pixelAt(image, {barX + 24, double(gridSepRow) / image.devicePixelRatio() -
+                                           surfaceOrigin.y()}) == QColor("#BCB4AF"),
+            "grid C-row separator diverged from its production color");
+    pass("production-grid-line-raster");
+}
+
 void exercise(Scene scene)
 {
     verifyGridAudio();
@@ -404,6 +523,7 @@ void exercise(Scene scene)
             "grid metrics do not match the production 24 TPQN projection");
     verifyFixture(scene);
     verifyRaster(scene);
+    verifyChromeRaster(scene);
 
     const QPointF pending = scene.point(98, 100);
     const QJsonArray beforePending = scene.notes();

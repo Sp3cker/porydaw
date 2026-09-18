@@ -1,0 +1,183 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 1,
+        "height": 39,
+        "width": 1100
+    },
+    "profile": "macos-dpr1-font16",
+    "regions": [
+        {
+            "h": 30,
+            "name": "transportMasterVolume",
+            "w": 111,
+            "x": 967,
+            "y": 4
+        },
+        {
+            "h": 35,
+            "name": "transportMasterVolumeCaption",
+            "w": 72,
+            "x": 894,
+            "y": 2
+        },
+        {
+            "h": 27,
+            "name": "transportScaleFold",
+            "w": 54,
+            "x": 795,
+            "y": 6
+        },
+        {
+            "h": 33,
+            "name": "transportScaleHighlight",
+            "w": 33,
+            "x": 761,
+            "y": 3
+        },
+        {
+            "h": 26,
+            "name": "transportScaleRoot",
+            "w": 71,
+            "x": 458,
+            "y": 6
+        },
+        {
+            "h": 26,
+            "name": "transportScaleType",
+            "w": 230,
+            "x": 530,
+            "y": 6
+        },
+        {
+            "h": 35,
+            "name": "transportTimeLabel",
+            "w": 217,
+            "x": 240,
+            "y": 2
+        },
+        {
+            "h": 35,
+            "name": "transportVolumeSpacer",
+            "w": 36,
+            "x": 850,
+            "y": 2
+        },
+        {
+            "h": 33,
+            "name": "transport.go-to-start",
+            "w": 33,
+            "x": 2,
+            "y": 3
+        },
+        {
+            "h": 33,
+            "name": "transport.play",
+            "w": 33,
+            "x": 36,
+            "y": 3
+        },
+        {
+            "h": 33,
+            "name": "transport.pause",
+            "w": 33,
+            "x": 70,
+            "y": 3
+        },
+        {
+            "h": 33,
+            "name": "transport.stop",
+            "w": 33,
+            "x": 104,
+            "y": 3
+        },
+        {
+            "h": 33,
+            "name": "transport.loop",
+            "w": 33,
+            "x": 138,
+            "y": 3
+        },
+        {
+            "h": 33,
+            "name": "transport.follow-playhead",
+            "w": 33,
+            "x": 172,
+            "y": 3
+        },
+        {
+            "h": 33,
+            "name": "transport.resonance",
+            "w": 33,
+            "x": 206,
+            "y": 3
+        },
+        {
+            "h": 35,
+            "name": "transport.time",
+            "w": 217,
+            "x": 240,
+            "y": 2
+        },
+        {
+            "h": 26,
+            "name": "transport.scale-root",
+            "w": 71,
+            "x": 458,
+            "y": 6
+        },
+        {
+            "h": 26,
+            "name": "transport.scale-type",
+            "w": 230,
+            "x": 530,
+            "y": 6
+        },
+        {
+            "h": 33,
+            "name": "transport.scale-highlight",
+            "w": 33,
+            "x": 761,
+            "y": 3
+        },
+        {
+            "h": 27,
+            "name": "transport.scale-fold",
+            "w": 54,
+            "x": 795,
+            "y": 6
+        },
+        {
+            "h": 35,
+            "name": "transport.master-volume-caption",
+            "w": 72,
+            "x": 894,
+            "y": 2
+        },
+        {
+            "h": 30,
+            "name": "transport.master-volume",
+            "w": 111,
+            "x": 967,
+            "y": 4
+        },
+        {
+            "h": 30,
+            "name": "transport.output-volume-caption",
+            "w": 100,
+            "x": 0,
+            "y": 0
+        },
+        {
+            "h": 35,
+            "name": "transport.output-volume",
+            "w": 35,
+            "x": 0,
+            "y": 0
+        }
+    ]
+}

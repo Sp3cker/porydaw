@@ -1,0 +1,29 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 1,
+        "height": 800,
+        "width": 1280
+    },
+    "profile": "macos-dpr1-font16",
+    "regions": [
+        {
+            "h": 737,
+            "name": "track-headers.band",
+            "w": 280,
+            "x": 0,
+            "y": 30
+        },
+        {
+            "h": 737,
+            "name": "track-headers.rows",
+            "w": 280,
+            "x": 0,
+            "y": 30
+        }
+    ]
+}

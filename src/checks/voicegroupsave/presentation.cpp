@@ -266,7 +266,6 @@ void VoicegroupSaveTest::typeColumnMapsEveryFamily()
     auto *tree = browser->findChild<QTreeWidget *>();
     QVERIFY(tree);
     QVERIFY(tree->columnWidth(1) >= tree->header()->sectionSizeHint(1));
-    QVERIFY(tree->iconSize().height() >= layout::fontPx(1.5));
     QVERIFY(tree->columnWidth(1) >=
             tree->iconSize().width() + 2 * layout::space(layout::Space::Two));
     // The Type column is icon-only: every family publishes its name through

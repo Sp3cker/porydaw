@@ -1,0 +1,50 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 800,
+        "width": 1280
+    },
+    "profile": "macos-dpr2-font12",
+    "regions": [
+        {
+            "h": 24,
+            "name": "timeline.ruler.band",
+            "w": 1280,
+            "x": 0,
+            "y": 0
+        },
+        {
+            "h": 24,
+            "name": "timeline.ruler.gutter",
+            "w": 262,
+            "x": 0,
+            "y": 0
+        },
+        {
+            "h": 24,
+            "name": "timeline.ruler.chrome",
+            "w": 1018,
+            "x": 262,
+            "y": 0
+        },
+        {
+            "h": 24,
+            "name": "timeline.ruler.marks",
+            "w": 1018,
+            "x": 262,
+            "y": 0
+        },
+        {
+            "h": 24,
+            "name": "timeline.ruler.controls",
+            "w": 262,
+            "x": 0,
+            "y": 0
+        }
+    ]
+}

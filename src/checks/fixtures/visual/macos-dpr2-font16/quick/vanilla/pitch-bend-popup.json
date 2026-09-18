@@ -1,0 +1,29 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 800,
+        "width": 1280
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 463,
+            "name": "popup.pitch-bend.form",
+            "w": 388,
+            "x": 236,
+            "y": 138
+        },
+        {
+            "h": 193,
+            "name": "popup.pitch-bend.graph",
+            "w": 388,
+            "x": 236,
+            "y": 215
+        }
+    ]
+}

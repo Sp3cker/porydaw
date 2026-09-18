@@ -157,7 +157,7 @@ QRectF padRowRect(const SongView &view, int key)
 }
 
 // Choose input targets through the public projection, not a second camera.
-// Keep an accidental as the named pad so its light text is always exercised.
+// Keep an accidental as the named pad so dark-lane rendering is exercised.
 std::optional<std::array<int, 3>> drumPadKeys(const SongView &view, qreal plotHeight)
 {
     int accidental = -1;
@@ -549,8 +549,6 @@ void TimelinePanTest::drumGutterLabelsAndHover()
     QCOMPARE(model->data(namedIndex, TimelineQuickTextModel::TextRole).toString(),
              QStringLiteral("Kick"));
     QVERIFY(detail::isBlackKey(namedKey));
-    QCOMPARE(model->data(namedIndex, TimelineQuickTextModel::ColorRole).value<QColor>(),
-             themes::color(themes::Role::song_view_piano_keyboard_natural_key));
     const QString longText = model->data(longIndex, TimelineQuickTextModel::TextRole).toString();
     const QRectF longRect = model->data(longIndex, TimelineQuickTextModel::RectRole).toRectF();
     const QString fullLongText = QString::fromUtf8(kDrumPadLongName);

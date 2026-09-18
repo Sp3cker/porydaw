@@ -355,6 +355,12 @@ qt_add_executable(porydaw_checks
     themelayout/tst_themelayout_chrome.cpp
     themelayout/tst_themelayout_font.cpp
     themelayout/tst_themelayout_scale.cpp
+    visual/visualbaseline.h
+    visual/visualbaseline.cpp
+    visual/chrome.cpp
+    visual/browsers.cpp
+    visual/dialogs.cpp
+    visual/quick.cpp
     ${PROJECT_SOURCE_DIR}/resources/fonts.qrc
 )
 set_target_properties(porydaw_checks PROPERTIES
@@ -410,6 +416,10 @@ target_link_libraries(porydaw_checks PRIVATE
 )
 target_precompile_headers(porydaw_checks PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/src/porydaw_pch.hpp>")
+# Frozen visual baselines live in the source tree; the runner resolves them
+# relative to the project root baked in at configure time.
+target_compile_definitions(porydaw_checks PRIVATE
+    PORYDAW_CHECK_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 add_dependencies(porydaw_checks mid2agb)
 
 qt_add_resources(porydaw_checks "checks_app_icon"

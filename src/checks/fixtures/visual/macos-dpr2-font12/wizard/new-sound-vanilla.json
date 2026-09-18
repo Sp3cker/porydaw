@@ -1,0 +1,50 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 456,
+        "width": 624
+    },
+    "profile": "macos-dpr2-font12",
+    "regions": [
+        {
+            "h": 18,
+            "name": "__qt__passive_wizardbutton0",
+            "w": 58,
+            "x": 432,
+            "y": 427
+        },
+        {
+            "h": 199,
+            "name": "page",
+            "w": 590,
+            "x": 17,
+            "y": 70
+        },
+        {
+            "h": 18,
+            "name": "button-back",
+            "w": 58,
+            "x": 432,
+            "y": 427
+        },
+        {
+            "h": 18,
+            "name": "button-finish",
+            "w": 53,
+            "x": 496,
+            "y": 427
+        },
+        {
+            "h": 18,
+            "name": "button-cancel",
+            "w": 58,
+            "x": 555,
+            "y": 427
+        }
+    ]
+}

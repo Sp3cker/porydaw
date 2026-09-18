@@ -1,0 +1,36 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 800,
+        "width": 1280
+    },
+    "profile": "macos-dpr2-font12",
+    "regions": [
+        {
+            "h": 575,
+            "name": "drum-keyboard.band",
+            "w": 1064,
+            "x": 210,
+            "y": 24
+        },
+        {
+            "h": 575,
+            "name": "drum-keyboard.keys",
+            "w": 52,
+            "x": 210,
+            "y": 24
+        },
+        {
+            "h": 12,
+            "name": "drum-keyboard.named-plate",
+            "w": 26,
+            "x": 233,
+            "y": 52
+        }
+    ]
+}

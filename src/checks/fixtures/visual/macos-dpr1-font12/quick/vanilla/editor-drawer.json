@@ -1,0 +1,43 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 1,
+        "height": 800,
+        "width": 1280
+    },
+    "profile": "macos-dpr1-font12",
+    "regions": [
+        {
+            "h": 22,
+            "name": "editor-drawer.bar",
+            "w": 1280,
+            "x": 0,
+            "y": 753
+        },
+        {
+            "h": 13,
+            "name": "editor-drawer.detent",
+            "w": 13,
+            "x": 212,
+            "y": 585
+        },
+        {
+            "h": 16,
+            "name": "editor-drawer.velocity-toggle",
+            "w": 16,
+            "x": 247,
+            "y": 756
+        },
+        {
+            "h": 160,
+            "name": "editor-drawer.velocity-page",
+            "w": 1070,
+            "x": 210,
+            "y": 439
+        }
+    ]
+}

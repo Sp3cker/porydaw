@@ -1,0 +1,71 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 480,
+        "width": 720
+    },
+    "profile": "macos-dpr2-font12",
+    "regions": [
+        {
+            "h": 18,
+            "name": "sf2ButtonBox",
+            "w": 698,
+            "x": 11,
+            "y": 451
+        },
+        {
+            "h": 22,
+            "name": "sf2SearchEdit",
+            "w": 698,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 406,
+            "name": "sf2ZoneTree",
+            "w": 698,
+            "x": 11,
+            "y": 39
+        },
+        {
+            "h": 22,
+            "name": "search",
+            "w": 698,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 406,
+            "name": "zone-tree",
+            "w": 698,
+            "x": 11,
+            "y": 39
+        },
+        {
+            "h": 14,
+            "name": "zone-tree.group-row",
+            "w": 674,
+            "x": 32,
+            "y": 62
+        },
+        {
+            "h": 14,
+            "name": "zone-tree.zone-row",
+            "w": 654,
+            "x": 52,
+            "y": 76
+        },
+        {
+            "h": 18,
+            "name": "button-box",
+            "w": 698,
+            "x": 11,
+            "y": 451
+        }
+    ]
+}

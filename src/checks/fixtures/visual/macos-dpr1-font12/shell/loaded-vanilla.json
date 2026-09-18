@@ -1,0 +1,246 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 1,
+        "height": 684,
+        "width": 1104
+    },
+    "profile": "macos-dpr1-font12",
+    "regions": [
+        {
+            "h": 17,
+            "name": "polyphonyCgbValue",
+            "w": 31,
+            "x": 1049,
+            "y": 665
+        },
+        {
+            "h": 17,
+            "name": "polyphonyPcmValue",
+            "w": 48,
+            "x": 964,
+            "y": 665
+        },
+        {
+            "h": 17,
+            "name": "shell.poly-meter",
+            "w": 147,
+            "x": 933,
+            "y": 665
+        },
+        {
+            "h": 22,
+            "name": "shell.status-bar",
+            "w": 1104,
+            "x": 0,
+            "y": 662
+        },
+        {
+            "h": 28,
+            "name": "shell.tabs",
+            "w": 836,
+            "x": 268,
+            "y": 37
+        },
+        {
+            "h": 22,
+            "name": "songListCategory",
+            "w": 166,
+            "x": 3,
+            "y": 87
+        },
+        {
+            "h": 22,
+            "name": "songListSearch",
+            "w": 256,
+            "x": 3,
+            "y": 62
+        },
+        {
+            "h": 22,
+            "name": "songListSort",
+            "w": 87,
+            "x": 172,
+            "y": 87
+        },
+        {
+            "h": 322,
+            "name": "songsDock",
+            "w": 262,
+            "x": 0,
+            "y": 37
+        },
+        {
+            "h": 211,
+            "name": "songsDock.position-indicator",
+            "w": 6,
+            "x": 252,
+            "y": 113
+        },
+        {
+            "h": 22,
+            "name": "songsDock.title",
+            "w": 262,
+            "x": 0,
+            "y": 37
+        },
+        {
+            "h": 25,
+            "name": "transportMasterVolume",
+            "w": 91,
+            "x": 924,
+            "y": 6
+        },
+        {
+            "h": 33,
+            "name": "transportMasterVolumeCaption",
+            "w": 56,
+            "x": 867,
+            "y": 2
+        },
+        {
+            "h": 26,
+            "name": "transportOutputVolume",
+            "w": 26,
+            "x": 1076,
+            "y": 5
+        },
+        {
+            "h": 33,
+            "name": "transportOutputVolumeCaption",
+            "w": 52,
+            "x": 1023,
+            "y": 2
+        },
+        {
+            "h": 23,
+            "name": "transportScaleFold",
+            "w": 44,
+            "x": 678,
+            "y": 7
+        },
+        {
+            "h": 33,
+            "name": "transportScaleHighlight",
+            "w": 33,
+            "x": 644,
+            "y": 2
+        },
+        {
+            "h": 22,
+            "name": "transportScaleRoot",
+            "w": 55,
+            "x": 409,
+            "y": 7
+        },
+        {
+            "h": 22,
+            "name": "transportScaleType",
+            "w": 178,
+            "x": 465,
+            "y": 7
+        },
+        {
+            "h": 33,
+            "name": "transportTimeLabel",
+            "w": 168,
+            "x": 240,
+            "y": 2
+        },
+        {
+            "h": 37,
+            "name": "transportToolbar",
+            "w": 1104,
+            "x": 0,
+            "y": 0
+        },
+        {
+            "h": 33,
+            "name": "transportVolumeSpacer",
+            "w": 136,
+            "x": 723,
+            "y": 2
+        },
+        {
+            "h": 22,
+            "name": "vgArgCombo",
+            "w": 179,
+            "x": 79,
+            "y": 389
+        },
+        {
+            "h": 297,
+            "name": "voicegroupDock",
+            "w": 262,
+            "x": 0,
+            "y": 365
+        },
+        {
+            "h": 205,
+            "name": "voicegroupDock.position-indicator",
+            "w": 6,
+            "x": 255,
+            "y": 414
+        },
+        {
+            "h": 22,
+            "name": "voicegroupDock.title",
+            "w": 262,
+            "x": 0,
+            "y": 365
+        },
+        {
+            "h": 14,
+            "name": "voicegroupEditorNotice",
+            "w": 256,
+            "x": 3,
+            "y": 624
+        },
+        {
+            "h": 28,
+            "name": "shell.tab.0",
+            "w": 131,
+            "x": 268,
+            "y": 37
+        },
+        {
+            "h": 17,
+            "name": "shell.poly-meter.value.0",
+            "w": 48,
+            "x": 964,
+            "y": 665
+        },
+        {
+            "h": 17,
+            "name": "shell.poly-meter.value.1",
+            "w": 31,
+            "x": 1049,
+            "y": 665
+        },
+        {
+            "h": 17,
+            "name": "shell.poly-meter.pcm-caption",
+            "w": 29,
+            "x": 933,
+            "y": 665
+        },
+        {
+            "h": 17,
+            "name": "shell.poly-meter.cgb-caption",
+            "w": 27,
+            "x": 1020,
+            "y": 665
+        },
+        {
+            "h": 597,
+            "name": "shell.quick-surface",
+            "w": 836,
+            "x": 268,
+            "y": 65
+        }
+    ]
+}

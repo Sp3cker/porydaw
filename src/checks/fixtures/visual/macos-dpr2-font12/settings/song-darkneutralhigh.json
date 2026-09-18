@@ -1,0 +1,85 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 580,
+        "width": 560
+    },
+    "profile": "macos-dpr2-font12",
+    "regions": [
+        {
+            "h": 534,
+            "name": "tabs",
+            "w": 538,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 22,
+            "name": "tab-bar",
+            "w": 212,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 18,
+            "name": "button-box",
+            "w": 240,
+            "x": 309,
+            "y": 551
+        },
+        {
+            "h": 22,
+            "name": "song.voicegroup",
+            "w": 395,
+            "x": 145,
+            "y": 42
+        },
+        {
+            "h": 25,
+            "name": "song.volume",
+            "w": 395,
+            "x": 145,
+            "y": 70
+        },
+        {
+            "h": 25,
+            "name": "song.reverb",
+            "w": 395,
+            "x": 145,
+            "y": 101
+        },
+        {
+            "h": 25,
+            "name": "song.priority",
+            "w": 395,
+            "x": 145,
+            "y": 132
+        },
+        {
+            "h": 16,
+            "name": "song.exact-gate",
+            "w": 520,
+            "x": 20,
+            "y": 163
+        },
+        {
+            "h": 16,
+            "name": "song.extended-clocks",
+            "w": 520,
+            "x": 20,
+            "y": 185
+        },
+        {
+            "h": 16,
+            "name": "song.no-compression",
+            "w": 520,
+            "x": 20,
+            "y": 207
+        }
+    ]
+}

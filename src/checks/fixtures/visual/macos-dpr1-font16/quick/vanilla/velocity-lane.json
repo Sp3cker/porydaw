@@ -1,0 +1,50 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 1,
+        "height": 800,
+        "width": 1280
+    },
+    "profile": "macos-dpr1-font16",
+    "regions": [
+        {
+            "h": 160,
+            "name": "velocity-lane.band",
+            "w": 1000,
+            "x": 280,
+            "y": 428
+        },
+        {
+            "h": 160,
+            "name": "velocity-lane.axis",
+            "w": 69,
+            "x": 280,
+            "y": 428
+        },
+        {
+            "h": 160,
+            "name": "velocity-lane.grid",
+            "w": 931,
+            "x": 349,
+            "y": 428
+        },
+        {
+            "h": 160,
+            "name": "velocity-lane.stems",
+            "w": 931,
+            "x": 349,
+            "y": 428
+        },
+        {
+            "h": 160,
+            "name": "velocity-lane.nodes",
+            "w": 931,
+            "x": 349,
+            "y": 428
+        }
+    ]
+}

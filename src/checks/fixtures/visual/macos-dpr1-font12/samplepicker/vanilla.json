@@ -1,0 +1,162 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 1,
+        "height": 420,
+        "width": 340
+    },
+    "profile": "macos-dpr1-font12",
+    "regions": [
+        {
+            "h": 14,
+            "name": "vgSamplePickerDetail",
+            "w": 330,
+            "x": 5,
+            "y": 401
+        },
+        {
+            "h": 366,
+            "name": "vgSamplePickerList",
+            "w": 330,
+            "x": 5,
+            "y": 31
+        },
+        {
+            "h": 22,
+            "name": "vgSamplePickerSearch",
+            "w": 330,
+            "x": 5,
+            "y": 5
+        },
+        {
+            "h": 14,
+            "name": "picker.section.0",
+            "w": 326,
+            "x": 6,
+            "y": 32
+        },
+        {
+            "h": 14,
+            "name": "picker.section.0.type-icon",
+            "w": 19,
+            "x": 313,
+            "y": 32
+        },
+        {
+            "h": 14,
+            "name": "picker.row.fixture_bass",
+            "w": 314,
+            "x": 18,
+            "y": 46
+        },
+        {
+            "h": 14,
+            "name": "picker.row.fixture_bass.type-icon",
+            "w": 19,
+            "x": 313,
+            "y": 46
+        },
+        {
+            "h": 14,
+            "name": "picker.row.fixture_keys",
+            "w": 314,
+            "x": 18,
+            "y": 60
+        },
+        {
+            "h": 14,
+            "name": "picker.row.fixture_keys.type-icon",
+            "w": 19,
+            "x": 313,
+            "y": 60
+        },
+        {
+            "h": 14,
+            "name": "picker.section.1",
+            "w": 326,
+            "x": 6,
+            "y": 74
+        },
+        {
+            "h": 14,
+            "name": "picker.section.1.type-icon",
+            "w": 19,
+            "x": 313,
+            "y": 74
+        },
+        {
+            "h": 14,
+            "name": "picker.row.DirectSoundWaveData_fixture_bass",
+            "w": 314,
+            "x": 18,
+            "y": 88
+        },
+        {
+            "h": 14,
+            "name": "picker.row.DirectSoundWaveData_fixture_bass.type-icon",
+            "w": 19,
+            "x": 313,
+            "y": 88
+        },
+        {
+            "h": 14,
+            "name": "picker.row.DirectSoundWaveData_fixture_bass.loop-badge",
+            "w": 19,
+            "x": 313,
+            "y": 88
+        },
+        {
+            "h": 14,
+            "name": "picker.row.DirectSoundWaveData_fixture_drum",
+            "w": 314,
+            "x": 18,
+            "y": 102
+        },
+        {
+            "h": 14,
+            "name": "picker.row.DirectSoundWaveData_fixture_drum.type-icon",
+            "w": 19,
+            "x": 313,
+            "y": 102
+        },
+        {
+            "h": 14,
+            "name": "picker.row.DirectSoundWaveData_fixture_loop",
+            "w": 314,
+            "x": 18,
+            "y": 116
+        },
+        {
+            "h": 14,
+            "name": "picker.row.DirectSoundWaveData_fixture_loop.type-icon",
+            "w": 19,
+            "x": 313,
+            "y": 116
+        },
+        {
+            "h": 14,
+            "name": "picker.row.DirectSoundWaveData_fixture_loop.loop-badge",
+            "w": 19,
+            "x": 313,
+            "y": 116
+        },
+        {
+            "h": 14,
+            "name": "picker.row.DirectSoundWaveData_fixture_pluck",
+            "w": 314,
+            "x": 18,
+            "y": 130
+        },
+        {
+            "h": 14,
+            "name": "picker.row.DirectSoundWaveData_fixture_pluck.type-icon",
+            "w": 19,
+            "x": 313,
+            "y": 130
+        }
+    ]
+}

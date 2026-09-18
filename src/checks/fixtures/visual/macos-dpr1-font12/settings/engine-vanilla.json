@@ -1,0 +1,78 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 1,
+        "height": 580,
+        "width": 560
+    },
+    "profile": "macos-dpr1-font12",
+    "regions": [
+        {
+            "h": 22,
+            "name": "pcmMixerCombo",
+            "w": 415,
+            "x": 125,
+            "y": 73
+        },
+        {
+            "h": 534,
+            "name": "tabs",
+            "w": 538,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 22,
+            "name": "tab-bar",
+            "w": 212,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 18,
+            "name": "button-box",
+            "w": 240,
+            "x": 309,
+            "y": 551
+        },
+        {
+            "h": 25,
+            "name": "engine.polyphony",
+            "w": 415,
+            "x": 125,
+            "y": 42
+        },
+        {
+            "h": 22,
+            "name": "engine.mixer",
+            "w": 415,
+            "x": 125,
+            "y": 73
+        },
+        {
+            "h": 22,
+            "name": "engine.mix-rate",
+            "w": 415,
+            "x": 125,
+            "y": 101
+        },
+        {
+            "h": 16,
+            "name": "engine.analog-filter",
+            "w": 520,
+            "x": 20,
+            "y": 129
+        },
+        {
+            "h": 18,
+            "name": "engine.restore-defaults",
+            "w": 118,
+            "x": 20,
+            "y": 151
+        }
+    ]
+}
