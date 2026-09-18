@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.29)
 
 project(SwiftGridPrototype LANGUAGES C CXX Swift)
 
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -203,4 +205,11 @@ if(APPLE)
         )
         target_sources(swift_grid_prototype PRIVATE "${SWIFT_GRID_FIXTURE_SRC}")
     endforeach()
+elseif(WIN32)
+    file(COPY ${SWIFT_GRID_QML_FILES}
+        DESTINATION "${CMAKE_CURRENT_BINARY_DIR}"
+    )
+    file(COPY "${SWIFT_GRID_ROOT}/src/checks/fixtures/decompproject/sound"
+        DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/AudioFixture"
+    )
 endif()

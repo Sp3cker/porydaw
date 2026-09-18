@@ -29,9 +29,14 @@ using Session = std::unique_ptr<SGAudioSession, decltype(&sga_destroy)>;
 
 Session makeSession()
 {
+#ifdef Q_OS_MACOS
     const QByteArray root = QDir(QCoreApplication::applicationDirPath())
                                 .absoluteFilePath("../Resources/AudioFixture")
                                 .toUtf8();
+#else
+    const QByteArray root =
+        QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("AudioFixture").toUtf8();
+#endif
     std::array<char, 1024> error{};
     Session session(sga_create(root.constData(), error.data(), error.size()), sga_destroy);
     requireAudio(bool(session), error.data());

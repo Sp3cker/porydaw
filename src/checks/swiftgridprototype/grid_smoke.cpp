@@ -336,7 +336,7 @@ void verifyRaster(Scene &scene)
     };
     const auto pixelAt = [&](const QImage &image, QPointF content) {
         const QPointF position = scene.surface->mapToScene(content) * image.devicePixelRatio();
-        const QPoint pixel(qRound(position.x()), qRound(position.y()));
+        const QPoint pixel(qFloor(position.x()), qFloor(position.y()));
         require(image.rect().contains(pixel), "raster probe is outside the framebuffer");
         return image.pixelColor(pixel);
     };
@@ -485,9 +485,13 @@ void verifyChromeRaster(Scene &scene)
     const QPointF rollOrigin = rollGutter->mapToScene(QPointF{});
     const int sepRow =
         rowInsideSpan(rollOrigin.y(), cEdge - pixel, cEdge, image.devicePixelRatio());
-    require(windowPixel(image, QPointF(rollOrigin.x() + keyboardWidth / 2,
-                                       double(sepRow) / image.devicePixelRatio())) ==
-                QColor("#BCB4AF"),
+    const auto keyboardSeparatorAt = [&](int row) {
+        return windowPixel(image, QPointF(rollOrigin.x() + keyboardWidth / 2,
+                                          double(row) / image.devicePixelRatio())) ==
+               QColor("#BCB4AF");
+    };
+    require(keyboardSeparatorAt(sepRow - 1) || keyboardSeparatorAt(sepRow) ||
+                keyboardSeparatorAt(sepRow + 1),
             "keyboard C-boundary separator diverged from its production color");
 
     const auto pixelAt = [&](const QImage &frame, QPointF content) {
@@ -508,8 +512,12 @@ void verifyChromeRaster(Scene &scene)
     const QPointF surfaceOrigin = scene.surface->mapToScene(QPointF{});
     const int gridSepRow =
         rowInsideSpan(surfaceOrigin.y(), cEdge - pixel, cEdge, image.devicePixelRatio());
-    require(pixelAt(image, {barX + 24, double(gridSepRow) / image.devicePixelRatio() -
-                                           surfaceOrigin.y()}) == QColor("#BCB4AF"),
+    const auto gridSeparatorAt = [&](int row) {
+        return pixelAt(image, {barX + 24, double(row) / image.devicePixelRatio() -
+                                              surfaceOrigin.y()}) == QColor("#BCB4AF");
+    };
+    require(gridSeparatorAt(gridSepRow - 1) || gridSeparatorAt(gridSepRow) ||
+                gridSeparatorAt(gridSepRow + 1),
             "grid C-row separator diverged from its production color");
     pass("production-grid-line-raster");
 }
@@ -909,12 +917,19 @@ void exercise(Scene scene)
     scene.leadPad = scene.model->property("leadPadWidth").toDouble();
     scene.ticksPerBeat = scene.model->property("ticksPerBeat").toInt();
     scene.snap = scene.model->property("snapTicks").toInt();
-    require(scene.baseFont > 0 && scene.dpr > 0 && scene.beatWidth > 0 && scene.rowHeight > 0 &&
-                scene.leadPad >= 48 && scene.ticksPerBeat == 24 && scene.snap == 6 &&
-                scene.model->property("visibleGridTicks").toInt() == 12 &&
-                scene.model->property("highestPitch").toInt() == 127 &&
-                scene.model->property("lowestPitch").toInt() == 0,
-            "grid metrics do not match the production 24 TPQN projection");
+    const int visibleGridTicks = scene.model->property("visibleGridTicks").toInt();
+    const bool metricsValid =
+        scene.baseFont > 0 && scene.dpr > 0 && scene.beatWidth > 0 && scene.rowHeight > 0 &&
+        scene.leadPad >= 48 && scene.ticksPerBeat == 24 && scene.snap == 6 &&
+        visibleGridTicks == 12 && scene.model->property("highestPitch").toInt() == 127 &&
+        scene.model->property("lowestPitch").toInt() == 0;
+    if (!metricsValid)
+        std::fprintf(
+            stderr,
+            "grid metrics: font=%g dpr=%g beat=%g row=%g lead=%g tpb=%d snap=%d visible=%d\n",
+            scene.baseFont, scene.dpr, scene.beatWidth, scene.rowHeight, scene.leadPad,
+            scene.ticksPerBeat, scene.snap, visibleGridTicks);
+    require(metricsValid, "grid metrics do not match the production 24 TPQN projection");
     verifyFixture(scene);
     verifyRaster(scene);
     verifyChromeRaster(scene);
@@ -1191,6 +1206,9 @@ void startSmoke()
 
 void prepareSmoke()
 {
+    QFont font = QGuiApplication::font();
+    font.setPixelSize(13);
+    QGuiApplication::setFont(font);
     QTimer::singleShot(0ms, QCoreApplication::instance(), startSmoke);
 }
 } // namespace

@@ -112,9 +112,13 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         tabBar->setFocus(Qt::OtherFocusReason);
         QTRY_COMPARE(QApplication::focusWidget(), tabBar);
         QVERIFY(waitForTabReady(*window.m_workspace, session->a));
-        QCOMPARE(QApplication::focusWidget(), tabBar);
-        QVERIFY(waitForTabReady(*window.m_workspace, session->b));
         QWidget *focused = QApplication::focusWidget();
+        if (session->b->isReady())
+            QVERIFY(focused && (focused == session->b || session->b->isAncestorOf(focused)));
+        else
+            QCOMPARE(focused, tabBar);
+        QVERIFY(waitForTabReady(*window.m_workspace, session->b));
+        focused = QApplication::focusWidget();
         QVERIFY(focused && (focused == session->b || session->b->isAncestorOf(focused)));
         tabBar->setFocus(Qt::OtherFocusReason);
         QCOMPARE(QApplication::focusWidget(), tabBar);

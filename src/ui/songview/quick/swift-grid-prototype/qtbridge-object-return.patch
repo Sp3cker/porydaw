@@ -13,7 +13,13 @@ diff --git a/Sources/QtBridgeMacros/Extensions.swift b/Sources/QtBridgeMacros/Ex
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -62,6 +62,7 @@ ExternalProject_Add(QtBridgeMacros_External
+@@ -59,9 +59,13 @@ ExternalProject_Add(QtBridgeMacros_External
+     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Sources/QtBridgeMacros"
+     CMAKE_ARGS
+         -G Ninja
++        -DCMAKE_MAKE_PROGRAM:FILEPATH=${CMAKE_MAKE_PROGRAM}
++        -DCMAKE_Swift_COMPILER:FILEPATH=${CMAKE_Swift_COMPILER}
++        -DCMAKE_Swift_FLAGS:STRING=${CMAKE_Swift_FLAGS}
          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
          -DBUILD_SHARED_LIBS=YES
          -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=${QTBRIDGE_MACROS_EP_ROOT}/build/bin
