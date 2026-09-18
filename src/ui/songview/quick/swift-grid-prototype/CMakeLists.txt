@@ -121,6 +121,7 @@ set(SWIFT_GRID_SMOKE_DIR
 
 add_library(swift_grid_smoke STATIC
     "${SWIFT_GRID_SMOKE_DIR}/grid_smoke.cpp"
+    "${SWIFT_GRID_SMOKE_DIR}/songtabs_smoke.cpp"
     "${SWIFT_GRID_SMOKE_DIR}/audio_smoke.cpp"
     "${SWIFT_GRID_SMOKE_DIR}/interaction_smoke.cpp"
     "${SWIFT_GRID_SMOKE_DIR}/math_smoke.cpp"
@@ -180,7 +181,7 @@ set(SWIFT_GRID_FONT_QRC
 )
 
 set_target_properties(swift_grid_prototype PROPERTIES AUTORCC ON)
-target_sources(swift_grid_prototype PRIVATE "${SWIFT_GRID_FONT_QRC}")
+target_sources(swift_grid_prototype PRIVATE "${SWIFT_GRID_FONT_QRC}" "tabart.qrc")
 
 if(APPLE)
     set_target_properties(swift_grid_prototype PROPERTIES

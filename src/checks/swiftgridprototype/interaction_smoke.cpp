@@ -230,8 +230,30 @@ void verifyGridInteractions(QQuickWindow *window, QObject *model)
     require(audio->property("playheadTick").toDouble() == 0, "Stop did not return to song start");
     pass("real-audio-play-pause-stop-and-playhead");
     QTest::keyClick(window, Qt::Key_Space);
-    awaitState([&] { return audio->property("playing").toBool(); },
-               "focused Stop button stole Space from the window transport command");
+    const bool spaceStarted =
+        QTest::qWaitFor([&] { return audio->property("playing").toBool(); }, 3s);
+    if (!spaceStarted) {
+        QQuickItem *focus = window->activeFocusItem();
+        QObject *currentPage = window->property("currentPage").value<QObject *>();
+        QObject *rootAudio = window->property("audio").value<QObject *>();
+        QObject *songTabs = window->property("songTabs").value<QObject *>();
+        const QString focusName = focus ? focus->objectName() : QStringLiteral("<null>");
+        const QString pageName = currentPage ? currentPage->objectName() : QStringLiteral("<null>");
+        std::fprintf(stderr,
+                     "Space transport diagnostic: windowActive=%d windowVisible=%d "
+                     "activeFocusItem='%s' gridShortcutsEnabled=%d currentPage='%s' "
+                     "noteMenuOpen=%d pitchEditorOpen=%d rootAudioMatches=%d selectedId=%d "
+                     "selectedIndex=%d audioPlaying=%d\n",
+                     window->isActive(), window->isVisible(), qPrintable(focusName),
+                     window->property("gridShortcutsEnabled").toBool(), qPrintable(pageName),
+                     currentPage && currentPage->property("noteMenuOpen").toBool(),
+                     currentPage && currentPage->property("pitchEditorOpen").toBool(),
+                     rootAudio == audio, songTabs ? songTabs->property("selectedId").toInt() : -1,
+                     songTabs ? songTabs->property("selectedIndex").toInt() : -1,
+                     audio->property("playing").toBool());
+        std::fflush(stderr);
+    }
+    require(spaceStarted, "focused Stop button stole Space from the window transport command");
     QTest::keyClick(window, Qt::Key_Return);
     require(!audio->property("playing").toBool() && audio->property("playheadTick").toDouble() == 0,
             "Enter did not activate the focused Stop button");

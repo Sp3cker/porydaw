@@ -5,9 +5,9 @@ import QtBridge
 
 private func deliverWindowCancel(_ reason: Int32, _ context: UnsafeMutableRawPointer?) {
     guard let context else { return }
-    let grid = Unmanaged<PianoGrid>.fromOpaque(context).takeUnretainedValue()
+    let songTabs = Unmanaged<SongTabsController>.fromOpaque(context).takeUnretainedValue()
     MainActor.assumeIsolated {
-        grid.inputCancelled(reason: Int(reason))
+        songTabs.selectedGrid?.inputCancelled(reason: Int(reason))
     }
 }
 
@@ -15,17 +15,21 @@ private func deliverWindowCancel(_ reason: Int32, _ context: UnsafeMutableRawPoi
 struct SwiftGridApp: QApp {
     let qmlFileName: String = "Main"
 
-    let gridModel = PianoGrid()
+    let songTabs = SongTabsController()
 
     var initialProperties: [String: QObjectBuildable] {
-        ["gridModel": gridModel]
+        ["songTabs": songTabs]
     }
 
     init() {
         runMathSelftestIfRequested()
         runPolicySelftestIfRequested()
+        let initialTabId = songTabs.selectedId
+        songTabs.openTab()
+        songTabs.openTab()
+        songTabs.selectTab(tabId: initialTabId)
         sgw_installWindowCancelHost(
-            deliverWindowCancel, Unmanaged.passUnretained(gridModel).toOpaque())
+            deliverWindowCancel, Unmanaged.passUnretained(songTabs).toOpaque())
         installGridSmoke()
     }
 }

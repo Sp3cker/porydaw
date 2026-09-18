@@ -1,8 +1,10 @@
 #include "grid_smoke.h"
+#include "songtabs_smoke.h"
 
 #include <QColor>
 #include <QCoreApplication>
 #include <QDeadlineTimer>
+#include <QFont>
 #include <QGuiApplication>
 #include <QImage>
 #include <QJsonArray>
@@ -346,9 +348,34 @@ void verifyRaster(Scene &scene)
     const double pixel = 1.0 / scene.dpr;
     const int borderPixels = qRound(scene.dpr);
     for (int i = 0; i < borderPixels; ++i) {
-        require(isBlack(pixelAt(image, {note.center().x(), note.top() + i * pixel})) &&
-                    isBlack(pixelAt(image, {note.center().x(), note.bottom() - (i + 1) * pixel})),
-                "unselected note lacks its display-scaled black border");
+        const QPointF topProbe{note.center().x(), note.top() + i * pixel};
+        const QPointF bottomProbe{note.center().x(), note.bottom() - (i + 1) * pixel};
+        const QColor topColor = pixelAt(image, topProbe);
+        const QColor bottomColor = pixelAt(image, bottomProbe);
+        const bool borderMatches = isBlack(topColor) && isBlack(bottomColor);
+        if (!borderMatches) {
+            const QPointF surfaceOrigin = scene.surface->mapToScene(QPointF{});
+            const QPointF topDevice =
+                scene.surface->mapToScene(topProbe) * image.devicePixelRatio();
+            const QPointF bottomDevice =
+                scene.surface->mapToScene(bottomProbe) * image.devicePixelRatio();
+            std::fprintf(stderr,
+                         "unselected border raster i=%d viewport=%gx%g content=(%g,%g) "
+                         "surfaceOrigin=(%g,%g) dpr=%g imageDpr=%g note=(%g,%g %gx%g) "
+                         "topContent=(%g,%g) topDevice=(%g,%g) topColor=(%d,%d,%d,%d) "
+                         "bottomContent=(%g,%g) bottomDevice=(%g,%g) bottomColor=(%d,%d,%d,%d)\n",
+                         i, scene.viewport->width(), scene.viewport->height(),
+                         scene.viewport->property("contentX").toDouble(),
+                         scene.viewport->property("contentY").toDouble(), surfaceOrigin.x(),
+                         surfaceOrigin.y(), scene.dpr, image.devicePixelRatio(), note.x(), note.y(),
+                         note.width(), note.height(), topProbe.x(), topProbe.y(), topDevice.x(),
+                         topDevice.y(), topColor.red(), topColor.green(), topColor.blue(),
+                         topColor.alpha(), bottomProbe.x(), bottomProbe.y(), bottomDevice.x(),
+                         bottomDevice.y(), bottomColor.red(), bottomColor.green(),
+                         bottomColor.blue(), bottomColor.alpha());
+            std::fflush(stderr);
+        }
+        require(borderMatches, "unselected note lacks its display-scaled black border");
     }
     pass("production-row-colors-note-fill-and-border-raster");
 
@@ -758,6 +785,7 @@ void exercise(Scene scene)
     verifyGridUndo(scene.window, scene.model);
     verifyGridCancel(scene.window, scene.model);
     verifyGridEscape(scene.window, scene.model);
+    verifySongTabs(scene.window);
 
     std::puts("SWIFT_GRID_SMOKE PASS");
     std::fflush(stdout);
@@ -768,6 +796,17 @@ void startSmoke()
 {
     auto *app = QCoreApplication::instance();
     require(app, "pre-routine ran without application");
+    const QString fontPxValue = qEnvironmentVariable("PORYDAW_VISUAL_FONT_PX");
+    if (!fontPxValue.isEmpty()) {
+        bool ok = false;
+        const int fontPx = fontPxValue.toInt(&ok);
+        require(ok && fontPx > 0, "PORYDAW_VISUAL_FONT_PX must be a positive integer");
+        auto *guiApp = qobject_cast<QGuiApplication *>(app);
+        require(guiApp, "visual font override requires QGuiApplication");
+        QFont font = guiApp->font();
+        font.setPixelSize(fontPx);
+        guiApp->setFont(font);
+    }
     auto *poll = new QTimer(app);
     const auto checkReady = [poll] {
         for (QWindow *candidate : QGuiApplication::allWindows()) {
@@ -784,6 +823,9 @@ void startSmoke()
                 continue;
             poll->stop();
             poll->deleteLater();
+            window->requestActivate();
+            require(QTest::qWaitForWindowActive(window),
+                    "smoke window did not become active before keyboard interaction");
             exercise({window, viewport, surface, model});
             return;
         }

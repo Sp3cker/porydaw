@@ -128,6 +128,14 @@ public final class GridPalette {
     public let chromeBackground: String = "#BDB5AF"
     public let separator: String = "#5B5652"
     public let outline: String = "#8C857F"
+    public let tabBackground: String = "#E1DBD6"
+    public let tabHoverBackground: String = "#ECE7E1"
+    public let tabSelectedBackground: String = "#B9E8EE"
+    // QPushButton/QToolButton surfaces: the tab strip's overflow controls are
+    // ordinary tool buttons, so they take the button roles, not the tab faces.
+    public let buttonBackground: String = "#E1DBD6"
+    public let buttonHoverBackground: String = "#ECE7E1"
+    public let buttonPressedBackground: String = "#F5B61C"
 
     public let keyboardNatural: String = "#F4F4F4"
     public let keyboardBlack: String = "#202224"

@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/tabart">
+        <file alias="window-close.svg">tabart/window-close.svg</file>
+        <file alias="tab-arrow-left-enabled.png">tabart/tab-arrow-left-enabled.png</file>
+        <file alias="tab-arrow-left-enabled@2x.png">tabart/tab-arrow-left-enabled@2x.png</file>
+        <file alias="tab-arrow-left-disabled.png">tabart/tab-arrow-left-disabled.png</file>
+        <file alias="tab-arrow-left-disabled@2x.png">tabart/tab-arrow-left-disabled@2x.png</file>
+        <file alias="tab-arrow-right-enabled.png">tabart/tab-arrow-right-enabled.png</file>
+        <file alias="tab-arrow-right-enabled@2x.png">tabart/tab-arrow-right-enabled@2x.png</file>
+        <file alias="tab-arrow-right-disabled.png">tabart/tab-arrow-right-disabled.png</file>
+        <file alias="tab-arrow-right-disabled@2x.png">tabart/tab-arrow-right-disabled@2x.png</file>
+    </qresource>
+</RCC>
