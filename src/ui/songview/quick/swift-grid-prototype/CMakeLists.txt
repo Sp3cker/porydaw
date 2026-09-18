@@ -125,6 +125,8 @@ add_library(swift_grid_smoke STATIC
     "${SWIFT_GRID_SMOKE_DIR}/interaction_smoke.cpp"
     "${SWIFT_GRID_SMOKE_DIR}/math_smoke.cpp"
     "${SWIFT_GRID_SMOKE_DIR}/jurisdiction_smoke.cpp"
+    "${SWIFT_GRID_SMOKE_DIR}/policy_smoke.cpp"
+    "${SWIFT_GRID_ROOT}/src/ui/songview/editcommandtable.cpp"
 )
 target_include_directories(swift_grid_smoke PRIVATE
     "${SWIFT_GRID_SMOKE_DIR}"

@@ -23,6 +23,7 @@ struct SwiftGridApp: QApp {
 
     init() {
         runMathSelftestIfRequested()
+        runPolicySelftestIfRequested()
         sgw_installWindowCancelHost(
             deliverWindowCancel, Unmanaged.passUnretained(gridModel).toOpaque())
         installGridSmoke()
