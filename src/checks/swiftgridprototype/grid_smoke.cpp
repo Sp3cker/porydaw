@@ -388,6 +388,7 @@ void verifyRaster(Scene &scene)
 
 void exercise(Scene scene)
 {
+    verifyGridAudio();
     scene.baseFont = scene.model->property("baseFontPx").toDouble();
     scene.dpr = scene.model->property("devicePixelRatio").toDouble();
     scene.beatWidth = scene.model->property("beatWidth").toDouble();
@@ -630,6 +631,7 @@ void exercise(Scene scene)
     }
     require(hoverAligned, "scrolled keyboard hover chip is not beside the hovered row");
     pass("scrolled-keyboard-hover-chip");
+    verifyGridInteractions(scene.window, scene.model);
 
     std::puts("SWIFT_GRID_SMOKE PASS");
     std::fflush(stdout);

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.29)
 
-project(SwiftGridPrototype LANGUAGES CXX Swift)
+project(SwiftGridPrototype LANGUAGES C CXX Swift)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,6 +17,9 @@ include(FetchContent)
 FetchContent_Declare(QtBridge
     GIT_REPOSITORY https://github.com/qt/qtbridge-swift.git
     GIT_TAG 407714006dd21107b70db6547ce75e43df0c8a75
+    PATCH_COMMAND "${CMAKE_COMMAND}"
+        "-DPATCH=${CMAKE_CURRENT_SOURCE_DIR}/qtbridge-object-return.patch"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/PatchQtBridge.cmake"
 )
 FetchContent_MakeAvailable(QtBridge)
 
@@ -43,6 +46,65 @@ if(APPLE)
         PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
 endif()
 
+
+# The poryaaaa submodule is not checked out in worktrees; the build tool
+# passes -DPORYAAAA_DIR from the main checkout (same pattern as Qt).
+if(NOT PORYAAAA_DIR)
+    set(PORYAAAA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../external/poryaaaa/packages/poryaaaa")
+endif()
+if(NOT EXISTS "${PORYAAAA_DIR}/plugin/porydaw/CMakeLists.txt")
+    message(FATAL_ERROR "PORYAAAA_DIR must point to the poryaaaa package source tree")
+endif()
+add_subdirectory("${PORYAAAA_DIR}/plugin/porydaw" poryaaaa-engine)
+set(SWIFT_GRID_AUDIO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/native")
+# Project root (src/, external/, resources/) — five levels above this dir.
+set(SWIFT_GRID_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../..")
+add_library(swift_grid_audio STATIC
+    "${SWIFT_GRID_AUDIO_DIR}/audio_session.cpp"
+    "${SWIFT_GRID_AUDIO_DIR}/audio_session_internal.h"
+    "${SWIFT_GRID_ROOT}/src/audio/audioengine.cpp"
+    "${SWIFT_GRID_ROOT}/src/audio/auditionslots.cpp"
+    "${SWIFT_GRID_ROOT}/src/audio/resonance_suppressor.cpp"
+    "${SWIFT_GRID_ROOT}/src/audio/miniaudio_impl.c"
+    "${SWIFT_GRID_ROOT}/src/core/miditimeline.cpp"
+    "${SWIFT_GRID_ROOT}/src/core/timelineplayer.cpp"
+    "${SWIFT_GRID_ROOT}/src/core/smf.cpp"
+    "${SWIFT_GRID_ROOT}/src/core/mid2agbtables.cpp"
+)
+set_source_files_properties("${SWIFT_GRID_AUDIO_DIR}/audio_session_internal.h" PROPERTIES
+    HEADER_FILE_ONLY ON
+)
+target_include_directories(swift_grid_audio PUBLIC
+    "${SWIFT_GRID_AUDIO_DIR}"
+    "${SWIFT_GRID_ROOT}/src"
+)
+target_include_directories(swift_grid_audio SYSTEM PUBLIC
+    "${PORYAAAA_DIR}/third_party"
+    "${PORYAAAA_DIR}/plugin/porydaw/.."
+    "${PORYAAAA_DIR}/plugin/m4a"
+    "${PORYAAAA_DIR}/plugin/m4a/.."
+    "${PORYAAAA_DIR}/plugin/hw_audio"
+    "${PORYAAAA_DIR}/plugin/hw_audio/.."
+)
+target_link_libraries(swift_grid_audio PUBLIC
+    Qt6::Core
+    poryaaaa_engine
+)
+
+add_library(swift_grid_curve STATIC
+    "${SWIFT_GRID_AUDIO_DIR}/curve_session.cpp"
+    "${SWIFT_GRID_ROOT}/src/ui/pitchbendkernel.cpp"
+    "${SWIFT_GRID_ROOT}/src/ui/pitchprojection.cpp"
+    "${SWIFT_GRID_ROOT}/src/ui/songview/grid.cpp"
+    "${SWIFT_GRID_ROOT}/src/ui/songview/timeaxis.cpp"
+    "${SWIFT_GRID_ROOT}/src/ui/songview/timecamera.cpp"
+)
+target_include_directories(swift_grid_curve PUBLIC
+    "${SWIFT_GRID_AUDIO_DIR}"
+    "${SWIFT_GRID_ROOT}/src"
+)
+target_link_libraries(swift_grid_curve PUBLIC Qt6::Core)
+
 # Verification-only native smoke driver (event injection; no UI/model logic).
 # Kept as a separate static target so Qt6::Test's QT_TESTCASE_* compile
 # definitions stay on C++ and never reach the Swift compilation.
@@ -52,6 +114,8 @@ set(SWIFT_GRID_SMOKE_DIR
 
 add_library(swift_grid_smoke STATIC
     "${SWIFT_GRID_SMOKE_DIR}/grid_smoke.cpp"
+    "${SWIFT_GRID_SMOKE_DIR}/audio_smoke.cpp"
+    "${SWIFT_GRID_SMOKE_DIR}/interaction_smoke.cpp"
 )
 target_include_directories(swift_grid_smoke PRIVATE
     "${SWIFT_GRID_SMOKE_DIR}"
@@ -59,6 +123,7 @@ target_include_directories(swift_grid_smoke PRIVATE
 target_link_libraries(swift_grid_smoke PRIVATE
     Qt6::Quick
     Qt6::Test
+    swift_grid_audio
 )
 if(APPLE)
     set_target_properties(swift_grid_smoke PROPERTIES
@@ -82,13 +147,17 @@ if(APPLE)
 endif()
 
 target_compile_options(swift_grid_prototype PRIVATE
-    "$<$<COMPILE_LANGUAGE:Swift>:-Xcc>"
-    "$<$<COMPILE_LANGUAGE:Swift>:-fmodule-map-file=${SWIFT_GRID_SMOKE_DIR}/module.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_SMOKE_DIR}/module.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_AUDIO_DIR}/module.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_AUDIO_DIR}>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_ROOT}/src>"
 )
 
 target_link_libraries(swift_grid_prototype PRIVATE
     QtBridge
     Qt6::Quick
+    swift_grid_audio
+    swift_grid_curve
     "$<LINK_ONLY:swift_grid_smoke>"
 )
 
@@ -107,15 +176,17 @@ if(APPLE)
     set_source_files_properties(${SWIFT_GRID_QML_FILES} PROPERTIES
         MACOSX_PACKAGE_LOCATION Resources
     )
-else()
-    foreach(qml_file IN LISTS SWIFT_GRID_QML_FILES)
-        get_filename_component(qml_name "${qml_file}" NAME)
-        add_custom_command(
-            TARGET swift_grid_prototype POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy
-                "${qml_file}"
-                "$<TARGET_FILE_DIR:swift_grid_prototype>/${qml_name}"
-            COMMENT "Copying ${qml_name} next to executable"
+    file(GLOB_RECURSE SWIFT_GRID_FIXTURE_FILES RELATIVE
+        "${SWIFT_GRID_ROOT}/src/checks/fixtures/decompproject"
+        "${SWIFT_GRID_ROOT}/src/checks/fixtures/decompproject/sound/*"
+    )
+    foreach(fixture_file IN LISTS SWIFT_GRID_FIXTURE_FILES)
+        set(SWIFT_GRID_FIXTURE_SRC
+            "${SWIFT_GRID_ROOT}/src/checks/fixtures/decompproject/${fixture_file}")
+        get_filename_component(SWIFT_GRID_FIXTURE_DIR "${fixture_file}" DIRECTORY)
+        set_source_files_properties("${SWIFT_GRID_FIXTURE_SRC}" PROPERTIES
+            MACOSX_PACKAGE_LOCATION "Resources/AudioFixture/${SWIFT_GRID_FIXTURE_DIR}"
         )
+        target_sources(swift_grid_prototype PRIVATE "${SWIFT_GRID_FIXTURE_SRC}")
     endforeach()
 endif()

@@ -6,9 +6,11 @@
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timeruler.h"
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <ranges>
 #include <span>
@@ -250,4 +252,50 @@ void SongView::applyEditorViewState(const EditorViewState &state)
     cancelActiveInteractions();
     m_editorViewState = state;
     applyEditorViewStateToWidgets(drawerChanged);
+}
+
+void SongView::gridStateChanged(bool changed)
+{
+    if (!changed)
+        return;
+    if (m_editorDrawer)
+        m_editorDrawer->cancelVisiblePageInteraction();
+    m_ruler->syncGridControls();
+    m_roll->requestQuickUpdate(PianoRollQuickDirty::DrawPreviewFill);
+    requestTimelineQuickUpdate(TimelineQuickDirty::Ruler | TimelineQuickDirty::OtherEvents |
+                               TimelineQuickDirty::Velocity | TimelineQuickDirty::VoiceChanges);
+    requestAutomationQuickUpdate(songview::AutomationRefresh::All);
+    m_roll->requestQuickUpdate(PianoRollQuickDirty::GridTime);
+    refreshDrawerPages(DrawerScope::Content);
+}
+
+void SongView::setGridFeel(songview::GridFeel feel)
+{
+    gridStateChanged(m_grid.setFeel(feel));
+}
+
+void SongView::setGridSelection(songview::GridSelection selection)
+{
+    gridStateChanged(m_grid.setSelection(selection));
+}
+
+void SongView::narrowGrid()
+{
+    gridStateChanged(m_grid.narrow());
+}
+
+void SongView::widenGrid()
+{
+    gridStateChanged(m_grid.widen());
+}
+
+void SongView::toggleGridFeel()
+{
+    gridStateChanged(m_grid.toggleFeel());
+}
+
+void SongView::forEachGridLine(Tick tickBegin, Tick tickEnd,
+                               const std::function<void(Tick, bool, int, int)> &fn) const
+{
+    m_timeAxis.forEachGridLine(tickBegin, tickEnd, fn);
 }

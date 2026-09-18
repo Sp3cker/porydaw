@@ -1,0 +1,9 @@
+module NativeGridAudio {
+    header "audio_session.h"
+    export *
+}
+
+module NativeGridCurve {
+    header "curve_session.h"
+    export *
+}

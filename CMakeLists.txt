@@ -397,9 +397,12 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/quick/timerulerquick.cpp
     src/ui/pitchbendeditor.cpp
     src/ui/pitchbendeditor.hpp
+    src/ui/pitchbendgeometry.h
     src/ui/pitchbendgraph.cpp
     src/ui/pitchbendgraph.hpp
     src/ui/pitchbendgraph_render.cpp
+    src/ui/pitchbendkernel.cpp
+    src/ui/pitchbendkernel.h
     src/ui/eventtablemodel.cpp
     src/ui/eventtablemodeledit.cpp
     src/ui/eventtablemodel.h

@@ -1,15 +1,14 @@
 #pragma once
 
 #include "core/songdocument.h"
+#include "pitchbendkernel.h"
 #include "ui/mousehints/hintprofiles.h"
 #include "ui/songview/quick/timelinequicklayer.h"
-
 #include <QCursor>
 #include <QPointF>
 #include <QPointer>
 #include <QQuickItem>
 #include <QRect>
-#include <QSize>
 #include <QString>
 #include <QtQmlIntegration/qqmlintegration.h>
 #include <cstdint>
@@ -32,38 +31,6 @@ class MouseHints;
 }
 
 namespace songview {
-
-class Grid;
-
-// One geometry authority for the pitch/modulation popup. resolve() derives
-// every value from typography and layout primitives (never raw pixel
-// literals); the session resolves it once, injects it into each graph's
-// initial state, and applies later changes through setMetrics so C++ hit-testing,
-// projection, and rendering agree with the QML labels.
-struct PitchBendGeometry {
-    static PitchBendGeometry resolve(const QFont &font, qreal dpr);
-
-    QSize popupSize;
-    int headerHeight = 0;
-    int graphHeight = 0;
-    int outerInset = 0;
-    int titleHeight = 0;
-    int descriptionHeight = 0;
-    int controlsHeight = 0;
-    int fieldWidth = 0;
-    int fieldHeight = 0;
-    int resetWidth = 0;
-    int resetHeight = 0;
-    int axisLabelHeight = 0;
-    QRect canvas; // Graph-local canvas rectangle; labels align around it.
-    qreal zeroDetent = 0.0;
-    qreal nodeHitRadius = 0.0;
-    qreal nodePaintRadius = 0.0;
-    qreal selectedRingRadius = 0.0;
-    qreal curveStroke = 0.0;
-    qreal scrubThreshold = 0.0;
-    qreal hairline = 0.0;
-};
 
 // One editable lane of the note-automation popup. A QQuickItem whose curve,
 // gesture, sampling, collision, and wheel algorithms stay in C++ with exact
@@ -167,23 +134,6 @@ class PitchBendGraph : public QQuickItem
     void itemChange(ItemChange change, const ItemChangeData &data) override;
 
   private:
-    enum class StrokeMode { Freehand, AngledLine };
-    enum class Sampling { Normal, Fine };
-
-    struct StrokeState {
-        StrokeMode mode = StrokeMode::Freehand;
-        std::map<Tick, int> snapshot;
-        Tick anchorTick = 0;
-        int anchorValue = 0;
-        Tick previousTick = 0;
-        int previousValue = 0;
-    };
-
-    struct VertexDragState {
-        std::map<Tick, int> snapshot;
-        Tick originalTick = 0;
-    };
-
     // redraw() rebuilds the retained layer and schedules a scene-graph sync.
     void redraw();
     void notifyPresentationChanged();
@@ -201,25 +151,11 @@ class PitchBendGraph : public QQuickItem
     void notifyCancelRequested();
     void notifyAuditionRequested();
     void notifyGrabLost();
-    void updateStroke(const QPointF &position);
-    void updateVertexDrag(const QPointF &position, Qt::KeyboardModifiers modifiers = {});
     void finishGesture();
-    void replaceSegment(Tick tick0, int value0, Tick tick1, int value1, Sampling sampling);
-    bool isLineGesture() const;
-    Sampling gestureSampling() const;
-    Tick nextSampleTick(Tick tick, Sampling sampling) const;
-    Tick lastEditableTick(Sampling sampling) const;
-    Tick tickAtFraction(double fraction, Sampling sampling) const;
-    Tick tickAtX(qreal x, Sampling sampling) const;
-    int xAtTick(Tick tick) const;
-    int valueAtY(qreal y) const;
-    int yAtValue(int value) const;
-    int valueAtTick(Tick tick) const;
-    int minimumValue() const;
-    int maximumValue() const;
-    int defaultValue() const;
     QString formatLiveValue() const;
     QString formatRangeLimit(bool positive) const;
+    static PitchBendKernel::Lane toKernelLane(Lane lane);
+    static Lane fromKernelLane(PitchBendKernel::Lane lane);
     // Mouse-hint presentation: this item is its own physical Quick source.
     // The service borrow is lazy and QPointer-guarded so teardown never
     // recreates it.
@@ -246,31 +182,19 @@ class PitchBendGraph : public QQuickItem
     void settleMouseHintAt(const QPointF &position);
     void settleMouseHintAtCursor();
 
-    static constexpr int kBendStep = 128;
-
-    bool m_initialized = false;
-    ::SongView *m_songView = nullptr;
-    const songview::Grid *m_grid = nullptr;
     int m_engineTrack = -1;
-    Tick m_startTick = 0;
-    Tick m_endTick = 0;
     bool m_unterminated = false;
     int m_bendRange = 2;
-    int m_endValue = 0;
-    Lane m_lane = Lane::PitchBend;
-    std::map<Tick, int> m_points;
-    Tick m_keyboardTick = 0;
-    int m_liveValue = 0;
-    double m_rangeWheelRemainder = 0.0;
-    std::optional<StrokeState> m_strokeState;
-    std::optional<VertexDragState> m_vertexDragState;
-    std::optional<Tick> m_selectedTick;
     Callbacks m_callbacks;
-    PitchBendGeometry m_geometry;
+    // Canonical curve/gesture/sampling state. Empty until initialize()
+    // supplies the grid, span, and document snapshot; the kernel itself is
+    // always fully constructed once present.
+    std::optional<PitchBendKernel> m_kernel;
     TimelineQuickLayerData m_layer;
     mutable QPointer<ui::MouseHints> m_mouseHints;
     // Originating profile retained for the whole gesture.
     ui::hint_profiles::Id m_gestureProfile = ui::hint_profiles::Id::Empty;
     bool m_hovered = false;
 };
+
 } // namespace songview

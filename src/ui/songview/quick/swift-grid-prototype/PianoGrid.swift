@@ -1,4 +1,3 @@
-
 import Foundation
 import QtBridge
 
@@ -12,8 +11,10 @@ final class GridNote {
     let velocity: Int
     let ghost: Bool
 
-    init(noteId: Int, tick: Int, duration: Int, pitch: Int,
-         track: Int, velocity: Int, ghost: Bool) {
+    init(
+        noteId: Int, tick: Int, duration: Int, pitch: Int,
+        track: Int, velocity: Int, ghost: Bool
+    ) {
         self.noteId = noteId
         self.tick = tick
         self.duration = duration
@@ -38,9 +39,16 @@ public final class PianoGrid {
 
     @QtIgnored
     private(set) var notes: [GridNote] = []
+    @QtIgnored
+    var controllerEvents: [GridControllerEvent] = []
+    @QtTracked public var audio: AudioSession = AudioSession()
     @QtTracked public var scene: GridScene = GridScene()
     @QtTracked public var palette: GridPalette = GridPalette()
 
+    // Published geometry snapshot for QML and the smoke harness. `metrics`
+    // below is the single authority; these are write-once-per-configure
+    // outputs assigned only in publishGeometry() and never read by Swift
+    // interaction or projection logic.
     public var baseFontPx: Double = 13
     public var devicePixelRatio: Double = 1
     public var beatWidth: Double = 35
@@ -77,84 +85,173 @@ public final class PianoGrid {
     private var providedMetrics: [String: Double] = [:]
     private var pendingMetrics: Set<String> = []
 
+    // Sole geometry authority for all Swift-side computation.
     var metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 0, height: 0)
 
-    private enum GestureKind {
-        case pendingDraw, draw, move, resize, resizeLeft
-    }
-
-    private struct Gesture {
-        var kind: GestureKind
-        var pressX: Double
-        var pressY: Double
-        var pressTick: Double
-        var pressKey: Int
-        var dTick: Int = 0
-        var dKey: Int = 0
-        var dDur: Int = 0
-        var gripTick: Int = 0
-        var gripOpposite: Int = 0
-        var drawAnchor: Int = 0
-        var drawTick: Int = 0
-        var drawDur: Int = 0
-        var drawKey: Int = 0
-    }
-
-    private var gesture: Gesture?
+    private var gesture: GridGesture?
     private var selection: Set<Int> = []
     var lastVelocity: Int = 100
     var hoverKey: Int = -1
     @QtIgnored
     var viewportScrollY: Double = 0
-    private var nextNoteId = 31
+    private var nextNoteId = GridFixture.nextNoteId
+    private var noteSummaryDirty = true
+    private var selectionAtRightPress: Set<Int> = []
+    @QtIgnored private var pitchEditor: PitchEditor?
+    @QtIgnored private var pitchPreview: [GridControllerEvent] = []
 
     var drawPreview: (tick: Int, duration: Int, pitch: Int)? {
-        guard let g = gesture, g.kind == .draw else { return nil }
-        return (g.drawTick, g.drawDur, g.drawKey)
+        guard case .draw(let state) = gesture else { return nil }
+        return (state.tick, state.duration, state.key)
+    }
+
+    private var selectionBand: (x: Double, y: Double, w: Double, h: Double)? {
+        guard case .band(let state) = gesture else { return nil }
+        let x0 = min(state.pressX, state.curX)
+        let x1 = max(state.pressX, state.curX)
+        let y0 = min(state.pressY, state.curY)
+        let y1 = max(state.pressY, state.curY)
+        return (x0, y0, x1 - x0, y1 - y0)
     }
 
     public init() {
-        notes = makeFixture()
+        notes = GridFixture.makeNotes()
         recomputeGridWidth()
         publishMetricsRequest()
-        scene.attach(self)
-        refreshOutputs()
+        scene.hoverChipFont = fontSpec(.chip)
+        publishOutputs()
+        synchronizeAudio()
     }
 
-    public func configureViewport(baseFontPx: Double, devicePixelRatio: Double,
-                                  width: Double, height: Double) {
-        guard baseFontPx > 0, devicePixelRatio > 0, width >= 0, height >= 0 else { return }
-        self.baseFontPx = baseFontPx
-        self.devicePixelRatio = devicePixelRatio
-        metrics = GridMetrics(baseFontPx: baseFontPx, dpr: devicePixelRatio,
-                              width: width, height: height)
-        beatWidth = metrics.beatWidth
-        rowHeight = metrics.rowHeight
-        keyboardWidth = metrics.keyboardWidth
-        leadPadWidth = metrics.leadPadWidth
-        gridHeight = metrics.gridHeight
-        snapTicks = metrics.snapTicks
-        visibleGridTicks = metrics.visibleGridTicks
+    public func synchronizeAudio() {
+        audio.sync(notes: notes, controllers: controllerEvents)
+    }
 
+    @QtSignal public func contextMenuRequested(x: Double, y: Double)
+
+    @QtIgnored
+    var selectedEditableNote: GridNote? {
+        notes.first { !$0.ghost && isSelected($0.noteId) }
+    }
+
+    public func hasEditableSelection() -> Bool { selectedEditableNote != nil }
+
+    public func makePitchEditor(
+        titleHeight: Double, captionHeight: Double,
+        bodyFamily: String, monoFamily: String
+    ) -> PitchEditor {
+        let editor = PitchEditor(
+            note: selectedEditableNote!, events: controllerEvents,
+            baseFontPx: metrics.baseFontPx, dpr: metrics.dpr,
+            titleHeight: titleHeight, captionHeight: captionHeight,
+            bodyFamily: bodyFamily, monoFamily: monoFamily, palette: palette)
+        pitchEditor = editor
+        pitchPreview = controllerEvents
+        return editor
+    }
+
+    public func pitchEditorAnchor() -> [String: QVariantSettable] {
+        let note = selectedEditableNote!
+        let rect = metrics.noteRect(
+            x0: metrics.displayX(Double(note.tick)),
+            x1: metrics.displayX(Double(note.tick + note.duration)),
+            pitch: note.pitch)
+        return ["x": rect.x, "y": rect.y, "width": rect.w, "height": rect.h]
+    }
+
+    public func previewPitchCurves() {
+        pitchPreview = pitchEditor!.controllerEvents()
+        audio.sync(notes: notes, controllers: pitchPreview)
+    }
+
+    public func commitPitchCurves() {
+        controllerEvents = pitchPreview
+    }
+
+    public func closePitchEditor() {
+        pitchEditor = nil
+        pitchPreview.removeAll()
+    }
+
+    public func deleteSelection() {
+        let before = notes.count
+        notes.removeAll { !$0.ghost && isSelected($0.noteId) }
+        guard notes.count != before else { return }
+        selection.removeAll()
+        noteSummaryDirty = true
+        recomputeGridWidth()
+        scene.rebuildNotes(sceneInput())
+        publishOutputs()
+        synchronizeAudio()
+    }
+
+    public func configureViewport(
+        baseFontPx: Double, devicePixelRatio: Double,
+        width: Double, height: Double
+    ) {
+        guard baseFontPx > 0, devicePixelRatio > 0, width >= 0, height >= 0 else { return }
+        metrics = GridMetrics(
+            baseFontPx: baseFontPx, dpr: devicePixelRatio,
+            width: width, height: height)
         initialScrollY = defaultVerticalScroll()
         recomputeGridWidth()
+        publishGeometry()
         publishMetricsRequest()
-        scene.attach(self)
-        scene.rebuildStatic()
-        scene.rebuildNotes()
-        refreshOutputs()
+        rebuildScene()
+        publishOutputs()
+    }
+
+    private func publishGeometry() {
+        let m = metrics
+        baseFontPx = m.baseFontPx
+        devicePixelRatio = m.dpr
+        beatWidth = m.beatWidth
+        rowHeight = m.rowHeight
+        keyboardWidth = m.keyboardWidth
+        leadPadWidth = m.leadPadWidth
+        gridHeight = m.gridHeight
+        snapTicks = m.snapTicks
+        visibleGridTicks = m.visibleGridTicks
+    }
+
+    private func sceneInput() -> GridSceneInput {
+        GridSceneInput(
+            metrics: metrics,
+            palette: palette,
+            gridWidth: gridWidth,
+            rulerHeight: rulerHeight,
+            metricsReady: metricsReady,
+            metric: { self.metric($0) },
+            fontSpec: { self.fontSpec($0) },
+            notes: notes,
+            displayedNote: { self.displayedNote($0) },
+            isSelected: { self.isSelected($0) },
+            drawPreview: drawPreview,
+            lastVelocity: lastVelocity,
+            hoverKey: hoverKey,
+            viewportScrollY: viewportScrollY,
+            selectionBand: selectionBand)
+    }
+
+    private func rebuildScene() {
+        let input = sceneInput()
+        scene.rebuildStatic(input)
+        scene.rebuildNotes(input)
     }
 
     private func defaultVerticalScroll() -> Double {
-        var lo = 127, hi = 0
+        var lo = 127
+        var hi = 0
         for i in 0..<notes.count {
             lo = min(lo, notes[i].pitch)
             hi = max(hi, notes[i].pitch)
         }
         let midKey = lo <= hi ? (lo + hi) / 2 : 60
         let centerRow = 127 - midKey
-        return max(0.0, Double(centerRow) * metrics.rowHeight -
-                   max(metrics.initialViewportHeight, metrics.viewportHeight) / 2.0)
+        return max(
+            0.0,
+            Double(centerRow) * metrics.rowHeight - max(
+                metrics.initialViewportHeight, metrics.viewportHeight) / 2.0)
     }
 
     private func recomputeGridWidth() {
@@ -165,7 +262,8 @@ public final class PianoGrid {
         if let preview = drawPreview {
             end = max(end, preview.tick + preview.duration)
         }
-        gridWidth = metrics.leadPadWidth + Double(end) * metrics.pxPerTick
+        gridWidth =
+            metrics.leadPadWidth + Double(end) * metrics.pxPerTick
             + metrics.viewportWidth
         extendRulerMetrics()
     }
@@ -196,16 +294,21 @@ public final class PianoGrid {
         let bodyPx = max(1.0, (m.baseFontPx * 1.125).rounded())
         let next = "Atkinson Hyperlegible Next"
         let mono = "Atkinson Hyperlegible Mono"
-        func spec(_ family: String, _ px: Double, _ weight: Int,
-                  _ spacing: Double = 0) -> [String: QVariantSettable] {
-            ["family": family, "pixelSize": Int(px), "weight": weight,
-             "letterSpacing": spacing]
+        func spec(
+            _ family: String, _ px: Double, _ weight: Int,
+            _ spacing: Double = 0
+        ) -> [String: QVariantSettable] {
+            [
+                "family": family, "pixelSize": Int(px), "weight": weight,
+                "letterSpacing": spacing,
+            ]
         }
         let rulerPx = max(m.rulerMinFontPx, bodyPx - 1)
         measurementFonts = [
             "ruler": spec(mono, rulerPx, 400, m.rulerLetterSpacing),
-            "beat": spec(mono, max(m.rulerMinFontPx, rulerPx - 1), 400,
-                         m.rulerLetterSpacing),
+            "beat": spec(
+                mono, max(m.rulerMinFontPx, rulerPx - 1), 400,
+                m.rulerLetterSpacing),
             "bold": spec(mono, rulerPx, 600, m.rulerLetterSpacing),
             "sig": spec(next, bodyPx, 600),
             "chip": spec(next, m.baseFontPx, 400),
@@ -227,8 +330,11 @@ public final class PianoGrid {
             }
         }
         for key in 0..<128 {
-            keys.append(("chip.advance.\(GridScene.keyName(key))",
-                         GridScene.keyName(key)))
+            keys.append(
+                (
+                    "chip.advance.\(GridScene.keyName(key))",
+                    GridScene.keyName(key)
+                ))
         }
         metricsRequest = keys.map { "\($0.0)\t\($0.1)" }.joined(separator: "\n")
         pendingMetrics = Set(keys.map { $0.0 })
@@ -248,23 +354,17 @@ public final class PianoGrid {
         guard metricsReady else { return }
 
         rulerHeight = metric("bold.height") + 1 + metric("ruler.height") + 1
-        scene.rebuildStatic()
-        scene.rebuildNotes()
+        rebuildScene()
     }
 
     @QtIgnored
     func metric(_ key: String) -> Double {
-        guard let value = providedMetrics[key] else {
-            preconditionFailure("unrequested metric key: \(key)")
-        }
-        return value
+        providedMetrics[key]!
     }
 
     @QtIgnored
     func fontSpec(_ kind: GridFontKind) -> [String: QVariantSettable] {
-        guard var spec = measurementFonts[kind.prefix] as? [String: QVariantSettable] else {
-            preconditionFailure("unconfigured font: \(kind.prefix)")
-        }
+        var spec = measurementFonts[kind.prefix] as! [String: QVariantSettable]
         if kind == .keyLabel, metricsReady {
             spec["pixelSize"] = max(1, Int(metric("keylabel.fit")))
         }
@@ -276,143 +376,191 @@ public final class PianoGrid {
         let pressTick = metrics.tickAtContentX(x)
         let pressKey = metrics.yToPitch(y)
         guard pressKey >= 0 else { return }
-        var g = Gesture(kind: .pendingDraw, pressX: x, pressY: y,
-                        pressTick: pressTick, pressKey: pressKey)
+        var next: GridGesture = .pendingDraw(
+            GridGesture.PendingDraw(
+                pressX: x, pressY: y,
+                pressTick: pressTick, pressKey: pressKey))
         if let hit = hitNote(x: x, y: y) {
             let note = notes[hit.index]
             if !isSelected(note.noteId) {
                 selection = [note.noteId]
+                noteSummaryDirty = true
             }
             lastVelocity = note.velocity
             switch hit.zone {
             case .rightEdge:
-                g.kind = .resize
-                g.gripTick = note.tick + note.duration
-                g.gripOpposite = note.tick
+                next = .resize(
+                    pressTick: pressTick,
+                    gripTick: note.tick + note.duration,
+                    oppositeTick: note.tick, leading: false)
             case .leftEdge:
-                g.kind = .resizeLeft
-                g.gripTick = note.tick
-                g.gripOpposite = note.tick + note.duration
+                next = .resize(
+                    pressTick: pressTick,
+                    gripTick: note.tick,
+                    oppositeTick: note.tick + note.duration,
+                    leading: true)
             default:
-                g.kind = .move
+                next = .move(pressTick: pressTick, pressKey: pressKey)
             }
             activeNoteId = note.noteId
         } else {
+            if !selection.isEmpty { noteSummaryDirty = true }
             selection.removeAll()
         }
-        gesture = g
-        scene.rebuildNotes()
-        refreshOutputs()
+        gesture = next
+        scene.rebuildNotes(sceneInput())
+        publishOutputs()
     }
 
     public func updatePointer(x: Double, y: Double) {
-        guard var g = gesture else { return }
-        switch g.kind {
-        case .pendingDraw:
-
-            let key = metrics.yToPitch(y)
-            if key >= 0 { g.pressKey = key }
-            guard abs(x - g.pressX) >= metrics.drawThreshold else {
-                gesture = g
-                return
-            }
-            g.kind = .draw
-            g.drawAnchor = metrics.snapTickDown(g.pressTick)
-            g.drawTick = g.drawAnchor
-            g.drawDur = snapTicks
-            g.drawKey = g.pressKey
-            fallthrough
-        case .draw:
-            let tick = metrics.tickAtContentX(x)
-            let grid = snapTicks
-            if tick >= Double(g.drawAnchor) {
-                g.drawTick = g.drawAnchor
-                g.drawDur = max(g.drawAnchor + grid, metrics.snapTickUp(tick))
-                    - g.drawAnchor
-            } else {
-                g.drawTick = metrics.snapTickDown(tick)
-                g.drawDur = g.drawAnchor + grid - g.drawTick
-            }
-            let key = metrics.yToPitch(y)
-            if key >= 0 { g.drawKey = key }
-            gesture = g
-        case .move:
-            let tick = metrics.tickAtContentX(x)
-            let snapped = Int(((tick - g.pressTick) / Double(snapTicks)).rounded())
-                * snapTicks
-            let key = metrics.yToPitch(y)
-            g.dTick = snapped
-            if key >= 0 { g.dKey = key - g.pressKey }
-            gesture = g
-        case .resize, .resizeLeft:
-            let tick = metrics.tickAtContentX(x)
-            let desired = Double(g.gripTick) + (tick - g.pressTick)
-            let snapped = g.kind == .resize
-                ? max(metrics.snapTick(desired),
-                      metrics.snapTickUp(Double(g.gripOpposite) + 1.0))
-                : min(metrics.snapTick(desired),
-                      metrics.snapTickDown(Double(g.gripOpposite) - 1.0))
-
-            let delta = abs(desired - Double(g.gripTick)) < abs(desired - Double(snapped))
-                ? 0 : snapped - g.gripTick
-            if g.kind == .resize { g.dDur = delta } else { g.dTick = delta }
-            gesture = g
-        }
+        guard let g = gesture, !g.isRight else { return }
+        gesture = g.updated(x: x, y: y, metrics: metrics)
         recomputeGridWidth()
-        scene.rebuildNotes()
-        refreshOutputs()
+        scene.rebuildNotes(sceneInput())
+        publishOutputs()
     }
 
     public func endPointer() {
-        guard let g = gesture else { return }
-        switch g.kind {
-        case .pendingDraw:
-            editCursorTick = metrics.snapTick(g.pressTick)
-        case .draw:
-            let note = GridNote(noteId: nextNoteId, tick: g.drawTick,
-                                duration: g.drawDur, pitch: g.drawKey,
-                                track: 0, velocity: lastVelocity, ghost: false)
+        guard let g = gesture, !g.isRight else { return }
+        var mutated = false
+        switch g {
+        case .pendingDraw(let state):
+            editCursorTick = metrics.snapTick(state.pressTick)
+        case .draw(let state):
+            let note = GridNote(
+                noteId: nextNoteId, tick: state.tick,
+                duration: state.duration, pitch: state.key,
+                track: 0, velocity: lastVelocity, ghost: false)
             nextNoteId += 1
             notes.append(note)
             selection = [note.noteId]
-        case .move:
-            if g.dTick != 0 || g.dKey != 0 {
+            noteSummaryDirty = true
+            mutated = true
+        case .move(let state):
+            if state.dTick != 0 || state.dKey != 0 {
                 for i in 0..<notes.count where isSelected(notes[i].noteId) {
                     let note = notes[i]
-                    note.tick = max(0, note.tick + g.dTick)
-                    note.pitch = min(127, max(0, note.pitch + g.dKey))
+                    note.tick = max(0, note.tick + state.dTick)
+                    note.pitch = min(127, max(0, note.pitch + state.dKey))
                 }
+                noteSummaryDirty = true
+                mutated = true
             }
-        case .resize:
-            if g.dDur != 0 {
-                for i in 0..<notes.count where isSelected(notes[i].noteId) {
-                    let note = notes[i]
-                    note.duration = max(1, note.duration + g.dDur)
+        case .resize(let state):
+            if state.delta != 0 {
+                if state.leading {
+                    for i in 0..<notes.count where isSelected(notes[i].noteId) {
+                        let note = notes[i]
+                        let end = note.tick + note.duration
+                        note.tick = min(max(0, note.tick + state.delta), end - 1)
+                        note.duration = end - note.tick
+                    }
+                } else {
+                    for i in 0..<notes.count where isSelected(notes[i].noteId) {
+                        let note = notes[i]
+                        note.duration = max(1, note.duration + state.delta)
+                    }
                 }
+                noteSummaryDirty = true
+                mutated = true
             }
-        case .resizeLeft:
-            if g.dTick != 0 {
-                for i in 0..<notes.count where isSelected(notes[i].noteId) {
-                    let note = notes[i]
-                    let end = note.tick + note.duration
-                    note.tick = min(max(0, note.tick + g.dTick), end - 1)
-                    note.duration = end - note.tick
-                }
-            }
+        case .pendingMenu, .band:
+            break
         }
         gesture = nil
         activeNoteId = -1
         recomputeGridWidth()
-        scene.rebuildNotes()
-        refreshOutputs()
+        scene.rebuildNotes(sceneInput())
+        publishOutputs()
+        if mutated { synchronizeAudio() }
     }
 
     public func cancelPointer() {
-        guard gesture != nil else { return }
+        guard let g = gesture else { return }
         gesture = nil
         activeNoteId = -1
-        scene.rebuildNotes()
-        refreshOutputs()
+        if g.isRight {
+            selection = selectionAtRightPress
+            noteSummaryDirty = true
+        }
+        scene.rebuildNotes(sceneInput())
+        publishOutputs()
+    }
+
+    public func beginRightPointer(x: Double, y: Double, threshold: Double) {
+        if let g = gesture, !g.isRight {
+            gesture = nil
+            activeNoteId = -1
+        }
+        guard gesture == nil else { return }
+        selectionAtRightPress = selection
+        var hitId = -1
+        if let hit = hitNote(x: x, y: y) {
+            let note = notes[hit.index]
+            hitId = note.noteId
+            if !isSelected(note.noteId) {
+                selection = [note.noteId]
+                noteSummaryDirty = true
+            }
+        }
+        gesture = .pendingMenu(
+            GridGesture.PendingMenu(
+                pressX: x, pressY: y,
+                threshold: threshold,
+                hitNoteId: hitId))
+        scene.rebuildNotes(sceneInput())
+        publishOutputs()
+    }
+
+    public func updateRightPointer(x: Double, y: Double) {
+        guard let g = gesture, g.isRight else { return }
+        gesture = g.updated(x: x, y: y, metrics: metrics)
+        if let band = selectionBand {
+            applyBandSelection(band)
+        }
+        scene.rebuildNotes(sceneInput())
+        publishOutputs()
+    }
+
+    public func endRightPointer(x: Double, y: Double) {
+        guard let g = gesture, g.isRight else { return }
+        if case .pendingMenu(let state) = g {
+            if state.hitNoteId >= 0 {
+                contextMenuRequested(x: x, y: y)
+            } else {
+                if !selection.isEmpty { noteSummaryDirty = true }
+                selection.removeAll()
+            }
+        }
+        gesture = nil
+        scene.rebuildNotes(sceneInput())
+        publishOutputs()
+    }
+
+    public func cancelRightPointer() {
+        guard let g = gesture, g.isRight else { return }
+        gesture = nil
+        selection = selectionAtRightPress
+        noteSummaryDirty = true
+        scene.rebuildNotes(sceneInput())
+        publishOutputs()
+    }
+
+    private func applyBandSelection(_ band: (x: Double, y: Double, w: Double, h: Double)) {
+        var covered: Set<Int> = []
+        for note in notes where !note.ghost {
+            let r = metrics.noteRect(
+                x0: metrics.displayX(Double(note.tick)),
+                x1: metrics.displayX(Double(note.tick + note.duration)),
+                pitch: note.pitch)
+            let overlaps =
+                r.x < band.x + band.w && r.x + r.w > band.x
+                && r.y < band.y + band.h && r.y + r.h > band.y
+            if overlaps { covered.insert(note.noteId) }
+        }
+        guard covered != selection else { return }
+        selection = covered
+        noteSummaryDirty = true
     }
 
     public func doublePointer(x: Double, y: Double) {
@@ -424,17 +572,20 @@ public final class PianoGrid {
         } else {
             let key = metrics.yToPitch(y)
             guard key >= 0 else { return }
-            let note = GridNote(noteId: nextNoteId,
-                                tick: metrics.snapTickDown(metrics.tickAtContentX(x)),
-                                duration: snapTicks, pitch: key,
-                                track: 0, velocity: lastVelocity, ghost: false)
+            let note = GridNote(
+                noteId: nextNoteId,
+                tick: metrics.snapTickDown(metrics.tickAtContentX(x)),
+                duration: metrics.snapTicks, pitch: key,
+                track: 0, velocity: lastVelocity, ghost: false)
             nextNoteId += 1
             notes.append(note)
             selection = [note.noteId]
         }
+        noteSummaryDirty = true
         recomputeGridWidth()
-        scene.rebuildNotes()
-        refreshOutputs()
+        scene.rebuildNotes(sceneInput())
+        publishOutputs()
+        synchronizeAudio()
     }
 
     public func hoverPointer(x: Double, y: Double) {
@@ -454,20 +605,20 @@ public final class PianoGrid {
     public func setViewportScroll(y: Double) {
         guard viewportScrollY != y else { return }
         viewportScrollY = y
-        scene.rebuildHover()
+        scene.rebuildHover(sceneInput())
     }
 
     public func hoverKeyboard(y: Double) {
         let key = metrics.yToPitch(y)
         guard key != hoverKey else { return }
         hoverKey = key
-        scene.rebuildHover()
+        scene.rebuildHover(sceneInput())
     }
 
     public func clearKeyboardHover() {
         guard hoverKey >= 0 else { return }
         hoverKey = -1
-        scene.rebuildHover()
+        scene.rebuildHover(sceneInput())
     }
 
     public func resetDemo() {
@@ -478,76 +629,66 @@ public final class PianoGrid {
         hoverKey = -1
         cursorKind = 0
         editCursorTick = 0
-        notes = makeFixture()
-        nextNoteId = 31
+        notes = GridFixture.makeNotes()
+        controllerEvents.removeAll()
+        nextNoteId = GridFixture.nextNoteId
+        noteSummaryDirty = true
         recomputeGridWidth()
         initialScrollY = defaultVerticalScroll()
-        scene.rebuildStatic()
-        scene.rebuildNotes()
-        refreshOutputs()
+        rebuildScene()
+        publishOutputs()
+        synchronizeAudio()
     }
-
-    private func makeFixture() -> [GridNote] {
-        let leadPitch = [60, 64, 67, 71, 74, 71, 67, 64, 60, 64, 67, 71, 74, 71, 67]
-        let ghostPitch = [48, 55, 52, 57, 50, 57, 52, 55, 48, 55, 52, 57, 50, 57, 52]
-        var fixture: [GridNote] = []
-        fixture.reserveCapacity(30)
-        for i in 0..<15 {
-            fixture.append(GridNote(noteId: i + 1, tick: 24 * i, duration: 18,
-                                    pitch: leadPitch[i], track: 0,
-                                    velocity: [98, 104, 110][i % 3], ghost: false))
-        }
-        for i in 0..<15 {
-            fixture.append(GridNote(noteId: 16 + i, tick: 12 + 24 * i, duration: 18,
-                                    pitch: ghostPitch[i], track: 1,
-                                    velocity: [86, 92, 98][i % 3], ghost: true))
-        }
-        return fixture
-    }
-
 
     @QtIgnored
     func isSelected(_ noteId: Int) -> Bool { selection.contains(noteId) }
 
     @QtIgnored
     func displayedNote(_ note: GridNote) -> (tick: Int, end: Int, pitch: Int) {
-        var tick = note.tick, end = note.tick + note.duration, pitch = note.pitch
+        var tick = note.tick
+        var end = note.tick + note.duration
+        var pitch = note.pitch
         guard let g = gesture, !note.ghost, isSelected(note.noteId) else {
             return (tick, end, pitch)
         }
-        switch g.kind {
-        case .resizeLeft:
-            tick = min(max(0, tick + g.dTick), end - 1)
-        case .move, .resize:
-            tick = max(0, tick + g.dTick)
-            end = max(tick + 1, end + g.dTick + (g.kind == .resize ? g.dDur : 0))
-            pitch = min(127, max(0, pitch + g.dKey))
+        switch g {
+        case .resize(let state) where state.leading:
+            tick = min(max(0, tick + state.delta), end - 1)
+        case .move(let state):
+            tick = max(0, tick + state.dTick)
+            end = max(tick + 1, end + state.dTick)
+            pitch = min(127, max(0, pitch + state.dKey))
+        case .resize(let state):
+            end = max(tick + 1, end + state.delta)
         default:
             break
         }
         return (tick, end, pitch)
     }
 
-
-
-
     private enum HitZone {
         case none, body, leftEdge, rightEdge
     }
 
-    private func hitZone(x: Double, y: Double, note: GridNote) -> HitZone {
+    private func hitZone(
+        x: Double, y: Double,
+        note: GridNote
+    ) -> (zone: HitZone, inside: Bool) {
         let reach = metrics.edgeGripReach
-        let r = metrics.noteRect(x0: metrics.displayX(Double(note.tick)),
-                                 x1: metrics.displayX(Double(note.tick + note.duration)),
-                                 pitch: note.pitch)
-        guard y >= r.y, y < r.y + r.h else { return .none }
+        let r = metrics.noteRect(
+            x0: metrics.displayX(Double(note.tick)),
+            x1: metrics.displayX(Double(note.tick + note.duration)),
+            pitch: note.pitch)
+        guard y >= r.y, y < r.y + r.h else { return (.none, false) }
         let right = r.x + r.w
         let inside = x >= r.x && x < right
-        guard inside || (x >= r.x - reach && x < right + reach) else { return .none }
+        guard inside || (x >= r.x - reach && x < right + reach) else {
+            return (.none, false)
+        }
         let inner = metrics.edgeGripInnerReach(rectWidth: r.w)
-        if x >= right - inner && x <= right + reach { return .rightEdge }
-        if x >= r.x - reach && x <= r.x + inner { return .leftEdge }
-        return .body
+        if x >= right - inner && x <= right + reach { return (.rightEdge, inside) }
+        if x >= r.x - reach && x <= r.x + inner { return (.leftEdge, inside) }
+        return (.body, inside)
     }
 
     private func hitNote(x: Double, y: Double) -> (index: Int, zone: HitZone)? {
@@ -557,12 +698,8 @@ public final class PianoGrid {
         for i in 0..<notes.count {
             let note = notes[i]
             if note.ghost { continue }
-            let zone = hitZone(x: x, y: y, note: note)
+            let (zone, inside) = hitZone(x: x, y: y, note: note)
             if zone == .none { continue }
-            let r = metrics.noteRect(x0: metrics.displayX(Double(note.tick)),
-                                     x1: metrics.displayX(Double(note.tick + note.duration)),
-                                     pitch: note.pitch)
-            let inside = x >= r.x && x < r.x + r.w
             hit = (i, zone)
             hitInside = inside
             if inside && (zone == .leftEdge || zone == .rightEdge) {
@@ -573,30 +710,39 @@ public final class PianoGrid {
         return hit
     }
 
-
-    private func refreshOutputs() {
-        var parts: [String] = []
-        parts.reserveCapacity(notes.count)
-        for note in notes {
-            parts.append("{\"id\":\(note.noteId),\"tick\":\(note.tick),"
-                         + "\"duration\":\(note.duration),\"pitch\":\(note.pitch),"
-                         + "\"track\":\(note.track),\"velocity\":\(note.velocity),"
-                         + "\"selected\":\(isSelected(note.noteId)),\"ghost\":\(note.ghost)}")
+    private func publishOutputs() {
+        if noteSummaryDirty {
+            noteSummaryDirty = false
+            var parts: [String] = []
+            parts.reserveCapacity(notes.count)
+            for note in notes {
+                parts.append(
+                    "{\"id\":\(note.noteId),\"tick\":\(note.tick),"
+                        + "\"duration\":\(note.duration),\"pitch\":\(note.pitch),"
+                        + "\"track\":\(note.track),\"velocity\":\(note.velocity),"
+                        + "\"selected\":\(isSelected(note.noteId)),\"ghost\":\(note.ghost)}")
+            }
+            noteSummary = "[" + parts.joined(separator: ",") + "]"
         }
-        noteSummary = "[" + parts.joined(separator: ",") + "]"
 
         if let g = gesture {
-            switch g.kind {
-            case .pendingDraw:
-                statusText = "Pending draw at tick \(metrics.snapTick(g.pressTick))"
-            case .draw:
-                statusText = "Drawing — tick \(g.drawTick), duration \(g.drawDur), "
-                    + "pitch \(g.drawKey)"
-            case .move:
-                statusText = "Moving \(selection.count) note(s) — dTick \(g.dTick), "
-                    + "dKey \(g.dKey)"
-            case .resize, .resizeLeft:
+            switch g {
+            case .pendingDraw(let state):
+                statusText = "Pending draw at tick \(metrics.snapTick(state.pressTick))"
+            case .draw(let state):
+                statusText =
+                    "Drawing — tick \(state.tick), duration \(state.duration), "
+                    + "pitch \(state.key)"
+            case .move(let state):
+                statusText =
+                    "Moving \(selection.count) note(s) — dTick \(state.dTick), "
+                    + "dKey \(state.dKey)"
+            case .resize:
                 statusText = "Resizing \(selection.count) note(s)"
+            case .pendingMenu:
+                statusText = "\(notes.count) notes, \(selection.count) selected"
+            case .band:
+                statusText = "Selecting \(selection.count) note(s)"
             }
         } else {
             statusText = "\(notes.count) notes, \(selection.count) selected"

@@ -13,8 +13,7 @@ Item {
         parent: root.plotSide
         objectName: "timelineQuickPianoGridRows"
         anchors.fill: parent
-        scene: root.timelineScene
-        sceneLayer: TimelineQuickItem.PianoGridRows
+        rects: root.timelineScene.pianoGridRows
         z: 0
     }
 
@@ -22,8 +21,7 @@ Item {
         parent: root.plotSide
         objectName: "timelineQuickPianoGridTime"
         anchors.fill: parent
-        scene: root.timelineScene
-        sceneLayer: TimelineQuickItem.PianoGridTime
+        rects: root.timelineScene.pianoGridTime
         z: 1
     }
 
@@ -31,8 +29,7 @@ Item {
         parent: root.plotSide
         objectName: "timelineQuickPianoNoteFills"
         anchors.fill: parent
-        scene: root.timelineScene
-        sceneLayer: TimelineQuickItem.PianoNoteFills
+        rects: root.timelineScene.pianoNoteFills
         z: 2
     }
 
@@ -40,8 +37,7 @@ Item {
         parent: root.plotSide
         objectName: "timelineQuickPianoDrawPreviewFill"
         anchors.fill: parent
-        scene: root.timelineScene
-        sceneLayer: TimelineQuickItem.PianoDrawPreviewFill
+        rects: root.timelineScene.pianoDrawPreviewFill
         z: 3
     }
 
@@ -83,8 +79,7 @@ Item {
         parent: root.plotSide
         objectName: "timelineQuickPianoNoteBordersAndSelection"
         anchors.fill: parent
-        scene: root.timelineScene
-        sceneLayer: TimelineQuickItem.PianoNoteBordersAndSelection
+        rects: root.timelineScene.pianoNoteBordersAndSelection
         z: 5
     }
 
@@ -92,8 +87,7 @@ Item {
         parent: root.plotSide
         objectName: "timelineQuickPianoOverlay"
         anchors.fill: parent
-        scene: root.timelineScene
-        sceneLayer: TimelineQuickItem.PianoOverlay
+        rects: root.timelineScene.pianoOverlay
         z: 6
     }
 
@@ -101,8 +95,7 @@ Item {
         parent: root.gutterSide
         objectName: "timelineQuickPianoKeyboardKeys"
         anchors.fill: parent
-        scene: root.timelineScene
-        sceneLayer: TimelineQuickItem.PianoKeyboardKeys
+        rects: root.timelineScene.pianoKeyboardKeys
         z: 0
     }
 
@@ -110,8 +103,7 @@ Item {
         parent: root.gutterSide
         objectName: "timelineQuickPianoKeyboardHighlights"
         anchors.fill: parent
-        scene: root.timelineScene
-        sceneLayer: TimelineQuickItem.PianoKeyboardHighlights
+        rects: root.timelineScene.pianoKeyboardHighlights
         z: 1
     }
 

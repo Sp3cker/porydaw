@@ -67,6 +67,25 @@ async function resolveQtPrefix(): Promise<string | undefined> {
   return undefined;
 }
 
+async function poryaaaaDir(): Promise<string | undefined> {
+  const candidates = [
+    join(Deno.cwd(), "external", "poryaaaa", "packages", "poryaaaa"),
+    join(
+      (await mainWorktreeRoot()) ?? "",
+      "external",
+      "poryaaaa",
+      "packages",
+      "poryaaaa",
+    ),
+  ];
+  for (const candidate of candidates) {
+    if (await exists(join(candidate, "plugin", "porydaw", "CMakeLists.txt"))) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
 function executablePath(): string {
   switch (Deno.build.os) {
     case "darwin":
@@ -83,7 +102,6 @@ function executablePath(): string {
       return join(BUILD_DIR, TARGET);
   }
 }
-
 async function configure(): Promise<void> {
   console.log("prototype:swift-grid: configure");
   const qtPrefix = await resolveQtPrefix();
@@ -96,6 +114,11 @@ async function configure(): Promise<void> {
     "Ninja",
     "-DCMAKE_BUILD_TYPE=Release",
     ...(qtPrefix ? [`-DCMAKE_PREFIX_PATH=${qtPrefix}`] : []),
+    // The worktree ships without the poryaaaa submodule checkout; resolve it
+    // from the main checkout so the audio session can link the engine.
+    ...(await poryaaaaDir().then((dir) =>
+      dir ? [`-DPORYAAAA_DIR=${dir}`] : []
+    )),
   ];
   // Streamed so a long first-time configure (QtBridge fetch) shows progress
   // instead of looking stuck.
@@ -157,7 +180,7 @@ async function runSmoke(): Promise<void> {
   }
   console.log("prototype:swift-grid: smoke");
   const child = new Deno.Command(binary, {
-    env: { PORYDAW_SWIFT_GRID_SMOKE: "1" },
+    env: { PORYDAW_SWIFT_GRID_SMOKE: "1", PORYDAW_AUDIO_BACKEND: "null" },
     stdout: "piped",
     stderr: "piped",
   }).spawn();

@@ -1,4 +1,3 @@
-
 import Foundation
 
 func fontPx(_ base: Double, _ multiplier: Double) -> Double {
@@ -112,7 +111,8 @@ struct GridMetrics {
 
     func yToPitch(_ y: Double) -> Int {
         guard y >= rowEdge(0), y < rowEdge(128) else { return -1 }
-        var first = 0, end = 128
+        var first = 0
+        var end = 128
         while first < end {
             let middle = first + (end - first) / 2
             if y < rowEdge(middle + 1) { end = middle } else { first = middle + 1 }
@@ -128,26 +128,29 @@ struct GridMetrics {
         Int(contentEndTick(gridWidth: gridWidth) / 96) + 2
     }
 
-    var visibleGridTicks: Int {
-        let ladder = [32, 16, 8, 4, 2, 1]
-        var step = ladder.count - 1
-        for i in 0..<ladder.count where beatWidth / Double(ladder[i]) >= autoGridMinCell {
+    // Index into the subdivision ladder whose cell is the coarsest one still
+    // at least autoGridMinCell wide on screen.
+    private var gridLadderStep: Int {
+        var step = Self.gridLadder.count - 1
+        for i in 0..<Self.gridLadder.count
+        where beatWidth / Double(Self.gridLadder[i]) >= autoGridMinCell {
             step = i
             break
         }
-        return max(1, Self.ticksPerBeat / ladder[step])
+        return step
+    }
+
+    private static let gridLadder = [32, 16, 8, 4, 2, 1]
+
+    var visibleGridTicks: Int {
+        max(1, Self.ticksPerBeat / Self.gridLadder[gridLadderStep])
     }
 
     var snapTicks: Int {
-        let ladder = [32, 16, 8, 4, 2, 1]
-        var step = ladder.count - 1
-        for i in 0..<ladder.count where beatWidth / Double(ladder[i]) >= autoGridMinCell {
-            step = i
-            break
-        }
-        let vis = max(1, Self.ticksPerBeat / ladder[step])
+        let step = gridLadderStep
+        let vis = max(1, Self.ticksPerBeat / Self.gridLadder[step])
         guard step > 0 else { return vis }
-        let fine = max(1, Self.ticksPerBeat / ladder[step - 1])
+        let fine = max(1, Self.ticksPerBeat / Self.gridLadder[step - 1])
         func gcd(_ a: Int, _ b: Int) -> Int { b == 0 ? a : gcd(b, a % b) }
         return max(1, gcd(vis, fine))
     }
@@ -173,18 +176,24 @@ struct GridMetrics {
     func snapTickDown(_ tick: Double) -> Int { latticeFloor(max(0.0, tick)) }
     func snapTickUp(_ tick: Double) -> Int { latticeCeil(max(0.0, tick)) }
 
-    func noteRect(x0: Double, x1: Double, pitch: Int) -> (x: Double, y: Double,
-                                                          w: Double, h: Double) {
+    func noteRect(x0: Double, x1: Double, pitch: Int) -> (
+        x: Double, y: Double,
+        w: Double, h: Double
+    ) {
         let row = 127 - min(127, max(0, pitch))
         let top = rowEdge(row)
         let bottom = rowEdge(row + 1)
-        return (x0, top + pixel,
-                max(noteMinWidth, x1 - x0),
-                max(noteMinHeight * pixel, bottom - top - pixel))
+        return (
+            x0, top + pixel,
+            max(noteMinWidth, x1 - x0),
+            max(noteMinHeight * pixel, bottom - top - pixel)
+        )
     }
 
-    func noteBox(x0: Double, x1: Double, pitch: Int) -> (x: Double, y: Double,
-                                                         w: Double, h: Double) {
+    func noteBox(x0: Double, x1: Double, pitch: Int) -> (
+        x: Double, y: Double,
+        w: Double, h: Double
+    ) {
         let r = noteRect(x0: x0, x1: x1, pitch: pitch)
         return (r.x, r.y, r.w, r.h - pixel)
     }
@@ -193,11 +202,14 @@ struct GridMetrics {
         min(edgeGripReach, max(0.0, (rectWidth - moveZoneMinWidth) / 2.0))
     }
 
-    func fittedFrameThickness(rectWidth: Double, rectHeight: Double,
-                              requestedPixels: Int, insetPixels: Int) -> Int {
+    func fittedFrameThickness(
+        rectWidth: Double, rectHeight: Double,
+        requestedPixels: Int, insetPixels: Int
+    ) -> Int {
         let minDim = Int((min(rectWidth, rectHeight) * dpr).rounded())
-        return min(requestedPixels,
-                   max(0, (minDim - 1) / 2 - insetPixels))
+        return min(
+            requestedPixels,
+            max(0, (minDim - 1) / 2 - insetPixels))
     }
 
     var noteBorderPixels: Int { max(1, Int(dpr.rounded())) }
