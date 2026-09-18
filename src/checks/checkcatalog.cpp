@@ -729,6 +729,15 @@ const std::vector<CheckDefinition> &catalog()
             },
 #ifdef __APPLE__
             {
+                .name = "swiftdocfeed",
+                // Real document snapshots, observer lifetime, and the shared Swift revision guard.
+                .argv = strings({"--swiftdocfeed", "{scratch}", "mus_route101"}),
+                .handler = qtWithTwoArguments<runSwiftDocFeedCheck>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101Files,
+            },
+            {
                 .name = "rendering-playhead-native",
                 // Cocoa playhead layer lifecycle: native ownership, clipping, and surface teardown
                 .argv = strings({"--check-rendering-playhead-native", "{scratch}", "mus_route101"}),

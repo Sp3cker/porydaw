@@ -384,6 +384,20 @@ endif()
 
 porydaw_enable_project_warnings(porydaw_checks)
 if(APPLE)
+    qt_add_library(swift_doc_feed_check STATIC
+        swiftdocfeed/DocumentFeedCheck.swift
+    )
+    set_target_properties(swift_doc_feed_check PROPERTIES
+        AUTOMOC OFF
+        AUTOUIC OFF
+        AUTORCC OFF
+    )
+    target_link_libraries(swift_doc_feed_check PRIVATE swiftgrid)
+    target_link_libraries(porydaw_checks PRIVATE swift_doc_feed_check)
+    target_sources(porydaw_checks PRIVATE
+        swiftdocfeed/tst_swiftdocfeed.cpp
+        swiftdocfeed/document_feed_check.h
+    )
     target_sources(porydaw_checks PRIVATE
         nativegraphics/tst_playhead_native_mac.mm
     )
@@ -392,6 +406,7 @@ if(APPLE)
     set_property(SOURCE nativegraphics/tst_playhead_native_mac.mm APPEND PROPERTY
         COMPILE_OPTIONS -Wno-shadow)
     set_target_properties(porydaw_checks PROPERTIES
+        LINKER_LANGUAGE CXX
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}

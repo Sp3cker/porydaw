@@ -20,6 +20,9 @@ that already owns its application/engine; it does not add a second engine.
 - `src/ui/songview/quick/swift-grid-prototype/qtbridge-object-return.patch`
   and `PatchQtBridge.cmake`: preserve existing fixes and add only the approved
   `QmlInstantiable.registerQmlElement()` access change from package to public.
+- `src/ui/songview/quick/swift-grid-prototype/EditCommands.swift`: checked
+  `Sendable` conformance for the plain-value policy table's struct/enums,
+  required by Swift 6 language mode. Preserve fields and policy values.
 
 ## Prerequisites
 
@@ -61,6 +64,8 @@ Task 2's declared files/module contract, not its implementation. Tasks 1 and
 2. Add production target with the prototype's QtBridge/Swift compile settings,
    framework include precedence and explicit shared Swift list. Add Task 2
    module flags/source registrations to both lanes with the ownership above.
+   Keep Swift 6 concurrency checking enabled; repair missing checked
+   `Sendable` conformance, never use `@unchecked` or relax the language mode.
 3. Resolve native seam dependencies against already-compiled production
    implementations and link through `porydaw_app`; keep standalone targets
    self-contained. No duplicate production core compilation.
@@ -81,6 +86,6 @@ Task 1 build alone does not prove that path.
 ## Task-specific constraints
 
 User approved the registration visibility patch extension on 2026-09-18;
-all other QtBridge internals remain untouched. No Swift implementation edits
-in this task. An additional access or source fork is a contract defect, not
-permission to widen the patch.
+all other QtBridge internals remain untouched. The only Swift source change
+is the checked value-type conformance above. An additional access or source
+fork is a contract defect, not permission to widen the patch.

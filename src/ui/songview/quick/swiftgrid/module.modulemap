@@ -1,0 +1,4 @@
+module SwiftGridDocumentFeed {
+    header "document_feed.h"
+    export *
+}

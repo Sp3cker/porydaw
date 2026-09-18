@@ -60,8 +60,11 @@ Task 2's `SgdDocument` / per-instance `DocumentFeed` public contract and Task
   prototype. Document mode supplies real division and ordered signatures;
   note geometry, hit testing, viewport extents, subdivisions, bar numbering,
   ruler labels and time marks share that one parameterized geometry path.
-  Preserve actual tick values and production signature precedence. No
-  re-quantization, parallel geometry implementation or frozen Wave-1 edits.
+  Preserve actual tick values and raw UInt8 signature numerator/denomPow2.
+  Reuse existing Swift `TimeMap` / `TimeSigPoint` / `TimeAxis` for signature
+  normalization, bounded beat-stride shifts and precedence; do not reject
+  imported signatures or expand denominators in the feed. No re-quantization,
+  parallel geometry implementation or frozen Wave-1 edits.
 
 ## Implementation steps
 
@@ -76,8 +79,9 @@ Task 2's `SgdDocument` / per-instance `DocumentFeed` public contract and Task
 3. Parameterize existing `GridMetrics`; replace fixed-timebase consumption in
    `GridScene.rebuildStatic` / `rebuildRuler`. Preserve geometry/raster defaults,
    implicit 4/4 semantics and coincident signature last-event precedence.
-   Use the production time-signature interpretation as the oracle, not a new
-   interpretation. No edits to Tick/TimeAxis/PitchProjection or C++ math.
+   Consume existing Swift `TimeAxis` semantics for raw signature values,
+   including numerator zero and denomPow2 >=31; production remains the oracle.
+   No edits to Tick/TimeAxis/PitchProjection or C++ math.
 4. Add real input smoke rows covering mutation inertness, view pan/zoom/hover,
    track-filtered loads and higher-revision refresh on the existing window's
    grid. At the end of editable smoke, C++ registers a synthetic endpoint slot,
@@ -87,7 +91,8 @@ Task 2's `SgdDocument` / per-instance `DocumentFeed` public contract and Task
    No second Swift test grid, custom-value QVariant call or test-only production
    hook. Binding is immutable; all document rows use that one endpoint.
    Exercise at least one non-24 division, a signature change, coincident
-   signatures and empty/invalid-track data; assert rendered positions and
+   signatures, raw zero numerator/high exponent, and empty/invalid-track data;
+   assert rendered positions and
    marks against production semantics, not just note counts.
 5. Preserve every existing editable smoke outcome, including raster/typography,
    input and standalone audio; explicit demo initialization reproduces the

@@ -24,6 +24,21 @@ surfaces. Production implementations and interfaces are designed to stay:
 - Production focus applies to checks too: a check that only passes in the
   sandbox proves nothing about production.
 
+## Swift implementation policy
+
+- Target Swift 6.4 and use current language and standard-library features
+  where they improve ownership, safety, clarity, or performance. Apply this
+  during implementation, not as a deferred modernization pass.
+- Prefer spans for scoped borrowed access where supported. Verify concrete
+  APIs and deployment availability; do not invent compatibility fallbacks.
+- Raw pointer access is acceptable when bounds, initialization and lifetime
+  are proven. A view into a callback's buffers must not escape that callback.
+- Retained document state needs owned storage. Copy accepted input into that
+  storage once; avoid intermediate arrays, redundant mapping, boxing and
+  avoidable copy-on-write detachment. Reject stale snapshots before copying.
+- Review these properties in every Swift task. Use modern features for a
+  concrete benefit, not feature-count churn or unrelated rewrites.
+
 ## Compatibility and retirement decision (2026-09-18)
 
 Required user behavior and explicitly permanent host interfaces create

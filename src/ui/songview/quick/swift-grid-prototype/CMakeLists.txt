@@ -13,15 +13,9 @@ find_package(Qt6 6.10 REQUIRED COMPONENTS
     Test
 )
 
-include(FetchContent)
-FetchContent_Declare(QtBridge
-    GIT_REPOSITORY https://github.com/qt/qtbridge-swift.git
-    GIT_TAG 407714006dd21107b70db6547ce75e43df0c8a75
-    PATCH_COMMAND "${CMAKE_COMMAND}"
-        "-DPATCH=${CMAKE_CURRENT_SOURCE_DIR}/qtbridge-object-return.patch"
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/PatchQtBridge.cmake"
-)
-FetchContent_MakeAvailable(QtBridge)
+qt_standard_project_setup()
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/../../../../../cmake/QtBridge.cmake")
 
 if(APPLE)
     # Same framework-header precedence fix as the root build: keep Qt's exact
@@ -36,14 +30,6 @@ if(APPLE)
                 INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${qt_include_dirs}")
         endif()
     endforeach()
-endif()
-
-
-if(APPLE)
-    # NO_SYSTEM_FROM_IMPORTED must apply to the upstream targets too; the
-    # property is per-target and does not propagate through linking.
-    set_target_properties(QtBridgeCpp QtBridge
-        PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
 endif()
 
 
@@ -112,6 +98,13 @@ add_library(swift_grid_window_cancel STATIC "${SWIFT_GRID_AUDIO_DIR}/window_canc
 target_include_directories(swift_grid_window_cancel PUBLIC "${SWIFT_GRID_AUDIO_DIR}")
 target_link_libraries(swift_grid_window_cancel PUBLIC Qt6::Quick)
 
+set(SWIFT_GRID_FEED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../swiftgrid")
+qt_add_library(swift_grid_document_feed STATIC
+    "${SWIFT_GRID_FEED_DIR}/document_feed.cpp"
+    "${SWIFT_GRID_FEED_DIR}/document_feed.h"
+)
+target_include_directories(swift_grid_document_feed PUBLIC "${SWIFT_GRID_FEED_DIR}")
+
 # Verification-only native smoke driver (event injection; no UI/model logic).
 # Kept as a separate static target so Qt6::Test's QT_TESTCASE_* compile
 # definitions stay on C++ and never reach the Swift compilation.
@@ -149,8 +142,12 @@ file(GLOB SWIFT_GRID_QML_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.qml"
 )
 
-add_executable(swift_grid_prototype
+qt_add_executable(swift_grid_prototype
     ${SWIFT_GRID_SOURCES}
+)
+set_target_properties(swift_grid_prototype PROPERTIES
+    Swift_MODULE_NAME SwiftGrid
+    Swift_LANGUAGE_VERSION 6
 )
 
 if(APPLE)
@@ -161,7 +158,9 @@ endif()
 target_compile_options(swift_grid_prototype PRIVATE
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_SMOKE_DIR}/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_AUDIO_DIR}/module.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_FEED_DIR}/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_AUDIO_DIR}>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_FEED_DIR}>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_ROOT}/src>"
 )
 
@@ -172,6 +171,7 @@ target_link_libraries(swift_grid_prototype PRIVATE
     swift_grid_curve
     swift_grid_typography
     swift_grid_window_cancel
+    swift_grid_document_feed
     "$<LINK_ONLY:swift_grid_smoke>"
 )
 

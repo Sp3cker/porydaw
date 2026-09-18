@@ -21,3 +21,15 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
      USES_TERMINAL_BUILD TRUE
      INSTALL_COMMAND ""
  )
+diff --git a/Sources/QtBridge/QmlInstantiable.swift b/Sources/QtBridge/QmlInstantiable.swift
+--- a/Sources/QtBridge/QmlInstantiable.swift
++++ b/Sources/QtBridge/QmlInstantiable.swift
+@@ -50,7 +50,7 @@ extension QmlInstantiable {
+ }
+ 
+ extension QmlInstantiable {
+-    package static func registerQmlElement() {
++    public static func registerQmlElement() {
+         metaObjectBuilder.registerInitializer(initFn: self.init)
+         metaObjectBuilder.registerQmlElement(from: Self.self)
+     }

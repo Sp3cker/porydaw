@@ -55,9 +55,10 @@ only after both settle. Task 1 alone edits root/prototype CMake.
    cached documents, polling, or hidden initial push. Unregister erases state.
 2. Implement observer snapshot assembly from public `SongDocument` APIs named
    in spec §2. Iterate engine tracks in order; copy unsigned document tick and
-   duration values faithfully. Convert `DocTimeSig::denomPow2` to denominator
-   using production-valid signature semantics; preserve sorted order and
-   coincident-event precedence. Constructor connects but never delivers.
+   duration values faithfully. Copy `DocTimeSig::numerator` and `denomPow2`
+   directly into the ABI's UInt8 fields; no denominator expansion,
+   normalization, clamping or rejected imported events in the feed. Preserve
+   sorted order and coincident-event precedence. Constructor never delivers.
 3. Implement the Swift guard and copy accepted arrays before returning.
    Unrelated identities cannot reset revisions; no dictionaries of closed
    documents. Releasing a receiver drops its snapshot and callback state.

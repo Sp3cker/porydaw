@@ -39,6 +39,12 @@ int runEditCheck(const QStringList &checkArguments, const QStringList &qtArgumen
 int runScaleCheck(const QStringList &checkArguments, const QStringList &qtArguments);
 int runNoteIdentityCheck(const QStringList &checkArguments, const QStringList &qtArguments);
 
+#ifdef __APPLE__
+// Production Swift document value feed (src/checks/swiftdocfeed).
+int runSwiftDocFeedCheck(const QString &projectRoot, const QString &songLabel,
+                         const QStringList &qtArguments);
+#endif
+
 // Onboarding (src/checks/onboardcheck).
 int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath,
                     const QStringList &qtArguments);
