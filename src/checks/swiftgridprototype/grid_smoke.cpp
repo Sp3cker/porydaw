@@ -757,6 +757,7 @@ void exercise(Scene scene)
     verifyGridInteractions(scene.window, scene.model);
     verifyGridUndo(scene.window, scene.model);
     verifyGridCancel(scene.window, scene.model);
+    verifyGridEscape(scene.window, scene.model);
 
     std::puts("SWIFT_GRID_SMOKE PASS");
     std::fflush(stdout);

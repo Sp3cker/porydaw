@@ -346,6 +346,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/editactions.cpp
     src/ui/songview/editactions.h
     src/ui/songview/editcommandtable.cpp
+    src/ui/songview/editcommandtable.h
     src/ui/songview/scalecontroller.cpp
     src/ui/songview/scalecontroller.h
     src/ui/songview/clipmime.cpp
@@ -464,12 +465,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/velocityaxis.cpp
     src/ui/editordrawer/velocityaxis.h
 )
-# editcommandtable.cpp is the data-only TU the Swift parity seam compiles
-# standalone; in the app it is included by editactions.cpp (which still
-# consumes CommandRow/kCommandTable/actionIndex), so it must not compile a
-# second editCommandPolicy into this target.
-set_source_files_properties(src/ui/songview/editcommandtable.cpp PROPERTIES
-    HEADER_FILE_ONLY ON)
 if(APPLE)
     target_sources(porydaw_app PRIVATE
         src/ui/nativelayerutils_macos_p.h

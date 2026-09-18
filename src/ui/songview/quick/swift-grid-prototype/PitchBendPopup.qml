@@ -7,6 +7,10 @@ Rectangle {
 
     required property var bridge
     signal hintChanged(string text)
+    // Escape is forwarded, never decided here: the host routes it to the
+    // single gridModel.escapePressed arbiter and executes the action it
+    // returns (spec §3.5).
+    signal escapePressed()
 
     function focusPitch() {
         pitchGraph.forceActiveFocus(Qt.PopupFocusReason);
@@ -74,7 +78,7 @@ Rectangle {
     // Focused controls claim their keys before this popup sink.
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape)
-            bridge.cancelAndClose();
+            root.escapePressed();
         else
             bridge.routeUnclaimedKey(event.key, event.modifiers, event.isAutoRepeat);
         event.accepted = true;
@@ -278,6 +282,7 @@ Rectangle {
         id: pitchGraph
         laneModel: root.bridge.pitchGraph
         onHintChanged: text => root.hintChanged(text)
+        onEscapePressed: root.escapePressed()
 
         objectName: "pitchBendGraph"
         x: 0
@@ -291,6 +296,7 @@ Rectangle {
         id: modGraph
         laneModel: root.bridge.modGraph
         onHintChanged: text => root.hintChanged(text)
+        onEscapePressed: root.escapePressed()
 
         objectName: "modWheelGraph"
         x: 0

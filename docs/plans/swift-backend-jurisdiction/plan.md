@@ -23,18 +23,16 @@ host — no second dispatcher. No TimeCamera / Grid / PitchBendKernel work
 | 3 | [EditCommandPolicy frozen table + `sgp_*` parity seam](task-3-brief.md) | SDD-track / sdd-implementer | Production table extraction (behavior-preserving move) + 35-row Swift mirror + live C-ABI parity sweep; production-behavior gates required | none |
 | 4 | [Edit-key policy dimensions (ported selectionkey matrix)](task-4-brief.md) | SDD-track / sdd-implementer | Routing-decision port of `SongView::handleEditKey` policy branches with a six-dimension frozen scenario matrix; decision ordering is contract | 3 (policy table + seam) |
 | 5 | [Single Escape arbiter](task-5-brief.md) | SDD-track / sdd-implementer | Consolidates the independent QML Escape handlers into one Swift policy entry taking full surface state; precedence table is a design decision, not mechanics | 2 (reason-taking cancel API) |
+| 6 | [`editcommandtable.h` accessor header](task-6-brief.md) | Direct | Drop the Task-3 `.cpp` include + `HEADER_FILE_ONLY` pairing; table stays anonymous; header is declarations only | 3 (extracted TU) |
 
-No Direct-route tasks: every task creates or extends a verification seam
-and freezes semantics; all five are judgment work.
+Task 6 is Direct: mechanical header/TU cutover, no new semantics.
 
-Execution order: **1 → 2 → 3 → {4 ∥ 5}**. The chain 1 → 2 → 3 is forced
-by file reuse, not interfaces: Tasks 1 and 2 both edit `PianoGrid.swift`,
-`jurisdiction_smoke.cpp`, `grid_smoke.h`, `grid_smoke.cpp`; Task 3 and
-Tasks 1/2 both edit the prototype `CMakeLists.txt`. Tasks 4 and 5 share no
+Execution order: **1 → 2 → 3 → {4 ∥ 5 ∥ 6}**. Tasks 4, 5, and 6 share no
 files (Task 4: `EditKeyArbiter.swift`, `PolicySelftest.swift`; Task 5:
-`PianoGrid.swift`, prototype QML, `jurisdiction_smoke.cpp`) and may run in
-parallel after 3 settles (Task 5 needs only Task 2's interface, but runs
-after 3 to keep `jurisdiction_smoke.cpp` single-writer).
+`PianoGrid.swift`, prototype QML, `jurisdiction_smoke.cpp`,
+`grid_smoke.h/.cpp` call site only; Task 6: `editcommandtable.h/.cpp`,
+`editactions.cpp/.h`, root `CMakeLists.txt`, `policy_smoke.cpp`) and run
+in parallel after 3.
 
 ## Global Constraints
 
@@ -94,7 +92,7 @@ Two surfaces, decided once here:
    press/move/release, `ungrabMouse()`, focus changes, `visible` toggles,
    a synthesized `QEvent::WindowDeactivate`). Compile-only fallback:
    `deno task prototype:swift-grid --build-only`. Runtime prerequisites:
-   cmake ≥ 3.29, Ninja, Swift 6.2+, Qt 6.10+, normal desktop session
+   cmake ≥ 3.29, Ninja, Swift 6.4+, Qt 6.10+, normal desktop session
    (the smoke launches the real app bundle; native macOS is fine).
 2. **Production behavior gates — Task 3 only** (the one task that touches
    production C++): `deno task build:app` (new TU compiles and links) and

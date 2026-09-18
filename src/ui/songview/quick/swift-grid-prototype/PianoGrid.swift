@@ -37,6 +37,18 @@ public enum GridCancelReason: Int {
     case windowDeactivated = 3
 }
 
+// Escape arbitration result (spec §3.5): the single decision point for
+// Escape across every prototype surface. QML forwards the key plus the
+// already-arbitrated noteMenuOpen observation and executes only the visual
+// teardown the returned action names.
+public enum GridEscapeAction: Int {
+    case none = 0
+    case cancelGesture = 1
+    case closePitchEditor = 2
+    case closeNoteMenu = 3
+    case clearSelection = 4
+}
+
 @MainActor
 @QtBridgeable
 public final class PianoGrid {
@@ -508,6 +520,43 @@ public final class PianoGrid {
             cancelPitchCurves()
         }
         scene.rebuildHover(sceneInput())
+    }
+
+    // The single Escape arbiter (spec §3.5): every surface forwards the key
+    // plus the host-observed noteMenuOpen flag; the returned action names
+    // the visual teardown QML executes. Precedence mirrors production
+    // handleEditKey: live gesture cancels through the pointer-ungrab
+    // teardown (right-family selection restore included), then the pitch
+    // editor discards its live preview and closes, then the note menu
+    // closes, then an idle Escape clears the selection.
+    //
+    // Bridged surface returns the raw Int: under Swift 6.4 QtBridge's
+    // generated slot rejects a non-QVariantGettable enum metatype, and the
+    // vendored return-type patch only widened macro acceptance, not the
+    // generated code. QML already switches on the delivered Int (spec §3.5
+    // QML contract unchanged); GridEscapeAction stays the internal type.
+    @discardableResult
+    public func escapePressed(noteMenuOpen: Bool) -> Int {
+        if gesture != nil {
+            cancelPointer(reason: GridCancelReason.pointerUngrabbed.rawValue)
+            return GridEscapeAction.cancelGesture.rawValue
+        }
+        if let editor = pitchEditor {
+            editor.pitchGraph.cancelPointerSilently()
+            editor.modGraph.cancelPointerSilently()
+            cancelPitchCurves()
+            return GridEscapeAction.closePitchEditor.rawValue
+        }
+        if noteMenuOpen {
+            return GridEscapeAction.closeNoteMenu.rawValue
+        }
+        if !selection.isEmpty {
+            noteSummaryDirty = true
+            selection.removeAll()
+        }
+        scene.rebuildNotes(sceneInput())
+        publishOutputs()
+        return GridEscapeAction.clearSelection.rawValue
     }
 
     public func beginRightPointer(x: Double, y: Double, threshold: Double) {

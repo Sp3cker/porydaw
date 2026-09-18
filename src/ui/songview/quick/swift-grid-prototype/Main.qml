@@ -111,6 +111,7 @@ ApplicationWindow {
             sourceComponent: PitchBendPopup {
                 bridge: root.pitchBridge
                 onHintChanged: text => root.contextualHint = text
+                onEscapePressed: root.escapePressed()
             }
             onLoaded: item.focusPitch()
         }
@@ -184,6 +185,19 @@ ApplicationWindow {
         root.gridModel.resetDemo();
         flick.contentX = 0;
         flick.contentY = root.gridModel.initialScrollY;
+    }
+
+    // The single Escape arbiter (spec §3.5): every surface forwards Escape
+    // here; the model decides over the observed noteMenu.opened and returns
+    // the action this host executes. Raw values mirror GridEscapeAction
+    // (2 = closePitchEditor, 3 = closeNoteMenu); other actions need no QML
+    // work — the model already tore the gesture down or cleared selection.
+    function escapePressed() {
+        const action = root.gridModel.escapePressed(noteMenu.opened);
+        if (action === 2)
+            pitchHost.close();
+        else if (action === 3)
+            noteMenu.close();
     }
 
     Component.onCompleted: {
@@ -538,6 +552,15 @@ ApplicationWindow {
                             // observable as production focusOutEvent (reason 0).
                             focus: true
                             hoverEnabled: true
+                            // Window-tier Escape fallback (spec §3.5): the
+                            // focused grid input surface forwards to the same
+                            // arbiter as every popup surface. Keys.onEscapePressed
+                            // only — Keys.onPressed intercepts G even when
+                            // accepted is false and blocks the window Shortcut.
+                            Keys.onEscapePressed: event => {
+                                root.escapePressed();
+                                event.accepted = true;
+                            }
                             z: 10
                             property bool rightHeld: false
                             // Production focusOutEvent entry: focus loss while
@@ -628,6 +651,7 @@ ApplicationWindow {
         anchors.fill: parent
         baseFontPx: root.baseFontPx
         menuFont: root.font
+        onEscapePressed: root.escapePressed()
         onChosen: function (command) {
             if (command === "delete")
                 root.gridModel.deleteSelection();

@@ -1,6 +1,7 @@
 #include "policy_smoke.h"
 
 #include "ui/songview/editactions.h"
+#include "ui/songview/editcommandtable.h"
 
 // Thin conversion over the extracted production table (spec §4): the C ABI
 // answers what songview::editCommandPolicy returns — no logic, no second

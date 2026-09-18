@@ -1,3 +1,5 @@
+#include "ui/songview/editcommandtable.h"
+
 #include "ui/songview/editactions.h"
 
 #include <array>
@@ -387,6 +389,31 @@ static_assert(kCommandTable.size() == actionIndex(EditCommand::GridTriplet) + 1)
 static_assert(commandTableFollowsEnumOrder());
 
 } // namespace
+std::size_t editCommandCount()
+{
+    return kCommandTable.size();
+}
+
+const char *editCommandId(EditCommand command)
+{
+    return kCommandTable[actionIndex(command)].id;
+}
+
+bool editCommandCheckable(EditCommand command)
+{
+    return kCommandTable[actionIndex(command)].checkable;
+}
+
+const char *editCommandWindowObjectName(EditCommand command)
+{
+    return kCommandTable[actionIndex(command)].windowObjectName;
+}
+
+EditDeliveryClass editCommandDelivery(EditCommand command)
+{
+    return kCommandTable[actionIndex(command)].delivery;
+}
+
 const EditCommandPolicy &editCommandPolicy(EditCommand command)
 {
     return kCommandTable[actionIndex(command)].policy;

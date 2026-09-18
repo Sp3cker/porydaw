@@ -5,6 +5,10 @@ Item {
 
     required property var laneModel
     signal hintChanged(string text)
+    // Escape is forwarded, never decided here: the host routes it to the
+    // single gridModel.escapePressed arbiter and executes the action it
+    // returns (spec §3.5).
+    signal escapePressed()
     readonly property rect canvasRect: Qt.rect(laneModel.canvasRect.x, laneModel.canvasRect.y, laneModel.canvasRect.width, laneModel.canvasRect.height)
     readonly property string laneTitle: laneModel.laneTitle
     readonly property string liveValueText: laneModel.liveValueText
@@ -19,6 +23,11 @@ Item {
             event.accepted = true;
     }
     Keys.onPressed: event => {
+        if (event.key === Qt.Key_Escape) {
+            root.escapePressed();
+            event.accepted = true;
+            return;
+        }
         event.accepted = laneModel.keyPressed(event.key, event.isAutoRepeat);
     }
 

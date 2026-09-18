@@ -6,6 +6,10 @@ Item {
     required property real baseFontPx
     required property font menuFont
     signal chosen(string command)
+    // Escape is forwarded, never decided here: the host routes it to the
+    // single gridModel.escapePressed arbiter and executes the action it
+    // returns (spec §3.5).
+    signal escapePressed()
 
     property bool opened: false
     property point origin: Qt.point(0, 0)
@@ -42,7 +46,7 @@ Item {
 
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape) {
-            close();
+            escapePressed();
         } else if (event.key === Qt.Key_Down) {
             panel.highlightedRow = (panel.highlightedRow + 1) % actions.count;
         } else if (event.key === Qt.Key_Up) {

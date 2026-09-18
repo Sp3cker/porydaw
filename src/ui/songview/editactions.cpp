@@ -22,16 +22,14 @@
 #include <cstdint>
 #include <optional>
 
-// The canonical command table and editCommandPolicy live in
-// editcommandtable.cpp (the data-only TU the Swift parity seam links
-// standalone). It is included here rather than compiled separately so this
-// translation unit keeps the same anonymous-namespace symbols it had before
-// the extraction — CommandRow, kCommandTable, actionIndex — with exactly one
-// editCommandPolicy definition in the app link.
-#include "ui/songview/editcommandtable.cpp"
-
 namespace songview {
 namespace {
+using EditCommand = SongView::EditCommand;
+
+constexpr std::size_t actionIndex(EditCommand command)
+{
+    return static_cast<std::size_t>(command);
+}
 
 // Copy alone becomes enabled for focused text; Solo still requires its
 // existing song target even though text focus owns its execution.
@@ -39,36 +37,37 @@ namespace {
 // dispatch path (keys, execute, triggered) re-applies the gate itself, so
 // the cached state describes the committed selection and never the sweep
 // that produced it.
-bool liveRowEnabled(const SongView &target, const CommandRow &row, bool textFocused)
+bool liveRowEnabled(const SongView &target, EditCommand command, bool textFocused)
 {
-    if (textFocused && row.policy.focusedTextOwnership == EditFocusedTextOwnership::Copy)
+    if (textFocused &&
+        editCommandPolicy(command).focusedTextOwnership == EditFocusedTextOwnership::Copy)
         return true;
-    return target.editCommandAvailable(row.command, /*ignorePointerGesture=*/true);
+    return target.editCommandAvailable(command, /*ignorePointerGesture=*/true);
 }
 
 } // namespace
 
 EditActions::EditActions(QObject *parent) : QObject(parent)
 {
-    static_assert(kCommandTable.size() == cActionCount,
-                  "the command table and the m_actions array must cover the same commands");
+    Q_ASSERT(editCommandCount() == cActionCount);
     keymap::Registry &keys = keymap::Registry::instance();
-    for (const CommandRow &row : kCommandTable) {
-        auto *const commandAction = new QAction(keys.label(QLatin1String(row.id)), this);
-        keys.attach(QLatin1String(row.id), commandAction);
-        commandAction->setCheckable(row.checkable);
-        if (row.windowObjectName)
-            commandAction->setObjectName(QLatin1String(row.windowObjectName));
+    for (std::size_t index = 0; index < editCommandCount(); ++index) {
+        const EditCommand command = static_cast<EditCommand>(index);
+        auto *const commandAction =
+            new QAction(keys.label(QLatin1String(editCommandId(command))), this);
+        keys.attach(QLatin1String(editCommandId(command)), commandAction);
+        commandAction->setCheckable(editCommandCheckable(command));
+        if (const char *const windowObjectName = editCommandWindowObjectName(command))
+            commandAction->setObjectName(QLatin1String(windowObjectName));
 
         // The delivery column mirrors the keymap catalogue's Scope, and
         // attach is the sole shortcut-context writer — drift between the
         // two aborts here instead of silently rerouting a key's delivery.
-        Q_ASSERT((row.delivery == EditDeliveryClass::Window) ==
+        Q_ASSERT((editCommandDelivery(command) == EditDeliveryClass::Window) ==
                  (commandAction->shortcutContext() == Qt::WindowShortcut));
 
-        m_actions[actionIndex(row.command)] = commandAction;
-        connect(commandAction, &QAction::triggered, this,
-                [this, command = row.command] { execute(command); });
+        m_actions[actionIndex(command)] = commandAction;
+        connect(commandAction, &QAction::triggered, this, [this, command] { execute(command); });
     }
 
     connect(qApp, &QApplication::focusChanged, this, [this](QWidget *, QWidget *) { refresh(); });
@@ -95,9 +94,10 @@ void EditActions::installWindowShortcuts(QWidget &window)
     // Only Window-class commands join the widget tree; EditorRouted actions
     // are delivered manually and must never be registered, or keys would
     // fire both through the QAction and the manual resolver.
-    for (const CommandRow &row : kCommandTable) {
-        if (row.delivery == EditDeliveryClass::Window)
-            window.addAction(action(row.command));
+    for (std::size_t index = 0; index < editCommandCount(); ++index) {
+        const EditCommand command = static_cast<EditCommand>(index);
+        if (editCommandDelivery(command) == EditDeliveryClass::Window)
+            window.addAction(action(command));
     }
 }
 
@@ -113,9 +113,10 @@ std::optional<EditCommand> EditActions::editorCommandForKey(int key,
     // manual key route. All dispatch re-gates live (gesture, availability),
     // and override-first consumption keeps single delivery in production.
     const keymap::Registry &keys = keymap::Registry::instance();
-    for (const CommandRow &row : kCommandTable) {
-        if (keys.matches(key, modifiers, QLatin1String(row.id)))
-            return row.command;
+    for (std::size_t index = 0; index < editCommandCount(); ++index) {
+        const EditCommand command = static_cast<EditCommand>(index);
+        if (keys.matches(key, modifiers, QLatin1String(editCommandId(command))))
+            return command;
     }
     return std::nullopt;
 }
@@ -126,9 +127,8 @@ void EditActions::activateEditorCommand(EditCommand command)
     if (!boundTarget)
         return;
 
-    const CommandRow &row = kCommandTable[actionIndex(command)];
     QAction *const commandAction = action(command);
-    commandAction->setEnabled(liveRowEnabled(*boundTarget, row, focusedTextTarget()));
+    commandAction->setEnabled(liveRowEnabled(*boundTarget, command, focusedTextTarget()));
     if (commandAction->isEnabled())
         commandAction->trigger();
 }
@@ -175,9 +175,10 @@ void EditActions::refresh()
 {
     SongView *const boundTarget = m_target.data();
     const bool textFocused = boundTarget && focusedTextTarget();
-    for (const CommandRow &row : kCommandTable) {
-        const bool enabled = boundTarget && liveRowEnabled(*boundTarget, row, textFocused);
-        action(row.command)->setEnabled(enabled);
+    for (std::size_t index = 0; index < editCommandCount(); ++index) {
+        const EditCommand command = static_cast<EditCommand>(index);
+        const bool enabled = boundTarget && liveRowEnabled(*boundTarget, command, textFocused);
+        action(command)->setEnabled(enabled);
     }
     refreshCheckedStates(boundTarget);
 }

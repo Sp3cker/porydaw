@@ -80,7 +80,7 @@ One verification surface for the whole epic: the prototype smoke.
   the prototype UI is unchanged.
 - `deno task prototype:swift-grid --build-only` — compile/type-check gate
   only; the fallback when windowing is unavailable.
-- Runtime prerequisites: cmake ≥ 3.29, Ninja, Swift 6.2+, Qt 6.10+
+- Runtime prerequisites: cmake ≥ 3.29, Ninja, Swift 6.4+, Qt 6.10+
   (`tools/swift_grid_prototype.ts` auto-resolves the local Qt prefix and
   the main checkout's poryaaaa); the smoke launches the real app bundle, so
   it needs a normal desktop session (native macOS is fine).

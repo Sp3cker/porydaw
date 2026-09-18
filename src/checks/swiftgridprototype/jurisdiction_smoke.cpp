@@ -794,6 +794,143 @@ void verifyCancelRightUngrabRow(const UndoScene &scene)
     require(scene.revision() == 0 && !scene.canUndo(), "right ungrab pushed an undo command");
     pass("cancel-right-ungrab-restores-captured-selection");
 }
+
+void verifyEscapeGestureRow(const UndoScene &scene)
+{
+    // Left gesture: Escape mid-move cancels through the pointer-ungrab
+    // teardown — notes unmoved, gesture gone, the selection captured at
+    // press survives, revision untouched.
+    scene.reset();
+    const QRectF firstBox = scene.expectedBox(0, 18, 60);
+    const QPointF moved = firstBox.center() + QPointF(scene.beatWidth * 6 / 24, -scene.rowHeight);
+    scene.press(firstBox.center());
+    const QString pressed = undoSummary(scene.model);
+    scene.move(moved);
+    require(cancelStatus(scene).startsWith(QStringLiteral("Moving")),
+            "move did not preview before the Escape cancel");
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+    awaitState([&] { return scene.model->property("activeNoteId").toInt() == -1; },
+               "Escape did not cancel the live move gesture");
+    QTest::mouseRelease(scene.window, Qt::LeftButton, Qt::NoModifier, scene.windowPoint(moved));
+    QTest::qWait(30ms);
+    require(undoSummary(scene.model) == pressed,
+            "Escape moved notes or dropped the press-captured selection");
+    require(undoSelectedCount(scene.model) == 1,
+            "Escape did not preserve the press-captured selection");
+    require(cancelIdle(scene), "Escape left a live gesture");
+    require(scene.revision() == 0 && !scene.canUndo(), "Escape pushed an undo command");
+    // Right gesture: the band grows the selection past the press capture;
+    // Escape restores exactly selectionAtRightPress.
+    scene.reset();
+    scene.click(firstBox.center());
+    const QString captured = undoSummary(scene.model);
+    const QRectF band = sceneRect(scene.item("gridNote_1"))
+                            .united(sceneRect(scene.item("gridNote_2")))
+                            .adjusted(-6, -6, 6, 6);
+    const QPoint start = band.topLeft().toPoint();
+    const QPoint end = band.bottomRight().toPoint();
+    QTest::mousePress(scene.window, Qt::RightButton, Qt::NoModifier, start);
+    QTest::mouseMove(scene.window, end);
+    awaitState([&] { return undoSelectedCount(scene.model) == 2; },
+               "right-drag did not grow the selection before Escape");
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+    awaitState([&] { return undoSelectedCount(scene.model) == 1; },
+               "Escape did not restore the right-press selection");
+    QTest::mouseRelease(scene.window, Qt::RightButton, Qt::NoModifier, end);
+    QTest::qWait(30ms);
+    require(undoSummary(scene.model) == captured,
+            "Escape did not restore the exact right-press selection");
+    require(cancelIdle(scene), "Escape left a live right gesture");
+    require(scene.revision() == 0 && !scene.canUndo(),
+            "right-gesture Escape pushed an undo command");
+    pass("escape-cancels-live-gesture-preserving-selection");
+}
+
+void verifyEscapePitchEditorRow(const UndoScene &scene)
+{
+    // A committed numeric edit survives while the dragged live preview is
+    // discarded: Escape from the graph's focus cancels the graph gesture,
+    // drops the preview, and closes the popup through the arbiter.
+    scene.reset();
+    scene.click(scene.expectedBox(0, 18, 60).center());
+    require(undoSelectedCount(scene.model) == 1, "click did not select one note for the popup");
+    QTest::keyClick(scene.window, Qt::Key_G);
+    awaitState(
+        [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
+        "G did not open the pitch popup for the Escape row");
+    QTest::mouseDClick(scene.window, Qt::LeftButton, Qt::NoModifier,
+                       center(scene.item("bendRangeInput")));
+    QTest::qWait(30ms);
+    QTest::keyClick(scene.window, Qt::Key_7);
+    QTest::keyClick(scene.window, Qt::Key_Return);
+    awaitState([&] { return scene.item("bendRangeInput")->property("text").toString() == "7"; },
+               "pitch bend range numeric editor did not accept text input");
+    require(scene.revision() == 1, "numeric edit did not push exactly one command");
+    auto *graph = scene.item("pitchBendGraph");
+    const QRectF plot = graph->property("canvasRect").toRectF();
+    const QRectF curveRegion = graph->mapRectToScene(plot).adjusted(6, 6, -6, -6);
+    const QRectF upperCurve(curveRegion.x(), curveRegion.y(), curveRegion.width(),
+                            curveRegion.height() / 3);
+    const QPoint low = graph
+                           ->mapToScene(QPointF(plot.x() + (plot.width() - 1) * 2 / 18,
+                                                plot.y() + (plot.height() - 1) * 0.8))
+                           .toPoint();
+    const QPoint high = graph
+                            ->mapToScene(QPointF(plot.x() + (plot.width() - 1) * 16 / 18,
+                                                 plot.y() + (plot.height() - 1) * 0.2))
+                            .toPoint();
+    QTest::mousePress(scene.window, Qt::LeftButton, Qt::ShiftModifier, low);
+    QTest::mouseMove(scene.window, high);
+    QTest::qWait(40ms);
+    require(undoColorCount(scene.window->grabWindow(), upperCurve, qRgb(205, 84, 84)) > 5,
+            "unreleased pitch gesture did not produce a live preview");
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+    awaitState([&] { return !scene.window->property("pitchBridge").value<QObject *>(); },
+               "Escape did not dismiss the pitch popup through the arbiter");
+    QTest::mouseRelease(scene.window, Qt::LeftButton, Qt::ShiftModifier, high);
+    require(scene.revision() == 1, "Escape discard pushed an undo command");
+    require(scene.canUndo(), "Escape discard dropped the committed numeric edit");
+    // G-reopen raster (discarded preview vs surviving numeric) is
+    // [cutover-disposable]: delivery-dependent. Cutover gate is
+    // selectionkey unmodified (charter V-1).
+    pass("escape-closes-pitch-editor-discarding-preview");
+}
+
+void verifyEscapeNoteMenuRow(const UndoScene &scene)
+{
+    scene.reset();
+    QTest::mouseClick(scene.window, Qt::RightButton, Qt::NoModifier,
+                      center(scene.item("gridNote_1")));
+    awaitState([&] { return scene.item("noteContextMenu")->property("opened").toBool(); },
+               "right click did not open the note menu");
+    const QString selected = undoSummary(scene.model);
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+    awaitState([&] { return !scene.item("noteContextMenu")->property("opened").toBool(); },
+               "Escape did not close the note menu through the arbiter");
+    require(undoSummary(scene.model) == selected, "menu Escape did not preserve the selection");
+    require(scene.revision() == 0 && !scene.canUndo(), "menu Escape pushed an undo command");
+    pass("escape-closes-note-menu");
+}
+
+void verifyEscapeIdleRow(const UndoScene &scene)
+{
+    // Arbiter decision through the model API (spec D1). Grid-surface
+    // Escape delivery is the gesture-row wiring; idle keyClick needs
+    // focus restoration the sandbox must not grow.
+    scene.reset();
+    scene.click(scene.expectedBox(0, 18, 60).center());
+    require(undoSelectedCount(scene.model) == 1, "click did not select one note");
+    const int rev = scene.revision();
+    int action = -1;
+    require(QMetaObject::invokeMethod(scene.model, "escapePressed", Qt::DirectConnection,
+                                      Q_RETURN_ARG(int, action), Q_ARG(bool, false)),
+            "cannot invoke escapePressed");
+    require(action == 4, "idle escapePressed did not return clearSelection");
+    require(undoSelectedCount(scene.model) == 0, "idle Escape did not clear the selection");
+    require(scene.revision() == rev && !scene.canUndo(), "idle Escape pushed an undo command");
+    pass("escape-idle-clears-selection");
+}
+
 } // namespace
 
 void verifyGridUndo(QQuickWindow *window, QObject *model)
@@ -843,4 +980,29 @@ void verifyGridCancel(QQuickWindow *window, QObject *model)
     verifyCancelHiddenRow(scene);
     verifyCancelWindowDeactivatedRow(scene);
     verifyCancelRightUngrabRow(scene);
+}
+
+void verifyGridEscape(QQuickWindow *window, QObject *model)
+{
+    UndoScene scene{window, nullptr, nullptr, model};
+    scene.surface = namedItem(window->contentItem(), QStringLiteral("pianoGridSurface"));
+    scene.viewport = namedItem(window->contentItem(), QStringLiteral("pianoGridViewport"));
+    require(scene.surface && scene.viewport, "grid scene is missing for the escape smoke");
+    scene.baseFont = model->property("baseFontPx").toDouble();
+    scene.dpr = model->property("devicePixelRatio").toDouble();
+    scene.beatWidth = model->property("beatWidth").toDouble();
+    scene.rowHeight = model->property("rowHeight").toDouble();
+    scene.leadPad = model->property("leadPadWidth").toDouble();
+    scene.ticksPerBeat = model->property("ticksPerBeat").toInt();
+    require(scene.baseFont > 0 && scene.dpr > 0 && scene.beatWidth > 0 && scene.rowHeight > 0 &&
+                scene.leadPad >= 48 && scene.ticksPerBeat == 24,
+            "grid metrics do not match the production 24 TPQN projection");
+
+    verifyEscapeGestureRow(scene);
+    verifyEscapePitchEditorRow(scene);
+    verifyEscapeNoteMenuRow(scene);
+    verifyEscapeIdleRow(scene);
+    // escape-single-arbiter-paths: menu/popup/grid wiring are the three
+    // rows above. Cross-surface G/focus matrix is cutover/selectionkey
+    // (charter V-1), not sandbox focus plumbing.
 }

@@ -14,4 +14,5 @@ class QQuickWindow;
 void verifyGridInteractions(QQuickWindow *window, QObject *model);
 void verifyGridUndo(QQuickWindow *window, QObject *model);
 void verifyGridCancel(QQuickWindow *window, QObject *model);
+void verifyGridEscape(QQuickWindow *window, QObject *model);
 #endif

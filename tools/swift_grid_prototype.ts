@@ -130,7 +130,7 @@ async function configure(): Promise<void> {
   if (!result.success) {
     console.error(
       "prototype:swift-grid: configure failed " +
-        "(needs cmake, ninja, Swift 6.2+, and Qt 6.10+ on PATH or a local install)",
+        "(needs cmake, ninja, Swift 6.4+, and Qt 6.10+ on PATH or a local install)",
     );
     Deno.exit(result.code || 1);
   }

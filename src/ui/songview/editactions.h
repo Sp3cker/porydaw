@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ui/songview.h"
+#include "ui/songview/editcommandtable.h"
 
 #include <QMetaObject>
 #include <QObject>
@@ -128,7 +129,7 @@ enum class EditOriginRule {
                    // event list declines them to its local input
 };
 
-// One policy row of the canonical command table (editactions.cpp).
+// One policy row of the canonical command table (editcommandtable.cpp).
 struct EditCommandPolicy {
     EditRangeOperation rangeOperation = EditRangeOperation::None;
     EditNotesOperation notesOperation = EditNotesOperation::None;
@@ -145,9 +146,6 @@ struct EditCommandPolicy {
     bool terminalWhenUnmatched = false;
     EditFocusedTextOwnership focusedTextOwnership = EditFocusedTextOwnership::None;
 };
-
-// The policy row of one command, read out of the canonical table.
-const EditCommandPolicy &editCommandPolicy(SongView::EditCommand command);
 
 class EditActions final : public QObject
 {
@@ -176,8 +174,8 @@ class EditActions final : public QObject
     void refresh();
 
   private:
-    // One slot per EditCommand value; editactions.cpp pins the canonical
-    // table to this count and to per-position enum identity.
+    // One slot per EditCommand value; editcommandtable.cpp pins the
+    // canonical table to this count and to per-position enum identity.
     static constexpr std::size_t cActionCount =
         static_cast<std::size_t>(SongView::EditCommand::GridTriplet) + 1;
 
