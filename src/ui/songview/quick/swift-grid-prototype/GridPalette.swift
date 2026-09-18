@@ -1,0 +1,178 @@
+
+import Foundation
+import QtBridge
+
+enum PaletteMath {
+
+    struct Oklab {
+        var lightness: Double
+        var a: Double
+        var b: Double
+    }
+
+    static func srgbToLinear(_ channel: Double) -> Double {
+        channel <= 0.04045 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
+    }
+
+    static func linearToSrgb(_ channel: Double) -> Double {
+        channel <= 0.0031308 ? 12.92 * channel
+                             : 1.055 * pow(max(0.0, channel), 1.0 / 2.4) - 0.055
+    }
+
+    static func oklab(r: Int, g: Int, b: Int) -> Oklab {
+        let red = srgbToLinear(Double(r) / 255.0)
+        let green = srgbToLinear(Double(g) / 255.0)
+        let blue = srgbToLinear(Double(b) / 255.0)
+        let l = cbrt(0.4122214708 * red + 0.5363325363 * green + 0.0514459929 * blue)
+        let m = cbrt(0.2119034982 * red + 0.6806995451 * green + 0.1073969566 * blue)
+        let s = cbrt(0.0883024619 * red + 0.2817188376 * green + 0.6299787005 * blue)
+        return Oklab(lightness: 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+                     a: 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+                     b: 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s)
+    }
+
+    private static func gammaChannel(_ channel: Double) -> Int {
+        let scaled = min(255.0, max(0.0, linearToSrgb(channel) * 255.0))
+        return Int(floor(scaled + 0.5))
+    }
+
+    static func rgb(_ lab: Oklab) -> (r: Int, g: Int, b: Int) {
+        let l = lab.lightness + 0.3963377774 * lab.a + 0.2158037573 * lab.b
+        let m = lab.lightness - 0.1055613458 * lab.a - 0.0638541728 * lab.b
+        let s = lab.lightness - 0.0894841775 * lab.a - 1.2914855480 * lab.b
+        let l3 = l * l * l, m3 = m * m * m, s3 = s * s * s
+        return (gammaChannel(4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3),
+                gammaChannel(-1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3),
+                gammaChannel(-0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3))
+    }
+
+    static func mixTowardOklab(_ from: Oklab, _ to: Oklab, _ t: Double) -> Oklab {
+        Oklab(lightness: from.lightness + (to.lightness - from.lightness) * t,
+              a: from.a + (to.a - from.a) * t,
+              b: from.b + (to.b - from.b) * t)
+    }
+
+    static func hex(r: Int, g: Int, b: Int, a: Int = 255) -> String {
+        a == 255
+            ? String(format: "#%02X%02X%02X", r, g, b)
+            : String(format: "#%02X%02X%02X%02X", a, r, g, b)
+    }
+
+    static func hex(_ lab: Oklab, alpha: Int = 255) -> String {
+        let c = rgb(lab)
+        return hex(r: c.r, g: c.g, b: c.b, a: alpha)
+    }
+
+    static func channels(_ hex: String) -> (r: Int, g: Int, b: Int, a: Int) {
+        var value: UInt64 = 0
+        Scanner(string: String(hex.dropFirst())).scanHexInt64(&value)
+        if hex.count == 9 {
+            return (Int((value >> 16) & 0xFF), Int((value >> 8) & 0xFF), Int(value & 0xFF),
+                    Int((value >> 24) & 0xFF))
+        }
+        return (Int((value >> 16) & 0xFF), Int((value >> 8) & 0xFF), Int(value & 0xFF), 255)
+    }
+
+    static func gridLineColor(_ alpha: Int = 255) -> String {
+        let base = channels("#3F040000")
+        let a = (base.a * alpha + 127) / 255
+        return hex(r: base.r, g: base.g, b: base.b, a: a)
+    }
+
+    static func noteFill(track: Int, velocity: Int) -> String {
+        let identity = trackIdentityOklab(track)
+        let zero = oklab(r: 0x8B, g: 0x84, b: 0x7E)
+        let v = min(127, max(0, velocity))
+        if v == 0 { return hex(zero) }
+        if v == 127 { return hex(identity) }
+        return hex(mixTowardOklab(identity, zero, 1.0 - Double(v) / 127.0))
+    }
+
+    static func ghostFill(track: Int, accidentalRow: Bool) -> String {
+        let identity = trackIdentityOklab(track)
+        let background = accidentalRow
+            ? oklab(r: 0xB4, g: 0xAC, b: 0xA6)
+            : oklab(r: 0xD4, g: 0xCC, b: 0xC7)
+        let weight = 60.0 / 255.0
+        let offset = min(0.055, max(-0.055,
+                                    (identity.lightness - background.lightness) * weight))
+        return hex(Oklab(lightness: background.lightness + offset,
+                         a: background.a + (identity.a - background.a) * weight,
+                         b: background.b + (identity.b - background.b) * weight))
+    }
+
+    static func trackIdentityIndex(_ track: Int) -> Int {
+        ((track % trackIdentityFills.count) + trackIdentityFills.count)
+            % trackIdentityFills.count
+    }
+
+    static func trackIdentityOklab(_ track: Int) -> Oklab {
+        let c = channels(trackIdentityFills[trackIdentityIndex(track)])
+        return oklab(r: c.r, g: c.g, b: c.b)
+    }
+
+    static let trackIdentityFills = [
+        "#CD5454", "#54CD77", "#9B54CD", "#CDBD54", "#54B9CD", "#CD5497",
+        "#73CD54", "#5854CD", "#CD7D54", "#54CD9F", "#C354CD", "#B5CD54",
+        "#5491CD", "#CD546F", "#54CD5E", "#8154CD",
+    ]
+}
+
+@MainActor
+@QtBridgeable
+public final class GridPalette {
+
+    public let windowBackground: String = "#C9C1BB"
+    public let rollBackground: String = "#D4CCC7"
+    public let accidentalLane: String = "#B4ACA6"
+    public let chromeBackground: String = "#BDB5AF"
+    public let separator: String = "#5B5652"
+    public let outline: String = "#8C857F"
+
+    public let keyboardNatural: String = "#F4F4F4"
+    public let keyboardBlack: String = "#202224"
+    public let keyboardSeparator: String = "#BCB4AF"
+    public let keyboardLabel: String = "#1A1A1A"
+    public let keyboardActiveKey: String = "#B9E8EE"
+    public let keyboardHover: String = "#50B9E8EE"
+
+    public let gridLine: String = "#3F040000"
+    public let gridLineSub1: String = PaletteMath.gridLineColor(125)
+    public let gridLineSub2: String = PaletteMath.gridLineColor(100)
+    public let gridLineSub3: String = PaletteMath.gridLineColor(75)
+    public let gridLineBeat: String = PaletteMath.gridLineColor(160)
+    public let gridLineBeatFine: String = PaletteMath.gridLineColor(200)
+    public let gridLineBar: String = PaletteMath.gridLineColor()
+    public let rowLine: String = PaletteMath.gridLineColor(50)
+
+    public let preRollMask: String = PaletteMath.hex(
+        PaletteMath.mixTowardOklab(PaletteMath.oklab(r: 0xD4, g: 0xCC, b: 0xC7),
+                                 PaletteMath.oklab(r: 0x04, g: 0x00, b: 0x00), 0.15))
+    public let rulerPreRollMask: String = PaletteMath.hex(
+        PaletteMath.mixTowardOklab(PaletteMath.oklab(r: 0xBD, g: 0xB5, b: 0xAF),
+                                 PaletteMath.oklab(r: 0x04, g: 0x00, b: 0x00), 0.15))
+
+    public let noteVelocityZero: String = "#8B847E"
+    public let noteBorder: String = "#FF000000"
+    public let selectionRing: String = "#B9E8EE"
+    public let selectionFill: String = "#1EB9E8EE"
+    public let selectionEdge: String = "#00CADB"
+
+    public let primaryText: String = "#302C29"
+    public let windowText: String = "#302C29"
+    public let secondaryText: String = "#57514C"
+    public let editCursor: String = "#302C29"
+    public let playhead: String = "#E24242"
+    public let hoverChipFill: String = "#E6303030"
+    public let hoverChipText: String = "#FFFFFF"
+    public let implicitSignature: String = "#8B847E"
+
+    public let rulerDetailText: String = {
+        let fg = (0x57, 0x51, 0x4C), bg = (0xBD, 0xB5, 0xAF)
+        let recede = { (191 * $0 + 64 * $1 + 127) / 255 }
+        return PaletteMath.hex(r: recede(fg.0, bg.0), g: recede(fg.1, bg.1),
+                               b: recede(fg.2, bg.2))
+    }()
+
+    public init() {}
+}

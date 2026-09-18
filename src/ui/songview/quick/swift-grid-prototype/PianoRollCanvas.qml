@@ -1,0 +1,237 @@
+import QtQuick
+
+Item {
+    id: root
+
+    required property Item gutterSide
+    required property Item bandSide
+    required property Item plotSide
+    required property QtObject timelineScene
+
+    // Keep pitch rows below pre-roll shading and time marks.
+    TimelineQuickItem {
+        parent: root.plotSide
+        objectName: "timelineQuickPianoGridRows"
+        anchors.fill: parent
+        scene: root.timelineScene
+        sceneLayer: TimelineQuickItem.PianoGridRows
+        z: 0
+    }
+
+    TimelineQuickItem {
+        parent: root.plotSide
+        objectName: "timelineQuickPianoGridTime"
+        anchors.fill: parent
+        scene: root.timelineScene
+        sceneLayer: TimelineQuickItem.PianoGridTime
+        z: 1
+    }
+
+    TimelineQuickItem {
+        parent: root.plotSide
+        objectName: "timelineQuickPianoNoteFills"
+        anchors.fill: parent
+        scene: root.timelineScene
+        sceneLayer: TimelineQuickItem.PianoNoteFills
+        z: 2
+    }
+
+    TimelineQuickItem {
+        parent: root.plotSide
+        objectName: "timelineQuickPianoDrawPreviewFill"
+        anchors.fill: parent
+        scene: root.timelineScene
+        sceneLayer: TimelineQuickItem.PianoDrawPreviewFill
+        z: 3
+    }
+
+    Item {
+        parent: root.plotSide
+        anchors.fill: parent
+        z: 4
+
+        Repeater {
+            model: root.timelineScene.pianoNoteTextModel
+
+            delegate: Text {
+                required property var labelRect
+                required property string labelText
+                required property string labelColor
+                required property var labelFont
+                required property int labelHorizontalAlignment
+                required property int labelVerticalAlignment
+
+                x: labelRect.x
+                y: labelRect.y
+                width: labelRect.width
+                height: labelRect.height
+                text: labelText
+                color: labelColor
+                font: Qt.font(labelFont)
+                horizontalAlignment: labelHorizontalAlignment
+                verticalAlignment: labelVerticalAlignment
+                textFormat: Text.PlainText
+                renderType: Text.NativeRendering
+                elide: Text.ElideNone
+                maximumLineCount: 1
+                clip: contentWidth > width || contentHeight > height
+            }
+        }
+    }
+
+    TimelineQuickItem {
+        parent: root.plotSide
+        objectName: "timelineQuickPianoNoteBordersAndSelection"
+        anchors.fill: parent
+        scene: root.timelineScene
+        sceneLayer: TimelineQuickItem.PianoNoteBordersAndSelection
+        z: 5
+    }
+
+    TimelineQuickItem {
+        parent: root.plotSide
+        objectName: "timelineQuickPianoOverlay"
+        anchors.fill: parent
+        scene: root.timelineScene
+        sceneLayer: TimelineQuickItem.PianoOverlay
+        z: 6
+    }
+
+    TimelineQuickItem {
+        parent: root.gutterSide
+        objectName: "timelineQuickPianoKeyboardKeys"
+        anchors.fill: parent
+        scene: root.timelineScene
+        sceneLayer: TimelineQuickItem.PianoKeyboardKeys
+        z: 0
+    }
+
+    TimelineQuickItem {
+        parent: root.gutterSide
+        objectName: "timelineQuickPianoKeyboardHighlights"
+        anchors.fill: parent
+        scene: root.timelineScene
+        sceneLayer: TimelineQuickItem.PianoKeyboardHighlights
+        z: 1
+    }
+
+    // Drum labels and hover chips may span the gutter and plot so full pad
+    // names stay readable. Their coordinates are already band-local because
+    // the gutter starts at band-local x = 0.
+    Rectangle {
+        parent: root.bandSide
+        objectName: "timelineQuickPianoHoverChip"
+        x: root.timelineScene.hoverChipRect.x
+        y: root.timelineScene.hoverChipRect.y
+        width: root.timelineScene.hoverChipRect.width
+        height: root.timelineScene.hoverChipRect.height
+        visible: root.timelineScene.hoverChipVisible
+        color: root.timelineScene.hoverChipFill
+        radius: root.timelineScene.hoverChipRadius
+        z: 8
+    }
+
+    Item {
+        parent: root.bandSide
+        anchors.fill: parent
+        z: 3
+
+        Repeater {
+            model: root.timelineScene.pianoKeyboardTextModel
+
+            delegate: Item {
+                required property var labelRect
+                required property string labelText
+                required property string labelColor
+                required property var labelFont
+                required property int labelHorizontalAlignment
+                required property int labelVerticalAlignment
+                required property string labelBackground
+                required property var labelBackgroundRect
+
+                x: labelRect.x
+                y: labelRect.y
+                width: labelRect.width
+                height: labelRect.height
+
+                Rectangle {
+                    x: labelBackgroundRect.x - labelRect.x
+                    y: labelBackgroundRect.y - labelRect.y
+                    width: labelBackgroundRect.width
+                    height: labelBackgroundRect.height
+                    visible: labelBackgroundRect.width > 0 && labelBackgroundRect.height > 0
+                    color: labelBackground
+                }
+
+                Text {
+                    anchors.fill: parent
+                    text: labelText
+                    color: labelColor
+                    font: Qt.font(labelFont)
+                    horizontalAlignment: labelHorizontalAlignment
+                    verticalAlignment: labelVerticalAlignment
+                    textFormat: Text.PlainText
+                    renderType: Text.NativeRendering
+                    elide: Text.ElideNone
+                    maximumLineCount: 1
+                    clip: contentWidth > width || contentHeight > height
+                }
+            }
+        }
+    }
+
+    Text {
+        parent: root.bandSide
+        objectName: "timelineQuickPianoHoverChipText"
+        x: root.timelineScene.hoverChipRect.x
+        y: root.timelineScene.hoverChipRect.y
+        width: root.timelineScene.hoverChipRect.width
+        height: root.timelineScene.hoverChipRect.height
+        visible: root.timelineScene.hoverChipVisible
+        text: root.timelineScene.hoverChipText
+        color: "white"
+        font: Qt.font(root.timelineScene.hoverChipFont)
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        textFormat: Text.PlainText
+        renderType: Text.NativeRendering
+        elide: Text.ElideNone
+        maximumLineCount: 1
+        clip: contentWidth > width || contentHeight > height
+        z: 9
+    }
+
+    Item {
+        parent: root.plotSide
+        anchors.fill: parent
+        z: 7
+
+        Repeater {
+            model: root.timelineScene.pianoLoadingTextModel
+
+            delegate: Text {
+                required property var labelRect
+                required property string labelText
+                required property string labelColor
+                required property var labelFont
+                required property int labelHorizontalAlignment
+                required property int labelVerticalAlignment
+
+                x: labelRect.x
+                y: labelRect.y
+                width: labelRect.width
+                height: labelRect.height
+                text: labelText
+                color: labelColor
+                font: Qt.font(labelFont)
+                horizontalAlignment: labelHorizontalAlignment
+                verticalAlignment: labelVerticalAlignment
+                textFormat: Text.PlainText
+                renderType: Text.NativeRendering
+                elide: Text.ElideNone
+                maximumLineCount: 1
+                clip: contentWidth > width || contentHeight > height
+            }
+        }
+    }
+}
