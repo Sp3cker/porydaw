@@ -1,5 +1,8 @@
 import Foundation
 
+private let midiHeaderMagic: [UInt8] = [0x4D, 0x54, 0x68, 0x64]
+private let midiTrackMagic: [UInt8] = [0x4D, 0x54, 0x72, 0x6B]
+
 public enum MidiCodecError: Error, Equatable, CustomStringConvertible {
     case notStandardMIDIFile
     case invalidHeader
@@ -164,7 +167,7 @@ public struct MidiFile: Equatable, Sendable {
 
     public static func decode(_ bytes: [UInt8]) throws -> MidiFile {
         var reader = MidiByteReader(bytes)
-        guard bytes.count >= 14, try reader.read(count: 4) == Array("MThd".utf8) else {
+        guard bytes.count >= 14, try reader.read(count: 4) == midiHeaderMagic else {
             throw MidiCodecError.notStandardMIDIFile
         }
         let headerLength = try reader.readUInt32(or: .invalidHeader)
@@ -181,7 +184,7 @@ public struct MidiFile: Equatable, Sendable {
         var chunks: [MidiChunk] = []
         chunks.reserveCapacity(Int(trackCount))
         for trackIndex in 0..<Int(trackCount) {
-            guard reader.canRead(8), try reader.read(count: 4) == Array("MTrk".utf8) else {
+            guard reader.canRead(8), try reader.read(count: 4) == midiTrackMagic else {
                 throw MidiCodecError.missingTrack(index: trackIndex, count: Int(trackCount))
             }
             let length = try reader.readUInt32(or: .truncatedTrack(index: trackIndex))
@@ -203,7 +206,7 @@ public struct MidiFile: Equatable, Sendable {
         guard division & 0x8000 == 0 else { throw MidiCodecError.unsupportedSMPTETimeDivision }
         guard chunks.count <= Int(UInt16.max) else { throw MidiCodecError.tooManyTracks(chunks.count) }
 
-        var output = Array("MThd".utf8)
+        var output = midiHeaderMagic
         output.appendUInt32(6)
         output.appendUInt16(1)
         output.appendUInt16(UInt16(chunks.count))
@@ -268,7 +271,7 @@ public struct MidiFile: Equatable, Sendable {
                 throw MidiCodecError.invalidEvent(track: trackIndex, event: chunk.events.count,
                                                   reason: "track data is too large")
             }
-            output.append(contentsOf: Array("MTrk".utf8))
+            output.append(contentsOf: midiTrackMagic)
             output.appendUInt32(UInt32(body.count))
             output.append(contentsOf: body)
         }
@@ -428,8 +431,13 @@ private func parseTrack(reader: inout MidiByteReader, end: Int, index: Int) thro
 
     while reader.position < end {
         let delta: UInt32
-        do { delta = try reader.readVariableLength(through: end) }
-        catch { throw malformed("truncated delta time") }
+        do {
+            delta = try reader.readVariableLength(through: end)
+        } catch ReaderFailure.invalidVariableLength {
+            throw malformed("delta time VLQ exceeds 4 bytes")
+        } catch {
+            throw malformed("truncated delta time")
+        }
         tick += UInt64(delta)
         guard tick < UInt64(TimeDefaults.noTick) else {
             throw malformed("tick position exceeds 32-bit tick range")
@@ -445,7 +453,13 @@ private func parseTrack(reader: inout MidiByteReader, end: Int, index: Int) thro
             let length: UInt32
             do {
                 type = try reader.readByte(through: end)
+            } catch {
+                throw malformed("truncated meta event")
+            }
+            do {
                 length = try reader.readVariableLength(through: end)
+            } catch ReaderFailure.invalidVariableLength {
+                throw malformed("meta length VLQ exceeds 4 bytes")
             } catch {
                 throw malformed("truncated meta event")
             }
@@ -461,8 +475,15 @@ private func parseTrack(reader: inout MidiByteReader, end: Int, index: Int) thro
             events.append(.meta(tick: eventTick, type: type, data: data))
         } else if first == 0xF0 || first == 0xF7 {
             runningStatus = nil
+            let length: UInt32
             do {
-                let length = try reader.readVariableLength(through: end)
+                length = try reader.readVariableLength(through: end)
+            } catch ReaderFailure.invalidVariableLength {
+                throw malformed("SysEx length VLQ exceeds 4 bytes")
+            } catch {
+                throw malformed("truncated SysEx event")
+            }
+            do {
                 let data = try reader.read(count: Int(length), through: end)
                 events.append(.systemExclusive(tick: eventTick, status: first, data: data))
             } catch {
@@ -522,19 +543,21 @@ private extension Array where Element == UInt8 {
             throw MidiCodecError.invalidEvent(track: track, event: event,
                                               reason: "delta time exceeds MIDI VLQ range")
         }
-        var buffer = [UInt8](repeating: 0, count: 4)
-        var count = 0
-        var remaining = value
-        repeat {
-            buffer[count] = UInt8(remaining & 0x7F)
-            count += 1
-            remaining >>= 7
-        } while remaining != 0
-        while count > 1 {
-            count -= 1
-            append(buffer[count] | 0x80)
+        if value < 0x80 {
+            append(UInt8(value))
+        } else if value < 0x4000 {
+            append(UInt8(value >> 7) | 0x80)
+            append(UInt8(value & 0x7F))
+        } else if value < 0x20_0000 {
+            append(UInt8(value >> 14) | 0x80)
+            append(UInt8(value >> 7) | 0x80)
+            append(UInt8(value & 0x7F))
+        } else {
+            append(UInt8(value >> 21) | 0x80)
+            append(UInt8(value >> 14) | 0x80)
+            append(UInt8(value >> 7) | 0x80)
+            append(UInt8(value & 0x7F))
         }
-        append(buffer[0])
     }
 
     mutating func appendVariableLengthCount(_ count: Int, track: Int, event: Int) throws {

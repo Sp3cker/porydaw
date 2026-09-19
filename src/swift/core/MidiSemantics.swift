@@ -1,5 +1,7 @@
 import Foundation
 
+private let midiNoteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
 public enum M4aLane: Int, CaseIterable, Sendable {
     case modulation
     case volume
@@ -201,6 +203,8 @@ public func m4aClassifyCC(_ controller: UInt8) -> M4aCCInfo {
     }
 }
 
+// This audited subset is intentionally adjacent to `m4aClassifyCC`: event
+// classification does not imply that the bundled exporter emits the CC.
 public func m4aExportSupport(_ controller: UInt8) -> M4aExportSupport {
     switch controller {
     case 0x01, 0x07, 0x0A, 0x0C, 0x10, 0x11, 0x14, 0x15, 0x16, 0x18, 0x1A, 0x21, 0x27:
@@ -214,7 +218,7 @@ public func m4aLane(forXCMDSelector selector: UInt8) -> M4aLane {
     switch selector {
     case 0x08: return .echoVolume
     case 0x09: return .echoLength
-    default: preconditionFailure("unregistered XCMD descriptor selector")
+    default: return .echoVolume
     }
 }
 
@@ -279,8 +283,13 @@ public func m4aVoiceTypeName(_ type: UInt8) -> String {
 }
 
 public func midiKeyName(_ key: Int) -> String {
-    let names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-    return "\(names[key % 12])\(key / 12 - 1)"
+    var octave = key / 12
+    var pitchClass = key % 12
+    if pitchClass < 0 {
+        pitchClass += 12
+        octave -= 1
+    }
+    return "\(midiNoteNames[pitchClass])\(octave - 1)"
 }
 
 public func midiTimeSignatureLabel(numerator: Int, denominatorPowerOfTwo: Int) -> String {

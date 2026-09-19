@@ -1,0 +1,5 @@
+module PorydawCoreCheckNative {
+    header "core_check.h"
+    header "oracle_check.h"
+    export *
+}

@@ -3,21 +3,23 @@
   "inventoryEvidence": {
     "catalog": "All registered filters in src/checks/checkcatalog.cpp; source definitions and private QTest slots are authoritative. Scout baseline .scratch/inventory-baseline.md is a cross-check only.",
     "rowDiscovery": "Literal QTest::newRow keys are separate identities. Indirect dynamic generators use an explicit no-row-marker, rowCount when source-stable, and the generator source location. Deferred/exclusion suites remain harness-level with caseNamesPending per controller resolution.",
-    "statusPolicy": "A case is verified only when every observable assertion assigned to its due task was exercised. Partial Task-1 evidence is recorded without promoting later-task document/timeline/native assertions.",
+    "statusPolicy": "Verified requires the mapped Swift-owned assertions to execute under the amended test-language ownership contract. Task-1 assertions are implemented and remain pending until fresh, revision-identified controller execution.",
     "controllerRunEvidence": {
       "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
       "revision": "working tree post-voicefix",
-      "result": "PASS 4/4 + references PASS"
+      "result": "PASS 4/4 + references PASS",
+      "status": "historical-parity-only",
+      "qualificationGap": "Original command and revision labels are preserved verbatim, not executable/revision-complete acceptance evidence. Fresh exact commands, tested revision and Swift assertion locations are required."
     },
     "totals": {
-      "ledgerEntries": 834,
+      "ledgerEntries": 832,
       "byStatus": {
         "deferred-ui": 49,
-        "pending": 763,
-        "verified": 22
+        "pending": 783,
+        "verified": 0
       },
       "byDueTask": {
-        "1": 22,
+        "1": 20,
         "2": 36,
         "3": 127,
         "4": 23,
@@ -30,17 +32,43 @@
       "byClassification": {
         "absent-UI-only": 49,
         "grid/window input": 248,
-        "in-scope core behavior": 395,
+        "in-scope core behavior": 393,
         "native integration": 137,
         "obsolete transport/implementation candidate": 5
       },
       "catalogFilters": 108,
       "catalogFiltersRepresented": 108,
       "reconciliationDisagreements": 110,
-      "task1PendingGaps": 0
+      "task1PendingGaps": 20
     },
     "methodMappingWarnings": [],
-    "unreconciledCatalogEntries": []
+    "unreconciledCatalogEntries": [],
+    "acceptanceProbeEvidence": {
+      "source": ".scratch/t1-acceptance-probes.md",
+      "unknownQTestSlot": {
+        "command": "... --qt bogusSlot",
+        "expectedExit": 1,
+        "observedExit": 1,
+        "result": "PASS: rejection proved"
+      },
+      "unknownHarness": {
+        "command": "... --filter definitely-not-a-real-harness",
+        "expectedExit": 2,
+        "observedExit": 2,
+        "result": "PASS: rejection proved"
+      },
+      "deliberateMismatchPreMigration": {
+        "injection": "MidiChecks.swift semantic CC class result",
+        "expectedExit": 1,
+        "observedExit": 1,
+        "diagnostic": "cppId and expected/actual identified the mismatch; source reverted; clean run passed"
+      },
+      "deliberateMismatchPostMigration": {
+        "injection": "src/checks/swiftcore/MidiChecks.swift expectOracleValue actual argument",
+        "status": "controller-run-pending",
+        "requirement": "Inject one wrong Swift value, require exit 1 with cppId and expected/actual, then revert before acceptance."
+      }
+    }
   },
   "cases": [
     {
@@ -1447,9 +1475,12 @@
       "dueTask": 2,
       "swiftTargets": "swiftcore/midiCodec exact formatZeroCoercion/channel-prefix-routing cppId; whole canonical bytes and mapping summary",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "task1Partial": "Swift midiCodec owns the channel-prefix-routing synthetic case and compares canonical bytes plus mapping summary with the frozen C++ oracle."
+      },
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 2 Swift comparison"
+      "pendingGap": "Task 1 channel-prefix routing comparison is implemented but controller-run-pending; Task 2 document projection assertions remain pending."
     },
     {
       "cppId": "editcheck/EditCheckTest::formatZeroGlobals",
@@ -3998,11 +4029,12 @@
       "observableAssertions": "every enum, mnemonic and display string equals C++; all value formatting and advanced labels equal C++",
       "dueTask": 1,
       "swiftTargets": "swiftcore/musicalSemantics no-row/core/m4asemantics.cpp case-key matrix",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -4016,11 +4048,12 @@
       "observableAssertions": "all representative velocity and duration results equal C++ table behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/musicalSemantics no-row/core/mid2agbtables.cpp matrices",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -4034,11 +4067,12 @@
       "observableAssertions": "each row's C++ and Swift validity, bytes, chunk/end-tick summary, format provenance and engine mapping agree",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec one no-row/core/smf.cpp/normal-project-song/<path> failure cppId per fixture",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -4054,11 +4088,12 @@
       "observableAssertions": "constants/domains and bit-exact doubles equal C++; reserved Tick is never emitted by arithmetic; hardware ceiling is 16",
       "dueTask": 1,
       "swiftTargets": "swiftcore/musicalSemantics no-row/core/timedefaults.h and tracklimits.h matrices",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -4072,11 +4107,12 @@
       "observableAssertions": "constants/domains and bit-exact doubles equal C++; reserved Tick is never emitted by arithmetic; hardware ceiling is 16",
       "dueTask": 1,
       "swiftTargets": "swiftcore/musicalSemantics no-row/core/timedefaults.h and tracklimits.h matrices",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -4104,12 +4140,13 @@
       "observableAssertions": "token 0 is unassigned and nonzero is assigned; NoteID never affects MIDI equality or bytes",
       "classification": "in-scope core behavior",
       "dueTask": 1,
-      "swiftTargets": "swiftcore/musicalSemantics exact baseline cppId through PDC_NOTE_ID operations",
-      "status": "verified",
+      "swiftTargets": "src/checks/swiftcore/MidiChecks.swift musicalSemantics direct NoteID assignment, equality, and canonical storage assertions",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null,
       "reconciliationNotes": "Scout assigned this case to Task 2; NoteID storage/equality semantics are implemented and exhaustively compared in the Task 1 musicalSemantics slot."
@@ -5418,12 +5455,13 @@
       "operations": "MidiFile.blankSong; canonical encode and reparse",
       "observableAssertions": "division 24; one-bar conductor tempo/time signature; voice 0 and volume 100 track; end ticks and bytes equal C++",
       "dueTask": 1,
-      "swiftTargets": "swiftcore/midiCodec pdc_blank_song byte equality and reparse cppIds",
-      "status": "verified",
+      "swiftTargets": "src/checks/swiftcore/MidiChecks.swift midiCodec direct MidiFile.blankSong byte equality and reparse assertions",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -8895,11 +8933,12 @@
       "observableAssertions": "every malformed file throws/rejects completely; C++ and Swift acceptance verdicts agree",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec explicit-no-row cppIds for each malformed variant",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -8913,11 +8952,12 @@
       "observableAssertions": "every malformed file throws/rejects completely; C++ and Swift acceptance verdicts agree",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec explicit-no-row cppIds for each malformed variant",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -8931,11 +8971,12 @@
       "observableAssertions": "every malformed file throws/rejects completely; C++ and Swift acceptance verdicts agree",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec explicit-no-row cppIds for each malformed variant",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -8949,11 +8990,12 @@
       "observableAssertions": "every malformed file throws/rejects completely; C++ and Swift acceptance verdicts agree",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec explicit-no-row cppIds for each malformed variant",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -8967,11 +9009,12 @@
       "observableAssertions": "every malformed file throws/rejects completely; C++ and Swift acceptance verdicts agree",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec explicit-no-row cppIds for each malformed variant",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -8986,11 +9029,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec fixture cppId; canonical bytes cover every payload and order assertion",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null
     },
@@ -9018,11 +9062,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec duplicate-EOT and trailing-data cppIds",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null
     },
@@ -9055,11 +9100,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec cppId exact match; encoded bytes and decoded summary",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null
     },
@@ -9191,11 +9237,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec fixture and synthetic cppIds; whole canonical byte comparison",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null
     },
@@ -9208,11 +9255,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec exact cppId invalid verdict comparison",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null
     },
@@ -9269,12 +9317,13 @@
       "observableAssertions": "format is coerced to 1; wasFormat0 is true; canonical Swift bytes equal C++",
       "classification": "in-scope core behavior",
       "dueTask": 1,
-      "swiftTargets": "src/checks/swiftcore/tst_swiftcore.cpp midiCodec cppId exact match; MidiFile.decode/encoded byte comparison and wasFormat0 summary",
-      "status": "verified",
+      "swiftTargets": "src/checks/swiftcore/MidiChecks.swift midiCodec exact cppId; direct MidiFile.decode/encoded byte comparison and wasFormat0 summary",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null
     },
@@ -9287,11 +9336,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec cppId fixture and invalid-carry variants",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null
     },
@@ -9439,40 +9489,6 @@
       },
       "caseNamesPending": true,
       "pendingGap": "Independent exclusion approval has not yet been recorded."
-    },
-    {
-      "cppId": "swiftcore/SwiftCoreCheck::midiCodec",
-      "source": "src/checks/swiftcore/tst_swiftcore.cpp:620",
-      "fixturesAndInputs": "Checked-in SMF fixtures, synthetic boundary cases, staged project songs, and exhaustive finite domains",
-      "operations": "Run the midiCodec production Swift/C++ comparison slot",
-      "observableAssertions": "Compares production Swift decode/canonical encode results with the C++ codec across fixtures, synthetic cases, blank-song bytes, and the staged project corpus.",
-      "classification": "in-scope core behavior",
-      "dueTask": 1,
-      "swiftTargets": "src/checks/swiftcore/tst_swiftcore.cpp::midiCodec; src/swift/core",
-      "status": "verified",
-      "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
-      },
-      "exclusionReview": null
-    },
-    {
-      "cppId": "swiftcore/SwiftCoreCheck::musicalSemantics",
-      "source": "src/checks/swiftcore/tst_swiftcore.cpp:625",
-      "fixturesAndInputs": "Checked-in SMF fixtures, synthetic boundary cases, staged project songs, and exhaustive finite domains",
-      "operations": "Run the musicalSemantics production Swift/C++ comparison slot",
-      "observableAssertions": "Exhaustively compares production Swift musical constants, tables, velocity maps, and time/track laws with the frozen C++ oracle.",
-      "classification": "in-scope core behavior",
-      "dueTask": 1,
-      "swiftTargets": "src/checks/swiftcore/tst_swiftcore.cpp::musicalSemantics; src/swift/core",
-      "status": "verified",
-      "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
-      },
-      "exclusionReview": null
     },
     {
       "cppId": "swiftdocfeed/catalog-suite[case-names-pending]",
@@ -10712,11 +10728,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/musicalSemantics exhaustive value matrices under levelsCanonicalizeAndMove cppId",
-      "status": "verified",
+      "status": "pending",
+      "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
-        "revision": "working tree post-voicefix",
-        "result": "PASS 4/4 + references PASS"
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
       },
       "exclusionReview": null
     },

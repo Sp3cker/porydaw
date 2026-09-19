@@ -12,16 +12,6 @@ public struct NoteID: Hashable, Sendable {
     public var isAssigned: Bool { rawValue != 0 }
 }
 
-public struct NoteVelocity: Equatable, Sendable {
-    public var noteID: NoteID
-    public var velocity: Int
-
-    public init(noteID: NoteID = NoteID(), velocity: Int = 1) {
-        self.noteID = noteID
-        self.velocity = velocity
-    }
-}
-
 public struct TempoPoint: Equatable, Sendable {
     public var tick: Tick
     public var microsecondsPerQuarterNote: UInt32
@@ -135,20 +125,11 @@ public enum TimeDefaults {
 
     @inlinable
     public static func controllerDefault(for controller: UInt8) -> UInt8? {
-        switch controller {
-        case ccModulation, ccPortamento, ccModulationType, ccPWMCycle, ccPWMWidth, ccLFODelay:
-            return 0
-        case ccVolume:
-            return 127
-        case ccPan, ccFineTune:
-            return 64
-        case ccBendRange:
-            return 2
-        case ccLFOSpeed:
-            return 22
-        default:
-            return nil
+        for index in 0..<controllerDefaultCount {
+            let entry = controllerDefault(at: index)
+            if entry.controller == controller { return entry.value }
         }
+        return nil
     }
 
     public static func laneDomain(for controller: UInt8) -> LaneDomain {
@@ -167,21 +148,8 @@ public enum TimeDefaults {
         }
     }
 
-    public static func clampLaneValue(_ value: Int, for controller: UInt8) -> Int {
-        let domain = laneDomain(for: controller)
-        return min(max(value, domain.minimum), domain.maximum)
-    }
-
     public static func hasEngineDefaultNode(for controller: UInt8) -> Bool {
         controller == ccVolume || controller == ccPan
-    }
-
-    public static func syntheticTickZero<Value>(for controller: UInt8,
-                                                 in points: [(tick: Tick, value: Value)]) -> Int? {
-        guard hasEngineDefaultNode(for: controller), !points.contains(where: { $0.tick == 0 }) else {
-            return nil
-        }
-        return controllerDefault(for: controller).map(Int.init)
     }
 
     public static func microsecondsPerQuarterNote(forBPM bpm: Int) -> UInt32 {

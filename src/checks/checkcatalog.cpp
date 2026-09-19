@@ -741,8 +741,8 @@ const std::vector<CheckDefinition> &catalog()
 #ifdef __APPLE__
             {
                 .name = "swiftcore",
-                // Production Swift MIDI codec and musical semantics against
-                // the frozen C++ oracle and checked-in SMF corpus.
+                // Production Swift MIDI codec, musical semantics, and playback
+                // behavior against the frozen C++ oracle and checked-in corpus.
                 .argv = strings({"--swiftcore", "{scratch}"}),
                 .handler = qtWithOneArgument<runSwiftCoreCheck>,
                 .scratchKind = ScratchKind::ExistingDirectory,
