@@ -410,6 +410,11 @@ public final class PianoGrid: QmlInstantiableStatus {
         visibleGridTicks = m.visibleGridTicks
     }
 
+    public func reloadVisuals() {
+        rebuildScene()
+        publishOutputs()
+    }
+
     private func sceneInput() -> GridSceneInput {
         GridSceneInput(
             metrics: metrics,
@@ -433,11 +438,6 @@ public final class PianoGrid: QmlInstantiableStatus {
         let input = sceneInput()
         scene.rebuildStatic(input)
         scene.rebuildNotes(input)
-    }
-
-    public func reloadVisuals() {
-        rebuildScene()
-        publishOutputs()
     }
 
     private func refreshNotes() {

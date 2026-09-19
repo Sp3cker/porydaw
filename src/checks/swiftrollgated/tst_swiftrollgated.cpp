@@ -80,6 +80,7 @@ void SwiftRollGatedTest::testInitialRenderWithoutEdit()
     QVERIFY(viewport != nullptr);
     QVERIFY2(viewport->property("contentY").toReal() > 0.0,
              "Overlay must scroll to the note range, not the empty high keys");
+    QCOMPARE(overlay->property("centeredOnNotes").toBool(), true);
     auto *const background =
         overlay->findChild<QQuickItem *>(QStringLiteral("swiftRollBackground"));
     QVERIFY(background != nullptr);

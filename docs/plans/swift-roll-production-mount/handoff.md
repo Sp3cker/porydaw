@@ -177,8 +177,17 @@ Closed items:
 
 - Task-4 review minors: unused overlay `setViewportScroll`/`setViewportScrollX`
   removed; `inputCancelled(2)` named (`cancelReasonHidden` mirroring
-  `TimelineInputCancelReason::Hidden`); mount syncs roll geometry once after
-  mounting.
+  `TimelineInputCancelReason::Hidden`). The third minor (mount-time geometry
+  sync) was withdrawn after thermo-nuclear review: `m_bandLayout` is always
+  empty at construction, so a constructor-time `updateBandGeometry` is a no-op
+  that hides the real first-publish convergence; the call was removed.
+- Host palette push derives grid cadence and pre-roll colors through the
+  canonical oracle helpers (`detail::gridLineColor`, `mixTowardOklab`) instead
+  of bespoke math; `rulerDetailText`, `noteBorder`, and `hoverChip*` stay on
+  GridPalette's own Swift derivations. `swiftrollgated` pins rollBackground
+  and that initial centering engaged (`centeredOnNotes` plus non-top scroll;
+  exact `initialScrollY` equality is unassertable — the model recomputes it
+  after the one-shot centering consumed the first value).
 - `swiftrollbench` + `swiftrollbench-swift`: frame-cost bench rows
   (vgloadbench pattern) — one build, two lanes via manifest environment.
   2026-09-18 evidence on this machine (mus_route101): scroll median 17.3ms

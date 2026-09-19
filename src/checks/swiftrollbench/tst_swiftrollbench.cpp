@@ -25,13 +25,15 @@
 
 #include <QtTest/QTest>
 
-// Frame-cost bench for whichever roll the build mounts: the Swift overlay when
-// the Swift grid is compiled in, the C++ roll otherwise. The flavor is
-// detected at runtime from the overlay item, so one harness measures both and
-// the two runs are directly comparable. Each phase prints one SWIFTROLLBENCH
-// line; the timing numbers are the deliverable, the assertions only prove the
-// cadence really drove the roll (window active, frames flowed, the roll's
-// viewport or camera moved).
+// Frame-cost bench for whichever roll this process mounts: the Swift overlay
+// when the Swift grid is compiled in AND PORYDAW_SWIFT_ROLL is set, the C++
+// roll otherwise (that is how the flag-off swiftrollbench catalog lane
+// measures the C++ roll in the same build). Flavor is detected at runtime
+// from the overlay item, so one harness measures both and the two runs are
+// directly comparable. Each phase prints one SWIFTROLLBENCH line; the timing
+// numbers are the deliverable, the assertions only prove the cadence really
+// drove the roll (window active, frames flowed, the roll's viewport or
+// camera moved).
 namespace {
 
 constexpr int kWheelNotch = 120;
@@ -142,8 +144,8 @@ void SwiftRollBenchTest::testScrollZoomFrameCadence()
     QVERIFY2(QTest::qWaitForWindowActive(quickWin),
              "the Quick window must be active before the cadence is timed");
 
-    // Runtime flavor detection: the overlay is mounted only when the Swift
-    // grid is compiled in, so the same harness measures either roll.
+    // Runtime flavor detection: the overlay mounts only when the Swift grid
+    // is compiled in AND PORYDAW_SWIFT_ROLL is set at construction.
     QQuickItem *const overlay =
         quickWin->findChild<QQuickItem *>(QStringLiteral("swiftRollOverlay"));
     const QString roll = overlay ? QStringLiteral("swift") : QStringLiteral("cpp");
