@@ -1,8 +1,9 @@
 # Task m1a — DocumentSession: two consumers, one native session object
 
-Status: dispatch-ready proposal. NOT dispatched — awaits user approval of the
-M1 staging (m1m2-gate-decisions.md §C). No dependency on decisions E.1/E.2
-(adapter, metadata path): those gate M1b/M2, not this task.
+Status: superseded; do not dispatch. The
+[Swift core rewrite plan](../swift-core-rewrite/plan.md) replaces this
+feed-owning two-consumer session proposal with native Swift core ownership
+and one direct piano-grid consumer.
 
 Where this fits: first M1 stage after m0-probe and swift-org land. Governing:
 plan.md Global Constraints; integration contract (capability rows now

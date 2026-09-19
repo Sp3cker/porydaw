@@ -5,15 +5,33 @@ backend track inherits this document. Where a spec and this charter
 disagree, the charter wins and the spec is a defect. Successor wave specs
 (document seam, surfaces) must name this file in their Global Constraints.
 
-Current dispatch precedence: this charter and the
+Current planning precedence: this charter and the
 [QtBridge integration contract](qtbridge-integration-contract.md) govern the
-proposed [ownership design](swift-ownership-cutover/design.md). That design
-is not an implementation brief or authorization. Earlier view-math,
-jurisdiction, production-mount and writable-flip wave plans/briefs are
-historical dispatch records, not permission to resume tasks. Their behavioral
-contracts still describe retained legacy paths until replacement acceptance;
-their old architecture choices, retired commands and T5 mirror instructions
-do not override this charter.
+[Swift core rewrite plan](swift-core-rewrite/plan.md). The earlier
+[ownership design](swift-ownership-cutover/design.md) and its M1/M2 proposals
+are historical; their reverse-adapter and two-consumer sequence is superseded.
+Earlier wave documents remain behavioral references, not dispatch authority.
+
+## Approved incremental rewrite scope (2026-09-19)
+
+The user explicitly permits unmigrated editors to be absent from the rewrite
+application: not rendered, instantiated, or compiled into it. Preserve their
+song data and core editing semantics, not their availability in this build.
+Do not implement a reverse legacy-client adapter to keep those editors alive.
+The current plan converts `src/core/*` to native Swift, converts the existing
+piano grid into its first direct document consumer, then stops. No additional
+QML features or other consumer conversions belong to that plan.
+
+This approval supersedes earlier requirements that every old editor remain
+usable through the authority cutover. Source and behavioral checks for absent
+surfaces may remain unbuilt references; report their coverage as deferred,
+never passing. The replacement's own checks exercise real Swift code.
+
+The optimization criterion is less code and fewer concepts for future work,
+not a transliteration of C++ interfaces. Verify ordinary editing, saving,
+loading and playback, plus real external-file errors. Do not expand this
+rewrite into stress testing internal states normal application use cannot
+produce. Preserve required behavior without inventing defensive frameworks.
 
 ## Prime directive
 
@@ -38,9 +56,9 @@ surfaces. Production implementations and interfaces are designed to stay:
 
 ## Swift implementation policy
 
-- Target Swift 6.4 and use current language and standard-library features
-  where they improve ownership, safety, clarity, or performance. Apply this
-  during implementation, not as a deferred modernization pass.
+- Use the verified Swift toolchain recorded in the integration contract.
+  Prefer current language features when they reduce code or improve concrete
+  ownership/performance; a compiler upgrade is not a rewrite prerequisite.
 - Prefer spans for scoped borrowed access where supported. Verify concrete
   APIs and deployment availability; do not invent compatibility fallbacks.
 - Raw pointer access is acceptable when bounds, initialization and lifetime
@@ -216,8 +234,8 @@ and the specific replacement/caller gate that allows its deletion:
    mount plumbing retires when production mounting replaces it; parity
    adapters retire with their corresponding oracle. Prefixes are not
    ownership categories. No new per-surface adapters may be created. An
-   authority cutover must resolve legacy editing callers, not turn them
-   read-only or silently introduce a replacement facade.
+  authority cutover must account for legacy callers: migrate them or exclude
+  their surfaces under the approved scope above, without a replacement facade.
 2. **Retained native-service adapters** — audio/DSP and necessary platform
    integration, kept behind a narrow service interface. C++ here is a
    decision, not a debt: do not rewrite native audio merely to eliminate
@@ -241,25 +259,14 @@ model" — the authority cutover is.
 INV-1/INV-2 preserve one keymap and arbitration authority across host
 technology changes. INV-3 separates band logic from host arbitration.
 S-3 preserves one writable document and authoritative history, including
-shared voice-bank behavior. Legacy editors may submit requests to the single
-authority; request submission is not ownership of a second writable model.
-The approved design must specify how every remaining editor continues to
-work before the old authority is removed.
+shared voice-bank behavior. The approved plan distinguishes converted callers
+from explicitly excluded surfaces; neither creates a second writable model.
 
 ### Ordering (amended)
 
-First record the QtBridge baseline, actual lifetime ownership and direct
-model-update evidence. Then define cohesive production Swift organization
-and the two-consumer integration. Do not assume the note/signature feeds
-supply complete header data. Full header retirement additionally requires
-all metadata, activity, actions, menus, input and caller coverage; a bridge
-probe is not that gate.
-
-Bring full document/editing/history/session ownership forward, before
-expanding independent surface waves. The authority cutover cannot dispatch
-until every legacy editing caller has an approved migration path. Neither
-new per-surface seams nor silently disabled editors solve that dependency.
-Input/mount replacement may have a different gate from document ownership.
-Remaining surfaces become Swift+QML consumers with named deletions; audio
-stays a retained native service. The ownership design records unresolved
-sequencing choices explicitly rather than delegating them to implementers.
+The baseline/probe and production-Swift rehome inform the current plan.
+Next convert the full core and its necessary native-service boundary, then
+the existing piano grid as one direct Swift consumer. Stop at that acceptance
+gate. Headers and all other surfaces require a separate later plan.
+Input/mount replacement must preserve actual delivery on the retained grid;
+removing document transport alone does not prove that delivery.

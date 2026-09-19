@@ -1,14 +1,14 @@
-# Swift ownership cutover — executable plan (authorized slice)
+# Swift ownership cutover — historical authorized slice
 
-Execution plan for the user-authorized slice only (2026-09-19): M0 baseline +
-probe, one production-Swift organization task, and the corrected M1/M2 gate
-design. Not authorized by this plan: new legacy-client facade, expanded C ABI
-vocabulary, production header retirement, document-authority cutover, disabled
-editing features, replacement window/input dispatcher.
+The M0/probe and Swift organization work below belongs to the earlier slice.
+Its M1/M2 successor proposals are superseded by the
+[Swift core rewrite plan](../swift-core-rewrite/plan.md), which records the
+newly approved exclusion of unmigrated editors. Do not resume m1a or build
+the proposed reverse adapter.
 
-Design: [design.md](design.md). Governing: charter
-(../../swift-backend-charter.md — normative) and the
-[QtBridge integration contract](../../qtbridge-integration-contract.md)
+Historical design: [design.md](design.md). Governing:
+[charter](../swift-backend-charter.md) and
+[QtBridge integration contract](../qtbridge-integration-contract.md)
 (baseline + evidence ledger).
 
 ## Global Constraints

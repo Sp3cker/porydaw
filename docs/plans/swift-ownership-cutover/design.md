@@ -1,9 +1,10 @@
 # Swift ownership design and cutover gates
 
-Status: proposed, not dispatched. Corrected after source inspection at
-`bc24c98d` on 2026-09-19. This is an ownership design, not executable task
-briefs. Documentation corrections authorize no source changes, new adapters,
-feature removals, or milestone dispatch.
+Status: historical, superseded by the [Swift core rewrite plan](../swift-core-rewrite/plan.md)
+on 2026-09-19. The user now approves an incomplete rewrite application with
+unmigrated editors excluded. The two-consumer sequence and reverse-adapter
+proposal below are not dispatch instructions; retain the source inventory
+and behavioral observations as reference.
 
 Governing documents: [current charter](../swift-backend-charter.md) and
 [QtBridge integration contract](../qtbridge-integration-contract.md).
@@ -210,57 +211,10 @@ A green generic corpus does not substitute for named coverage gaps.
 
 ### Mandatory thermo-nuclear quality gates
 
-This is the single plan-wide quality-review policy. Task briefs reference
-this section, not copies of it. When an executable `plan.md` is introduced,
-move this policy into its Global Constraints and replace this section with
-a link; do not maintain two versions.
-
-The orchestrator dispatches `thermo-nuclear-reviewer` using the
-`thermo-nuclear-code-quality-review` skill. The reviewer is independent of
-the implementation author and read-only; author self-review does not satisfy
-the gate.
-
-Required reviews cover:
-
-1. M0's bridge integration/proof implementation.
-2. The production Swift organization and obsolete-code retirement stage.
-3. Each independently verifiable ownership or production-surface cutover.
-4. Cumulative milestone integration, from the recorded milestone-start
-   revision through the complete settled change set.
-
-Within a larger stage, review a settled increment before dependent work
-consumes materially changed ownership/lifetime, shared interfaces, native
-adapters, transport representations, transaction/history semantics, or a new
-mode, fallback, dispatcher or abstraction layer. Do not review every
-mechanical edit or repeatedly audit an unchanged diff. A stage review may
-also satisfy milestone review when the scope is identical.
-
-Each dispatch supplies the exact base revision and reviewed snapshot/change
-set (including relevant uncommitted work), governing documents/task brief,
-ownership and deletion contracts, verification results and known gaps.
-Writers must not mutate the reviewed scope while review is running;
-independent reviews may run concurrently over stable, disjoint scopes.
-
-Review structural simplicity as well as correctness: C ABI leakage into
-Swift domain code, per-surface adapters, duplicate state, unclear lifetime
-ownership, dead migration paths, unnecessary wrappers and conditional-mode
-growth. Judge cohesion and meaningful ownership seams, never arbitrary file
-sizes or opportunities to split code merely to reduce line counts.
-
-Dependent tasks must not build on a shared interface before its gate passes.
-No stage or milestone is accepted with unresolved material findings. For
-each finding, fix it and rerun affected verification, or reject it with
-concrete source/contract evidence recorded in the review disposition.
-Material fixes require reviewer recheck. After two unsuccessful repair
-cycles, stop dependent dispatch and escalate the design issue rather than
-layering on more patches or declaring the gate passed.
-
-Reviewers do not run shared builds, formatters or test suites; the
-orchestrator runs covering validation after writers settle. Read-only source
-inspection remains part of review. Record scope, verdict and finding
-dispositions with existing stage evidence, not another tracking system.
-Thermo review supplements behavioral verification, task/spec review and
-Qt-specific correctness review where applicable; it replaces none of them.
+The current policy lives once in the successor
+[plan's Global Constraints](../swift-core-rewrite/plan.md#global-constraints).
+The earlier M0/rehome reviews remain evidence for their recorded scopes,
+not acceptance of the new core or consumer.
 
 ### Dispatch status
 

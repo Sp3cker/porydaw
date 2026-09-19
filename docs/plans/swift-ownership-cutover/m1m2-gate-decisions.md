@@ -1,9 +1,10 @@
 # M1/M2 gate decisions — completed inventory and proposal
 
-Status: proposed 2026-09-19 after source-evidenced inventory. Extends
-[design.md](design.md) §3/§4 with the caller inventory those sections
-required. Not authorized for dispatch: this document records decisions and
-names the approvals required from the user.
+Status: historical inventory, superseded by the
+[Swift core rewrite plan](../swift-core-rewrite/plan.md) on 2026-09-19.
+The user approved excluding unmigrated editors from the rewrite application.
+Section B's reverse adapter and section C's two-consumer staging are rejected
+for the successor plan, not pending implementation choices.
 
 Evidence base: caller inventory collected 2026-09-19 at `bc24c98d`
 (scope: `src/` excluding build/external). Every row cites file:line.
