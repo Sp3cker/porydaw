@@ -34,23 +34,6 @@ void awaitState(Predicate predicate, const char *reason)
     require(QTest::qWaitFor(predicate, 3s), reason);
 }
 
-// Window-tier QML Shortcuts (G) only fire while the window is active, and
-// synthetic QTest input cannot restore OS activation once the desktop
-// deactivates the window mid-run. Shortcut-dependent rows re-establish the
-// prerequisite before each press; see interaction_smoke.cpp for the
-// environment rationale. macOS refuses focus steals while the user is
-// actively typing in another app, so keep requesting across a bounded
-// window rather than failing on one lost race.
-void ensureWindowActive(QQuickWindow *window)
-{
-    for (int attempt = 0; attempt < 16; ++attempt) {
-        window->requestActivate();
-        if (QTest::qWaitForWindowActive(window, 500))
-            return;
-    }
-    require(false, "jurisdiction window lost OS activation before a shortcut scenario");
-}
-
 void pass(const char *scenario)
 {
     std::printf("SWIFT_GRID_SMOKE %s PASS\n", scenario);
@@ -450,7 +433,7 @@ void verifyPitchCurveRow(const UndoScene &scene)
     scene.reset();
     scene.click(scene.expectedBox(0, 18, 60).center());
     require(undoSelectedCount(scene.model) == 1, "click did not select one note for the popup");
-    ensureWindowActive(scene.window);
+    ensureSmokeWindowActive(scene.window);
     QTest::keyClick(scene.window, Qt::Key_G);
     awaitState(
         [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
@@ -481,7 +464,7 @@ void verifyPitchCurveRow(const UndoScene &scene)
                "Escape did not dismiss the pitch popup");
     require(scene.revision() == 1 && scene.canUndo(),
             "pitch commit did not push exactly one controller command");
-    ensureWindowActive(scene.window);
+    ensureSmokeWindowActive(scene.window);
     QTest::keyClick(scene.window, Qt::Key_G);
     awaitState(
         [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
@@ -494,7 +477,7 @@ void verifyPitchCurveRow(const UndoScene &scene)
                "Escape did not dismiss the reopened pitch popup");
     scene.undo();
     require(scene.canRedo() && !scene.canUndo(), "pitch undo left canUndo/canRedo inconsistent");
-    ensureWindowActive(scene.window);
+    ensureSmokeWindowActive(scene.window);
     QTest::keyClick(scene.window, Qt::Key_G);
     awaitState(
         [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
@@ -698,7 +681,7 @@ void verifyCancelHiddenRow(const UndoScene &scene)
     scene.click(scene.expectedBox(0, 18, 60).center());
     require(undoSelectedCount(scene.model) == 1, "click did not select one note for the editor");
     const QString selected = undoSummary(scene.model);
-    ensureWindowActive(scene.window);
+    ensureSmokeWindowActive(scene.window);
     QTest::keyClick(scene.window, Qt::Key_G);
     awaitState(
         [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
@@ -768,7 +751,7 @@ void verifyCancelWindowDeactivatedRow(const UndoScene &scene)
     scene.reset();
     scene.click(scene.expectedBox(0, 18, 60).center());
     require(undoSelectedCount(scene.model) == 1, "click did not select one note for the popup");
-    ensureWindowActive(scene.window);
+    ensureSmokeWindowActive(scene.window);
     QTest::keyClick(scene.window, Qt::Key_G);
     awaitState(
         [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
@@ -876,7 +859,7 @@ void verifyEscapePitchEditorRow(const UndoScene &scene)
     scene.reset();
     scene.click(scene.expectedBox(0, 18, 60).center());
     require(undoSelectedCount(scene.model) == 1, "click did not select one note for the popup");
-    ensureWindowActive(scene.window);
+    ensureSmokeWindowActive(scene.window);
     QTest::keyClick(scene.window, Qt::Key_G);
     awaitState(
         [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },

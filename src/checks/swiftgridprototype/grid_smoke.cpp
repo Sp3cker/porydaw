@@ -842,6 +842,18 @@ void prepareSmoke()
 }
 } // namespace
 
+// Shared with interaction_smoke.cpp / jurisdiction_smoke.cpp via grid_smoke.h.
+// Defined outside the anonymous namespace for external linkage.
+void ensureSmokeWindowActive(QQuickWindow *window)
+{
+    for (int attempt = 0; attempt < 16; ++attempt) {
+        window->requestActivate();
+        if (QTest::qWaitForWindowActive(window, 500))
+            return;
+    }
+    require(false, "smoke window lost OS activation before a shortcut scenario");
+}
+
 extern "C" void installGridSmoke(void)
 {
     if (qEnvironmentVariable("PORYDAW_SWIFT_GRID_SMOKE") != QStringLiteral("1"))
