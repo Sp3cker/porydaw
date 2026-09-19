@@ -94,12 +94,15 @@ When arbitration migrates, the `selectionkey` suites are re-pointed at the
 new tier and green before the old tier is deleted: one atomic cutover, never
 two live authorities.
 
-**INV-3 — Swift never sees the window.** Swift owns band math and policy
-data. It receives normalized input, named cancel reasons, and value
-snapshots; it returns intents and geometry. Window-tier arbitration, focus
-chains, pointer grabs, popup stacking, and platform events stay in the
-C++/QML host forever. Swift never becomes a dispatcher of window input
-(AGENTS.md: no second dispatcher).
+**INV-3 — One window/input authority; Swift is not a dispatcher.** Swift
+owns band math and policy data. It receives normalized input, named cancel
+reasons, and value snapshots; it returns intents and geometry. Window-tier
+arbitration, focus chains, pointer grabs, popup stacking, and platform
+events belong to exactly one host authority — never two tiers at once, and
+Swift never becomes a dispatcher of window input (AGENTS.md: no second
+dispatcher). The 2026-09-19 amendment retires the earlier "C++/QWidgets
+host forever" framing: the authority's implementation may migrate wholesale
+(INV-2 precedent), but its singleness does not.
 
 ## Platform decision (2026-09-18): Windows deferred, MinGW incidental
 
@@ -175,22 +178,66 @@ tagged `cutover-disposable` and retire at the table's behavioral-coverage
 gate. Merely mounting a read-only production surface does not satisfy it.
 A permanent parallel suite is a defect.
 
-## End-state architecture (decided)
+## End-state architecture (amended 2026-09-19)
 
-- Host target: `QMainWindow` shell (native menu bar, native frame) plus a
-  single Quick central surface. A full-QML host and per-tab embedded windows
-  are rejected.
-- Chrome migration (amended 2026-09-18): persistent chrome panels — the
-  song list and voicegroup browser docks and their successors — migrate to
-  QML content hosted inside the existing `QDockWidget`s. The shell —
-  native menu bar, native frame, docking, and the INV-1/INV-2/INV-3 focus
-  and input arbitration boundary — stays C++/QWidgets permanently. Modal
-  dialogs stay C++/QWidgets until a later wave names them. Dock waves
-  inherit the prime directive whole: no widget twin survives past its
-  retirement gate, and production suites run unmodified against the QML
-  surface at cutover (V-1); only harness drivers may be re-pointed (INV-2
-  precedent). Timeline waves do not touch chrome; dock waves do not touch
-  timeline surfaces.
-- Ordering: shared seams first (view math → input jurisdiction → document
-  feed and commands), surfaces after (grid, track headers, ruler, lanes,
-  docks). No surface serializes behind math it does not consume.
+The destination is a Swift-native application with QML views: Swift owns
+application and domain logic — document state, editing operations,
+transactions and history, session state, and presenters — as native Swift
+modules; QML owns views and delegates. Handwritten C++ Qt application code
+is minimized to what QtBridge cannot cover and what retained native services
+justify. Preserve user-visible behavior, not old C++ presenter interfaces;
+QML interfaces may change to fit Swift presenters.
+
+### Interop taxonomy
+
+Exactly three classes of native boundary exist. Every seam in the tree must
+belong to one, and each migration milestone names the obsolete C++ and C ABI
+adapters it deletes:
+
+1. **Legacy document adapters** — the `sgd_`/`sgc_`/`sgs_`/`sgk_`/`sgb_`
+   feeds, band/key seams, hand-mirrored C enums, and parity oracles. They
+   exist only while the C++ document/history authority and their callers
+   exist. No new ones may be created; they retire at the ownership cutover
+   that supersedes them.
+2. **Retained native-service adapters** — audio/DSP and necessary platform
+   integration, kept behind a narrow service interface. C++ here is a
+   decision, not a debt: do not rewrite native audio merely to eliminate
+   the language.
+3. **QML exposure** — Swift presenters and collections exposed to QML
+   directly through QtBridge (`docs/plans/qtbridge-integration-contract.md`
+   is the integration contract and acceptance gate; its scenarios are
+   Unverified until runtime evidence is recorded there). No new handwritten
+   per-surface C++ presenter mirrors or per-surface push/pull feeds.
+
+Swift domain types are not designed around C ABI layouts. Imported C
+structs, pointer/count buffers, raw opcode conversion, and callback handles
+stay inside the narrowly scoped adapters above. Swift-to-Swift calls never
+serialize through C. Fixed-width numeric types are fine where musical
+arithmetic or identity requires them; ABI requirements do not dictate the
+domain model. Consolidating the existing C feeds is not "Swift owns the
+model" — the authority cutover is.
+
+### Ownership invariants (unchanged in force, restated for the pivot)
+
+INV-1 (one keymap source) and INV-2 (arbitration moves wholesale or not at
+all) govern any host technology: one keyboard-arbitration authority, no
+second dispatcher, whatever owns the window. INV-3's principle — Swift band
+logic receives normalized input and never becomes a window dispatcher —
+holds; its former "C++/QWidgets host forever" framing is retired with this
+amendment. S-3 becomes: one authoritative document and history, wherever it
+lives; no synchronized writable document twins, no competing undo
+authorities, including the shared voice-bank history behavior. The C++
+document authority remains the oracle (S-1) until the milestone that moves
+it, which must prove single-authority behavior before deleting the C++
+implementation.
+
+### Ordering (amended)
+
+Ownership before surfaces: prove the QtBridge two-consumer integration
+(grid and headers sharing one Swift document/session store, no handwritten
+C++ header presenter), then move document/editing/history/session authority
+into Swift, then expand surfaces (ruler, lanes, songtabs, chrome) as pure
+Swift+QML consumers with no new C++ seams. Audio remains a retained native
+service throughout. The retired surface-first wave plan (grid → headers →
+ruler/lanes → songtabs → chrome → document core → audio last) is superseded
+by this ordering; committed seams remain as legacy adapters under class 1.
