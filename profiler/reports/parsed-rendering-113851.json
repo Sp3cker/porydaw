@@ -1,0 +1,115 @@
+{
+  "range_events_total_ms": 0.0,
+  "total_events": 130,
+  "by_type": [],
+  "hotspots": [],
+  "pixmap_cache": {
+    "load_requests": 17,
+    "loaded": 17,
+    "removed": 34,
+    "pixmaps": [
+      {
+        "filename": "image://drawerchrome/detent/1",
+        "width": 1024,
+        "height": 1024,
+        "pixels": 1048576
+      },
+      {
+        "filename": "image://drawerchrome/velocity/1",
+        "width": 1024,
+        "height": 1024,
+        "pixels": 1048576
+      },
+      {
+        "filename": "image://drawerchrome/automationOn/1",
+        "width": 1024,
+        "height": 1024,
+        "pixels": 1048576
+      },
+      {
+        "filename": "image://drawerchrome/voiceChanges/1",
+        "width": 1024,
+        "height": 1024,
+        "pixels": 1048576
+      },
+      {
+        "filename": "image://drawerchrome/velocity/1",
+        "width": 1024,
+        "height": 1024,
+        "pixels": 1048576
+      },
+      {
+        "filename": "image://drawerchrome/automationOn/1",
+        "width": 1024,
+        "height": 1024,
+        "pixels": 1048576
+      },
+      {
+        "filename": "image://drawerchrome/voiceChanges/1",
+        "width": 1024,
+        "height": 1024,
+        "pixels": 1048576
+      },
+      {
+        "filename": "image://drawerchrome/velocity/1",
+        "width": 22,
+        "height": 22,
+        "pixels": 484
+      },
+      {
+        "filename": "image://drawerchrome/automationOn/1",
+        "width": 22,
+        "height": 22,
+        "pixels": 484
+      },
+      {
+        "filename": "image://drawerchrome/voiceChanges/1",
+        "width": 22,
+        "height": 22,
+        "pixels": 484
+      },
+      {
+        "filename": "image://drawerchrome/velocityOn/1",
+        "width": 22,
+        "height": 22,
+        "pixels": 484
+      },
+      {
+        "filename": "image://drawerchrome/voiceChangesOn/1",
+        "width": 22,
+        "height": 22,
+        "pixels": 484
+      },
+      {
+        "filename": "image://drawerchrome/velocity/1",
+        "width": 22,
+        "height": 22,
+        "pixels": 484
+      },
+      {
+        "filename": "image://drawerchrome/voiceChanges/1",
+        "width": 22,
+        "height": 22,
+        "pixels": 484
+      },
+      {
+        "filename": "image://drawerchrome/voiceChangesOn/1",
+        "width": 11,
+        "height": 11,
+        "pixels": 121
+      },
+      {
+        "filename": "image://drawerchrome/automationOn/1",
+        "width": 11,
+        "height": 11,
+        "pixels": 121
+      },
+      {
+        "filename": "image://drawerchrome/velocityOn/1",
+        "width": 11,
+        "height": 11,
+        "pixels": 121
+      }
+    ]
+  }
+}

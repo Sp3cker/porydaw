@@ -494,6 +494,7 @@ void WorkspaceUi::requestCloseTab(SongTab *tab)
     // terminal publication lands.
     if (m_inFlightSaves.contains(name))
         return;
+    // Known limitation: users must save bank-only edits before closing the tab.
     if (!tab->isReady() || !tab->document().isDirty()) {
         closeTabNow(tab);
         return;

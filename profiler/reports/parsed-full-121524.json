@@ -1,0 +1,468 @@
+{
+  "range_events_total_ms": 103.75,
+  "total_events": 80598,
+  "by_type": [
+    {
+      "type": "Creating",
+      "count": 3874,
+      "total_ms": 36.17
+    },
+    {
+      "type": "Compiling",
+      "count": 26,
+      "total_ms": 34.99
+    },
+    {
+      "type": "Binding",
+      "count": 24609,
+      "total_ms": 20.55
+    },
+    {
+      "type": "Javascript",
+      "count": 29523,
+      "total_ms": 11.1
+    },
+    {
+      "type": "HandlingSignal",
+      "count": 282,
+      "total_ms": 0.94
+    }
+  ],
+  "hotspots": [
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 0,
+      "type": "Compiling",
+      "name": "TimelineCanvas.qml:0",
+      "details": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "count": 2,
+      "total_ms": 16.62,
+      "avg_ms": 8.312
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/AutomationTabs.qml",
+      "line": 0,
+      "type": "Compiling",
+      "name": "AutomationTabs.qml:0",
+      "details": "qrc:/qt/qml/Porydaw/Ui/AutomationTabs.qml",
+      "count": 2,
+      "total_ms": 10.42,
+      "avg_ms": 5.209
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 4,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:4",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 4.93,
+      "avg_ms": 1.233
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/AutomationTabs.qml",
+      "line": 40,
+      "type": "Creating",
+      "name": "AutomationTabs.qml:40",
+      "details": "QtQuick/Repeater",
+      "count": 4,
+      "total_ms": 4.01,
+      "avg_ms": 1.003
+    },
+    {
+      "filename": "qrc:/qt-project.org/imports/QtQuick/Controls/Basic/Calendar.qml",
+      "line": 0,
+      "type": "Compiling",
+      "name": "Calendar.qml:0",
+      "details": "qrc:/qt-project.org/imports/QtQuick/Controls/Basic/Calendar.qml",
+      "count": 2,
+      "total_ms": 3.83,
+      "avg_ms": 1.913
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/AutomationTabs.qml",
+      "line": 13,
+      "type": "Binding",
+      "name": "AutomationTabs.qml:13",
+      "details": "",
+      "count": 36,
+      "total_ms": 3.77,
+      "avg_ms": 0.105
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 271,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:271",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 1.5,
+      "avg_ms": 0.374
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 290,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:290",
+      "details": "EventListPage",
+      "count": 2,
+      "total_ms": 1.48,
+      "avg_ms": 0.742
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/EventListPage.qml",
+      "line": 0,
+      "type": "Compiling",
+      "name": "EventListPage.qml:0",
+      "details": "qrc:/qt/qml/Porydaw/Ui/EventListPage.qml",
+      "count": 2,
+      "total_ms": 1.36,
+      "avg_ms": 0.679
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/DrawerChromeLayer.qml",
+      "line": 168,
+      "type": "Creating",
+      "name": "DrawerChromeLayer.qml:168",
+      "details": "QtQuick/Image",
+      "count": 12,
+      "total_ms": 1.26,
+      "avg_ms": 0.105
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/AutomationTabs.qml",
+      "line": 43,
+      "type": "Creating",
+      "name": "AutomationTabs.qml:43",
+      "details": "TabButton",
+      "count": 26,
+      "total_ms": 1.25,
+      "avg_ms": 0.048
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/DrawerChromeLayer.qml",
+      "line": 173,
+      "type": "Binding",
+      "name": "DrawerChromeLayer.qml:173",
+      "details": "",
+      "count": 12,
+      "total_ms": 1.2,
+      "avg_ms": 0.1
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/EventListPage.qml",
+      "line": 4,
+      "type": "Creating",
+      "name": "EventListPage.qml:4",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 1.04,
+      "avg_ms": 0.261
+    },
+    {
+      "filename": "qrc:/qt-project.org/imports/QtQuick/Controls/Basic/TabButton.qml",
+      "line": 0,
+      "type": "Compiling",
+      "name": "TabButton.qml:0",
+      "details": "qrc:/qt-project.org/imports/QtQuick/Controls/Basic/TabButton.qml",
+      "count": 2,
+      "total_ms": 0.88,
+      "avg_ms": 0.442
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TrackHeaderBand.qml",
+      "line": 153,
+      "type": "Creating",
+      "name": "TrackHeaderBand.qml:153",
+      "details": "QtQuick/Item",
+      "count": 34,
+      "total_ms": 0.86,
+      "avg_ms": 0.025
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 198,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:198",
+      "details": "TimelineSceneBand",
+      "count": 2,
+      "total_ms": 0.79,
+      "avg_ms": 0.396
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 723,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:723",
+      "details": "DrawerChromeLayer",
+      "count": 2,
+      "total_ms": 0.76,
+      "avg_ms": 0.38
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 630,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:630",
+      "details": "TrackHeaderBand",
+      "count": 2,
+      "total_ms": 0.73,
+      "avg_ms": 0.364
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/EventListPage.qml",
+      "line": 781,
+      "type": "Creating",
+      "name": "EventListPage.qml:781",
+      "details": "QtQuick/Repeater",
+      "count": 4,
+      "total_ms": 0.69,
+      "avg_ms": 0.173
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/HoverHint.qml",
+      "line": 117,
+      "type": "Javascript",
+      "name": "HoverHint.qml:117",
+      "details": "sync",
+      "count": 202,
+      "total_ms": 0.68,
+      "avg_ms": 0.003
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 236,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:236",
+      "details": "RulerControls",
+      "count": 2,
+      "total_ms": 0.63,
+      "avg_ms": 0.315
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/RulerControls.qml",
+      "line": 3,
+      "type": "Creating",
+      "name": "RulerControls.qml:3",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 0.58,
+      "avg_ms": 0.145
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 303,
+      "type": "Binding",
+      "name": "TimelineCanvas.qml:303",
+      "details": "",
+      "count": 4,
+      "total_ms": 0.54,
+      "avg_ms": 0.135
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/DrawerChromeLayer.qml",
+      "line": 174,
+      "type": "Binding",
+      "name": "DrawerChromeLayer.qml:174",
+      "details": "",
+      "count": 45,
+      "total_ms": 0.45,
+      "avg_ms": 0.01
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/HoverHint.qml",
+      "line": 49,
+      "type": "HandlingSignal",
+      "name": "HoverHint.qml:49",
+      "details": "",
+      "count": 88,
+      "total_ms": 0.44,
+      "avg_ms": 0.005
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 299,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:299",
+      "details": "TimelineSceneBand",
+      "count": 2,
+      "total_ms": 0.44,
+      "avg_ms": 0.22
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 570,
+      "type": "Binding",
+      "name": "TimelineCanvas.qml:570",
+      "details": "",
+      "count": 34,
+      "total_ms": 0.44,
+      "avg_ms": 0.013
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/HoverHint.qml",
+      "line": 49,
+      "type": "Javascript",
+      "name": "HoverHint.qml:49",
+      "details": "onScopeRefresh",
+      "count": 87,
+      "total_ms": 0.41,
+      "avg_ms": 0.005
+    },
+    {
+      "filename": "qrc:/qt-project.org/imports/QtQuick/Controls/Basic/TabButton.qml",
+      "line": 9,
+      "type": "Creating",
+      "name": "TabButton.qml:9",
+      "details": "QtQuick.Templates/TabButton",
+      "count": 48,
+      "total_ms": 0.41,
+      "avg_ms": 0.009
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 727,
+      "type": "Binding",
+      "name": "TimelineCanvas.qml:727",
+      "details": "",
+      "count": 4,
+      "total_ms": 0.4,
+      "avg_ms": 0.101
+    }
+  ],
+  "memory": {
+    "heap_pages": {
+      "alloc_count": 25,
+      "alloc_bytes": 2785024,
+      "freed_bytes": 0,
+      "peak_live_bytes": 2785024,
+      "final_live_bytes": 2785024
+    },
+    "large_items": {
+      "alloc_count": 0,
+      "alloc_bytes": 0,
+      "freed_bytes": 0,
+      "peak_live_bytes": 0,
+      "final_live_bytes": 0
+    },
+    "small_items": {
+      "alloc_count": 21605,
+      "alloc_bytes": 2931456,
+      "freed_bytes": 429120,
+      "peak_live_bytes": 2556032,
+      "final_live_bytes": 2502336
+    },
+    "total_allocations": 21605,
+    "total_allocated_bytes": 2931456,
+    "peak_heap_bytes": 2785024
+  },
+  "pixmap_cache": {
+    "load_requests": 17,
+    "loaded": 17,
+    "removed": 34,
+    "pixmaps": [
+      {
+        "filename": "image://drawerchrome/detent/1",
+        "width": 1024,
+        "height": 1024,
+        "pixels": 1048576
+      },
+      {
+        "filename": "image://drawerchrome/velocity/1",
+        "width": 1024,
+        "height": 1024,
+        "pixels": 1048576
+      },
+      {
+        "filename": "image://drawerchrome/automationOn/1",
+        "width": 1024,
+        "height": 1024,
+        "pixels": 1048576
+      },
+      {
+        "filename": "image://drawerchrome/voiceChanges/1",
+        "width": 1024,
+        "height": 1024,
+        "pixels": 1048576
+      },
+      {
+        "filename": "image://drawerchrome/velocity/1",
+        "width": 1024,
+        "height": 1024,
+        "pixels": 1048576
+      },
+      {
+        "filename": "image://drawerchrome/automationOn/1",
+        "width": 1024,
+        "height": 1024,
+        "pixels": 1048576
+      },
+      {
+        "filename": "image://drawerchrome/voiceChanges/1",
+        "width": 1024,
+        "height": 1024,
+        "pixels": 1048576
+      },
+      {
+        "filename": "image://drawerchrome/velocity/1",
+        "width": 22,
+        "height": 22,
+        "pixels": 484
+      },
+      {
+        "filename": "image://drawerchrome/automationOn/1",
+        "width": 22,
+        "height": 22,
+        "pixels": 484
+      },
+      {
+        "filename": "image://drawerchrome/voiceChanges/1",
+        "width": 22,
+        "height": 22,
+        "pixels": 484
+      },
+      {
+        "filename": "image://drawerchrome/velocityOn/1",
+        "width": 22,
+        "height": 22,
+        "pixels": 484
+      },
+      {
+        "filename": "image://drawerchrome/voiceChangesOn/1",
+        "width": 22,
+        "height": 22,
+        "pixels": 484
+      },
+      {
+        "filename": "image://drawerchrome/velocity/1",
+        "width": 22,
+        "height": 22,
+        "pixels": 484
+      },
+      {
+        "filename": "image://drawerchrome/voiceChanges/1",
+        "width": 22,
+        "height": 22,
+        "pixels": 484
+      },
+      {
+        "filename": "image://drawerchrome/voiceChangesOn/1",
+        "width": 11,
+        "height": 11,
+        "pixels": 121
+      },
+      {
+        "filename": "image://drawerchrome/automationOn/1",
+        "width": 11,
+        "height": 11,
+        "pixels": 121
+      },
+      {
+        "filename": "image://drawerchrome/velocityOn/1",
+        "width": 11,
+        "height": 11,
+        "pixels": 121
+      }
+    ]
+  }
+}

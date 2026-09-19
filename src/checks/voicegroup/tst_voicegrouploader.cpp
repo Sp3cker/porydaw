@@ -24,6 +24,7 @@ class VoicegroupLoaderTest final : public QObject
   private slots:
     void init();
     void exactTargetParityWarmReuseAndSampleSets();
+    void declaredNameResolvesDespiteFileName();
     void serialAndFourWideBatchAdaptersPreserveBankAndOwnership();
     void failedTransportReleasesPartialBatchAndContextHeals();
 
@@ -39,6 +40,8 @@ void VoicegroupLoaderTest::init()
     m_copy = checks::ProjectFixture::copyOf(m_stagedRoot, error);
     QVERIFY2(m_copy, qPrintable(error));
     QVERIFY2(voicegroup_load_test::stageBatchVoicegroup(m_copy->root(), error), qPrintable(error));
+    QVERIFY2(voicegroup_load_test::stageAliasedVoicegroup(m_copy->root(), error),
+             qPrintable(error));
 }
 
 QByteArray VoicegroupLoaderTest::targetPath(const QString &name) const
@@ -108,6 +111,40 @@ void VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets()
     voicegroup_project_free(project);
     voicegroup_free(batch);
     voicegroup_free(rich);
+}
+
+// A group declared with `voice_group <name>` inside a differently named file
+// still assembles, so it must load: `check_alias_parts.inc` declares
+// `check_alias_kit`, and the host bank's `voice_keysplit_all
+// voicegroup_check_alias_kit` resolves to it. Without the declared-name lookup
+// that subgroup stayed null and every note routed through it was dropped.
+void VoicegroupLoaderTest::declaredNameResolvesDespiteFileName()
+{
+    const QByteArray root = m_copy->root().toLocal8Bit();
+    LoadedVoiceGroup *const host = voicegroup_load(root.constData(), "check_alias_host", nullptr);
+    QVERIFY(host);
+    const ToneData &keysplit = host->voices[0];
+    QCOMPARE(int(keysplit.type), VOICE_KEYSPLIT_ALL);
+    const auto *const kit = static_cast<const ToneData *>(keysplit.subGroup);
+    QVERIFY2(kit, "declared voice_group name resolves through a mismatched file name");
+    // The declaration's starting note is the kit's window: slot 59 stays empty
+    // and the two voices land at 60/61, where note 60 reaches them.
+    const char *const empty = voicegroup_subgroup_slot_name(host, kit, 59);
+    const char *const drum = voicegroup_subgroup_slot_name(host, kit, 60);
+    const char *const pluck = voicegroup_subgroup_slot_name(host, kit, 61);
+    QVERIFY(empty && drum && pluck);
+    QCOMPARE(empty, "");
+    QCOMPARE(drum, "fixture_drum");
+    QCOMPARE(pluck, "fixture_pluck");
+    // The declared symbol also names a loadable top-level voicegroup.
+    LoadedVoiceGroup *const direct = voicegroup_load(root.constData(), "check_alias_kit", nullptr);
+    QVERIFY(direct);
+    QVERIFY(!direct->voices[59].wav);
+    QVERIFY(direct->voices[60].wav);
+    QVERIFY(direct->voices[61].wav);
+    QVERIFY(!direct->voices[62].wav);
+    voicegroup_free(direct);
+    voicegroup_free(host);
 }
 
 void VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnership()

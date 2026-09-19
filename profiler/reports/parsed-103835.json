@@ -1,0 +1,333 @@
+{
+  "range_events_total_ms": 110.32,
+  "total_events": 52952,
+  "by_type": [
+    {
+      "type": "Compiling",
+      "count": 26,
+      "total_ms": 40.76
+    },
+    {
+      "type": "Creating",
+      "count": 3886,
+      "total_ms": 36.36
+    },
+    {
+      "type": "Binding",
+      "count": 22009,
+      "total_ms": 20.35
+    },
+    {
+      "type": "Javascript",
+      "count": 26748,
+      "total_ms": 11.75
+    },
+    {
+      "type": "HandlingSignal",
+      "count": 283,
+      "total_ms": 1.1
+    }
+  ],
+  "hotspots": [
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 0,
+      "type": "Compiling",
+      "name": "TimelineCanvas.qml:0",
+      "details": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "count": 2,
+      "total_ms": 20.33,
+      "avg_ms": 10.163
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/AutomationTabs.qml",
+      "line": 0,
+      "type": "Compiling",
+      "name": "AutomationTabs.qml:0",
+      "details": "qrc:/qt/qml/Porydaw/Ui/AutomationTabs.qml",
+      "count": 2,
+      "total_ms": 11.77,
+      "avg_ms": 5.885
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 4,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:4",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 4.76,
+      "avg_ms": 1.19
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/AutomationTabs.qml",
+      "line": 40,
+      "type": "Creating",
+      "name": "AutomationTabs.qml:40",
+      "details": "QtQuick/Repeater",
+      "count": 4,
+      "total_ms": 4.33,
+      "avg_ms": 1.082
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/AutomationTabs.qml",
+      "line": 13,
+      "type": "Binding",
+      "name": "AutomationTabs.qml:13",
+      "details": "",
+      "count": 30,
+      "total_ms": 3.28,
+      "avg_ms": 0.109
+    },
+    {
+      "filename": "qrc:/qt-project.org/imports/QtQuick/Controls/Basic/Calendar.qml",
+      "line": 0,
+      "type": "Compiling",
+      "name": "Calendar.qml:0",
+      "details": "qrc:/qt-project.org/imports/QtQuick/Controls/Basic/Calendar.qml",
+      "count": 2,
+      "total_ms": 3.06,
+      "avg_ms": 1.53
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/EventListPage.qml",
+      "line": 0,
+      "type": "Compiling",
+      "name": "EventListPage.qml:0",
+      "details": "qrc:/qt/qml/Porydaw/Ui/EventListPage.qml",
+      "count": 2,
+      "total_ms": 1.73,
+      "avg_ms": 0.863
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/AutomationTabs.qml",
+      "line": 43,
+      "type": "Creating",
+      "name": "AutomationTabs.qml:43",
+      "details": "TabButton",
+      "count": 26,
+      "total_ms": 1.3,
+      "avg_ms": 0.05
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 271,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:271",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 1.22,
+      "avg_ms": 0.306
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 290,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:290",
+      "details": "EventListPage",
+      "count": 2,
+      "total_ms": 1.21,
+      "avg_ms": 0.604
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/DrawerChromeLayer.qml",
+      "line": 168,
+      "type": "Creating",
+      "name": "DrawerChromeLayer.qml:168",
+      "details": "QtQuick/Image",
+      "count": 12,
+      "total_ms": 1.0,
+      "avg_ms": 0.083
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/EventListPage.qml",
+      "line": 4,
+      "type": "Creating",
+      "name": "EventListPage.qml:4",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 0.99,
+      "avg_ms": 0.248
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/DrawerChromeLayer.qml",
+      "line": 173,
+      "type": "Binding",
+      "name": "DrawerChromeLayer.qml:173",
+      "details": "",
+      "count": 12,
+      "total_ms": 0.95,
+      "avg_ms": 0.079
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TrackHeaderBand.qml",
+      "line": 153,
+      "type": "Creating",
+      "name": "TrackHeaderBand.qml:153",
+      "details": "QtQuick/Item",
+      "count": 34,
+      "total_ms": 0.89,
+      "avg_ms": 0.026
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 198,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:198",
+      "details": "TimelineSceneBand",
+      "count": 2,
+      "total_ms": 0.85,
+      "avg_ms": 0.425
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 723,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:723",
+      "details": "DrawerChromeLayer",
+      "count": 2,
+      "total_ms": 0.81,
+      "avg_ms": 0.404
+    },
+    {
+      "filename": "qrc:/qt-project.org/imports/QtQuick/Controls/Basic/TabButton.qml",
+      "line": 0,
+      "type": "Compiling",
+      "name": "TabButton.qml:0",
+      "details": "qrc:/qt-project.org/imports/QtQuick/Controls/Basic/TabButton.qml",
+      "count": 2,
+      "total_ms": 0.78,
+      "avg_ms": 0.392
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/HoverHint.qml",
+      "line": 117,
+      "type": "Javascript",
+      "name": "HoverHint.qml:117",
+      "details": "sync",
+      "count": 202,
+      "total_ms": 0.78,
+      "avg_ms": 0.004
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 630,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:630",
+      "details": "TrackHeaderBand",
+      "count": 2,
+      "total_ms": 0.74,
+      "avg_ms": 0.372
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/EventListPage.qml",
+      "line": 781,
+      "type": "Creating",
+      "name": "EventListPage.qml:781",
+      "details": "QtQuick/Repeater",
+      "count": 4,
+      "total_ms": 0.72,
+      "avg_ms": 0.181
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/RulerControls.qml",
+      "line": 0,
+      "type": "Compiling",
+      "name": "RulerControls.qml:0",
+      "details": "qrc:/qt/qml/Porydaw/Ui/RulerControls.qml",
+      "count": 2,
+      "total_ms": 0.7,
+      "avg_ms": 0.351
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 236,
+      "type": "Creating",
+      "name": "TimelineCanvas.qml:236",
+      "details": "RulerControls",
+      "count": 2,
+      "total_ms": 0.64,
+      "avg_ms": 0.319
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TrackHeaderBand.qml",
+      "line": 0,
+      "type": "Compiling",
+      "name": "TrackHeaderBand.qml:0",
+      "details": "qrc:/qt/qml/Porydaw/Ui/TrackHeaderBand.qml",
+      "count": 2,
+      "total_ms": 0.59,
+      "avg_ms": 0.295
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/RulerControls.qml",
+      "line": 3,
+      "type": "Creating",
+      "name": "RulerControls.qml:3",
+      "details": "QtQuick/Item",
+      "count": 4,
+      "total_ms": 0.58,
+      "avg_ms": 0.146
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/HoverHint.qml",
+      "line": 49,
+      "type": "HandlingSignal",
+      "name": "HoverHint.qml:49",
+      "details": "",
+      "count": 88,
+      "total_ms": 0.51,
+      "avg_ms": 0.006
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 727,
+      "type": "Binding",
+      "name": "TimelineCanvas.qml:727",
+      "details": "",
+      "count": 4,
+      "total_ms": 0.49,
+      "avg_ms": 0.123
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/HoverHint.qml",
+      "line": 49,
+      "type": "Javascript",
+      "name": "HoverHint.qml:49",
+      "details": "onScopeRefresh",
+      "count": 88,
+      "total_ms": 0.48,
+      "avg_ms": 0.005
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/DrawerChromeLayer.qml",
+      "line": 174,
+      "type": "Binding",
+      "name": "DrawerChromeLayer.qml:174",
+      "details": "",
+      "count": 48,
+      "total_ms": 0.48,
+      "avg_ms": 0.01
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml",
+      "line": 727,
+      "type": "Javascript",
+      "name": "TimelineCanvas.qml:727",
+      "details": "expression for automationBandRect",
+      "count": 4,
+      "total_ms": 0.48,
+      "avg_ms": 0.119
+    },
+    {
+      "filename": "qrc:/qt/qml/Porydaw/Ui/TimelineScrollbar.qml",
+      "line": 0,
+      "type": "Compiling",
+      "name": "TimelineScrollbar.qml:0",
+      "details": "qrc:/qt/qml/Porydaw/Ui/TimelineScrollbar.qml",
+      "count": 2,
+      "total_ms": 0.48,
+      "avg_ms": 0.238
+    }
+  ]
+}

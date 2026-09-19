@@ -47,6 +47,7 @@ bool WorkspaceUi::openProjectEnabled() const noexcept
 {
     if (m_state.state == ProjectOpenState::Loading)
         return false;
+    // Known limitation: users must let startup restoration finish before switching projects.
     if (m_state.state == ProjectOpenState::Closed || m_state.state == ProjectOpenState::Failed)
         return !m_openRequested;
     // Ready: the action stays disabled while any placeholder lacks a
