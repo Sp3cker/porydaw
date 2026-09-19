@@ -1,5 +1,15 @@
 # Swift backend Wave 4 — writable seam (`sgc_`) and its first two consumers
 
+> Historical dispatch plan — do not execute or resume these tasks.
+> Commit `fe1ff4df` closed a re-scoped grid milestone, not this original
+> five-task acceptance set. T5's C++ presenter mirror was canceled.
+> Retained legacy behavior is recorded in [spec.md](spec.md); the
+> [current charter](../swift-backend-charter.md) governs maintenance.
+> New work requires the [ownership design](../swift-ownership-cutover/design.md)
+> gates and approved replacement briefs. Commands below may refer to retired
+> harnesses or the removed standalone demo lane; they are historical evidence,
+> not the current verification recipe.
+
 The read-only roll becomes an editor, and TrackHeaders becomes the second
 consumer of the same seams. Four new C-ABI surfaces, all values:
 

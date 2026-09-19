@@ -1,5 +1,11 @@
 # spec.md — Swift roll production mount: behavior contract
 
+> Historical Wave 3 behavior contract, not current dispatch authority.
+> The writable grid milestone superseded read-only-only scope; the
+> [current charter](../swift-backend-charter.md) governs ownership and
+> retirement. Preserve applicable legacy behavior until replacement
+> acceptance, not historical interface shapes or removed demo commands.
+
 Wave 3 of the Swift backend track ([plan.md](plan.md)). This file fixes
 the agreed behavior and the shared vocabulary; briefs cite it and never
 restate it.

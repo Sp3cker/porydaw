@@ -1,5 +1,11 @@
 # Task 5 — TrackHeaders Swift presenter
 
+> CANCELED — historical reference only. Do not dispatch this brief, restore
+> its C++ presenter mirror, freeze the old QML interface, or recreate its
+> harness. `fe1ff4df` removed that integration. Replacement header work must
+> follow the [current charter](../swift-backend-charter.md) and resolve the
+> [ownership design](../swift-ownership-cutover/design.md) prerequisites.
+
 ## Context
 
 The second consumer: `PORYDAW_SWIFT_HEADERS` swaps the C++

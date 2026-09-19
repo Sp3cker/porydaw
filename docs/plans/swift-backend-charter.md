@@ -5,6 +5,16 @@ backend track inherits this document. Where a spec and this charter
 disagree, the charter wins and the spec is a defect. Successor wave specs
 (document seam, surfaces) must name this file in their Global Constraints.
 
+Current dispatch precedence: this charter and the
+[QtBridge integration contract](qtbridge-integration-contract.md) govern the
+proposed [ownership design](swift-ownership-cutover/design.md). That design
+is not an implementation brief or authorization. Earlier view-math,
+jurisdiction, production-mount and writable-flip wave plans/briefs are
+historical dispatch records, not permission to resume tasks. Their behavioral
+contracts still describe retained legacy paths until replacement acceptance;
+their old architecture choices, retired commands and T5 mirror instructions
+do not override this charter.
+
 ## Prime directive
 
 This is not a prototype. The Swift backend track converts production
@@ -14,10 +24,12 @@ surfaces. Production implementations and interfaces are designed to stay:
   AGENTS.md: stop, name the root cause, recommend the root-cause fix, and
   request approval. Accommodating a broken invariant with a guard or
   fallback is not an option.
-- No "transitional" production implementations scheduled for rework at
-  cutover. If a production design cannot survive cutover unchanged, it is
-  the wrong design now. The enumerated migration verification and mount
-  machinery below is not a license for temporary production implementations.
+- Destination Swift modules and QML views are production implementations,
+  not scaffolds written for another rewrite. Existing legacy application
+  code and adapters retire under the taxonomy and gates below; that planned
+  retirement is not permission to add new per-surface seams or workarounds.
+  Any proposed new shared legacy-client adapter requires explicit design
+  approval with its scope, callers and retirement gate.
 - No parallel implementations kept "until later." Widget twins inside the
   song tab are cut over and deleted at their named retirement gate, not
   maintained beside their successors indefinitely.
@@ -51,40 +63,39 @@ compatibility obligations; migration-only machinery creates **none**.
 Demo APIs, fixture loaders, sandbox checks, and parity adapters are not
 public contracts merely because code or tests call them. Preserve the
 behavior they help prove, not their implementation shape or entry points.
-INV-3's root host window/focus/input boundary remains permanent, as do
-INV-1 and INV-2's single keymap and arbitration authority.
+INV-1/INV-2 preserve one keymap and arbitration authority. INV-3 preserves
+the host/band division of responsibility, not a permanent C++ class or ABI.
 
-The table is the authoritative, exhaustive permission for migration-only
-verification and mount machinery. Each row has a removal gate, not an
-open-ended exception to the prime directive. Production grid logic, value
-feeds, and host integration must still be built to stay; being introduced
-during migration does not make them disposable. Reaching a gate requires
-evidence on the replacement surface, not a changed plan status.
+The table records verification and staged-mount retirement obligations.
+The interop taxonomy below additionally governs existing legacy application
+adapters. Each retirement requires replacement evidence and migrated callers;
+no document-ownership milestone automatically retires host input delivery.
+Destination Swift logic must be built to stay. Historical feed layouts and
+presenter interfaces are not permanent contracts.
 
 | Migration-only machinery | Read-only production mount obligation | Removal gate |
 | --- | --- | --- |
 | Standalone demo entry point and demo fixture setup | Exclude the standalone app entry point and selftest drivers from the production library. Production content comes from the real document feed, not demo fixture initialization. Keep the standalone lane and fixtures still required by this wave's acceptance. | Remove the standalone lane and demo-only fixture hooks when production acceptance exercises all required behavior they still verify, including editable behavior. Delete a fixture only when no retained acceptance check needs it; production regression fixtures are not disposable merely because the demo also used them. |
 | Duplicate local undo (`GridUndo` in the demo) | Read-only production mode records no local edits or undo entries. Keep demo undo for still-required editable sandbox acceptance; it is not a second production undo authority. | At editable cutover, connect Swift edits to the authoritative document undo path and prove production mutation/undo/redo behavior before deleting duplicate local undo and its demo callers in the same cutover. This does not authorize a rewrite of production undo in the read-only wave. |
-| Rollout flag, read-only overlay mounting, and old C++ rendering path | Keep the flag and flag-off renderer while the opt-in mount is read-only. Use the shared production grid implementation, not a separate temporary grid implementation. | At default editable cutover, production rendering, editing, focus/key arbitration, cancellation, and undo acceptance must pass on Swift-backed surfaces. Then remove the rollout flag, overlay-only mounting/absorption machinery, and replaced C++ rendering path atomically; preserve normal production mounting and the permanent host boundary. Windows deferral cannot extend this gate. |
+| Rollout flag, read-only overlay mounting, and old C++ rendering path | Preserve the existing gated path until complete replacement acceptance. The re-scoped writable milestone is not full default cutover; its leading-resize limitation remains explicit. | At default editable cutover, production rendering, editing, focus/key arbitration, cancellation, and undo acceptance must pass on Swift-backed surfaces. Remove the rollout flag, obsolete overlay-only machinery and replaced C++ rendering path together; preserve required mounting and host behavior through their replacements. Windows deferral cannot extend this gate. |
 | Duplicate sandbox behavioral checks | Retain rows still required by prototype regression; a read-only mount cannot replace editable, keyboard, menu, or cancellation acceptance. | Delete each `cutover-disposable` row when its required behavior is covered and passing on the actual production replacement surface. Retire the duplicate harness when its last such row retires; never keep a parallel behavioral acceptance suite after cutover. |
-| Callable parity adapters and dual-run oracle plumbing | Keep adapters needed by live parity sweeps. Distinguish oracle/test adapters from production seams even when colocated or sharing a prefix. | At the corresponding oracle implementation's cutover, pass the final dual-run sweep and replacement production acceptance, then remove oracle-only adapters and sweep plumbing with the retired oracle. Retain needed independent numeric regression coverage without a duplicate production implementation. Production value feeds and permanent host input/cancel interfaces do not retire with test adapters. |
+| Callable parity adapters and dual-run oracle plumbing | Keep adapters needed by live parity sweeps; distinguish oracle/test adapters from production transport even when colocated or similarly named. | At the corresponding oracle retirement gate, pass the final comparison and replacement production acceptance, then remove oracle-only adapters with the retired implementation. Document transport and host input delivery have separate caller/replacement gates, not the oracle's gate. |
 
-These gates permit verification scaffolding and staged mounting, not
-workarounds, backward-compatibility shims, or production code written to be
-replaced later. A gate not reached means its acceptance machinery remains
-necessary, not that its API becomes permanent. The current C++ document
-and undo ownership is the production authority for these waves, not a
-decision that the current document seam must exist forever; any later
-ownership change requires its own explicit contract and acceptance gate.
+These gates permit existing verification, mounting and legacy integration
+to survive only until their replacements are proven. They do not authorize
+workarounds or new compatibility facades. C++ remains the production
+document/history authority until the approved authority cutover; Swift
+projections do not create another writable authority.
 
 ## The three migration invariants
 
 These predate every wave. A plan that violates one is rejected at triage.
 
-**INV-1 — One keymap source.** `keymap::Registry` is the single definition
-of window-tier key bindings. Every Quick surface binds keys generated from
-the registry; hand-written `Shortcut`/`Keys` bindings in QML are forbidden.
-A second keymap is a silent fork of the global priority contract.
+**INV-1 — One keymap source.** `keymap::Registry` is the current single
+definition of window-tier bindings. Persistent surfaces must not introduce
+handwritten competing shortcut maps. A future implementation-language change
+migrates the definitions and their consumers together under INV-2; it does
+not authorize a second keymap.
 
 
 **INV-2 — Arbitration moves wholesale or not at all.** Window-tier key
@@ -94,15 +105,13 @@ When arbitration migrates, the `selectionkey` suites are re-pointed at the
 new tier and green before the old tier is deleted: one atomic cutover, never
 two live authorities.
 
-**INV-3 — One window/input authority; Swift is not a dispatcher.** Swift
-owns band math and policy data. It receives normalized input, named cancel
-reasons, and value snapshots; it returns intents and geometry. Window-tier
-arbitration, focus chains, pointer grabs, popup stacking, and platform
-events belong to exactly one host authority — never two tiers at once, and
-Swift never becomes a dispatcher of window input (AGENTS.md: no second
-dispatcher). The 2026-09-19 amendment retires the earlier "C++/QWidgets
-host forever" framing: the authority's implementation may migrate wholesale
-(INV-2 precedent), but its singleness does not.
+**INV-3 — One host authority; bands are not window dispatchers.** Swift
+band/presenter logic receives normalized input and named cancel reasons.
+Window-tier arbitration, focus chains, pointer grabs, popup stacking and
+platform events belong to one host authority. No band installs a competing
+dispatcher. Host implementation may migrate wholesale under INV-2, including
+Swift-owned application policy with Qt/QML event delivery; this does not
+require raw window events in Swift domain code or a permanent QWidget shell.
 
 ## Platform decision (2026-09-18): Windows deferred, MinGW incidental
 
@@ -124,23 +133,28 @@ nothing. Binding consequences:
 
 ## Seam rules
 
-**S-1 — Production C++ is the read-only oracle.** Until cutover, production
-implementations are normative and never modified to accommodate Swift. A
-parity mismatch is a defect report against the port or a stale oracle claim
-— never a silent edit of expected values.
+**S-1 — Preserve the behavioral oracle.** During parity verification, do not
+alter reference behavior or expectations to conceal a port mismatch.
+"Read-only oracle" describes that review discipline, not a read-only runtime
+document: the current C++ authority still executes production edits.
+An approved cutover may migrate callers and remove reference implementations
+after replacement acceptance; the old write sets do not freeze the codebase.
 
-**S-2 — Value feeds, not object borrows.** State crosses the C seam as
-copied value structs (the `TimeMap` pattern). No `MidiTimeline*`,
-`SongDocument*`, or Qt object pointers cross into Swift. Cross-boundary
-staleness is guarded by document identity plus revision (the
-`PendingHeaderMenu` pattern).
+**S-2 — Confine native transport to adapters.** Existing legacy C feeds
+exchange copied values, not borrowed `SongDocument*`, `MidiTimeline*` or Qt
+objects into domain code. Preserve their callback buffer lifetimes and
+document-identity/revision guards while retained. Native Swift-to-Swift
+interfaces do not serialize through C. QtBridge object/proxy lifetime and
+retained native-service interfaces follow their own explicit contracts;
+legacy value-feed layout rules do not define the Swift domain model.
 
-**S-3 — Undoability is existential.** Every gesture commit or command that
-mutates musical state through the Swift seam produces an undoable document
-edit on the C++ side. In-place mutation with "undo later" is forbidden;
-non-undoable edits fail cutover regardless of raster parity.
-This preserves the current production document/undo authority; it does not
-freeze that authority's implementation language or seam for all future waves.
+**S-3 — Undoability is existential.** Every undoable musical gesture commits
+one transaction to the single authoritative history. That authority is C++
+today and Swift after its approved cutover. Non-undoable musical mutation or
+competing histories fail acceptance, including shared voice-bank ordering.
+Session changes remain non-document edits where existing behavior requires.
+The historical leading-resize deviation is not permission to weaken the
+destination transaction contract.
 
 **S-4 — The four cancel reasons are contract.** `FocusLost`,
 `PointerUngrabbed`, `Hidden`, `WindowDeactivate` arrive as distinct named
@@ -161,11 +175,13 @@ gate in the retirement table is satisfied.
 
 ## Verification rules
 
-**V-1 — Checks are the contract; implementations swap beneath them.** At
-cutover, production suites run unmodified against Swift-backed surfaces.
-That run is the acceptance gate — not a port of the suites.
-The compatibility obligation is required observable behavior, not demo
-entry points or migration-only test APIs.
+**V-1 — Observable behavior is the contract.** At cutover, retained production
+behavior assertions exercise the actual Swift-backed replacement. Drivers,
+imports and implementation-specific access may change when concrete C++
+types retire. Do not keep a dead presenter solely to compile an old driver,
+or delete meaningful coverage merely because its implementation changes.
+Remove obsolete implementation-pinning assertions rather than re-pin them.
+Bridge probes establish capability; they do not alone prove production parity.
 
 **V-2 — Copied checks verify nothing but their copy.** Production checks are
 never rewritten against sandbox surfaces as acceptance evidence. Parity for
@@ -190,15 +206,18 @@ QML interfaces may change to fit Swift presenters.
 
 ### Interop taxonomy
 
-Exactly three classes of native boundary exist. Every seam in the tree must
-belong to one, and each migration milestone names the obsolete C++ and C ABI
-adapters it deletes:
+Native integration has three classes. Each milestone names obsolete code
+and the specific replacement/caller gate that allows its deletion:
 
-1. **Legacy document adapters** — the `sgd_`/`sgc_`/`sgs_`/`sgk_`/`sgb_`
-   feeds, band/key seams, hand-mirrored C enums, and parity oracles. They
-   exist only while the C++ document/history authority and their callers
-   exist. No new ones may be created; they retire at the ownership cutover
-   that supersedes them.
+1. **Legacy application integration**, with separate retirement obligations:
+   document/session/command transport (`sgd_`, `sgc_`, `sgs_`) retires when
+   Swift authority and migrated callers replace it; input delivery (`sgk_`,
+   `sgb_`, `SwiftRollBand`) retires when its event-delivery replacement passes;
+   mount plumbing retires when production mounting replaces it; parity
+   adapters retire with their corresponding oracle. Prefixes are not
+   ownership categories. No new per-surface adapters may be created. An
+   authority cutover must resolve legacy editing callers, not turn them
+   read-only or silently introduce a replacement facade.
 2. **Retained native-service adapters** — audio/DSP and necessary platform
    integration, kept behind a narrow service interface. C++ here is a
    decision, not a debt: do not rewrite native audio merely to eliminate
@@ -219,25 +238,28 @@ model" — the authority cutover is.
 
 ### Ownership invariants (unchanged in force, restated for the pivot)
 
-INV-1 (one keymap source) and INV-2 (arbitration moves wholesale or not at
-all) govern any host technology: one keyboard-arbitration authority, no
-second dispatcher, whatever owns the window. INV-3's principle — Swift band
-logic receives normalized input and never becomes a window dispatcher —
-holds; its former "C++/QWidgets host forever" framing is retired with this
-amendment. S-3 becomes: one authoritative document and history, wherever it
-lives; no synchronized writable document twins, no competing undo
-authorities, including the shared voice-bank history behavior. The C++
-document authority remains the oracle (S-1) until the milestone that moves
-it, which must prove single-authority behavior before deleting the C++
-implementation.
+INV-1/INV-2 preserve one keymap and arbitration authority across host
+technology changes. INV-3 separates band logic from host arbitration.
+S-3 preserves one writable document and authoritative history, including
+shared voice-bank behavior. Legacy editors may submit requests to the single
+authority; request submission is not ownership of a second writable model.
+The approved design must specify how every remaining editor continues to
+work before the old authority is removed.
 
 ### Ordering (amended)
 
-Ownership before surfaces: prove the QtBridge two-consumer integration
-(grid and headers sharing one Swift document/session store, no handwritten
-C++ header presenter), then move document/editing/history/session authority
-into Swift, then expand surfaces (ruler, lanes, songtabs, chrome) as pure
-Swift+QML consumers with no new C++ seams. Audio remains a retained native
-service throughout. The retired surface-first wave plan (grid → headers →
-ruler/lanes → songtabs → chrome → document core → audio last) is superseded
-by this ordering; committed seams remain as legacy adapters under class 1.
+First record the QtBridge baseline, actual lifetime ownership and direct
+model-update evidence. Then define cohesive production Swift organization
+and the two-consumer integration. Do not assume the note/signature feeds
+supply complete header data. Full header retirement additionally requires
+all metadata, activity, actions, menus, input and caller coverage; a bridge
+probe is not that gate.
+
+Bring full document/editing/history/session ownership forward, before
+expanding independent surface waves. The authority cutover cannot dispatch
+until every legacy editing caller has an approved migration path. Neither
+new per-surface seams nor silently disabled editors solve that dependency.
+Input/mount replacement may have a different gate from document ownership.
+Remaining surfaces become Swift+QML consumers with named deletions; audio
+stays a retained native service. The ownership design records unresolved
+sequencing choices explicitly rather than delegating them to implementers.

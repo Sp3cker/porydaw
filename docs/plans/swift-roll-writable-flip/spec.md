@@ -1,7 +1,12 @@
 # spec.md — writable seam: behavior contract
 
-Wave 4 of the Swift backend track ([plan.md](plan.md)). Fixes agreed
-behavior; briefs cite it and never restate it.
+Historical Wave 4 contract ([plan.md](plan.md)), retained to describe the
+legacy grid adapters until their retirement. This is not dispatch authority
+or the specification for the Swift-owned document. The
+[current charter](../swift-backend-charter.md) takes precedence.
+T5's header mirror and `swiftheadersgated` acceptance below are canceled
+historical scope, not requirements to restore. The leading-resize deviation
+in §5 remains explicit until its production replacement passes acceptance.
 
 ## §1 Two command classes, one pipe
 

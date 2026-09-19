@@ -1,6 +1,6 @@
 # QtBridge integration contract and acceptance gate
 
-Status: proposed integration requirements, recorded 2026-09-19 at the user's request. Runtime guarantees below are NOT yet verified by this assessment. This document preserves the architecture discussion; it does not close Wave 4, authorize implementation dispatch, or silently amend the existing charter. The roadmap pivot must reconcile the charter explicitly.
+Status: integration requirements referenced by the [current charter](swift-backend-charter.md), recorded 2026-09-19. Runtime guarantees below are NOT yet verified by this assessment. This document does not authorize implementation dispatch or close a production cutover. The proposed [ownership design](swift-ownership-cutover/design.md) records unresolved prerequisites and separates bridge capability from production acceptance.
 
 ## Purpose and ownership direction
 
@@ -20,7 +20,39 @@ Source evidence, not a runtime certification:
 - `PianoGrid.swift` uses direct QtBridge exposure; `GridScene.swift` exposes Swift `QListModel` collections.
 - Upstream: https://github.com/qt/qtbridge-swift (early-preview dependency).
 
-Before accepting this integration, record actual Qt and Swift versions, bridge and application revisions, build configuration, patch-by-patch purpose/upstream status, relevant pinned-source anchors, exact executed commands, and results. No runtime/toolchain baseline was collected for this document. Changing the dependency or relevant patch invalidates affected verification evidence until rerun.
+Recorded baseline (2026-09-19, worktree `swift-qml-grid` at `bc24c98d`,
+collected by source/build-config inspection; runtime scenarios below remain
+Unverified until executed):
+
+- Qt: 6.11.0 (Homebrew, `/opt/homebrew/lib/cmake/Qt6`; root `CMakeLists.txt`
+  requires 6.11, QtBridge requires 6.10 `CorePrivate`).
+- Swift: Apple `swiftc` 6.3.3 (`/usr/bin/swiftc`; recorded in
+  `build/CMakeFiles/4.3.2/CMakeSwiftCompiler.cmake`), `Swift_LANGUAGE_VERSION 6`,
+  `-cxx-interoperability-mode=default`.
+- QtBridge: `qt/qtbridge-swift` pinned `407714006dd21107b70db6547ce75e43df0c8a75`
+  via FetchContent (`cmake/QtBridge.cmake:18-26`); sources land in
+  `build/_deps/qtbridge-src`, macros rebuilt through an ExternalProject.
+- Application: Porydaw `feature/swift-qml-grid` at `bc24c98d` (this file's
+  baseline; advancing the pin, patch, Qt or Swift invalidates affected rows).
+
+Local patch `src/ui/songview/quick/swift-grid-prototype/qtbridge-object-return.patch`
+(74 lines, 4 hunks; **not upstreamed**; applied idempotently by
+`PatchQtBridge.cmake` with SHA256-pinned inputs):
+
+| Hunk | QtBridge source | Purpose |
+| --- | --- | --- |
+| 1 | `Sources/QtBridgeMacros/Extensions.swift:124` | Allow identifier (bridged object) return types from `@QtBridgeable` methods. |
+| 2 | `CMakeLists.txt:59` | Propagate host `CMAKE_MAKE_PROGRAM`/Swift compiler/flags into the macro plugin ExternalProject; `BUILD_ALWAYS`. |
+| 3 | `Sources/QtBridge/QmlInstantiable.swift:50` | Make `registerQmlElement()` public so consumer modules register QML elements. |
+| 4 | `Sources/QtBridge/QVariant.swift:95,181` | `QVariant` from `Optional<Wrapped: QObjectBuildable>` (typed null) + `Optional: QVariantGettable`. |
+
+Mechanism anchors (pinned source, subject to pin changes): `@QtTracked` emits
+Qt property-change signals from `didSet` (`QtBridgeableMacro.swift:115`);
+`QListModel` maps subscript sets to `dataChanged`, `replaceSubrange` to
+begin/endInsert/RemoveRows, `reset(to:)` to begin/endResetModel
+(`Sources/QtBridge/QListModel.swift:105-180`); rows are index-identified with
+no stable key — in-place row reuse is client policy (prefix diff in
+`GridScene.swift:129`).
 
 ## Lifetime contract
 
@@ -35,6 +67,26 @@ Required invariants:
 - Tab/application closure causes neither use-after-free nor indefinitely retained document graphs.
 - QML visibility is not treated as destruction, and proxy destruction is not assumed to release every Swift reference immediately.
 - Initial binding, detachment and teardown have an explicit ordered protocol. Identify when new actions stop, pending delivery is invalidated, observers disconnect, and references release. Test the actual protocol rather than assuming a universal deletion order.
+
+Recorded ownership table (2026-09-19, from pinned-source inspection; the
+scenario ledger below verifies the load-bearing rows at runtime):
+
+| Object | Creator | Lifecycle owner | Other retaining refs | Isolation | Invalidation/release | Teardown order |
+| --- | --- | --- | --- | --- | --- | --- |
+| `MainWindow`/`WorkspaceUi` | `main.cpp` | C++ app stack | — | Qt GUI thread | App exit | App teardown |
+| `SongTab` (per open song) | `WorkspaceUi::requestSongOpen` | `WorkspaceUi` tab container | — | Qt GUI thread | Tab close | Document closed before tab widget destroyed |
+| `SongDocument` + `SongHistory`/`QUndoStack` | `SongTab` | `SongTab` | `SwiftGridIntentExecutor` (borrows for submits) | Qt GUI thread | Tab close / document replace (`adoptSmf`) | Feeds unregistered in `SwiftRollMount::unmount` before document dies |
+| `SwiftRollMount` (flag-gated) | `SongView` | `SongView` member | — | Qt GUI thread | Tab close/unmount | `unmount()`: drop track connections → reset executor → session feed → document feed → delete overlay item (`swift_roll_mount.cpp:239-263`) |
+| `PianoGrid` (Swift, QML-instantiated) | `QQmlComponent` via `registerQmlElement` | QML scene graph; QtBridge holds `Unmanaged.passRetained` +1 (`QMetaObjectBuilder.swift:368-390`) | `QObjectProxyImpl` `Ownership::Qml` + deleter releasing the +1 | Qt GUI thread / Swift `@MainActor` | Overlay item destroyed → `~QObjectProxyImpl` → deleter `release()` | Overlay deleted last in `unmount()` |
+| `GridScene` + `QListModel`s (Swift-created) | `PianoGrid` | Swift ARC via `PianoGrid.scene`; `QObjectHolder` keeps C++ proxy alive (`QObjectHolder.swift:58`) | `QObjectHolder.proxy` `shared_ptr<Impl>`, `Ownership::Cpp`; C++ side holds **unretained** Swift pointer; holder holds `weak` owner | Same as owner | Last Swift ref drops → `objectHolder` deinit → `shared_ptr` → `delete m_object` | Children of `PianoGrid`; released with it |
+| Row elements (`SceneRect`/`SceneText` values) | `GridScene` rebuilds | `QListModel.storage` array | QML reads copies via delegates (no QML retain of Swift objects) | Same | Removed from storage → ARC releases immediately; `reset(to:)` replaces whole array | With owning model |
+| `sgd_`/`sgs_` deliveries | `SwiftGridDocumentFeed`/`SwiftGridSessionFeed` register single-slot callbacks | C++ feed objects own registration | Swift holds function pointers only while bound | Qt GUI thread (synchronous push) | `unmount()` resets feeds → slots cleared | Before overlay deletion |
+| `documentChanged` observers | `SongTab` (timeline rebuild) + `SwiftGridDocumentFeed` (snapshot push) | Qt signal wiring | — | Qt GUI thread | Sender destroyed → auto-disconnect | Qt parent ordering |
+
+Open lifetime facts the probe must observe rather than assume: delegate
+retention of removed rows (QML may cache items), pending-notification
+delivery across presenter destruction, and whether a stale row reference can
+still reach a replaced model.
 
 ## Observable model-update contract
 
@@ -70,7 +122,7 @@ An implementing task must register the covering checks and record exact `deno ta
 
 ## Acceptance and maintenance
 
-Direct Swift-to-QML integration is accepted only after the two-consumer scenarios pass with recorded evidence. The header cutover must remove the handwritten C++ header presenter and surface-specific push/pull transport, not merely rename them. Existing legacy document integration retires at its separately specified ownership cutover.
+Direct Swift-to-QML integration is accepted only after the two-consumer scenarios pass with recorded evidence. A smaller baseline probe establishes only its exercised bridge capability. Full production header retirement additionally requires complete metadata, activity, actions, appearance, menus, input and migrated caller coverage as specified in the ownership design; the existing note/signature feeds do not supply all of these. At that gate, remove the replaced C++ header presenter and surface-specific push/pull transport, not merely rename them. Document transport, input delivery, mounting and oracle adapters each retire at their own replacement/caller gate, not automatically at the document ownership milestone.
 
 Bridge defects belong in the shared integration and have a focused regression scenario. Do not compensate with surface-specific C++ presenter mirrors. A proposed workaround requires approval under repository rules. Keep any necessary bridge fixes cohesive and central; record upstream disposition and retest on upgrades.
 

@@ -1,5 +1,12 @@
 # Swift backend Wave 2 — input jurisdiction (undo, cancel reasons, command policy)
 
+> Historical Wave 2 dispatch record — do not resume these tasks.
+> Prototype scope and host-language assumptions below are historical.
+> The [current charter](../swift-backend-charter.md) preserves one host
+> authority and named cancellation behavior while allowing implementation
+> migration. New work requires the
+> [ownership design](../swift-ownership-cutover/design.md) gates.
+
 After the frozen Wave 1 view math, this wave gives the Swift piano-grid
 prototype the three input-jurisdiction properties a production cutover
 demands: **undoable gesture commits** (SongDocument contract: one undoable
@@ -130,7 +137,7 @@ No commit is authorized yet. When the user authorizes persistence:
 
 ## Source anchors
 
-| Owner | Current |
+| Owner (historical snapshot; retired paths available in Git history) | Behavior at that wave |
 | --- | --- |
 | [PianoGrid.swift](../../../src/ui/songview/quick/swift-grid-prototype/PianoGrid.swift) | `endPointer` (in-place note mutation, ~L352), `cancelPointer`/`cancelRightPointer` (undifferentiated), `deleteSelection`, `doublePointer`, `commitPitchCurves`, `resetDemo` |
 | [GridGesture.swift](../../../src/ui/songview/quick/swift-grid-prototype/GridGesture.swift) | six gesture kinds; `isRight` split; `updated(x:y:metrics:)` |
@@ -143,8 +150,8 @@ No commit is authorized yet. When the user authorizes persistence:
 | [editkeyrouting.cpp](../../../src/ui/songview/editkeyrouting.cpp) | `SongView::handleEditKey` policy branches (Escape arbiter + ordered gates), `editCommandAvailable`, `resolveSelectionTarget` |
 | [songdocument.h](../../../src/core/songdocument.h) | undo contract: one command per mutation, `undoStack()`, `revision()`, `documentChanged`; `moveNotes(…, mergeable)` |
 | [songview.h](../../../src/ui/songview.h) | `SongView::EditCommand` (35 values, Copy…GridTriplet) |
-| [interaction_smoke.cpp](../../../src/checks/swiftgridprototype/interaction_smoke.cpp) | QTest row pattern, `resetDemo` invoke, `ungrabMouse()` cancel drive, PASS naming |
-| [Main.qml](../../../src/ui/songview/quick/swift-grid-prototype/Main.qml), [NoteMenu.qml](../../../src/ui/songview/quick/swift-grid-prototype/NoteMenu.qml), [PitchBendPopup.qml](../../../src/ui/songview/quick/swift-grid-prototype/PitchBendPopup.qml), [PitchBendGraph.qml](../../../src/ui/songview/quick/swift-grid-prototype/PitchBendGraph.qml) | current pointer wiring (`onCanceled` → no-arg cancels); the three independent Escape handlers + ShortcutOverride claims |
+| Retired `src/checks/swiftgridprototype/interaction_smoke.cpp` | QTest row pattern, `resetDemo` invoke, `ungrabMouse()` cancel drive, PASS naming |
+| Retired `Main.qml`, `NoteMenu.qml`, `PitchBendPopup.qml`, `PitchBendGraph.qml` under `src/ui/songview/quick/swift-grid-prototype/` | Historical pointer wiring and independent Escape handlers/ShortcutOverride claims; not the current input contract |
 | [checkcatalog.cpp](../../../src/checks/checkcatalog.cpp) | coverage comments for `selectionkey-*` (routing tiers) and `editcheck` (document editing) |
-| [CMakeLists.txt (prototype)](../../../src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt) | `swift_grid_smoke` explicit source list; Swift/QML GLOBs |
+| Retired `src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt` | `swift_grid_smoke` explicit source list; Swift/QML GLOBs |
 | [CMakeLists.txt (root)](../../../CMakeLists.txt) | `porydaw_app` explicit source list (~L346 `editactions.cpp`) |

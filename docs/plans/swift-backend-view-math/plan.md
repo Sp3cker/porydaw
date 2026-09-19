@@ -1,5 +1,12 @@
 # Swift backend Wave 1 — view math (Tick, TimeMap/TimeAxis, PitchProjection)
 
+> Historical Wave 1 dispatch record — do not resume these tasks.
+> Read-only oracle write sets and prototype commands below were wave-local,
+> not a permanent prohibition on migrating/deleting C++ implementations.
+> New work follows the [current charter](../swift-backend-charter.md) and
+> [ownership design](../swift-ownership-cutover/design.md); preserve the
+> relevant behavioral evidence until its replacement gate passes.
+
 First executable epic of the Swift production-backend conversion: port the
 three pure value-math modules the destination DAG roots — the `Tick`
 helpers (`timedefaults.h`), `TimeAxis` as a **value type over a copied
@@ -104,15 +111,15 @@ No commit is authorized by this plan. When the user authorizes persistence:
 
 ## Source anchors
 
-| Owner | Current |
+| Owner (historical snapshot; retired paths available in Git history) | Behavior at that wave |
 | --- | --- |
 | [timedefaults.h](../../../src/core/timedefaults.h) | `Tick = uint32_t`, `kNoTick`, `kMaxTick`, `shiftTickClamped`, `tickFromDouble` |
 | [miditimeline.h](../../../src/core/miditimeline.h) | `TimeSigPoint {tick, numerator, denomPow2}`; viewer fields `ticksPerBeat=24`, `lengthTicks=0`, `loopStartTick/loopEndTick=kNoTick`, `timeSigs` sorted |
 | [timeaxis.h](../../../src/ui/songview/timeaxis.h) / [timeaxis.cpp](../../../src/ui/songview/timeaxis.cpp) | bind/borrow C++ oracle; fallback 24 TPB implicit 4/4; `beatsPerBarFor`, `beatTicksFor` |
 | [pitchprojection.h](../../../src/ui/pitchprojection.h) / [pitchprojection.cpp](../../../src/ui/pitchprojection.cpp) | C++ oracle; `snappedRowEdge`, binary searches |
-| [CMakeLists.txt (prototype)](../../../src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt) | GLOB `*.swift`; `swift_grid_smoke` links production `timeaxis.cpp`/`pitchprojection.cpp`/`grid.cpp` via `swift_grid_curve` and `miditimeline.cpp` via `swift_grid_audio` |
-| [grid_smoke.h](../../../src/checks/swiftgridprototype/grid_smoke.h) / [module.modulemap](../../../src/checks/swiftgridprototype/module.modulemap) | `installGridSmoke` pattern; single-header Clang module |
-| [grid_smoke.cpp](../../../src/checks/swiftgridprototype/grid_smoke.cpp) | `installGridSmoke` → `prepareSmoke` → `exercise` → prints `SWIFT_GRID_SMOKE PASS` |
-| [App.swift](../../../src/ui/songview/quick/swift-grid-prototype/App.swift) | `@main` entry; `init()` calls `installGridSmoke()` |
-| [swift_grid_prototype.ts](../../../tools/swift_grid_prototype.ts) | `--build-only` / `--smoke`; matcher requires exit 0 and `SWIFT_GRID_SMOKE PASS` |
+| Retired `src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt` | GLOB `*.swift`; `swift_grid_smoke` linked production math/audio sources |
+| Retired `src/checks/swiftgridprototype/grid_smoke.h` / `module.modulemap` | `installGridSmoke` pattern; single-header Clang module |
+| Retired `src/checks/swiftgridprototype/grid_smoke.cpp` | `installGridSmoke` → `prepareSmoke` → `exercise` → printed `SWIFT_GRID_SMOKE PASS` |
+| Retired `src/ui/songview/quick/swift-grid-prototype/App.swift` | Standalone `@main` entry invoked `installGridSmoke()` |
+| Retired `tools/swift_grid_prototype.ts` | Historical `--build-only` / `--smoke` runner; not a current command |
 | [checkcatalog.cpp](../../../src/checks/checkcatalog.cpp) | coverage comments for `view-buckets-grid`, `rollcheck`, `rollcheck-static` |

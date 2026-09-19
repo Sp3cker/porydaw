@@ -1,5 +1,12 @@
 # Swift backend Wave 3 — production mount (gated read-only Swift roll)
 
+> Historical Wave 3 dispatch record — do not resume these tasks.
+> Read-only scope, frozen write sets and old verification commands below
+> belong to that wave. The [current charter](../swift-backend-charter.md)
+> and [ownership design](../swift-ownership-cutover/design.md) govern new
+> work and adapter retirement; retained behavior still needs replacement
+> acceptance. No claim below makes a feed or QWidget host permanent.
+
 This wave puts the Swift note grid inside the production application for the
 first time: the prototype's grid compiles as a library linked into
 `porydaw` itself, a document feed seam (`sgd_*`, the `TimeMap` value-struct
