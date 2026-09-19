@@ -399,6 +399,10 @@ if(APPLE)
         swiftdocfeed/document_feed_check.h
     )
     target_sources(porydaw_checks PRIVATE
+        swiftrollgated/tst_swiftrollgated.cpp
+        swiftrollgated/tst_swiftrollgated.h
+    )
+    target_sources(porydaw_checks PRIVATE
         nativegraphics/tst_playhead_native_mac.mm
     )
     # Qt's qdebug.h UInt alias collides with macOS OSTypes.h only in this

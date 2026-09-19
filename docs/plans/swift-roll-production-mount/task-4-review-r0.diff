@@ -1,0 +1,1314 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 4991448c..e4f20675 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -183,20 +183,21 @@ if(APPLE)
+         "${SWIFT_GRID_DIR}/GridScene.swift"
+         "${SWIFT_GRID_DIR}/GridTypography.swift"
+         "${SWIFT_GRID_DIR}/GridUndo.swift"
+         "${SWIFT_GRID_DIR}/PianoGrid.swift"
+         "${SWIFT_GRID_DIR}/PitchEditor.swift"
+         "${SWIFT_GRID_DIR}/PitchGraph.swift"
+         "${SWIFT_GRID_DIR}/PitchProjection.swift"
+         "${SWIFT_GRID_DIR}/SgdDocument.swift"
+         "${SWIFT_GRID_DIR}/Tick.swift"
+         "${SWIFT_GRID_DIR}/TimeAxis.swift"
++        "${SWIFT_GRID_DIR}/SwiftGridHost.swift"
+     )
+     set_target_properties(swiftgrid PROPERTIES
+         Swift_MODULE_NAME SwiftGrid
+         Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swiftgrid"
+         Swift_LANGUAGE_VERSION 6
+         AUTOMOC OFF
+         AUTOUIC OFF
+         NO_SYSTEM_FROM_IMPORTED ON
+     )
+     target_include_directories(swiftgrid INTERFACE
+@@ -517,20 +518,23 @@ if(APPLE)
+         src/ui/playheadrenderer_macos.mm
+         "${SWIFT_GRID_AUDIO_DIR}/audio_session.cpp"
+         "${SWIFT_GRID_AUDIO_DIR}/audio_session_internal.h"
+         "${SWIFT_GRID_AUDIO_DIR}/curve_session.cpp"
+         "${SWIFT_GRID_AUDIO_DIR}/font_metrics.cpp"
+         "${SWIFT_GRID_AUDIO_DIR}/window_cancel.cpp"
+         "${SWIFT_GRID_FEED_DIR}/document_feed.cpp"
+         "${SWIFT_GRID_FEED_DIR}/document_feed.h"
+         "${SWIFT_GRID_FEED_DIR}/swift_grid_document_feed.cpp"
+         "${SWIFT_GRID_FEED_DIR}/swift_grid_document_feed.h"
++        "${SWIFT_GRID_FEED_DIR}/grid_host.h"
++        "${SWIFT_GRID_FEED_DIR}/swift_roll_mount.cpp"
++        "${SWIFT_GRID_FEED_DIR}/swift_roll_mount.h"
+     )
+     # The native seams reuse the engine/core/math objects already in this target.
+     set_source_files_properties("${SWIFT_GRID_AUDIO_DIR}/audio_session_internal.h"
+         PROPERTIES HEADER_FILE_ONLY ON)
+     target_link_libraries(porydaw_app PUBLIC swiftgrid)
+     # Qt's qdebug.h UInt alias collides with macOS OSTypes.h only in this
+     # Objective-C++ bridge; keep project -Wshadow enabled everywhere else.
+     set_property(SOURCE src/ui/playheadrenderer_macos.mm APPEND PROPERTY
+         COMPILE_OPTIONS -Wno-shadow)
+     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
+@@ -621,20 +625,30 @@ qt_add_qml_module(porydaw_app
+         src/ui/songview/quick/HoverHint.qml
+         src/ui/songview/quick/PromptCard.qml
+         src/ui/songview/quick/PromptButton.qml
+         src/ui/songview/quick/PitchBendPopup.qml
+         src/ui/songview/quick/VelocityPrompt.qml
+         src/ui/songview/quick/CcDeleteConfirm.qml
+         src/ui/songview/quick/TimeSignaturePrompt.qml
+         src/ui/songview/quick/InsertTimePrompt.qml
+         src/ui/songview/quick/VoicePickerPrompt.qml
+ )
++if(APPLE)
++    qt_add_resources(porydaw_app "swift_grid_qml"
++        PREFIX "/swiftgrid"
++        BASE "${SWIFT_GRID_DIR}"
++        FILES
++            "${SWIFT_GRID_DIR}/SwiftRollOverlay.qml"
++            "${SWIFT_GRID_DIR}/PianoRollCanvas.qml"
++            "${SWIFT_GRID_DIR}/TimelineQuickItem.qml"
++    )
++endif()
+ target_precompile_headers(porydaw_app PRIVATE
+     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
+ if(UNIX AND NOT APPLE)
+     find_package(Threads REQUIRED)
+     target_link_libraries(porydaw_app PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
+ endif()
+ 
+ qt_add_executable(porydaw
+     src/main.cpp
+     resources/fonts.qrc
+diff --git a/src/checks/CMakeLists.txt b/src/checks/CMakeLists.txt
+index 629018a3..23af94d7 100644
+--- a/src/checks/CMakeLists.txt
++++ b/src/checks/CMakeLists.txt
+@@ -391,20 +391,24 @@ if(APPLE)
+         AUTOMOC OFF
+         AUTOUIC OFF
+         AUTORCC OFF
+     )
+     target_link_libraries(swift_doc_feed_check PRIVATE swiftgrid)
+     target_link_libraries(porydaw_checks PRIVATE swift_doc_feed_check)
+     target_sources(porydaw_checks PRIVATE
+         swiftdocfeed/tst_swiftdocfeed.cpp
+         swiftdocfeed/document_feed_check.h
+     )
++    target_sources(porydaw_checks PRIVATE
++        swiftrollgated/tst_swiftrollgated.cpp
++        swiftrollgated/tst_swiftrollgated.h
++    )
+     target_sources(porydaw_checks PRIVATE
+         nativegraphics/tst_playhead_native_mac.mm
+     )
+     # Qt's qdebug.h UInt alias collides with macOS OSTypes.h only in this
+     # Objective-C++ bridge; keep project -Wshadow enabled everywhere else.
+     set_property(SOURCE nativegraphics/tst_playhead_native_mac.mm APPEND PROPERTY
+         COMPILE_OPTIONS -Wno-shadow)
+     set_target_properties(porydaw_checks PROPERTIES
+         LINKER_LANGUAGE CXX
+         MACOSX_BUNDLE TRUE
+diff --git a/src/checks/checkcatalog.cpp b/src/checks/checkcatalog.cpp
+index d63a85b2..61ae7fef 100644
+--- a/src/checks/checkcatalog.cpp
++++ b/src/checks/checkcatalog.cpp
+@@ -730,20 +730,32 @@ const std::vector<CheckDefinition> &catalog()
+ #ifdef __APPLE__
+             {
+                 .name = "swiftdocfeed",
+                 // Real document snapshots, observer lifetime, and the shared Swift revision guard.
+                 .argv = strings({"--swiftdocfeed", "{scratch}", "mus_route101"}),
+                 .handler = qtWithTwoArguments<runSwiftDocFeedCheck>,
+                 .scratchKind = ScratchKind::ExistingDirectory,
+                 .fixtureRootKind = FixtureRootKind::DecompProject,
+                 .fixtureFiles = route101Files,
+             },
++            {
++                .name = "swiftrollgated",
++                // Gated read-only Swift roll overlay in production: initial render,
++                // track follow, edit/undo/redo, interleaved documents, input absorption,
++                // viewing input, transferred-window teardown, flag-off absence.
++                .argv = strings({"--swiftrollgated", "{scratch}", "mus_route101", "mus_petalburg"}),
++                .handler = qtWithThreeArguments<runSwiftRollGatedCheck>,
++                .scratchKind = ScratchKind::ExistingDirectory,
++                .fixtureRootKind = FixtureRootKind::DecompProject,
++                .fixtureFiles = twoSongRichFiles,
++                .windowing = Windowing::WindowSystem,
++            },
+             {
+                 .name = "rendering-playhead-native",
+                 // Cocoa playhead layer lifecycle: native ownership, clipping, and surface teardown
+                 .argv = strings({"--check-rendering-playhead-native", "{scratch}", "mus_route101"}),
+                 .handler = qtWithTwoArguments<runRenderingPlayheadNativeCheck>,
+                 .scratchKind = ScratchKind::ExistingDirectory,
+                 .fixtureRootKind = FixtureRootKind::DecompProject,
+                 .fixtureFiles = route101Files,
+                 .windowing = Windowing::WindowSystem,
+             },
+diff --git a/src/checks/fwd.hpp b/src/checks/fwd.hpp
+index bb95ebd0..41a529b4 100644
+--- a/src/checks/fwd.hpp
++++ b/src/checks/fwd.hpp
+@@ -36,20 +36,23 @@ int runSelfTestWorkspaceCheck(const QStringList &checkArguments, const QStringLi
+ 
+ // Song document (src/checks/editcheck).
+ int runEditCheck(const QStringList &checkArguments, const QStringList &qtArguments);
+ int runScaleCheck(const QStringList &checkArguments, const QStringList &qtArguments);
+ int runNoteIdentityCheck(const QStringList &checkArguments, const QStringList &qtArguments);
+ 
+ #ifdef __APPLE__
+ // Production Swift document value feed (src/checks/swiftdocfeed).
+ int runSwiftDocFeedCheck(const QString &projectRoot, const QString &songLabel,
+                          const QStringList &qtArguments);
++// Gated read-only Swift roll overlay in production (src/checks/swiftrollgated).
++int runSwiftRollGatedCheck(const QString &projectRoot, const QString &songA, const QString &songB,
++                           const QStringList &qtArguments);
+ #endif
+ 
+ // Onboarding (src/checks/onboardcheck).
+ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath,
+                     const QStringList &qtArguments);
+ 
+ // Voicegroup bank (src/checks/voicegroup).
+ int runVgCheck(const QString &projectRoot, const QString &songLabel,
+                const QStringList &qtArguments);
+ int runVgBankCheck(const QString &projectRoot, const QString &songLabel,
+diff --git a/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt b/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt
+index dea0f74b..9eb0934b 100644
+--- a/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt
++++ b/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt
+@@ -176,20 +176,30 @@ target_link_libraries(swift_grid_prototype PRIVATE
+     swift_grid_document_feed
+     "$<LINK_ONLY:swift_grid_smoke>"
+ )
+ 
+ set(SWIFT_GRID_FONT_QRC
+     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../resources/fonts.qrc"
+ )
+ 
+ set_target_properties(swift_grid_prototype PROPERTIES AUTORCC ON)
+ target_sources(swift_grid_prototype PRIVATE "${SWIFT_GRID_FONT_QRC}")
++if(APPLE)
++    qt_add_resources(swift_grid_prototype "swift_grid_qml"
++        PREFIX "/swiftgrid"
++        BASE "${CMAKE_CURRENT_SOURCE_DIR}"
++        FILES
++            "${CMAKE_CURRENT_SOURCE_DIR}/SwiftRollOverlay.qml"
++            "${CMAKE_CURRENT_SOURCE_DIR}/PianoRollCanvas.qml"
++            "${CMAKE_CURRENT_SOURCE_DIR}/TimelineQuickItem.qml"
++    )
++endif()
+ 
+ if(APPLE)
+     set_target_properties(swift_grid_prototype PROPERTIES
+         MACOSX_BUNDLE TRUE
+     )
+     target_sources(swift_grid_prototype PRIVATE ${SWIFT_GRID_QML_FILES})
+     set_source_files_properties(${SWIFT_GRID_QML_FILES} PROPERTIES
+         MACOSX_PACKAGE_LOCATION Resources
+     )
+     file(GLOB_RECURSE SWIFT_GRID_FIXTURE_FILES RELATIVE
+diff --git a/src/ui/songview/quick/timelinequickview.cpp b/src/ui/songview/quick/timelinequickview.cpp
+index 866edaf0..a177f0ba 100644
+--- a/src/ui/songview/quick/timelinequickview.cpp
++++ b/src/ui/songview/quick/timelinequickview.cpp
+@@ -10,20 +10,23 @@
+ #include "ui/songview.h"
+ #include "ui/songview/otherstrip.h"
+ #include "ui/songview/pianoroll.h"
+ #include "ui/songview/quick/eventlistcontroller.h"
+ #include "ui/songview/quick/pianorollquick.h"
+ #include "ui/songview/quick/quickpopupsession.h"
+ #include "ui/songview/quick/timelineinputitem.h"
+ #include "ui/songview/timeruler.h"
+ #include "ui/songview/trackheadermodel.h"
+ #include "ui/theme/themeruntime.h"
++#ifdef Q_OS_MACOS
++#include "ui/songview/quick/swiftgrid/swift_roll_mount.h"
++#endif
+ #include <QColor>
+ #include <QGuiApplication>
+ #include <QQmlContext>
+ #include <QQmlError>
+ #include <QQuickImageProvider>
+ #include <QQuickView>
+ #include <QSurfaceFormat>
+ #include <QUrl>
+ #include <QVariant>
+ #include <array>
+@@ -368,20 +371,34 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
+     });
+     connect(&hints, &ui::MouseHints::scopeRefresh, this, [this, &hints, eachHintHost] {
+         eachHintHost([](TimelineInputItem *item) {
+             if (item)
+                 item->resyncMouseHint();
+         });
+         requestMouseHintRecovery(&hints);
+     });
+ 
+     syncAppearance();
++#ifdef Q_OS_MACOS
++    if (qEnvironmentVariableIsSet("PORYDAW_SWIFT_ROLL")) {
++        m_swiftRollMount = std::make_unique<SwiftRollMount>();
++        if (!m_swiftRollMount->mount(songView, *m_quickView)) {
++            qCritical("Failed to mount Swift roll overlay behind PORYDAW_SWIFT_ROLL");
++            m_swiftRollMount.reset();
++        } else if (m_view) {
++            connect(m_view.data(), &QObject::destroyed, this, [this] {
++                if (m_swiftRollMount)
++                    m_swiftRollMount->handleTransferredWindowDeath();
++            });
++        }
++    }
++#endif
+ }
+ 
+ void TimelineQuickView::detachInputInteraction(TimelineBand band)
+ {
+     const std::size_t index = timelineBandIndex(band);
+     // Clear first so a band being destroyed cannot retain a route to this
+     // host while its input detaches.
+     if (TimelineInputItem *const gutterItem = m_gutterInputItems[index]) {
+         gutterItem->clearKeyPolicy();
+         gutterItem->setInteraction(nullptr);
+@@ -741,20 +758,25 @@ void TimelineQuickView::publishTimelineBandLayout()
+         const std::optional<TimelineBandGeometry> &band = m_bandLayout.geometry(properties.band);
+         const QRectF bandRect = band ? QRectF{band->rect} : QRectF{};
+         // Empty plot rects (TrackHeaders) stay empty.
+         const QRectF bandPlotRect = band ? QRectF{band->plotRect} : QRectF{};
+         if (!root->setProperty(properties.rect, QVariant::fromValue(bandRect)) ||
+             !root->setProperty(properties.visible, QVariant::fromValue(band.has_value())) ||
+             !root->setProperty(properties.plotRect, QVariant::fromValue(bandPlotRect))) {
+             qFatal("Qt Quick timeline QML has incomplete band properties");
+         }
+     }
++#ifdef Q_OS_MACOS
++    if (m_swiftRollMount) {
++        m_swiftRollMount->updateBandGeometry(m_bandLayout.geometry(TimelineBand::Roll));
++    }
++#endif
+ 
+     // The event page replaces the roll band in EventList mode; its canonical
+     // rectangle publishes like every band's.
+     const QRect eventListRect = m_songView->eventListRect();
+     const QRectF publishedEventListRect =
+         eventListRect.isEmpty() ? QRectF{} : QRectF{eventListRect};
+     if (!root->setProperty("eventListBandRect", QVariant::fromValue(publishedEventListRect)) ||
+         !root->setProperty("eventListBandVisible", QVariant::fromValue(!eventListRect.isEmpty()))) {
+         qFatal("Qt Quick timeline QML has incomplete event-list properties");
+     }
+diff --git a/src/ui/songview/quick/timelinequickview.h b/src/ui/songview/quick/timelinequickview.h
+index a506b2a4..0428a590 100644
+--- a/src/ui/songview/quick/timelinequickview.h
++++ b/src/ui/songview/quick/timelinequickview.h
+@@ -35,20 +35,23 @@ class MouseHints;
+ 
+ namespace songview {
+ 
+ class OtherStrip;
+ class PianoRoll;
+ class TimeCamera;
+ class EventListInteraction;
+ class TimelineInputItem;
+ class QuickPopupSession;
+ 
++#ifdef Q_OS_MACOS
++class SwiftRollMount;
++#endif
+ class TimelineGestureScrollbar;
+ enum class TimelineQuickHoverOwner : quint8 {
+     None,
+     Automation,
+     VoiceChanges,
+ };
+ 
+ class TimeRuler;
+ class TrackHeaderModel;
+ 
+@@ -395,20 +398,23 @@ class TimelineQuickView final : public QObject
+     // Coalesces the one queued membership-recovery callback; cleared inside
+     // the callback before its guards re-read live state.
+     bool m_mouseHintRecoveryQueued = false;
+     // Cached QML scene root; cleared with the other borrows in detachWindow().
+     QPointer<QQuickItem> m_root;
+     QuickPopupSession *m_popupSession = nullptr;
+     std::array<QPointer<TimelineQuickItem>, static_cast<std::size_t>(TimelineQuickLayer::Count)>
+         m_items{};
+     std::array<QPointer<TimelineChromeItem>, 12> m_chromeItems{};
+     TimelineBandLayout m_bandLayout;
++#ifdef Q_OS_MACOS
++    std::unique_ptr<SwiftRollMount> m_swiftRollMount;
++#endif
+     // Published canonical timeline split (SongView::timelineSplitX()).
+     qreal m_publishedRulerPlotOrigin = 0.0;
+     QRectF m_publishedHorizontalScrollbarRect;
+     QRectF m_publishedVerticalScrollbarRect;
+     std::optional<qreal> m_hoverSongViewContentX;
+     std::optional<qreal> m_editSongViewContentX;
+     qreal m_playheadLocalX = 0.0;
+     bool m_playheadEffectiveVisible = false;
+     bool m_playheadPlaying = false;
+     bool m_playheadTrianglePointsUp = false;
+diff --git a/src/ui/songview/quick/timelinequickview_window.cpp b/src/ui/songview/quick/timelinequickview_window.cpp
+index c1461302..4ce31da6 100644
+--- a/src/ui/songview/quick/timelinequickview_window.cpp
++++ b/src/ui/songview/quick/timelinequickview_window.cpp
+@@ -11,20 +11,23 @@
+ 
+ #include "ui/editordrawer/automationcanvas.h"
+ #include "ui/editordrawer/automationpage.h"
+ #include "ui/editordrawer/voicechangearea/voicechangearea.h"
+ #include "ui/songview.h"
+ #include "ui/songview/pianoroll.h"
+ #include "ui/songview/quick/eventlistcontroller.h"
+ #include "ui/songview/quick/quickpopupsession.h"
+ #include "ui/songview/quick/timelineinputitem.h"
+ #include "ui/songview/trackheadermodel.h"
++#ifdef Q_OS_MACOS
++#include "ui/songview/quick/swiftgrid/swift_roll_mount.h"
++#endif
+ 
+ #include <QCoreApplication>
+ #include <QCursor>
+ #include <QGuiApplication>
+ #include <QKeyEvent>
+ #include <QMouseEvent>
+ #include <QQuickView>
+ #include <QUrl>
+ #include <algorithm>
+ 
+@@ -137,20 +140,26 @@ void TimelineQuickView::detachWindow()
+     if (m_roll)
+         m_roll->setPopupSession(nullptr);
+     if (m_trackHeaders)
+         m_trackHeaders->setPopupSession(nullptr);
+     if (m_automation && m_automation->canvas())
+         m_automation->canvas()->setPopupSession(nullptr);
+     if (m_voiceChanges)
+         m_voiceChanges->setPopupSession(nullptr);
+     delete m_popupSession;
+     m_popupSession = nullptr;
++#ifdef Q_OS_MACOS
++    if (m_swiftRollMount) {
++        m_swiftRollMount->unmount();
++        m_swiftRollMount.reset();
++    }
++#endif
+ 
+     // Raw QML borrows clear before the unload, then the QML tree unloads
+     // while the context properties still point at live models.
+     m_items.fill(nullptr);
+     m_chromeItems.fill(nullptr);
+     m_inputItems.fill(nullptr);
+     m_gutterInputItems.fill(nullptr);
+     m_drawerChromeInputs.fill(nullptr);
+     m_eventListInput.clear();
+     m_root.clear();
+diff --git a/src/checks/swiftrollgated/tst_swiftrollgated.cpp b/src/checks/swiftrollgated/tst_swiftrollgated.cpp
+new file mode 100644
+index 00000000..a696eca9
+--- /dev/null
++++ b/src/checks/swiftrollgated/tst_swiftrollgated.cpp
+@@ -0,0 +1,387 @@
++#include "tst_swiftrollgated.h"
++
++#include "checks/selectionkey/session.h"
++#include "core/songdocument.h"
++#include "ui/songtab.h"
++#include "ui/songview.h"
++#include "ui/songview/quick/timelinequickview.h"
++#include "ui/workspaceui.h"
++
++#include <QCoreApplication>
++#include <QMouseEvent>
++#include <QPoint>
++#include <QQuickItem>
++#include <QQuickWindow>
++#include <QUndoStack>
++#include <QWheelEvent>
++#include <QtTest/QTest>
++
++SwiftRollGatedTest::SwiftRollGatedTest(QString projectRoot, QString songA, QString songB)
++    : m_projectRoot(std::move(projectRoot))
++    , m_songA(std::move(songA))
++    , m_songB(std::move(songB))
++{}
++
++void SwiftRollGatedTest::initTestCase()
++{
++    qputenv("PORYDAW_AUDIO_BACKEND", "null");
++    qputenv("PORYDAW_SWIFT_ROLL", "1");
++}
++
++void SwiftRollGatedTest::cleanupTestCase()
++{
++    qunsetenv("PORYDAW_SWIFT_ROLL");
++}
++
++void SwiftRollGatedTest::testInitialRenderWithoutEdit()
++{
++    selectionkey::WindowSession session;
++    QString error;
++    QVERIFY2(selectionkey::openWindowSession(session, m_projectRoot, error), qUtf8Printable(error));
++
++    SongTab *const tab = selectionkey::openSongTab(session, m_songA, false, error);
++    QVERIFY2(tab != nullptr, qUtf8Printable(error));
++
++    SongView &view = tab->view();
++    const SongDocument &document = tab->document();
++
++    songview::TimelineQuickView *const quickView = view.quickView();
++    QVERIFY(quickView != nullptr);
++
++    QQuickWindow *const quickWin = quickView->quickWindow();
++    QVERIFY(quickWin != nullptr);
++
++    auto *const overlay = quickWin->findChild<QQuickItem *>(QStringLiteral("swiftRollOverlay"));
++    QVERIFY2(overlay != nullptr,
++             "Swift roll overlay must be mounted when PORYDAW_SWIFT_ROLL is set");
++    QVERIFY(overlay->isVisible());
++    QVERIFY(overlay->width() > 0 && overlay->height() > 0);
++
++    auto *const gridModel = quickWin->findChild<QObject *>(QStringLiteral("swiftGridModel"));
++    QVERIFY2(gridModel != nullptr, "swiftGridModel must exist in overlay QML");
++    QVERIFY(gridModel->property("readOnly").toBool());
++
++    const int noteCount = overlay->property("noteCount").toInt();
++    QVERIFY2(noteCount > 0, "Initial render must populate notes without requiring an edit");
++
++    const int primaryTrack = view.selectionModel().primaryTrack();
++    QCOMPARE(overlay->property("selectedTrack").toInt(), primaryTrack);
++    QCOMPARE(noteCount, static_cast<int>(document.notesForTrack(primaryTrack).size()));
++
++    const QString revText = overlay->property("appliedRevisionText").toString();
++    QCOMPARE(revText, QString::number(document.revision()));
++
++    QVERIFY(!overlay->hasActiveFocus());
++}
++
++void SwiftRollGatedTest::testTrackFollow()
++{
++    selectionkey::WindowSession session;
++    QString error;
++    QVERIFY2(selectionkey::openWindowSession(session, m_projectRoot, error), qUtf8Printable(error));
++
++    SongTab *const tab = selectionkey::openSongTab(session, m_songA, false, error);
++    QVERIFY2(tab != nullptr, qUtf8Printable(error));
++
++    SongView &view = tab->view();
++    const SongDocument &document = tab->document();
++
++    QQuickWindow *const quickWin = view.quickView()->quickWindow();
++    auto *const overlay = quickWin->findChild<QQuickItem *>(QStringLiteral("swiftRollOverlay"));
++    QVERIFY(overlay != nullptr);
++
++    const int track0Notes = static_cast<int>(document.notesForTrack(0).size());
++    QCOMPARE(overlay->property("noteCount").toInt(), track0Notes);
++
++    view.selectTrack(1);
++    selectionkey::settle();
++
++    QCOMPARE(overlay->property("selectedTrack").toInt(), 1);
++    const int track1Notes = static_cast<int>(document.notesForTrack(1).size());
++    QCOMPARE(overlay->property("noteCount").toInt(), track1Notes);
++
++    view.selectTrack(0);
++    selectionkey::settle();
++
++    QCOMPARE(overlay->property("selectedTrack").toInt(), 0);
++    QCOMPARE(overlay->property("noteCount").toInt(), track0Notes);
++}
++
++void SwiftRollGatedTest::testEditUndoRedoRefresh()
++{
++    selectionkey::WindowSession session;
++    QString error;
++    QVERIFY2(selectionkey::openWindowSession(session, m_projectRoot, error), qUtf8Printable(error));
++
++    SongTab *const tab = selectionkey::openSongTab(session, m_songA, false, error);
++    QVERIFY2(tab != nullptr, qUtf8Printable(error));
++
++    SongView &view = tab->view();
++    SongDocument &document = tab->document();
++
++    QQuickWindow *const quickWin = view.quickView()->quickWindow();
++    auto *const overlay = quickWin->findChild<QQuickItem *>(QStringLiteral("swiftRollOverlay"));
++    QVERIFY(overlay != nullptr);
++
++    const uint64_t baseRev = document.revision();
++    const int baseCount = overlay->property("noteCount").toInt();
++
++    document.addNote(0, 960, 60, 240, 100);
++    selectionkey::settle();
++
++    QVERIFY(document.revision() > baseRev);
++    QCOMPARE(overlay->property("appliedRevisionText").toString(),
++             QString::number(document.revision()));
++    QCOMPARE(overlay->property("noteCount").toInt(), baseCount + 1);
++
++    document.undoStack()->undo();
++    selectionkey::settle();
++
++    QCOMPARE(overlay->property("appliedRevisionText").toString(),
++             QString::number(document.revision()));
++    QCOMPARE(overlay->property("noteCount").toInt(), baseCount);
++
++    document.undoStack()->redo();
++    selectionkey::settle();
++
++    QCOMPARE(overlay->property("appliedRevisionText").toString(),
++             QString::number(document.revision()));
++    QCOMPARE(overlay->property("noteCount").toInt(), baseCount + 1);
++
++    document.undoStack()->undo();
++    selectionkey::settle();
++
++    QVERIFY(selectionkey::undoTabToClean(*session.workspace, document,
++                                         QStringLiteral("cleaning edit test"), &error));
++}
++
++void SwiftRollGatedTest::testTwoDocumentsInterleaved()
++{
++    selectionkey::WindowSession session;
++    QString error;
++    QVERIFY2(selectionkey::openWindowSession(session, m_projectRoot, error), qUtf8Printable(error));
++
++    SongTab *const tabA = selectionkey::openSongTab(session, m_songA, false, error);
++    QVERIFY2(tabA != nullptr, qUtf8Printable(error));
++
++    QQuickWindow *const quickWinA = tabA->view().quickView()->quickWindow();
++    auto *const overlayA = quickWinA->findChild<QQuickItem *>(QStringLiteral("swiftRollOverlay"));
++    auto *const modelA = quickWinA->findChild<QObject *>(QStringLiteral("swiftGridModel"));
++    QVERIFY(overlayA != nullptr && modelA != nullptr);
++
++    const QString tokenA = modelA->property("documentToken").toString();
++    QVERIFY(!tokenA.isEmpty());
++
++    SongTab *const tabB = selectionkey::openSongTab(session, m_songB, true, error);
++    QVERIFY2(tabB != nullptr, qUtf8Printable(error));
++
++    QQuickWindow *const quickWinB = tabB->view().quickView()->quickWindow();
++    auto *const overlayB = quickWinB->findChild<QQuickItem *>(QStringLiteral("swiftRollOverlay"));
++    auto *const modelB = quickWinB->findChild<QObject *>(QStringLiteral("swiftGridModel"));
++    QVERIFY(overlayB != nullptr && modelB != nullptr);
++
++    const QString tokenB = modelB->property("documentToken").toString();
++    QVERIFY(!tokenB.isEmpty());
++    QVERIFY2(tokenA != tokenB, "Each document feed must have a unique nonzero token");
++
++    SongDocument &docA = tabA->document();
++    SongDocument &docB = tabB->document();
++
++    const uint64_t revABefore = docA.revision();
++    const int countABefore = overlayA->property("noteCount").toInt();
++    const int countBBefore = overlayB->property("noteCount").toInt();
++
++    docB.addNote(0, 480, 62, 240, 90);
++    selectionkey::settle();
++
++    QCOMPARE(overlayB->property("appliedRevisionText").toString(),
++             QString::number(docB.revision()));
++    QCOMPARE(overlayB->property("noteCount").toInt(), countBBefore + 1);
++    QCOMPARE(overlayA->property("appliedRevisionText").toString(), QString::number(revABefore));
++    QCOMPARE(overlayA->property("noteCount").toInt(), countABefore);
++
++    docA.addNote(0, 480, 64, 240, 90);
++    selectionkey::settle();
++
++    QCOMPARE(overlayA->property("appliedRevisionText").toString(),
++             QString::number(docA.revision()));
++    QCOMPARE(overlayA->property("noteCount").toInt(), countABefore + 1);
++
++    docB.undoStack()->undo();
++    docA.undoStack()->undo();
++    selectionkey::settle();
++
++    session.workspace->selectSongTab(tabB);
++    session.workspace->requestCloseSelectedTab();
++    selectionkey::settle();
++
++    QCOMPARE(overlayA->property("appliedRevisionText").toString(),
++             QString::number(docA.revision()));
++    QCOMPARE(overlayA->property("noteCount").toInt(), countABefore);
++
++    docA.addNote(0, 480, 65, 240, 90);
++    selectionkey::settle();
++    QCOMPARE(overlayA->property("noteCount").toInt(), countABefore + 1);
++
++    docA.undoStack()->undo();
++    selectionkey::settle();
++    QVERIFY(selectionkey::undoTabToClean(*session.workspace, docA, QStringLiteral("cleaning tab A"),
++                                         &error));
++}
++
++void SwiftRollGatedTest::testRemountFreshToken()
++{
++    selectionkey::WindowSession session;
++    QString error;
++    QVERIFY2(selectionkey::openWindowSession(session, m_projectRoot, error), qUtf8Printable(error));
++
++    SongTab *tab = selectionkey::openSongTab(session, m_songA, false, error);
++    QVERIFY2(tab != nullptr, qUtf8Printable(error));
++
++    QQuickWindow *quickWin = tab->view().quickView()->quickWindow();
++    auto *model1 = quickWin->findChild<QObject *>(QStringLiteral("swiftGridModel"));
++    QVERIFY(model1 != nullptr);
++    const QString token1 = model1->property("documentToken").toString();
++    QVERIFY(!token1.isEmpty());
++
++    session.workspace->requestCloseSelectedTab();
++    selectionkey::settle();
++
++    tab = selectionkey::openSongTab(session, m_songA, false, error);
++    QVERIFY2(tab != nullptr, qUtf8Printable(error));
++
++    quickWin = tab->view().quickView()->quickWindow();
++    auto *model2 = quickWin->findChild<QObject *>(QStringLiteral("swiftGridModel"));
++    QVERIFY(model2 != nullptr);
++    const QString token2 = model2->property("documentToken").toString();
++    QVERIFY(!token2.isEmpty());
++
++    QVERIFY2(token1 != token2, "Reopening a song must mint a fresh document token");
++}
++
++void SwiftRollGatedTest::testPointerEditingBlockedWithoutFocusChange()
++{
++    selectionkey::WindowSession session;
++    QString error;
++    QVERIFY2(selectionkey::openWindowSession(session, m_projectRoot, error), qUtf8Printable(error));
++
++    SongTab *const tab = selectionkey::openSongTab(session, m_songA, false, error);
++    QVERIFY2(tab != nullptr, qUtf8Printable(error));
++
++    SongView &view = tab->view();
++    const SongDocument &document = tab->document();
++    QQuickWindow *const quickWin = view.quickView()->quickWindow();
++
++    auto *const overlay = quickWin->findChild<QQuickItem *>(QStringLiteral("swiftRollOverlay"));
++    QVERIFY(overlay != nullptr);
++
++    auto *const swiftRollInput = overlay->findChild<QQuickItem *>(QStringLiteral("swiftRollInput"));
++    QVERIFY(swiftRollInput != nullptr);
++
++    const uint64_t beforeRev = document.revision();
++    const auto beforeNotes = document.notesForTrack(0);
++
++    const QPoint center(static_cast<int>(swiftRollInput->width() / 2),
++                        static_cast<int>(swiftRollInput->height() / 2));
++    const QPointF scenePos = swiftRollInput->mapToScene(QPointF(center));
++    const QPoint globalPos = quickWin->mapToGlobal(scenePos.toPoint());
++
++    QMouseEvent press(QEvent::MouseButtonPress, scenePos, globalPos, Qt::LeftButton, Qt::LeftButton,
++                      Qt::NoModifier);
++    QCoreApplication::sendEvent(quickWin, &press);
++
++    QMouseEvent move(QEvent::MouseMove, scenePos + QPointF(50, 0), globalPos + QPoint(50, 0),
++                     Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
++    QCoreApplication::sendEvent(quickWin, &move);
++
++    QMouseEvent release(QEvent::MouseButtonRelease, scenePos + QPointF(50, 0),
++                        globalPos + QPoint(50, 0), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
++    QCoreApplication::sendEvent(quickWin, &release);
++    selectionkey::settle();
++
++    QCOMPARE(document.revision(), beforeRev);
++    QCOMPARE(document.notesForTrack(0).size(), beforeNotes.size());
++
++    QVERIFY(quickWin->activeFocusItem() != overlay);
++    QVERIFY(quickWin->activeFocusItem() != swiftRollInput);
++}
++
++void SwiftRollGatedTest::testViewingInputLive()
++{
++    selectionkey::WindowSession session;
++    QString error;
++    QVERIFY2(selectionkey::openWindowSession(session, m_projectRoot, error), qUtf8Printable(error));
++
++    SongTab *const tab = selectionkey::openSongTab(session, m_songA, false, error);
++    QVERIFY2(tab != nullptr, qUtf8Printable(error));
++
++    SongView &view = tab->view();
++    QQuickWindow *const quickWin = view.quickView()->quickWindow();
++
++    auto *const overlay = quickWin->findChild<QQuickItem *>(QStringLiteral("swiftRollOverlay"));
++    QVERIFY(overlay != nullptr);
++
++    auto *const swiftRollInput = overlay->findChild<QQuickItem *>(QStringLiteral("swiftRollInput"));
++    auto *const swiftRollViewport =
++        overlay->findChild<QQuickItem *>(QStringLiteral("swiftRollViewport"));
++    QVERIFY(swiftRollInput != nullptr && swiftRollViewport != nullptr);
++
++    const QPointF center(swiftRollViewport->width() / 2.0, swiftRollViewport->height() / 2.0);
++    const QPointF scenePos = swiftRollViewport->mapToScene(center);
++    const QPoint globalPos = quickWin->mapToGlobal(scenePos.toPoint());
++
++    QWheelEvent wheel(scenePos, globalPos, QPoint{}, QPoint(0, -240), Qt::NoButton, Qt::NoModifier,
++                      Qt::NoScrollPhase, false);
++    QCoreApplication::sendEvent(quickWin, &wheel);
++    selectionkey::settle();
++
++    const qreal contentY = swiftRollViewport->property("contentY").toReal();
++    QVERIFY2(contentY > 0.0, "Wheel viewing input must scroll the viewport");
++
++    QMouseEvent hover(QEvent::MouseMove, scenePos, globalPos, Qt::NoButton, Qt::NoButton,
++                      Qt::NoModifier);
++    QCoreApplication::sendEvent(quickWin, &hover);
++    selectionkey::settle();
++}
++
++void SwiftRollGatedTest::testTransferredWindowTeardown()
++{
++    selectionkey::WindowSession session;
++    QString error;
++    QVERIFY2(selectionkey::openWindowSession(session, m_projectRoot, error), qUtf8Printable(error));
++
++    SongTab *const tab = selectionkey::openSongTab(session, m_songA, false, error);
++    QVERIFY2(tab != nullptr, qUtf8Printable(error));
++
++    session.window.reset();
++    selectionkey::settle();
++}
++
++void SwiftRollGatedTest::testFlagOffAbsence()
++{
++    qunsetenv("PORYDAW_SWIFT_ROLL");
++
++    selectionkey::WindowSession session;
++    QString error;
++    QVERIFY2(selectionkey::openWindowSession(session, m_projectRoot, error), qUtf8Printable(error));
++
++    SongTab *const tab = selectionkey::openSongTab(session, m_songA, false, error);
++    QVERIFY2(tab != nullptr, qUtf8Printable(error));
++
++    SongView &view = tab->view();
++    QQuickWindow *const quickWin = view.quickView()->quickWindow();
++    QVERIFY(quickWin != nullptr);
++
++    auto *const overlay = quickWin->findChild<QQuickItem *>(QStringLiteral("swiftRollOverlay"));
++    QVERIFY2(overlay == nullptr,
++             "Swift roll overlay must NOT be mounted when PORYDAW_SWIFT_ROLL is unset");
++}
++
++int runSwiftRollGatedCheck(const QString &projectRoot, const QString &songA, const QString &songB,
++                           const QStringList &qtArguments)
++{
++    SwiftRollGatedTest test(projectRoot, songA, songB);
++    QStringList arguments = {QStringLiteral("swiftrollgated")};
++    arguments.append(qtArguments);
++    return QTest::qExec(&test, arguments);
++}
+diff --git a/src/checks/swiftrollgated/tst_swiftrollgated.h b/src/checks/swiftrollgated/tst_swiftrollgated.h
+new file mode 100644
+index 00000000..b702a780
+--- /dev/null
++++ b/src/checks/swiftrollgated/tst_swiftrollgated.h
+@@ -0,0 +1,32 @@
++#pragma once
++
++#include <QObject>
++#include <QString>
++#include <QStringList>
++
++class SwiftRollGatedTest final : public QObject
++{
++    Q_OBJECT
++
++  public:
++    SwiftRollGatedTest(QString projectRoot, QString songA, QString songB);
++
++  private slots:
++    void initTestCase();
++    void cleanupTestCase();
++
++    void testInitialRenderWithoutEdit();
++    void testTrackFollow();
++    void testEditUndoRedoRefresh();
++    void testTwoDocumentsInterleaved();
++    void testRemountFreshToken();
++    void testPointerEditingBlockedWithoutFocusChange();
++    void testViewingInputLive();
++    void testTransferredWindowTeardown();
++    void testFlagOffAbsence();
++
++  private:
++    QString m_projectRoot;
++    QString m_songA;
++    QString m_songB;
++};
+diff --git a/src/ui/songview/quick/swift-grid-prototype/SwiftGridHost.swift b/src/ui/songview/quick/swift-grid-prototype/SwiftGridHost.swift
+new file mode 100644
+index 00000000..90a3fc8a
+--- /dev/null
++++ b/src/ui/songview/quick/swift-grid-prototype/SwiftGridHost.swift
+@@ -0,0 +1,21 @@
++import Foundation
++import QtBridge
++
++private final class GridTypeRegistration: @unchecked Sendable {
++    static let shared = GridTypeRegistration()
++    private var registered = false
++
++    @MainActor
++    func register() {
++        guard !registered else { return }
++        registered = true
++        PianoGrid.registerQmlElement()
++    }
++}
++
++@_cdecl("sg_register_grid_types")
++public func sgRegisterGridTypes() {
++    MainActor.assumeIsolated {
++        GridTypeRegistration.shared.register()
++    }
++}
+diff --git a/src/ui/songview/quick/swift-grid-prototype/SwiftRollOverlay.qml b/src/ui/songview/quick/swift-grid-prototype/SwiftRollOverlay.qml
+new file mode 100644
+index 00000000..308c2ef8
+--- /dev/null
++++ b/src/ui/songview/quick/swift-grid-prototype/SwiftRollOverlay.qml
+@@ -0,0 +1,179 @@
++import QtQuick
++import SwiftGrid 1.0
++
++Item {
++    id: root
++    objectName: "swiftRollOverlay"
++    clip: true
++
++    onWidthChanged: configureViewport()
++    onHeightChanged: configureViewport()
++
++    required property string documentToken
++    required property int selectedTrack
++
++    readonly property QtObject gridModel: swiftGridModel
++    readonly property int noteCount: swiftGridModel.renderedNoteCount
++    readonly property string appliedRevisionText: swiftGridModel.appliedRevisionText
++
++    PianoGrid {
++        id: swiftGridModel
++        objectName: "swiftGridModel"
++        readOnly: true
++        documentToken: root.documentToken
++        documentTrack: root.selectedTrack
++    }
++
++    Rectangle {
++        anchors.fill: parent
++        color: swiftGridModel.palette.rollBackground
++        z: -1
++    }
++
++    Item {
++        id: rollBandContent
++        y: -flick.contentY
++        width: root.width
++        height: Math.max(swiftGridModel.gridHeight, 1)
++        z: 1
++
++        Item {
++            id: rollGutterSide
++            objectName: "timelineQuickRollGutter"
++            width: swiftGridModel.keyboardWidth
++            height: parent.height
++            clip: true
++        }
++
++        MouseArea {
++            width: rollGutterSide.width
++            height: parent.height
++            hoverEnabled: true
++            acceptedButtons: Qt.NoButton
++            onPositionChanged: function (mouse) {
++                swiftGridModel.hoverKeyboard(mouse.y);
++            }
++            onExited: function () {
++                swiftGridModel.clearKeyboardHover();
++            }
++            z: 10
++        }
++    }
++
++    Item {
++        id: rollPlot
++        objectName: "timelineQuickRollPlot"
++        x: swiftGridModel.keyboardWidth
++        width: Math.max(root.width - swiftGridModel.keyboardWidth, 0)
++        height: root.height
++        clip: true
++
++        onWidthChanged: root.configureViewport()
++        onHeightChanged: root.configureViewport()
++
++        Flickable {
++            id: flick
++            objectName: "swiftRollViewport"
++            anchors.fill: parent
++            clip: true
++            interactive: false
++            boundsBehavior: Flickable.StopAtBounds
++
++            contentWidth: pianoGridSurface.width
++            contentHeight: pianoGridSurface.height
++            onContentXChanged: swiftGridModel.setViewportScrollX(contentX)
++            onContentYChanged: swiftGridModel.setViewportScroll(contentY)
++
++            WheelHandler {
++                id: viewportWheel
++                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
++                onWheel: (event) => {
++                    var deltaY = event.angleDelta.y !== 0 ? event.angleDelta.y : event.pixelDelta.y;
++                    var deltaX = event.angleDelta.x !== 0 ? event.angleDelta.x : event.pixelDelta.x;
++                    var maxY = Math.max(0, flick.contentHeight - flick.height);
++                    var maxX = Math.max(0, flick.contentWidth - flick.width);
++                    flick.contentY = Math.max(0, Math.min(maxY, flick.contentY - deltaY));
++                    flick.contentX = Math.max(0, Math.min(maxX, flick.contentX - deltaX));
++                    event.accepted = true;
++                }
++            }
++            Item {
++                id: pianoGridSurface
++                objectName: "pianoGridSurface"
++                width: Math.max(swiftGridModel.gridWidth, 1)
++                height: Math.max(swiftGridModel.gridHeight, 1)
++
++                onVisibleChanged: {
++                    if (!visible)
++                        swiftGridModel.inputCancelled(2);
++                }
++
++                PianoRollCanvas {
++                    bandSide: rollBandContent
++                    gutterSide: rollGutterSide
++                    plotSide: pianoGridSurface
++                    timelineScene: swiftGridModel.scene
++                }
++
++                MouseArea {
++                    id: rollInput
++                    objectName: "swiftRollInput"
++                    anchors.fill: parent
++                    acceptedButtons: Qt.AllButtons
++                    preventStealing: true
++                    hoverEnabled: true
++
++                    cursorShape: {
++                        switch (swiftGridModel.cursorKind) {
++                        case 1:
++                            return Qt.OpenHandCursor;
++                        case 2:
++                        case 3:
++                            return Qt.SizeHorCursor;
++                        default:
++                            return Qt.ArrowCursor;
++                        }
++                    }
++
++                    onPressed: function (mouse) {
++                        mouse.accepted = true;
++                    }
++                    onDoubleClicked: function (mouse) {
++                        mouse.accepted = true;
++                    }
++                    onPositionChanged: function (mouse) {
++                        swiftGridModel.hoverPointer(mouse.x, mouse.y);
++                    }
++                    onReleased: function (mouse) {
++                        mouse.accepted = true;
++                    }
++                    onCanceled: function () {
++                    }
++                    onWheel: function (e) {
++                        flick.contentX = Math.max(0, Math.min(flick.contentWidth - flick.width, flick.contentX - e.angleDelta.x));
++                        flick.contentY = Math.max(0, Math.min(flick.contentHeight - flick.height, flick.contentY - e.angleDelta.y));
++                        e.accepted = true;
++                    }
++                }
++            }
++        }
++    }
++
++    function configureViewport() {
++        var dpr = Screen.devicePixelRatio > 0 ? Screen.devicePixelRatio : 1.0;
++        swiftGridModel.configureViewport(swiftGridModel.baseFontPx, dpr, Math.max(rollPlot.width, 1.0), Math.max(rollPlot.height, 1.0));
++    }
++    function setViewportScroll(y) {
++        flick.contentY = y;
++        swiftGridModel.setViewportScroll(y);
++    }
++
++    function setViewportScrollX(x) {
++        flick.contentX = x;
++        swiftGridModel.setViewportScrollX(x);
++    }
++
++    Component.onCompleted: {
++        configureViewport();
++    }
++}
+diff --git a/src/ui/songview/quick/swiftgrid/grid_host.h b/src/ui/songview/quick/swiftgrid/grid_host.h
+new file mode 100644
+index 00000000..8671a5ac
+--- /dev/null
++++ b/src/ui/songview/quick/swiftgrid/grid_host.h
+@@ -0,0 +1,11 @@
++#pragma once
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++void sg_register_grid_types(void);
++
++#ifdef __cplusplus
++}
++#endif
+diff --git a/src/ui/songview/quick/swiftgrid/swift_roll_mount.cpp b/src/ui/songview/quick/swiftgrid/swift_roll_mount.cpp
+new file mode 100644
+index 00000000..f758548a
+--- /dev/null
++++ b/src/ui/songview/quick/swiftgrid/swift_roll_mount.cpp
+@@ -0,0 +1,190 @@
++#include "swift_roll_mount.h"
++
++#ifdef Q_OS_MACOS
++
++#include "grid_host.h"
++#include "swift_grid_document_feed.h"
++#include "ui/songview.h"
++#include "ui/songview/timelinebandlayout.h"
++
++#include <QQmlComponent>
++#include <QQmlEngine>
++#include <QQuickItem>
++#include <QQuickView>
++#include <QUrl>
++#include <QVariantMap>
++
++// Resource basename swift_grid_qml initialized at global namespace per R2.
++static void initSwiftGridResources()
++{
++    Q_INIT_RESOURCE(swift_grid_qml);
++}
++
++namespace songview {
++
++SwiftRollMount::SwiftRollMount() = default;
++
++SwiftRollMount::~SwiftRollMount()
++{
++    unmount();
++}
++
++bool SwiftRollMount::mount(SongView &songView, QQuickView &view)
++{
++    if (m_mounted)
++        return true;
++
++    initSwiftGridResources();
++
++    m_songView = &songView;
++    m_view = &view;
++
++    // Step 1: Construct feed, mint token and register its empty endpoint.
++    m_feed = std::make_unique<SwiftGridDocumentFeed>(songView.document());
++    const uint64_t token = m_feed->documentId();
++    const QString tokenStr = QString::number(token);
++
++    // Step 2: Register grid types and create QML component.
++    sg_register_grid_types();
++
++    QQmlEngine *engine = view.engine();
++    if (!engine) {
++        qCritical("Swift roll overlay mount failed: view engine is null");
++        unmount();
++        return false;
++    }
++
++    QQmlComponent component(engine, QUrl(QStringLiteral("qrc:/swiftgrid/SwiftRollOverlay.qml")));
++    if (component.isError()) {
++        for (const QQmlError &err : component.errors())
++            qCritical().noquote() << "Swift roll overlay component error:" << err.toString();
++        unmount();
++        return false;
++    }
++
++    const int initialTrack = songView.selectionModel().primaryTrack();
++    QVariantMap initialProperties;
++    initialProperties.insert(QStringLiteral("documentToken"), tokenStr);
++    initialProperties.insert(QStringLiteral("selectedTrack"), initialTrack);
++
++    QObject *object = component.createWithInitialProperties(initialProperties);
++    if (!object) {
++        qCritical("Swift roll overlay component creation failed");
++        for (const QQmlError &err : component.errors())
++            qCritical().noquote() << "Swift roll overlay component error:" << err.toString();
++        unmount();
++        return false;
++    }
++
++    QQuickItem *const contentItem = view.contentItem();
++    if (!contentItem) {
++        qCritical("Swift roll overlay mount failed: view contentItem is null");
++        delete object;
++        unmount();
++        return false;
++    }
++
++    object->setParent(contentItem);
++
++    // Step 3: Verify component success and a bound delivery slot.
++    m_overlayItem = qobject_cast<QQuickItem *>(object);
++    if (!m_overlayItem) {
++        qCritical("Swift roll overlay root object is not a QQuickItem");
++        delete object;
++        unmount();
++        return false;
++    }
++
++    if (!m_feed->delivery()->fn) {
++        qCritical("Swift roll overlay failed to bind document delivery slot");
++        unmount();
++        return false;
++    }
++
++    m_overlayItem->setParentItem(contentItem);
++    m_overlayItem->setZ(100.0);
++    m_overlayItem->setFocus(false);
++    m_trackConnection =
++        QObject::connect(&songView, &SongView::selectedTrackChanged, m_overlayItem.data(),
++                         [overlay = m_overlayItem](int track) {
++                             if (overlay) {
++                                 overlay->setProperty("selectedTrack", track);
++                             }
++                         });
++
++    // Step 4: Explicitly push initial snapshot without waiting for edit.
++    m_feed->pushSnapshot();
++
++    m_mounted = true;
++    return true;
++}
++
++void SwiftRollMount::unmount()
++{
++    // Step 5: Disconnect observers and unregister/destroy feed BEFORE deleting overlay.
++    if (m_trackConnection) {
++        QObject::disconnect(m_trackConnection);
++        m_trackConnection = {};
++    }
++
++    m_feed.reset();
++
++    if (m_overlayItem) {
++        delete m_overlayItem.data();
++        m_overlayItem.clear();
++    }
++
++    m_songView.clear();
++    m_view.clear();
++    m_mounted = false;
++}
++
++void SwiftRollMount::updateBandGeometry(const std::optional<TimelineBandGeometry> &rollGeometry)
++{
++    if (!m_overlayItem)
++        return;
++
++    if (!rollGeometry.has_value()) {
++        m_overlayItem->setVisible(false);
++        return;
++    }
++
++    const QRect rect = rollGeometry->rect;
++    m_overlayItem->setX(rect.x());
++    m_overlayItem->setY(rect.y());
++    m_overlayItem->setWidth(rect.width());
++    m_overlayItem->setHeight(rect.height());
++    m_overlayItem->setVisible(true);
++}
++
++void SwiftRollMount::handleTransferredWindowDeath()
++{
++    if (m_trackConnection) {
++        QObject::disconnect(m_trackConnection);
++        m_trackConnection = {};
++    }
++
++    m_feed.reset();
++    m_overlayItem.clear();
++    m_songView.clear();
++    m_view.clear();
++    m_mounted = false;
++}
++
++} // namespace songview
++
++#else // !Q_OS_MACOS
++
++namespace songview {
++SwiftRollMount::SwiftRollMount() = default;
++SwiftRollMount::~SwiftRollMount() = default;
++bool SwiftRollMount::mount(SongView &, QQuickView &)
++{
++    return false;
++}
++void SwiftRollMount::unmount() {}
++void SwiftRollMount::updateBandGeometry(const std::optional<TimelineBandGeometry> &) {}
++void SwiftRollMount::handleTransferredWindowDeath() {}
++} // namespace songview
++
++#endif
+diff --git a/src/ui/songview/quick/swiftgrid/swift_roll_mount.h b/src/ui/songview/quick/swiftgrid/swift_roll_mount.h
+new file mode 100644
+index 00000000..3dc061e9
+--- /dev/null
++++ b/src/ui/songview/quick/swiftgrid/swift_roll_mount.h
+@@ -0,0 +1,46 @@
++#pragma once
++
++#include <QObject>
++#include <QPointer>
++#include <memory>
++#include <optional>
++
++class QQuickItem;
++class QQuickView;
++class SongView;
++
++namespace songview {
++struct TimelineBandGeometry;
++}
++
++class SwiftGridDocumentFeed;
++
++namespace songview {
++
++class SwiftRollMount final
++{
++  public:
++    SwiftRollMount();
++    ~SwiftRollMount();
++
++    Q_DISABLE_COPY_MOVE(SwiftRollMount)
++
++    bool mount(SongView &songView, QQuickView &view);
++    void unmount();
++
++    void updateBandGeometry(const std::optional<TimelineBandGeometry> &rollGeometry);
++    void handleTransferredWindowDeath();
++
++    bool isMounted() const noexcept { return m_mounted; }
++    QQuickItem *overlayItem() const noexcept { return m_overlayItem.data(); }
++
++  private:
++    std::unique_ptr<SwiftGridDocumentFeed> m_feed;
++    QPointer<QQuickItem> m_overlayItem;
++    QPointer<SongView> m_songView;
++    QPointer<QQuickView> m_view;
++    QMetaObject::Connection m_trackConnection;
++    bool m_mounted = false;
++};
++
++} // namespace songview

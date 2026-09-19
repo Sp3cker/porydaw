@@ -18,6 +18,9 @@
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/trackheadermodel.h"
+#ifdef Q_OS_MACOS
+#include "ui/songview/quick/swiftgrid/swift_roll_mount.h"
+#endif
 
 #include <QCoreApplication>
 #include <QCursor>
@@ -144,6 +147,12 @@ void TimelineQuickView::detachWindow()
         m_voiceChanges->setPopupSession(nullptr);
     delete m_popupSession;
     m_popupSession = nullptr;
+#ifdef Q_OS_MACOS
+    if (m_swiftRollMount) {
+        m_swiftRollMount->unmount();
+        m_swiftRollMount.reset();
+    }
+#endif
 
     // Raw QML borrows clear before the unload, then the QML tree unloads
     // while the context properties still point at live models.

@@ -183,6 +183,16 @@ set(SWIFT_GRID_FONT_QRC
 
 set_target_properties(swift_grid_prototype PROPERTIES AUTORCC ON)
 target_sources(swift_grid_prototype PRIVATE "${SWIFT_GRID_FONT_QRC}")
+if(APPLE)
+    qt_add_resources(swift_grid_prototype "swift_grid_qml"
+        PREFIX "/swiftgrid"
+        BASE "${CMAKE_CURRENT_SOURCE_DIR}"
+        FILES
+            "${CMAKE_CURRENT_SOURCE_DIR}/SwiftRollOverlay.qml"
+            "${CMAKE_CURRENT_SOURCE_DIR}/PianoRollCanvas.qml"
+            "${CMAKE_CURRENT_SOURCE_DIR}/TimelineQuickItem.qml"
+    )
+endif()
 
 if(APPLE)
     set_target_properties(swift_grid_prototype PROPERTIES

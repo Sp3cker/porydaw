@@ -190,6 +190,7 @@ if(APPLE)
         "${SWIFT_GRID_DIR}/SgdDocument.swift"
         "${SWIFT_GRID_DIR}/Tick.swift"
         "${SWIFT_GRID_DIR}/TimeAxis.swift"
+        "${SWIFT_GRID_DIR}/SwiftGridHost.swift"
     )
     set_target_properties(swiftgrid PROPERTIES
         Swift_MODULE_NAME SwiftGrid
@@ -524,6 +525,9 @@ if(APPLE)
         "${SWIFT_GRID_FEED_DIR}/document_feed.h"
         "${SWIFT_GRID_FEED_DIR}/swift_grid_document_feed.cpp"
         "${SWIFT_GRID_FEED_DIR}/swift_grid_document_feed.h"
+        "${SWIFT_GRID_FEED_DIR}/grid_host.h"
+        "${SWIFT_GRID_FEED_DIR}/swift_roll_mount.cpp"
+        "${SWIFT_GRID_FEED_DIR}/swift_roll_mount.h"
     )
     # The native seams reuse the engine/core/math objects already in this target.
     set_source_files_properties("${SWIFT_GRID_AUDIO_DIR}/audio_session_internal.h"
@@ -628,6 +632,16 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/InsertTimePrompt.qml
         src/ui/songview/quick/VoicePickerPrompt.qml
 )
+if(APPLE)
+    qt_add_resources(porydaw_app "swift_grid_qml"
+        PREFIX "/swiftgrid"
+        BASE "${SWIFT_GRID_DIR}"
+        FILES
+            "${SWIFT_GRID_DIR}/SwiftRollOverlay.qml"
+            "${SWIFT_GRID_DIR}/PianoRollCanvas.qml"
+            "${SWIFT_GRID_DIR}/TimelineQuickItem.qml"
+    )
+endif()
 target_precompile_headers(porydaw_app PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
 if(UNIX AND NOT APPLE)

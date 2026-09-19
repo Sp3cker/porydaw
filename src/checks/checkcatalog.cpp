@@ -738,6 +738,18 @@ const std::vector<CheckDefinition> &catalog()
                 .fixtureFiles = route101Files,
             },
             {
+                .name = "swiftrollgated",
+                // Gated read-only Swift roll overlay in production: initial render,
+                // track follow, edit/undo/redo, interleaved documents, input absorption,
+                // viewing input, transferred-window teardown, flag-off absence.
+                .argv = strings({"--swiftrollgated", "{scratch}", "mus_route101", "mus_petalburg"}),
+                .handler = qtWithThreeArguments<runSwiftRollGatedCheck>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = twoSongRichFiles,
+                .windowing = Windowing::WindowSystem,
+            },
+            {
                 .name = "rendering-playhead-native",
                 // Cocoa playhead layer lifecycle: native ownership, clipping, and surface teardown
                 .argv = strings({"--check-rendering-playhead-native", "{scratch}", "mus_route101"}),
