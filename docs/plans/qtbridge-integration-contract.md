@@ -106,6 +106,35 @@ Select supported update operations based on pinned-source inspection and runtime
 
 Every guarantee needs: requirement, pinned implementation/source anchor, reproduction scenario, exact command, tested revisions/toolchain, observed result, and status (`Unverified`, `Verified`, or `Unsupported`). Source inspection establishes mechanism; runtime execution establishes evidence. Never silently promote one into the other.
 
+### M0 capability probe — recorded 2026-09-19
+
+Harness: `src/checks/swiftqtml/` (registered check `swiftqtml`; harness-local
+`BridgeProbe` presenter + `QListModel<BridgeRow>` class rows + real QML
+Repeater delegates). Command (executed, observed):
+`deno task verify --filter swiftqtml --verbose` → PASS, and direct
+`porydaw_checks --swiftqtml <scratch> mus_route101 mus_petalburg` →
+`Totals: 10 passed, 0 failed`, zero captured Qt/QML messages. Toolchain: the
+recorded baseline above (Qt 6.11.0, Swift 6.3.3, QtBridge `407714006dd…`,
+patch as tabled), application at `aa9a5107` + this task's working tree.
+These rows verify bridge capability primitives only — the production-scenario
+rows below stay Unverified until the M1a two-consumer harness exercises them
+on real surfaces.
+
+| Capability | Observed result | Status |
+| --- | --- | --- |
+| Presenter property mutation → existing QML binding | `statusText` change reached the bound `Text` after settle (queued emission). | Verified |
+| Contained-object mutation propagation | Direct `BridgeRow` property set does **not** emit model `dataChanged`; the delegate keeps the old value. Row-object mutation alone is not a QML-visible update path. | Verified (limitation) |
+| In-place row update via subscript (`model[i] = row`) | Emits `dataChanged`; delegate shows the new value with **unchanged delegate serial** (no delegate recreation). | Verified |
+| Row replacement (new object at index) | Delegate shows new values, no churn; a retained reference to the old object stays live and distinct — actions through it address the old (detached) object, never the replacement. | Verified |
+| Insert/remove | Count/order update in QML; surviving delegates keep their serials; actions through references captured pre-mutation resolve the same domain row after the shift. | Verified |
+| Reorder (`moveRow`) | Order updates; action through a pre-move reference addresses the intended row (object identity, not index). | Verified |
+| Collection reset with stale QML-captured row reference | Fresh rows render; the stale reference's action is harmless (logged against the detached object); replacement rows untouched; view stays error-free. | Verified |
+| Pending mutation + immediate view/presenter teardown | No crash, no resurrection (`QPointer` null), fresh view isolated, zero QML warnings. (Bounded: presenter+`QQuickView` destruction with queued emissions — not the full tab-close protocol, which `swiftrollgated` covers.) | Verified (bounded) |
+| Patched object return (`makeRow`) | QML reads returned object's properties — **only while a Swift-side retainer holds the object**: a QML `var` stores just the C++ proxy; when Swift's last reference drops, the proxy is deleted and the QML var dangles (observed SIGSEGV in the QML binding read when the retainer was removed; restored + documented in the harness). Presenters returning objects to QML must retain them for the QML lifetime. | Verified |
+| Patched optional object return (`selectedRow() -> BridgeRow?`) | Non-nil readable (with presenter-side retention); nil renders as typed null (`<null>`, `selectedIsNull` true) without a QML type error. | Verified |
+| QML element registration (patch hunk 3) | Harness registers and instantiates its presenter as a QML element via `registerQmlElement()`. | Verified (exercised by harness) |
+| QML→Swift slot calls with bridged-object **arguments** | **Unsupported — crashes**: invoking an object-argument slot from QML segfaults the process inside QtBridge/QtQml argument marshaling (controller-observed SIGSEGV ×2 on 2026-09-19, pre-isolation runs; lldb backtrace: QtQml `OUTLINED_FUNCTION_2` accessor dereferencing garbage; invocation `invoke(root, "attemptObjectArgumentCall")`). Source mechanism: the pinned macro registers only primitive slot parameters. Post-fork in-process reproduction is not viable (Qt render-thread/event state is not fork-safe — two isolation designs failed pre-invocation), so the harness asserts the boundary statically with this evidence; the QML helper remains as the future-fix probe point. | Unsupported (crashes; evidence above) |
+
 Initial status for all following scenarios: **Unverified by this assessment**.
 
 - Rename a visible track in place without replacing its row; observe actual delegate text.

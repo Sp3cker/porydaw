@@ -428,6 +428,32 @@ if(APPLE)
         swiftbandkeys/tst_swiftbandkeys.cpp
         swiftbandkeys/keys_check.h
     )
+    qt_add_library(swift_qt_ml_check STATIC
+        swiftqtml/BridgeProbeCheck.swift
+    )
+    set_target_properties(swift_qt_ml_check PROPERTIES
+        Swift_MODULE_NAME SwiftQtMlCheck
+        Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_qt_ml_check"
+        Swift_LANGUAGE_VERSION 6
+        AUTOMOC OFF
+        AUTOUIC OFF
+        AUTORCC OFF
+    )
+    target_include_directories(swift_qt_ml_check INTERFACE
+        "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:swift_qt_ml_check,Swift_MODULE_DIRECTORY>>"
+    )
+    target_link_libraries(swift_qt_ml_check PRIVATE swiftgrid)
+    target_link_libraries(porydaw_checks PRIVATE swift_qt_ml_check)
+    target_sources(porydaw_checks PRIVATE
+        swiftqtml/tst_swiftqtml.cpp
+        swiftqtml/tst_swiftqtml.h
+    )
+    qt_add_resources(porydaw_checks "swift_qt_ml_qml"
+        PREFIX "/swiftqtml"
+        BASE "${CMAKE_CURRENT_SOURCE_DIR}/swiftqtml"
+        FILES
+            "${CMAKE_CURRENT_SOURCE_DIR}/swiftqtml/BridgeProbe.qml"
+    )
     target_sources(porydaw_checks PRIVATE
         swiftrollgated/tst_swiftrollgated.cpp
         swiftrollgated/tst_swiftrollgated.h

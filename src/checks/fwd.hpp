@@ -52,6 +52,9 @@ int runSwiftRollGatedCheck(const QString &projectRoot, const QString &songA, con
 // sgk_ key seam and SwiftRollBand adapter (src/checks/swiftbandkeys).
 int runSwiftBandKeysCheck(const QString &projectRoot, const QString &songA, const QString &songB,
                           const QStringList &qtArguments);
+// QtBridge model-update behavior through real QML delegates (src/checks/swiftqtml).
+int runSwiftQtMlCheck(const QString &projectRoot, const QString &songA, const QString &songB,
+                      const QStringList &qtArguments);
 #endif
 
 // Roll frame-cost bench, both roll flavors (src/checks/swiftrollbench).

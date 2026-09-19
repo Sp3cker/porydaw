@@ -787,6 +787,17 @@ const std::vector<CheckDefinition> &catalog()
                 .windowing = Windowing::WindowSystem,
             },
             {
+                .name = "swiftqtml",
+                // QtBridge observable model updates through a harness-local
+                // Swift presenter and real QML delegates.
+                .argv = strings({"--swiftqtml", "{scratch}", "mus_route101", "mus_petalburg"}),
+                .handler = qtWithThreeArguments<runSwiftQtMlCheck>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = twoSongRichFiles,
+                .windowing = Windowing::WindowSystem,
+            },
+            {
                 .name = "swiftrollbench-swift",
                 // Roll frame-cost bench, Swift lane: PORYDAW_SWIFT_ROLL mounts the
                 // overlay; compare cadence against the flag-off swiftrollbench row.
