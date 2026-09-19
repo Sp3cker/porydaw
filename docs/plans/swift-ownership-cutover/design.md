@@ -155,6 +155,12 @@ input, cancellation and mounting behavior under that same single authority.
 
 ## 6. Organization before parallel presenter work
 
+Naming note (post-rehome): `swiftroll/` is the production Swift home
+(presenters, domain math, QML, native helpers, QtBridge patch);
+`swiftgrid/` (adjacent) is the C++ seam/adapter directory
+(`sg*` feeds, executor, band, mount). The names are close by design lineage,
+not by function — check which side of the boundary you are editing.
+
 After the baseline, define one closed, behavior-preserving organization task:
 choose the production Swift home, isolate legacy/native/Qt integration, and
 separate production code from remaining demo/reference paths. Directory and

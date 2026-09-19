@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "../swift-grid-prototype/native/window_cancel.h"
+#include "../swiftroll/native/window_cancel.h"
 #include "key_feed.h"
 
 #ifdef __cplusplus

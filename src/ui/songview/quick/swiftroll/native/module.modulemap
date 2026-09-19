@@ -1,13 +1,3 @@
-module NativeGridAudio {
-    header "audio_session.h"
-    export *
-}
-
-module NativeGridCurve {
-    header "curve_session.h"
-    export *
-}
-
 module NativeGridTypography {
     header "font_metrics.h"
     export *

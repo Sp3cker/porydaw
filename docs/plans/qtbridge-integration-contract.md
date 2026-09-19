@@ -15,7 +15,7 @@ Swift domain types must not be designed around C ABI layouts. Imported C structs
 Source evidence, not a runtime certification:
 
 - `cmake/QtBridge.cmake` pins QtBridge to `407714006dd21107b70db6547ce75e43df0c8a75` and requires Qt 6.10 CorePrivate.
-- Local patch: `src/ui/songview/quick/swift-grid-prototype/qtbridge-object-return.patch`.
+- Local patch: `src/ui/songview/quick/swiftroll/qtbridge-object-return.patch`.
 - Patch scope observed during assessment: object-return macro support, optional bridged-object conversion, public QML element registration, and macro build configuration.
 - `PianoGrid.swift` uses direct QtBridge exposure; `GridScene.swift` exposes Swift `QListModel` collections.
 - Upstream: https://github.com/qt/qtbridge-swift (early-preview dependency).
@@ -35,7 +35,7 @@ Unverified until executed):
 - Application: Porydaw `feature/swift-qml-grid` at `bc24c98d` (this file's
   baseline; advancing the pin, patch, Qt or Swift invalidates affected rows).
 
-Local patch `src/ui/songview/quick/swift-grid-prototype/qtbridge-object-return.patch`
+Local patch `src/ui/songview/quick/swiftroll/qtbridge-object-return.patch`
 (74 lines, 4 hunks; **not upstreamed**; applied idempotently by
 `PatchQtBridge.cmake` with SHA256-pinned inputs):
 

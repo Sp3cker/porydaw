@@ -5,8 +5,7 @@
 // Raw values match songview::TimelineInputCancelReason.
 //
 // The filter QObject is parented to the QQuickWindow it watches. The sink is
-// a typed function pointer (the prototype stand-in for
-// TimelineBandInteraction::inputCancelled). No property handshake, no
+// a typed input-cancel function pointer. No property handshake, no
 // invokeMethod, no app-global event-filter singleton.
 
 #ifdef __cplusplus

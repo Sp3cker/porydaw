@@ -170,16 +170,11 @@ private final class HeaderFontMetrics {
     }
 }
 
-public typealias SgthNotifyFn = @convention(c) (UInt32, UnsafeMutableRawPointer?) -> Void
-public typealias SgthActionFn =
-    @convention(c) (Int32, Int32, Double, Double, UnsafeMutableRawPointer?) -> Void
-public typealias SgthStringFn =
-    @convention(c) (UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> Void
 
 @MainActor
 public final class TrackHeadersPresenter {
-    private let notify: SgthNotifyFn
-    private let action: SgthActionFn
+    private let notify: (UInt32, UnsafeMutableRawPointer?) -> Void
+    private let action: (Int32, Int32, Double, Double, UnsafeMutableRawPointer?) -> Void
     private let context: UnsafeMutableRawPointer?
 
     private let documents: DocumentFeed
@@ -212,7 +207,8 @@ public final class TrackHeadersPresenter {
 
     public init(
         documentId: UInt64, sessionId: UInt64, keyTargetId: UInt64,
-        notify: @escaping SgthNotifyFn, action: @escaping SgthActionFn,
+        notify: @escaping (UInt32, UnsafeMutableRawPointer?) -> Void,
+        action: @escaping (Int32, Int32, Double, Double, UnsafeMutableRawPointer?) -> Void,
         context: UnsafeMutableRawPointer?
     ) {
         self.notify = notify
@@ -465,7 +461,7 @@ public final class TrackHeadersPresenter {
             h: Double(geometry.renameEditorHeight))
     }
 
-    // Band-level rects the shell's Q_PROPERTY getters serve (sgth_band_rect).
+    // Band-level geometry queries.
     public func bandRect(_ field: Int32) -> HeaderRect {
         switch field {
         case 0: return muteButtonRect
@@ -475,7 +471,7 @@ public final class TrackHeadersPresenter {
         }
     }
 
-    // MARK: - Row queries (sgth_ getters)
+    // MARK: - Row queries
 
     public var rowCount: Int32 { Int32(rows.count) }
     public var contentHeight: Int32 { Int32(rows.count) * Int32(geometry.rowHeight) }
@@ -1036,356 +1032,3 @@ public final class TrackHeadersPresenter {
     }
 }
 
-// MARK: - sgth_ C surface
-
-@MainActor
-private enum TrackHeadersRegistry {
-    static var presenters: [UInt64: TrackHeadersPresenter] = [:]
-    static var nextHandle: UInt64 = 0
-}
-
-// C entry-point callbacks bundled so they can cross the one
-// MainActor.assumeIsolated boundary in sgth_create. GUI-thread-only by
-// contract (the sgth_ surface is invoked synchronously from the shell on
-// the GUI thread); the box only ferries the pointers into the isolated
-// construction site.
-private struct SgthCallbacks: @unchecked Sendable {
-    let notify: SgthNotifyFn
-    let action: SgthActionFn
-    let context: UnsafeMutableRawPointer?
-}
-
-@_cdecl("sgth_create")
-public func sgthCreate(
-    _ documentId: UInt64, _ sessionId: UInt64, _ keyTargetId: UInt64,
-    _ notify: SgthNotifyFn?, _ action: SgthActionFn?, _ context: UnsafeMutableRawPointer?
-) -> UInt64 {
-    guard let notify, let action else { return 0 }
-    let callbacks = SgthCallbacks(notify: notify, action: action, context: context)
-    return MainActor.assumeIsolated {
-        let presenter = TrackHeadersPresenter(
-            documentId: documentId, sessionId: sessionId, keyTargetId: keyTargetId,
-            notify: callbacks.notify, action: callbacks.action, context: callbacks.context)
-        guard presenter.connect() else { return 0 }
-        TrackHeadersRegistry.nextHandle += 1
-        let handle = TrackHeadersRegistry.nextHandle
-        TrackHeadersRegistry.presenters[handle] = presenter
-        return handle
-    }
-}
-
-@_cdecl("sgth_destroy")
-public func sgthDestroy(_ handle: UInt64) {
-    MainActor.assumeIsolated {
-        guard let presenter = TrackHeadersRegistry.presenters.removeValue(forKey: handle)
-        else { return }
-        presenter.disconnect()
-    }
-}
-
-@MainActor
-private func presenter(_ handle: UInt64) -> TrackHeadersPresenter? {
-    TrackHeadersRegistry.presenters[handle]
-}
-
-@_cdecl("sgth_set_geometry")
-public func sgthSetGeometry(_ handle: UInt64, _ values: UnsafePointer<Int32>?) {
-    guard let values else { return }
-    // Copy into owned storage before the isolated call: the borrowed C
-    // pointer never crosses the boundary.
-    let copied = (0 ..< 16).map { values[$0] }
-    MainActor.assumeIsolated { presenter(handle)?.setGeometry(copied) }
-}
-
-@_cdecl("sgth_set_font")
-public func sgthSetFont(
-    _ handle: UInt64, _ slot: Int32, _ family: UnsafePointer<CChar>?,
-    _ pixelSize: Int32, _ weight: Int32, _ letterSpacing: Double
-) {
-    guard let family else { return }
-    let name = String(cString: family)
-    MainActor.assumeIsolated {
-        presenter(handle)?.setFont(
-            slot: slot, family: name, pixelSize: pixelSize, weight: weight,
-            letterSpacing: letterSpacing)
-    }
-}
-
-@_cdecl("sgth_set_viewport")
-public func sgthSetViewport(_ handle: UInt64, _ width: Double, _ height: Double) {
-    MainActor.assumeIsolated { presenter(handle)?.setViewport(width: width, height: height) }
-}
-
-@_cdecl("sgth_begin_rows")
-public func sgthBeginRows(_ handle: UInt64) {
-    MainActor.assumeIsolated { presenter(handle)?.beginRows() }
-}
-
-@_cdecl("sgth_push_track")
-public func sgthPushTrack(
-    _ handle: UInt64, _ track: Int32, _ program: Int32,
-    _ name: UnsafePointer<CChar>?, _ placeholder: UnsafePointer<CChar>?,
-    _ subtitle: UnsafePointer<CChar>?,
-    _ baseColor: UInt32, _ overlayColor: UInt32, _ titleColor: UInt32,
-    _ subtitleColor: UInt32, _ activityDim: UInt32, _ activityActive: UInt32
-) {
-    let trackName = name.map { String(cString: $0) } ?? ""
-    let fallback = placeholder.map { String(cString: $0) } ?? ""
-    let voice = subtitle.map { String(cString: $0) } ?? ""
-    MainActor.assumeIsolated {
-        presenter(handle)?.pushTrack(
-            track: track, program: program, name: trackName, placeholder: fallback,
-            subtitle: voice, baseColor: baseColor, overlayColor: overlayColor,
-            titleColor: titleColor, subtitleColor: subtitleColor, activityDim: activityDim,
-            activityActive: activityActive)
-    }
-}
-
-@_cdecl("sgth_push_add_track")
-public func sgthPushAddTrack(_ handle: UInt64, _ title: UnsafePointer<CChar>?) {
-    let label = title.map { String(cString: $0) } ?? ""
-    MainActor.assumeIsolated { presenter(handle)?.pushAddTrack(title: label) }
-}
-
-@_cdecl("sgth_end_rows")
-public func sgthEndRows(_ handle: UInt64) {
-    MainActor.assumeIsolated { presenter(handle)?.endRows() }
-}
-
-@_cdecl("sgth_row_count")
-public func sgthRowCount(_ handle: UInt64) -> Int32 {
-    MainActor.assumeIsolated { presenter(handle)?.rowCount ?? 0 }
-}
-
-@_cdecl("sgth_row_flags")
-public func sgthRowFlags(_ handle: UInt64, _ row: Int32) -> UInt16 {
-    MainActor.assumeIsolated { presenter(handle)?.rowFlags(row) ?? 0 }
-}
-
-@_cdecl("sgth_row_track")
-public func sgthRowTrack(_ handle: UInt64, _ row: Int32) -> Int32 {
-    MainActor.assumeIsolated { presenter(handle)?.rowTrack(row) ?? -1 }
-}
-
-@_cdecl("sgth_row_string")
-public func sgthRowString(
-    _ handle: UInt64, _ row: Int32, _ field: Int32,
-    _ sink: SgthStringFn?, _ sinkContext: UnsafeMutableRawPointer?
-) {
-    guard let sink else { return }
-    // Fetch on MainActor, sink outside: the C callback never crosses the
-    // isolation boundary.
-    let value = MainActor.assumeIsolated {
-        presenter(handle)?.rowString(row, field: field) ?? nil
-    }
-    guard let value else {
-        sink(nil, sinkContext)
-        return
-    }
-    value.withCString { sink($0, sinkContext) }
-}
-
-@_cdecl("sgth_row_rect")
-public func sgthRowRect(
-    _ handle: UInt64, _ row: Int32, _ field: Int32,
-    _ x: UnsafeMutablePointer<Double>?, _ y: UnsafeMutablePointer<Double>?,
-    _ w: UnsafeMutablePointer<Double>?, _ h: UnsafeMutablePointer<Double>?
-) {
-    // Fetch on MainActor, write the out-pointers outside: the mutable
-    // pointers never cross the isolation boundary.
-    let rect = MainActor.assumeIsolated {
-        presenter(handle)?.rowRect(row, field: field) ?? HeaderRect()
-    }
-    x?.pointee = rect.x
-    y?.pointee = rect.y
-    w?.pointee = rect.w
-    h?.pointee = rect.h
-}
-
-@_cdecl("sgth_row_color")
-public func sgthRowColor(_ handle: UInt64, _ row: Int32, _ field: Int32) -> UInt32 {
-    MainActor.assumeIsolated { presenter(handle)?.rowColor(row, field: field) ?? 0 }
-}
-
-@_cdecl("sgth_band_rect")
-public func sgthBandRect(
-    _ handle: UInt64, _ field: Int32,
-    _ x: UnsafeMutablePointer<Double>?, _ y: UnsafeMutablePointer<Double>?,
-    _ w: UnsafeMutablePointer<Double>?, _ h: UnsafeMutablePointer<Double>?
-) {
-    let rect = MainActor.assumeIsolated {
-        presenter(handle)?.bandRect(field) ?? HeaderRect()
-    }
-    x?.pointee = rect.x
-    y?.pointee = rect.y
-    w?.pointee = rect.w
-    h?.pointee = rect.h
-}
-
-@_cdecl("sgth_content_height")
-public func sgthContentHeight(_ handle: UInt64) -> Int32 {
-    MainActor.assumeIsolated { presenter(handle)?.contentHeight ?? 0 }
-}
-
-@_cdecl("sgth_max_scroll_y")
-public func sgthMaxScrollY(_ handle: UInt64) -> Double {
-    MainActor.assumeIsolated { presenter(handle)?.maximumScrollY ?? 0 }
-}
-
-@_cdecl("sgth_viewport_height")
-public func sgthViewportHeight(_ handle: UInt64) -> Double {
-    MainActor.assumeIsolated { presenter(handle)?.currentViewportHeight ?? 0 }
-}
-
-@_cdecl("sgth_scroll_y")
-public func sgthScrollY(_ handle: UInt64) -> Double {
-    MainActor.assumeIsolated { presenter(handle)?.currentScrollY ?? 0 }
-}
-
-@_cdecl("sgth_set_scroll")
-public func sgthSetScroll(_ handle: UInt64, _ value: Double) {
-    MainActor.assumeIsolated { presenter(handle)?.setScroll(value) }
-}
-
-@_cdecl("sgth_renaming_track")
-public func sgthRenamingTrack(_ handle: UInt64) -> Int32 {
-    MainActor.assumeIsolated { presenter(handle)?.currentRenamingTrack ?? -1 }
-}
-
-@_cdecl("sgth_rename_draft")
-public func sgthRenameDraft(
-    _ handle: UInt64, _ sink: SgthStringFn?, _ sinkContext: UnsafeMutableRawPointer?
-) {
-    guard let sink else { return }
-    let draft = MainActor.assumeIsolated {
-        presenter(handle)?.currentRenameDraft ?? ""
-    }
-    draft.withCString { sink($0, sinkContext) }
-}
-
-@_cdecl("sgth_rename_placeholder")
-public func sgthRenamePlaceholder(
-    _ handle: UInt64, _ sink: SgthStringFn?, _ sinkContext: UnsafeMutableRawPointer?
-) {
-    guard let sink else { return }
-    let placeholder = MainActor.assumeIsolated {
-        presenter(handle)?.currentRenamePlaceholder ?? ""
-    }
-    placeholder.withCString { sink($0, sinkContext) }
-}
-
-@_cdecl("sgth_set_rename_draft")
-public func sgthSetRenameDraft(_ handle: UInt64, _ text: UnsafePointer<CChar>?) {
-    let draft = text.map { String(cString: $0) } ?? ""
-    MainActor.assumeIsolated { presenter(handle)?.setRenameDraft(draft) }
-}
-
-@_cdecl("sgth_begin_rename")
-public func sgthBeginRename(_ handle: UInt64, _ track: Int32) {
-    MainActor.assumeIsolated { presenter(handle)?.beginRename(track) }
-}
-
-@_cdecl("sgth_finish_rename")
-public func sgthFinishRename(_ handle: UInt64, _ commit: Int32, _ restoreFocus: Int32) {
-    MainActor.assumeIsolated {
-        presenter(handle)?.finishRename(commit: commit != 0, restoreRollFocus: restoreFocus != 0)
-    }
-}
-
-@_cdecl("sgth_cancel_rename")
-public func sgthCancelRename(_ handle: UInt64) {
-    MainActor.assumeIsolated { presenter(handle)?.cancelRename() }
-}
-
-@_cdecl("sgth_reorder_visible")
-public func sgthReorderVisible(_ handle: UInt64) -> Int32 {
-    MainActor.assumeIsolated { (presenter(handle)?.currentReorderVisible ?? false) ? 1 : 0 }
-}
-
-@_cdecl("sgth_reorder_y")
-public func sgthReorderY(_ handle: UInt64) -> Double {
-    MainActor.assumeIsolated { presenter(handle)?.currentReorderY ?? 0 }
-}
-
-@_cdecl("sgth_activate_mute")
-public func sgthActivateMute(_ handle: UInt64, _ track: Int32) {
-    MainActor.assumeIsolated { presenter(handle)?.activateMute(track) }
-}
-
-@_cdecl("sgth_activate_solo")
-public func sgthActivateSolo(_ handle: UInt64, _ track: Int32) {
-    MainActor.assumeIsolated { presenter(handle)?.activateSolo(track) }
-}
-
-@_cdecl("sgth_activate_add_track")
-public func sgthActivateAddTrack(_ handle: UInt64) {
-    MainActor.assumeIsolated { presenter(handle)?.activateAddTrack() }
-}
-
-@_cdecl("sgth_pointer")
-public func sgthPointer(
-    _ handle: UInt64, _ kind: Int32, _ x: Double, _ y: Double,
-    _ globalX: Double, _ globalY: Double, _ button: Int32, _ buttons: Int32,
-    _ modifiers: Int32
-) -> Int32 {
-    MainActor.assumeIsolated {
-        (presenter(handle)?.pointer(
-            kind: kind, x: x, y: y, globalX: globalX, globalY: globalY, button: button,
-            buttons: buttons, modifiers: modifiers) ?? false) ? 1 : 0
-    }
-}
-
-@_cdecl("sgth_wheel")
-public func sgthWheel(
-    _ handle: UInt64, _ pixelDeltaX: Int32, _ pixelDeltaY: Int32,
-    _ angleDeltaX: Int32, _ angleDeltaY: Int32, _ inverted: Int32
-) -> Int32 {
-    MainActor.assumeIsolated {
-        (presenter(handle)?.wheel(
-            pixelDeltaX: pixelDeltaX, pixelDeltaY: pixelDeltaY, angleDeltaX: angleDeltaX,
-            angleDeltaY: angleDeltaY, inverted: inverted != 0) ?? false) ? 1 : 0
-    }
-}
-
-@_cdecl("sgth_leave")
-public func sgthLeave(_ handle: UInt64) {
-    MainActor.assumeIsolated { presenter(handle)?.pointerLeave() }
-}
-
-@_cdecl("sgth_cancel_input")
-public func sgthCancelInput(_ handle: UInt64) {
-    MainActor.assumeIsolated { presenter(handle)?.cancelInput() }
-}
-
-@_cdecl("sgth_cancel_transient")
-public func sgthCancelTransient(_ handle: UInt64) {
-    MainActor.assumeIsolated { presenter(handle)?.cancelTransient() }
-}
-
-@_cdecl("sgth_gesture_active")
-public func sgthGestureActive(_ handle: UInt64) -> Int32 {
-    MainActor.assumeIsolated { (presenter(handle)?.gestureActive ?? false) ? 1 : 0 }
-}
-
-@_cdecl("sgth_menu_opened")
-public func sgthMenuOpened(_ handle: UInt64, _ documentId: UInt64, _ revision: UInt64,
-                           _ track: Int32) {
-    MainActor.assumeIsolated {
-        presenter(handle)?.menuOpened(documentId: documentId, revision: revision, track: track)
-    }
-}
-
-@_cdecl("sgth_menu_closed")
-public func sgthMenuClosed(_ handle: UInt64) {
-    MainActor.assumeIsolated { presenter(handle)?.menuClosed() }
-}
-
-@_cdecl("sgth_menu_action")
-public func sgthMenuAction(_ handle: UInt64, _ actionId: Int32, _ sessionStillOpen: Int32)
-    -> Int32
-{
-    MainActor.assumeIsolated {
-        (presenter(handle)?.menuAction(actionId, sessionStillOpen: sessionStillOpen != 0)
-            ?? false) ? 1 : 0
-    }
-}

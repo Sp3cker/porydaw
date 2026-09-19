@@ -6,7 +6,7 @@ find_package(Qt6 6.10 REQUIRED COMPONENTS CorePrivate)
 
 include(FetchContent)
 set(QTBRIDGE_PATCH_DIR
-    "${CMAKE_CURRENT_LIST_DIR}/../src/ui/songview/quick/swift-grid-prototype")
+    "${CMAKE_CURRENT_LIST_DIR}/../src/ui/songview/quick/swiftroll")
 # Reconfigure when either input changes, then invalidate FetchContent's patch
 # stamp through its recorded command: paths alone leave that stamp unchanged.
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS

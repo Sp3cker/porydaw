@@ -4,8 +4,8 @@ import SwiftGridKeyFeed
 import SwiftGridRollBand
 @MainActor
 final class GridNote {
-    // Local scene identity (demo ids or 1-based document row); `token` is the
-    // document-scoped NoteId the sgd_ feed delivered — 0 in the demo lane.
+    // Local scene identity is the 1-based document row; `token` is the
+    // document-scoped NoteId delivered by the sgd_ feed.
     let noteId: Int
     let token: UInt64
     var tick: Int
@@ -42,18 +42,6 @@ public enum GridCancelReason: Int {
     case windowDeactivated = 3
 }
 
-// Escape arbitration result (spec §3.5): the single decision point for
-// Escape across every prototype surface. QML forwards the key plus the
-// already-arbitrated noteMenuOpen observation and executes only the visual
-// teardown the returned action names.
-public enum GridEscapeAction: Int {
-    case none = 0
-    case cancelGesture = 1
-    case closePitchEditor = 2
-    case closeNoteMenu = 3
-    case clearSelection = 4
-}
-
 // Qt::MouseButton / Qt::KeyboardModifier raw values carried by sgb_ facts.
 // The C enum cases are not importable (rawValue only), so the band path
 // compares against these mirrors — the same convention SgcCommands.swift
@@ -71,9 +59,6 @@ public final class PianoGrid: QmlInstantiableStatus {
 
     @QtIgnored
     private(set) var notes: [GridNote] = []
-    @QtIgnored
-    var controllerEvents: [GridControllerEvent] = []
-    @QtTracked public var audio: AudioSession = AudioSession()
     @QtTracked public var scene: GridScene = GridScene()
     @QtTracked public var palette: GridPalette = GridPalette()
 
@@ -82,8 +67,6 @@ public final class PianoGrid: QmlInstantiableStatus {
             if newValue {
                 gesture = nil
                 activeNoteId = -1
-                pitchEditor = nil
-                pitchPreview.removeAll()
             }
         }
     }
@@ -106,8 +89,8 @@ public final class PianoGrid: QmlInstantiableStatus {
     @QtIgnored private var documentFeed: DocumentFeed?
     // Writable-seam bindings (spec §1–3): the intent pipe minted with the
     // document binding, the sgs_ session receiver, and the sgb_ band-surface
-    // binding. All three are absent in the demo lane; commandPipe != nil is
-    // the single "editing" gate for intent submission.
+    // binding. commandPipe != nil is the single "editing" gate for intent
+    // submission.
     @QtIgnored private var commandPipe: SgcCommandPipe?
     // True once bindDocument completed and commandPipe exists. The overlay
     // gates bindEditing on this so changed-handlers firing before the
@@ -166,22 +149,10 @@ public final class PianoGrid: QmlInstantiableStatus {
     @QtIgnored
     var viewportScrollY: Double = 0
     @QtIgnored private var viewportScrollX: Double = 0
-    private var nextNoteId = 1
     private var noteSummaryDirty = true
     private var selectionAtRightPress: Set<Int> = []
-    @QtIgnored private var pitchEditor: PitchEditor?
-    @QtIgnored private var pitchPreview: [GridControllerEvent] = []
-    @QtIgnored
-    private var undoStack = GridUndoStack()
-    // Plain public (not private(set)): this QtBridge version skips every
-    // variable carrying a `private` modifier token — including private(set)
-    // — so private(set) props never reach QML. Only pushCommand,
-    // syncUndoFlags, resetDemo, and applyUndoCommand write these.
-    public var canUndo: Bool = false
-    public var canRedo: Bool = false
-    public var revision: Int = 0
     // Host-named cancel delivery. -1 = none this session. Written only by
-    // inputCancelled and resetDemo. Raw values match GridCancelReason /
+    // inputCancelled. Raw values match GridCancelReason /
     // TimelineInputCancelReason.
     public var lastCancelReason: Int = -1
 
@@ -575,11 +546,6 @@ public final class PianoGrid: QmlInstantiableStatus {
             selection = selectionTokens()
         }
         selectionAtRightPress.removeAll()
-        controllerEvents.removeAll()
-        pitchEditor = nil
-        pitchPreview.removeAll()
-        undoStack.removeAll()
-        syncUndoFlags()
         noteSummaryDirty = true
         publishGeometry()
         recomputeGeometry()
@@ -587,142 +553,20 @@ public final class PianoGrid: QmlInstantiableStatus {
         publishOutputs()
     }
 
-    public func synchronizeAudio() {
-        guard !readOnly else { return }
-        audio.sync(notes: notes, controllers: controllerEvents)
-    }
-
     @QtSignal public func contextMenuRequested(x: Double, y: Double)
 
-    @QtIgnored
-    var selectedEditableNote: GridNote? {
-        // The pitch editor is a demo-lane surface: no sgc_ verb covers
-        // controller events, so a document-bound grid reports no editable
-        // selection and the editor paths stay inert.
-        readOnly || commandPipe != nil
-            ? nil
-            : notes.first { !$0.ghost && isSelected($0.noteId) }
-    }
-
-    public func hasEditableSelection() -> Bool { selectedEditableNote != nil }
-
-    public func makePitchEditor(
-        titleHeight: Double, captionHeight: Double,
-        bodyFamily: String, monoFamily: String
-    ) -> Optional<PitchEditor> {
-        guard !readOnly, let note = selectedEditableNote else { return nil }
-        let editor = PitchEditor(
-            note: note, events: controllerEvents,
-            baseFontPx: metrics.baseFontPx, dpr: metrics.dpr,
-            titleHeight: titleHeight, captionHeight: captionHeight,
-            bodyFamily: bodyFamily, monoFamily: monoFamily, palette: palette)
-        pitchEditor = editor
-        pitchPreview = controllerEvents
-        return editor
-    }
-
-    public func pitchEditorAnchor() -> [String: QVariantSettable] {
-        guard !readOnly, let note = selectedEditableNote else { return [:] }
-        let rect = metrics.noteRect(
-            x0: metrics.displayX(Double(note.tick)),
-            x1: metrics.displayX(Double(note.tick + note.duration)),
-            pitch: note.pitch)
-        return ["x": rect.x, "y": rect.y, "width": rect.w, "height": rect.h]
-    }
-
-    public func previewPitchCurves() {
-        guard !readOnly, let pitchEditor else { return }
-        pitchPreview = pitchEditor.controllerEvents()
-        audio.sync(notes: notes, controllers: pitchPreview)
-    }
-
-    public func commitPitchCurves() {
-        guard !readOnly, pitchEditor != nil else { return }
-        let before = controllerEvents
-        controllerEvents = pitchPreview
-        pushCommand(.controllerEvents(before: before, after: controllerEvents))
-    }
-
-    public func cancelPitchCurves() {
-        guard !readOnly else { return }
-        pitchPreview = controllerEvents
-        synchronizeAudio()
-    }
-
-    public func closePitchEditor() {
-        guard !readOnly else { return }
-        pitchEditor = nil
-        pitchPreview.removeAll()
-    }
-
     public func deleteSelection() {
-        guard !readOnly else { return }
-        if let pipe = commandPipe {
-            // One batch intent = one undo entry (spec §2); the host's
-            // reconciliation clears the selection through sgs_.
-            let tokens = selectedTokens()
-            if !tokens.isEmpty {
-                pipe.deleteNotes(tokens)
-            }
-            selection.removeAll()
-            noteSummaryDirty = true
-            refreshNotes()
-            publishOutputs()
-            return
+        guard !readOnly, let pipe = commandPipe else { return }
+        // One batch intent = one undo entry (spec §2); the host's
+        // reconciliation clears the selection through sgs_.
+        let tokens = selectedTokens()
+        if !tokens.isEmpty {
+            pipe.deleteNotes(tokens)
         }
-        let beforeNotes = notes.map(GridNoteSnapshot.init)
-        let before = notes.count
-        notes.removeAll { !$0.ghost && isSelected($0.noteId) }
-        guard notes.count != before else { return }
-        pushCommand(.notes(before: beforeNotes, after: notes.map(GridNoteSnapshot.init)))
         selection.removeAll()
         noteSummaryDirty = true
         refreshNotes()
         publishOutputs()
-        synchronizeAudio()
-    }
-
-    public func undo() {
-        // The demo lane's GridUndo is demo-only; a document-bound grid's
-        // undo lives on the production QUndoStack through the host.
-        guard !readOnly, commandPipe == nil else { return }
-        guard let command = undoStack.undo() else { return }
-        applyUndoCommand(command, undoing: true)
-        syncUndoFlags()
-    }
-
-    public func redo() {
-        guard !readOnly, commandPipe == nil else { return }
-        guard let command = undoStack.redo() else { return }
-        applyUndoCommand(command, undoing: false)
-        syncUndoFlags()
-    }
-
-    private func pushCommand(_ command: GridEditCommand) {
-        guard !readOnly else { return }
-        let depth = undoStack.undoCount
-        undoStack.push(command)
-        if undoStack.undoCount != depth { revision += 1 }
-        syncUndoFlags()
-    }
-
-    private func syncUndoFlags() {
-        canUndo = undoStack.undoCount > 0
-        canRedo = undoStack.redoCount > 0
-    }
-
-    private func applyUndoCommand(_ command: GridEditCommand, undoing: Bool) {
-        guard !readOnly else { return }
-        switch command {
-        case .notes(let before, let after):
-            notes = (undoing ? before : after).map { $0.materialize() }
-        case .controllerEvents(let before, let after):
-            controllerEvents = undoing ? before : after
-        }
-        noteSummaryDirty = true
-        refreshNotes()
-        publishOutputs()
-        synchronizeAudio()
     }
 
     public func configureViewport(
@@ -877,9 +721,7 @@ public final class PianoGrid: QmlInstantiableStatus {
         // frozen §2 vocabulary carries only as per-note noteMove+noteResize
         // pairs or as two batch intents — 2N or 2 undo entries against one
         // gesture = one entry. The editing lane declines the press instead of
-        // opening a gesture it cannot land atomically; the demo lane has no
-        // seam and lands one local undo entry per gesture, so its grip stays
-        // live.
+        // opening a gesture it cannot land atomically.
         if hit?.zone == .leftEdge, commandPipe != nil { return }
         var next: GridGesture = .pendingDraw(
             GridGesture.PendingDraw(
@@ -914,8 +756,8 @@ public final class PianoGrid: QmlInstantiableStatus {
                     gripTick: note.tick + note.duration,
                     oppositeTick: note.tick, leading: false)
             case .leftEdge:
-                // Only the demo lane reaches this case: a document-bound grid
-                // already declined the left grip (spec §5 deviation).
+                // A bound grid already declined the left grip; unbound input
+                // cannot commit it.
                 next = .resize(
                     pressTick: pressTick,
                     gripTick: note.tick,
@@ -942,70 +784,13 @@ public final class PianoGrid: QmlInstantiableStatus {
     }
 
     public func endPointer() {
-        guard !readOnly else { return }
+        guard !readOnly, commandPipe != nil else { return }
         guard let g = gesture, !g.isRight else { return }
-        if commandPipe != nil {
-            commitGesture(g)
-            gesture = nil
-            activeNoteId = -1
-            refreshNotes()
-            publishOutputs()
-            return
-        }
-        let beforeNotes = notes.map(GridNoteSnapshot.init)
-        var mutated = false
-        switch g {
-        case .pendingDraw(let state):
-            editCursorTick = metrics.snapTick(state.pressTick)
-        case .draw(let state):
-            let note = GridNote(
-                noteId: nextNoteId, tick: state.tick,
-                duration: state.duration, pitch: state.key,
-                track: 0, velocity: lastVelocity, ghost: false)
-            nextNoteId += 1
-            notes.append(note)
-            selection = [note.noteId]
-            noteSummaryDirty = true
-            mutated = true
-        case .move(let state):
-            if state.dTick != 0 || state.dKey != 0 {
-                for i in 0..<notes.count where isSelected(notes[i].noteId) {
-                    let note = notes[i]
-                    note.tick = max(0, note.tick + state.dTick)
-                    note.pitch = min(127, max(0, note.pitch + state.dKey))
-                }
-                noteSummaryDirty = true
-                mutated = true
-            }
-        case .resize(let state):
-            if state.delta != 0 {
-                if state.leading {
-                    for i in 0..<notes.count where isSelected(notes[i].noteId) {
-                        let note = notes[i]
-                        let end = note.tick + note.duration
-                        note.tick = min(max(0, note.tick + state.delta), end - 1)
-                        note.duration = end - note.tick
-                    }
-                } else {
-                    for i in 0..<notes.count where isSelected(notes[i].noteId) {
-                        let note = notes[i]
-                        note.duration = max(1, note.duration + state.delta)
-                    }
-                }
-                noteSummaryDirty = true
-                mutated = true
-            }
-        case .pendingMenu, .band:
-            break
-        }
-        if mutated {
-            pushCommand(.notes(before: beforeNotes, after: notes.map(GridNoteSnapshot.init)))
-        }
+        commitGesture(g)
         gesture = nil
         activeNoteId = -1
         refreshNotes()
         publishOutputs()
-        if mutated { synchronizeAudio() }
     }
 
     // Document-mode gesture commit (spec §5): the live drag was a Swift-side
@@ -1063,8 +848,7 @@ public final class PianoGrid: QmlInstantiableStatus {
         gesture = nil
         activeNoteId = -1
         if g.isRight {
-            // Doc mode reverts the host selection through the seam (the
-            // press may already have submitted a set); demo restores local.
+            // Restore the press-time selection through the bound session seam.
             applySelection(selectionAtRightPress)
         }
         if cancelReason == .hidden || cancelReason == .windowDeactivated {
@@ -1075,54 +859,13 @@ public final class PianoGrid: QmlInstantiableStatus {
     }
 
     // Hidden and window-deactivated teardown beyond the pointer-ungrab
-    // baseline: hover teardown plus pitch live-preview discard when an
-    // editor is open. Window-deactivated is identical for the grid surface
-    // by design; only the entry differs (per-surface visible vs
-    // window-level once, popup surfaces excluded by the host).
+    // baseline. Window-deactivated is identical for the grid surface by
+    // design; only the entry differs (per-surface visible vs window-level
+    // once, popup surfaces excluded by the host).
     private func cancelHoverAndPreview() {
         hoverKey = -1
         cursorKind = 0
-        if pitchEditor != nil {
-            cancelPitchCurves()
-        }
         scene.rebuildHover(sceneInput())
-    }
-
-    // The single Escape arbiter (spec §3.5): every surface forwards the key
-    // plus the host-observed noteMenuOpen flag; the returned action names
-    // the visual teardown QML executes. Precedence mirrors production
-    // handleEditKey: live gesture cancels through the pointer-ungrab
-    // teardown (right-family selection restore included), then the pitch
-    // editor discards its live preview and closes, then the note menu
-    // closes, then an idle Escape clears the selection.
-    //
-    // Bridged surface returns the raw Int: under Swift 6.4 QtBridge's
-    // generated slot rejects a non-QVariantGettable enum metatype, and the
-    // vendored return-type patch only widened macro acceptance, not the
-    // generated code. QML already switches on the delivered Int (spec §3.5
-    // QML contract unchanged); GridEscapeAction stays the internal type.
-    @discardableResult
-    public func escapePressed(noteMenuOpen: Bool) -> Int {
-        guard !readOnly else { return GridEscapeAction.none.rawValue }
-        if gesture != nil {
-            cancelPointer(reason: GridCancelReason.pointerUngrabbed.rawValue)
-            return GridEscapeAction.cancelGesture.rawValue
-        }
-        if let editor = pitchEditor {
-            editor.pitchGraph.cancelPointerSilently()
-            editor.modGraph.cancelPointerSilently()
-            cancelPitchCurves()
-            return GridEscapeAction.closePitchEditor.rawValue
-        }
-        if noteMenuOpen {
-            return GridEscapeAction.closeNoteMenu.rawValue
-        }
-        if !selection.isEmpty {
-            applySelection([])
-        }
-        scene.rebuildNotes(sceneInput())
-        publishOutputs()
-        return GridEscapeAction.clearSelection.rawValue
     }
 
     public func beginRightPointer(x: Double, y: Double, threshold: Double) {
@@ -1158,12 +901,6 @@ public final class PianoGrid: QmlInstantiableStatus {
         guard !readOnly else { return }
         guard let g = gesture, g.isRight else { return }
         gesture = g.updated(x: x, y: y, metrics: metrics)
-        // The demo lane previews band coverage live; the document lane
-        // mirrors production, where the marquee is a rectangle preview and
-        // the selection set is computed once at release.
-        if commandPipe == nil, let band = selectionBand {
-            applyBandSelection(band)
-        }
         scene.rebuildNotes(sceneInput())
         publishOutputs()
     }
@@ -1214,9 +951,8 @@ public final class PianoGrid: QmlInstantiableStatus {
         publishOutputs()
     }
 
-    // Notes whose rendered rect intersects the marquee — the shared
-    // coverage rule for the demo's live preview and the document lane's
-    // release-time set.
+    // Notes whose rendered rect intersects the marquee — the production
+    // release-time coverage rule.
     private func bandCoverage(
         pressX: Double, pressY: Double, curX: Double, curY: Double
     ) -> Set<Int> {
@@ -1238,66 +974,31 @@ public final class PianoGrid: QmlInstantiableStatus {
         return covered
     }
 
-    private func applyBandSelection(_ band: (x: Double, y: Double, w: Double, h: Double)) {
-        guard !readOnly else { return }
-        let covered = bandCoverage(
-            pressX: band.x, pressY: band.y,
-            curX: band.x + band.w, curY: band.y + band.h)
-        guard covered != selection else { return }
-        selection = covered
-        noteSummaryDirty = true
-    }
-
     public func doublePointer(x: Double, y: Double) {
-        guard !readOnly else { return }
+        guard !readOnly, let commandPipe else { return }
         guard gesture == nil else { return }
-        if commandPipe != nil {
-            // Production pointerDoubleClick: delete on a note, arm a draw on
-            // empty space (committed by the release that follows).
-            if let hit = hitNote(x: x, y: y) {
-                let note = notes[hit.index]
-                if note.token != 0 {
-                    commandPipe?.submit(.noteDelete(noteIds: [note.token]))
-                }
-                applySelection([])
-                scene.rebuildNotes(sceneInput())
-                publishOutputs()
-                return
+        // Production pointerDoubleClick: delete on a note, arm a draw on
+        // empty space (committed by the release that follows).
+        if let hit = hitNote(x: x, y: y) {
+            let note = notes[hit.index]
+            if note.token != 0 {
+                commandPipe.submit(.noteDelete(noteIds: [note.token]))
             }
-            beginPointer(x: x, y: y, modifiers: 0)
-            if case .pendingDraw(let state) = gesture {
-                let anchor = metrics.snapTickDown(state.pressTick)
-                gesture = .draw(
-                    GridGesture.Draw(
-                        anchorTick: anchor, tick: anchor,
-                        duration: metrics.snapTicks, key: state.pressKey))
-                scene.rebuildNotes(sceneInput())
-                publishOutputs()
-            }
+            applySelection([])
+            scene.rebuildNotes(sceneInput())
+            publishOutputs()
             return
         }
-        let beforeNotes = notes.map(GridNoteSnapshot.init)
-        if let hit = hitNote(x: x, y: y) {
-            let id = notes[hit.index].noteId
-            notes.remove(at: hit.index)
-            selection.remove(id)
-        } else {
-            let key = metrics.yToPitch(y)
-            guard key >= 0 else { return }
-            let note = GridNote(
-                noteId: nextNoteId,
-                tick: metrics.snapTickDown(metrics.tickAtContentX(x)),
-                duration: metrics.snapTicks, pitch: key,
-                track: 0, velocity: lastVelocity, ghost: false)
-            nextNoteId += 1
-            notes.append(note)
-            selection = [note.noteId]
+        beginPointer(x: x, y: y, modifiers: 0)
+        if case .pendingDraw(let state) = gesture {
+            let anchor = metrics.snapTickDown(state.pressTick)
+            gesture = .draw(
+                GridGesture.Draw(
+                    anchorTick: anchor, tick: anchor,
+                    duration: metrics.snapTicks, key: state.pressKey))
+            scene.rebuildNotes(sceneInput())
+            publishOutputs()
         }
-        noteSummaryDirty = true
-        pushCommand(.notes(before: beforeNotes, after: notes.map(GridNoteSnapshot.init)))
-        refreshNotes()
-        publishOutputs()
-        synchronizeAudio()
     }
 
     public func hoverPointer(x: Double, y: Double) {
@@ -1339,31 +1040,6 @@ public final class PianoGrid: QmlInstantiableStatus {
         scene.rebuildHover(sceneInput())
     }
 
-    public func resetDemo() {
-        guard !readOnly, documentFeed == nil else { return }
-        gesture = nil
-        activeNoteId = -1
-        selection.removeAll()
-        lastVelocity = 100
-        hoverKey = -1
-        cursorKind = 0
-        editCursorTick = 0
-        notes = GridFixture.makeNotes()
-        controllerEvents.removeAll()
-        nextNoteId = GridFixture.nextNoteId
-        undoStack.removeAll()
-        revision = 0
-        lastCancelReason = -1
-        syncUndoFlags()
-        noteSummaryDirty = true
-        recomputeGridWidth()
-        initialScrollY = defaultVerticalScroll()
-        // App initializes demo values before Qt starts. The first viewport
-        // configuration owns native font measurement and scene construction.
-        if typography != nil { rebuildScene() }
-        publishOutputs()
-        synchronizeAudio()
-    }
 
     @QtIgnored
     func isSelected(_ noteId: Int) -> Bool { selection.contains(noteId) }
@@ -1437,7 +1113,7 @@ public final class PianoGrid: QmlInstantiableStatus {
 
     private func publishOutputs() {
         renderedNoteCount = notes.count
-        // The standalone lane's JSON diagnostics are not document publication.
+        // The JSON diagnostics are not document publication.
         if !readOnly && noteSummaryDirty {
             noteSummaryDirty = false
             var parts: [String] = []

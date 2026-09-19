@@ -1,7 +1,7 @@
 // Tick.swift — Swift port of the CoreTimeDefaults tick helpers
 // (src/core/timedefaults.h, the production oracle). Pure Swift; no imports.
 // Guard ordering is spec §7 verbatim: a reorder is a defect even when tests
-// pass. Later Wave-1 tasks add TimeAxis.swift and PitchProjection.swift.
+// pass.
 
 /// Canonical musical position; mirrors C++ `using Tick = uint32_t`.
 typealias Tick = UInt32

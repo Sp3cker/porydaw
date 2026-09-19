@@ -169,24 +169,18 @@ if(APPLE)
     enable_language(Swift)
     include(cmake/QtBridge.cmake)
 
-    set(SWIFT_GRID_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swift-grid-prototype")
-    set(SWIFT_GRID_AUDIO_DIR "${SWIFT_GRID_DIR}/native")
+    set(SWIFT_GRID_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swiftroll")
+    set(SWIFT_GRID_NATIVE_DIR "${SWIFT_GRID_DIR}/native")
     set(SWIFT_GRID_FEED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swiftgrid")
     qt_add_library(swiftgrid STATIC
-        "${SWIFT_GRID_DIR}/AudioSession.swift"
         "${SWIFT_GRID_DIR}/EditCommands.swift"
         "${SWIFT_GRID_DIR}/EditKeyArbiter.swift"
-        "${SWIFT_GRID_DIR}/GridFixture.swift"
         "${SWIFT_GRID_DIR}/GridGeometry.swift"
         "${SWIFT_GRID_DIR}/GridGesture.swift"
         "${SWIFT_GRID_DIR}/GridPalette.swift"
         "${SWIFT_GRID_DIR}/GridScene.swift"
         "${SWIFT_GRID_DIR}/GridTypography.swift"
-        "${SWIFT_GRID_DIR}/GridUndo.swift"
         "${SWIFT_GRID_DIR}/PianoGrid.swift"
-        "${SWIFT_GRID_DIR}/PitchEditor.swift"
-        "${SWIFT_GRID_DIR}/PitchGraph.swift"
-        "${SWIFT_GRID_DIR}/PitchProjection.swift"
         "${SWIFT_GRID_DIR}/SgcCommands.swift"
         "${SWIFT_GRID_DIR}/SgcKeys.swift"
         "${SWIFT_GRID_DIR}/SgdDocument.swift"
@@ -207,9 +201,9 @@ if(APPLE)
         "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:swiftgrid,Swift_MODULE_DIRECTORY>>"
     )
     target_compile_options(swiftgrid PUBLIC
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_AUDIO_DIR}/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_NATIVE_DIR}/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_FEED_DIR}/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_AUDIO_DIR}>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_NATIVE_DIR}>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_FEED_DIR}>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/src>"
     )
@@ -519,11 +513,8 @@ if(APPLE)
     target_sources(porydaw_app PRIVATE
         src/ui/nativelayerutils_macos_p.h
         src/ui/playheadrenderer_macos.mm
-        "${SWIFT_GRID_AUDIO_DIR}/audio_session.cpp"
-        "${SWIFT_GRID_AUDIO_DIR}/audio_session_internal.h"
-        "${SWIFT_GRID_AUDIO_DIR}/curve_session.cpp"
-        "${SWIFT_GRID_AUDIO_DIR}/font_metrics.cpp"
-        "${SWIFT_GRID_AUDIO_DIR}/window_cancel.cpp"
+        "${SWIFT_GRID_NATIVE_DIR}/font_metrics.cpp"
+        "${SWIFT_GRID_NATIVE_DIR}/window_cancel.cpp"
         "${SWIFT_GRID_FEED_DIR}/command_feed.cpp"
         "${SWIFT_GRID_FEED_DIR}/command_feed.h"
         "${SWIFT_GRID_FEED_DIR}/intent_executor.cpp"
@@ -542,9 +533,6 @@ if(APPLE)
         "${SWIFT_GRID_FEED_DIR}/swift_roll_band.cpp"
         "${SWIFT_GRID_FEED_DIR}/swift_roll_band.h"
     )
-    # The native seams reuse the engine/core/math objects already in this target.
-    set_source_files_properties("${SWIFT_GRID_AUDIO_DIR}/audio_session_internal.h"
-        PROPERTIES HEADER_FILE_ONLY ON)
     target_link_libraries(porydaw_app PUBLIC swiftgrid)
     # Qt's qdebug.h UInt alias collides with macOS OSTypes.h only in this
     # Objective-C++ bridge; keep project -Wshadow enabled everywhere else.
