@@ -21,7 +21,11 @@ class SwiftRollGatedTest final : public QObject
     void testNon24AndSignatureGeometry();
     void testTwoDocumentsInterleaved();
     void testRemountFreshToken();
-    void testPointerEditingBlockedWithoutFocusChange();
+    void testBandEditWithoutFocusChange();
+    void testBandEditUndoRedoRerender();
+    void testEscapeMidDragZeroEffect();
+    void testBandLeadingGripDecline();
+    void testBandTrailingGripResizeCommitOnce();
     void testViewingInputLive();
     void testTransferredWindowTeardown();
     void testFlagOffAbsence();

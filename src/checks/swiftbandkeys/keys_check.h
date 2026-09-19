@@ -10,7 +10,12 @@ extern "C" {
 // SwiftGridKeyRouter target id. Counts and last-sample queries return -1 when
 // the surface is absent (or no sample exists); create/destroy return 1 on
 // success, 0 on failure.
-int32_t bandkeys_surface_create(uint64_t target_id, uint64_t session_id);
+// Full bind (sgs_ + sgk_ + sgb_) for the harness-owned private delivery target
+// (a scratch router/band pair never attached to input items). The production
+// target has no harness surface: the mounted grid owns both its sgb_ and sgk_
+// slots once editing binds, and its key ownership is asserted through sgk_
+// deliveries instead.
+int32_t bandkeys_surface_create_full(uint64_t target_id, uint64_t session_id);
 int32_t bandkeys_surface_destroy(uint64_t target_id);
 int32_t bandkeys_arrival_count(uint64_t target_id);
 int32_t bandkeys_last_verdict(uint64_t target_id);

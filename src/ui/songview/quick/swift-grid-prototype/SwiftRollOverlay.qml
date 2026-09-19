@@ -15,6 +15,14 @@ Item {
 
     required property string documentToken
     required property int selectedTrack
+    // Writable-seam bindings (spec §1–3): the band target id minted by the
+    // host key router and the session feed id, both canonical decimal tokens
+    // like documentToken. Empty = unbound: the Wave-3 read-only mount
+    // contract holds until both arrive and gridModel.bindEditing runs, which
+    // flips editingBound and clears readOnly.
+    property string bandTarget: ""
+    property string sessionToken: ""
+    property bool editingBound: false
 
     readonly property QtObject gridModel: swiftGridModel
     readonly property int noteCount: swiftGridModel.renderedNoteCount
@@ -23,9 +31,25 @@ Item {
     PianoGrid {
         id: swiftGridModel
         objectName: "swiftGridModel"
-        readOnly: true
+        readOnly: !root.editingBound
         documentToken: root.documentToken
         documentTrack: root.selectedTrack
+        onDocumentBoundChanged: root.bindEditingIfReady()
+    }
+
+    // Host recentering and scrollbar input can change the camera after the
+    // initial bind. Render from those same coordinates used by band hit tests.
+    // This signal also covers non-scrollbar camera changes: camera.cpp routes
+    // pan/reveal/setters through sync*Camera, and time/key zoom through
+    // updateScrollbars, which unconditionally notifies via both scroll setters.
+    // songview.cpp's viewport/DPR changes, song rebind and state restore, plus
+    // viewstate.cpp's projection recenter, use that same updateScrollbars tail.
+    Connections {
+        target: root.editingBound ? timelineQuickView : null
+        function onScrollbarStateChanged() {
+            flick.contentX = timelineQuickView.horizontalScrollValue + swiftGridModel.leadPadWidth;
+            flick.contentY = timelineQuickView.verticalScrollValue;
+        }
     }
 
     Rectangle {
@@ -86,8 +110,19 @@ Item {
 
             contentWidth: pianoGridSurface.width
             contentHeight: pianoGridSurface.height
-            onContentXChanged: swiftGridModel.setViewportScrollX(contentX)
-            onContentYChanged: swiftGridModel.setViewportScroll(contentY)
+            onContentXChanged: {
+                swiftGridModel.setViewportScrollX(contentX)
+                // The band maps pointer facts through the host camera, so the
+                // overlay's scroll must drive it: contentX 0 rests at the
+                // camera's -leadPad floor, matching the C++ roll's home.
+                if (root.editingBound)
+                    timelineQuickView.setHorizontalScroll(contentX - swiftGridModel.leadPadWidth)
+            }
+            onContentYChanged: {
+                swiftGridModel.setViewportScroll(contentY)
+                if (root.editingBound)
+                    timelineQuickView.setVerticalScroll(contentY)
+            }
 
             // Unified viewing scroll: WheelHandler captures wheel/pan over the
             // visible viewport; rollInput.onWheel forwards content-area wheel events.
@@ -180,7 +215,30 @@ Item {
     }
 
 
+    // Binds the writable seams once both host ids are present (initial
+    // properties or late sets): the sgs_ session receiver and the sgb_ band
+    // surface through gridModel.bindEditing, then clears readOnly via
+    // editingBound. Idempotent; bindEditing traps on malformed tokens, so
+    // the flag flips only after a successful bind.
+    function bindEditingIfReady() {
+        if (root.editingBound || root.bandTarget === "" || root.sessionToken === ""
+            || !swiftGridModel.documentBound) {
+            return;
+        }
+        swiftGridModel.bindEditing(root.bandTarget, root.sessionToken);
+        root.editingBound = true;
+        // The band maps pointer facts through the host camera, so the overlay's
+        // scroll must drive it. The initial centering ran before the bind, so
+        // push the resting scroll once here; live pushes ride the flickable's
+        // contentX/contentY handlers.
+        timelineQuickView.setHorizontalScroll(flick.contentX - swiftGridModel.leadPadWidth)
+        timelineQuickView.setVerticalScroll(flick.contentY)
+    }
+    onBandTargetChanged: bindEditingIfReady()
+    onSessionTokenChanged: bindEditingIfReady()
+
     Component.onCompleted: {
         configureViewport();
+        bindEditingIfReady();
     }
 }

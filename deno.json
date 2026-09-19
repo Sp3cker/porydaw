@@ -9,7 +9,6 @@
     "format": "deno run --allow-read --allow-write --allow-run --allow-env=CLANG_FORMAT tools/cli.ts format",
     "format:check": "deno run --allow-read --allow-write --allow-run --allow-env=CLANG_FORMAT tools/cli.ts format --check",
     "coverage": "deno run --allow-read --allow-write --allow-run --allow-env=CI,PORYDAW_COVERAGE_IN_CI tools/coverage.ts",
-    "prototype:swift-grid": "deno run --allow-read --allow-write --allow-run --allow-env tools/swift_grid_prototype.ts",
     "worktree:create": "deno run --allow-read --allow-write --allow-run tools/worktree.ts create"
   },
   "fmt": {

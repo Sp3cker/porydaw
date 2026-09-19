@@ -193,6 +193,7 @@ if(APPLE)
         "${SWIFT_GRID_DIR}/Tick.swift"
         "${SWIFT_GRID_DIR}/TimeAxis.swift"
         "${SWIFT_GRID_DIR}/SwiftGridHost.swift"
+        "${SWIFT_GRID_DIR}/TrackHeaders.swift"
     )
     set_target_properties(swiftgrid PROPERTIES
         Swift_MODULE_NAME SwiftGrid

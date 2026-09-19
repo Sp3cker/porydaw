@@ -1,10 +1,21 @@
 #include "key_feed.h"
 
+#include <QCoreApplication>
+#include <QThread>
+
 #include <cstdlib>
 #include <limits>
 #include <unordered_map>
 
 namespace {
+
+// sgk_ submission is synchronous on the GUI thread by contract (spec §1);
+// fail loudly on a cross-thread delivery instead of racing the borrowed slot.
+inline void assertGuiThread()
+{
+    Q_ASSERT(QCoreApplication::instance() &&
+             QCoreApplication::instance()->thread() == QThread::currentThread());
+}
 
 std::unordered_map<uint64_t, SgkDelivery *> &endpoints()
 {
@@ -56,6 +67,7 @@ void sgk_clear_delivery(uint64_t target_id)
 
 bool sgk_deliver(uint64_t target_id, const SgkKeyFacts *facts)
 {
+    assertGuiThread();
     if (!facts)
         return false;
     const auto it = endpoints().find(target_id);

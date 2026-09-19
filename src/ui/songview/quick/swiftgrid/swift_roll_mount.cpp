@@ -3,12 +3,13 @@
 #ifdef Q_OS_MACOS
 
 #include "grid_host.h"
+#include "intent_executor.h"
+#include "session_feed.h"
 #include "swift_grid_document_feed.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/timelinebandlayout.h"
 #include "ui/theme/themeruntime.h"
-
 #include <QColor>
 #include <QQmlComponent>
 #include <QQmlEngine>
@@ -46,20 +47,29 @@ SwiftRollMount::~SwiftRollMount()
     unmount();
 }
 
-bool SwiftRollMount::mount(SongView &songView, QQuickView &view)
+bool SwiftRollMount::mount(SongView &songView, QQuickView &view, uint64_t bandTargetId)
 {
     if (m_mounted)
         return true;
+    if (bandTargetId == 0) {
+        qCritical("Swift roll overlay mount failed: band target id is null");
+        return false;
+    }
 
     initSwiftGridResources();
 
     m_songView = &songView;
     m_view = &view;
 
-    // Step 1: Construct feed, mint token and register its empty endpoint.
+    // Step 1: Construct feeds, then the executor over the document feed's
+    // id (the swiftdocfeed harness order: feed before executor, executor
+    // unregisters in its dtor, everything dies before the view).
     m_feed = std::make_unique<SwiftGridDocumentFeed>(songView.document());
     const uint64_t token = m_feed->documentId();
     const QString tokenStr = QString::number(token);
+    m_sessionFeed = std::make_unique<SwiftGridSessionFeed>(songView);
+    const QString sessionStr = QString::number(m_sessionFeed->sessionId());
+    m_executor = std::make_unique<SwiftGridIntentExecutor>(songView, token);
 
     // Step 2: Register grid types and create QML component.
     sg_register_grid_types();
@@ -83,6 +93,8 @@ bool SwiftRollMount::mount(SongView &songView, QQuickView &view)
     QVariantMap initialProperties;
     initialProperties.insert(QStringLiteral("documentToken"), tokenStr);
     initialProperties.insert(QStringLiteral("selectedTrack"), initialTrack);
+    initialProperties.insert(QStringLiteral("bandTarget"), QString::number(bandTargetId));
+    initialProperties.insert(QStringLiteral("sessionToken"), sessionStr);
 
     QObject *object = component.createWithInitialProperties(initialProperties);
     if (!object) {
@@ -103,7 +115,7 @@ bool SwiftRollMount::mount(SongView &songView, QQuickView &view)
 
     object->setParent(contentItem);
 
-    // Step 3: Verify component success and a bound delivery slot.
+    // Step 3: Verify component success and bound delivery slots.
     m_overlayItem = qobject_cast<QQuickItem *>(object);
     if (!m_overlayItem) {
         qCritical("Swift roll overlay root object is not a QQuickItem");
@@ -114,6 +126,15 @@ bool SwiftRollMount::mount(SongView &songView, QQuickView &view)
 
     if (!m_feed->delivery()->fn) {
         qCritical("Swift roll overlay failed to bind document delivery slot");
+        unmount();
+        return false;
+    }
+
+    // The overlay binds editing (session delivery + band surface) with the
+    // ids above; without it the mount is a read-only shell, not production
+    // editing.
+    if (!m_sessionFeed->delivery()->fn) {
+        qCritical("Swift roll overlay failed to bind editing session slot");
         unmount();
         return false;
     }
@@ -129,8 +150,9 @@ bool SwiftRollMount::mount(SongView &songView, QQuickView &view)
                              }
                          });
 
-    // Step 4: Explicitly push initial snapshot without waiting for edit.
+    // Step 4: Explicitly push initial snapshots without waiting for edit.
     m_feed->pushSnapshot();
+    m_sessionFeed->pushSnapshot();
 
     // Palette after data: the reloadVisuals rebuild then runs once, with real
     // notes and final colors together instead of rebuilding empty first.
@@ -215,12 +237,17 @@ void SwiftRollMount::applyHostPalette()
 
 void SwiftRollMount::unmount()
 {
-    // Step 5: Disconnect observers and unregister/destroy feed BEFORE deleting overlay.
+    // Step 5: Disconnect observers and unregister/destroy executor + feeds
+    // BEFORE deleting the overlay. Executor first (its slot borrows the
+    // document id the feeds own), then the session and document feeds whose
+    // slots point at Swift — only then is deleting the Swift grid safe.
     if (m_trackConnection) {
         QObject::disconnect(m_trackConnection);
         m_trackConnection = {};
     }
 
+    m_executor.reset();
+    m_sessionFeed.reset();
     m_feed.reset();
 
     if (m_overlayItem) {
@@ -258,6 +285,8 @@ void SwiftRollMount::handleTransferredWindowDeath()
         m_trackConnection = {};
     }
 
+    m_executor.reset();
+    m_sessionFeed.reset();
     m_feed.reset();
     m_overlayItem.clear();
     m_songView.clear();
@@ -272,7 +301,7 @@ void SwiftRollMount::handleTransferredWindowDeath()
 namespace songview {
 SwiftRollMount::SwiftRollMount() = default;
 SwiftRollMount::~SwiftRollMount() = default;
-bool SwiftRollMount::mount(SongView &, QQuickView &)
+bool SwiftRollMount::mount(SongView &, QQuickView &, uint64_t)
 {
     return false;
 }

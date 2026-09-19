@@ -72,7 +72,9 @@ typedef struct {
 } SgbSurface;
 
 // GUI-thread-only live endpoints. Slots and callback contexts are borrowed.
-// Endpoints are keyed by the SwiftGridKeyRouter target id the band shares.
+// Endpoints are keyed by the SwiftGridKeyRouter target id the band shares;
+// ids must come from SwiftGridKeyRouter::targetId() (the router owns the
+// registration lifetime, so only its ids are ever present).
 void sgb_register_surface(uint64_t target_id, SgbSurface *surface);
 void sgb_unregister_surface(uint64_t target_id);
 bool sgb_set_surface(uint64_t target_id, const SgbSurface *surface);
@@ -105,8 +107,10 @@ namespace songview {
 // gesture-active from the Swift surface, and delivers inputCancelled as the
 // four named cancel reasons through the existing sgw_ filter mapping.
 //
-// The SongView, the key router, and the TimelineInputHost outlive the band;
-// all three are borrowed, never retained.
+// The SongView and the TimelineInputHost outlive the band; both are borrowed,
+// never retained. The sgb_/sgk_ endpoint id is cached by value: the router is
+// only a construction witness, so endpoint unregistration in the destructor
+// never depends on another object's lifetime or member order.
 class SwiftRollBand final : public TimelineBandInteraction
 {
   public:
@@ -115,9 +119,13 @@ class SwiftRollBand final : public TimelineBandInteraction
 
     Q_DISABLE_COPY_MOVE(SwiftRollBand)
 
-    uint64_t targetId() const { return m_router.targetId(); }
+    uint64_t targetId() const { return m_targetId; }
 
+    // Only the plot input (timelineRollInput, bound with attachHost=true)
+    // ever attaches: the gutter input (timelineRollGutterInput) binds with
+    // attachHost=false, so the host pointer always names the plot item.
     void attachInputHost(TimelineInputHost &host) override;
+
     void detachInputHost(TimelineInputHost &host) override;
     bool gestureActive() const override;
     bool pointerPress(const TimelinePointerInput &input) override;
@@ -137,7 +145,7 @@ class SwiftRollBand final : public TimelineBandInteraction
     bool deliverPointer(int32_t kind, const TimelinePointerInput &input) const;
 
     SongView &m_view;
-    SwiftGridKeyRouter &m_router;
+    const uint64_t m_targetId;
     TimelineInputHost *m_host = nullptr;
     SgbSurface m_surface{};
 };

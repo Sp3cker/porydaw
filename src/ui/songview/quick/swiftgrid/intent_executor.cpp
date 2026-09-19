@@ -37,6 +37,31 @@ bool resolveNote(const SongDocument &document, uint64_t token, DocNote *out)
     return document.findNote(NoteId{token}, out);
 }
 
+// Resolves a batch token list to live notes for one production batch call:
+// non-empty, non-null, every token live, no duplicates. False leaves notes
+// untouched and the caller rejects without mutating anything.
+bool resolveNoteBatch(const SongDocument &document, const uint64_t *tokens, int32_t count,
+                      std::vector<DocNote> &notes)
+{
+    if (count <= 0 || !tokens)
+        return false;
+    notes.clear();
+    notes.reserve(size_t(count));
+    for (int32_t i = 0; i < count; ++i) {
+        DocNote note;
+        if (!resolveNote(document, tokens[i], &note))
+            return false;
+        notes.push_back(note);
+    }
+    std::sort(notes.begin(), notes.end(),
+              [](const DocNote &a, const DocNote &b) { return a.noteId < b.noteId; });
+    if (std::adjacent_find(notes.begin(), notes.end(), [](const DocNote &a, const DocNote &b) {
+            return a.noteId == b.noteId;
+        }) != notes.end())
+        return false;
+    return true;
+}
+
 SgcResult reject(SgcOutcome &outcome, SgcResult result)
 {
     outcome.result = result;
@@ -119,6 +144,37 @@ SgcResult SwiftGridIntentExecutor::run(const SgcIntentCommand &command, SgcOutco
         const int64_t delta = int64_t(p.durationTicks) - int64_t(note.duration);
         if (delta != 0)
             document.resizeNotes({note}, delta);
+        outcome.result = SGC_EXECUTED;
+        return SGC_EXECUTED;
+    }
+    case SGC_NOTE_MOVE_BATCH: {
+        const SgcNoteMoveBatch &p = command.payload.noteMoveBatch;
+        if (p.deltaTicks < -int64_t(CoreTimeDefaults::kMaxTick) ||
+            p.deltaTicks > int64_t(CoreTimeDefaults::kMaxTick))
+            return reject(outcome, SGC_REJECTED_INVALID);
+        std::vector<DocNote> notes;
+        if (!resolveNoteBatch(document, p.noteIds, p.count, notes))
+            return reject(outcome, SGC_REJECTED_INVALID);
+        if (p.deltaTicks != 0 || p.deltaKeys != 0)
+            document.moveNotes(notes, p.deltaTicks, p.deltaKeys);
+        outcome.result = SGC_EXECUTED;
+        return SGC_EXECUTED;
+    }
+    case SGC_NOTE_RESIZE_BATCH: {
+        const SgcNoteResizeBatch &p = command.payload.noteResizeBatch;
+        std::vector<DocNote> notes;
+        if (!resolveNoteBatch(document, p.noteIds, p.count, notes))
+            return reject(outcome, SGC_REJECTED_INVALID);
+        // Per-note range checks mirroring the single resize over the implied
+        // absolute durations; overlap/trim rules stay production-side.
+        for (const DocNote &note : notes) {
+            const int64_t duration = int64_t(note.duration) + p.dDuration;
+            if (duration < 1 ||
+                uint64_t(note.tick) + uint64_t(duration) > CoreTimeDefaults::kMaxTick)
+                return reject(outcome, SGC_REJECTED_INVALID);
+        }
+        if (p.dDuration != 0)
+            document.resizeNotes(notes, p.dDuration);
         outcome.result = SGC_EXECUTED;
         return SGC_EXECUTED;
     }

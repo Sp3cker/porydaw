@@ -30,7 +30,9 @@ Document intents (undoable):
 | --- | --- | --- |
 | `SGC_NOTE_ADD` | track, key, onTick, durationTicks, velocity | adds note; result carries the new `NoteId` token |
 | `SGC_NOTE_MOVE` | `NoteId` token, deltaTicks (int64), deltaKeys (int32) | clamped per document rules (resize clamp, note-pair integrity — production semantics, C++-side) |
+| `SGC_NOTE_MOVE_BATCH` | token list, deltaTicks (int64), deltaKeys (int32) | one gesture's uniform move: one `moveNotes` call, one undo entry (S-3) |
 | `SGC_NOTE_RESIZE` | token, durationTicks | production clamp rules |
+| `SGC_NOTE_RESIZE_BATCH` | token list, dDuration (int64, uniform) | one gesture's resize: one production batch call, one undo entry (S-3); `dDuration` is a duration DELTA, never an absolute duration — the payload mirrors production `resizeNotes` exactly |
 | `SGC_NOTE_DELETE` | token list | one undo entry for the batch |
 | `SGC_TRACK_ADD` / `SGC_TRACK_DUPLICATE` / `SGC_TRACK_DELETE` / `SGC_TRACK_REORDER` / `SGC_TRACK_RENAME` | track index / (index, newIndex) / (index, UTF-8 name, len) | production track-op semantics |
 
@@ -43,6 +45,10 @@ Session intents (no undo):
 | `SGC_TRACK_MUTE` / `SGC_TRACK_SOLO` | track, bool | routes to SongView setters |
 
 Adding a verb requires amending this file first.
+
+Amendment 2026-09-19 (controller, during Task 4): batch move/resize added
+because single-note intents made multi-note gestures produce N undo entries,
+violating S-3's one-gesture-one-entry rule.
 
 ## §3 `sgs_` session-state push (C++ → Swift)
 
@@ -75,6 +81,18 @@ order. No QKeyEvents, no QML shortcuts, no second dispatcher (INV-1/3).
 - Gestures commit one intent (or one batch) at gesture end — live drag
   renders a preview Swift-side, the document mutates once. One gesture =
   one undo entry (S-3).
+- Deviation (2026-09-19, Task 4 re-scope): the editing lane declines the
+  left edge grip. A leading resize shifts every selected note's start by
+  +d and its duration by −d, which the frozen §2 vocabulary carries only
+  as per-note `noteMove`+`noteResize` pairs or as two batch intents — 2N
+  or 2 undo entries against S-3. With no one-entry form and no
+  executor-side coalescing (the C ABI is frozen for this milestone) the
+  press is declined: no gesture opens, no intent crosses, and the
+  flag-off C++ roll keeps its production leading resize
+  (`resizeNotesLeft`) untouched. The trailing right-grip resize keeps its
+  one-entry `SGC_NOTE_RESIZE_BATCH`. Closure: the deviation dies at the
+  Swift-native transaction cutover, where one gesture is one transaction
+  by construction.
 - `PORYDAW_SWIFT_HEADERS` swaps the `TrackHeaderModel` presenter for the
   Swift presenter behind the same QML (`TrackHeaderBand.qml` unchanged;
   the Swift presenter mirrors the Q_PROPERTY surface). Rename drafting

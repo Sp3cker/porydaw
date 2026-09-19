@@ -9,6 +9,11 @@ public enum SgcIntent: Sendable {
     case noteMove(noteId: UInt64, deltaTicks: Int64, deltaKeys: Int32)
     case noteResize(noteId: UInt64, durationTicks: UInt32)
     case noteDelete(noteIds: [UInt64])
+    // Batch forms: one gesture's move/resize as one intent = one undo entry
+    // (spec §5, S-3). noteResizeBatch carries a uniform duration DELTA
+    // mirroring production resizeNotes, not an absolute duration.
+    case noteMoveBatch(noteIds: [UInt64], deltaTicks: Int64, deltaKeys: Int32)
+    case noteResizeBatch(noteIds: [UInt64], dDuration: Int64)
     case trackAdd(voice: Int32)
     case trackDuplicate(track: Int32)
     case trackDelete(track: Int32)
@@ -58,6 +63,54 @@ public struct SgcCommandPipe: Sendable {
     }
 }
 
+// Gesture→intent helpers (spec.md §5): the grid's commit points speak in
+// gesture terms; each helper maps to the closed §2 vocabulary. Document
+// intents are undoable (one intent = one undo entry); selection intents
+// carry the complete desired set computed from sgs_ state.
+public extension SgcCommandPipe {
+    // Draw commit: adds the note and returns the outcome carrying the
+    // minted NoteId token (0 when rejected).
+    @discardableResult
+    func addDrawnNote(
+        track: Int32, key: Int32, onTick: UInt32,
+        durationTicks: UInt32, velocity: Int32
+    ) -> SgcOutcome {
+        submit(.noteAdd(
+            track: track, key: key, onTick: onTick,
+            durationTicks: durationTicks, velocity: velocity))
+    }
+    // Move commit: the whole selection as one batch intent = one undo
+    // entry (SGC_NOTE_MOVE_BATCH, spec §5).
+    @discardableResult
+    func moveNotes(noteIds: [UInt64], deltaTicks: Int64, deltaKeys: Int32) -> SgcOutcome {
+        submit(.noteMoveBatch(
+            noteIds: noteIds, deltaTicks: deltaTicks, deltaKeys: deltaKeys))
+    }
+
+    // Trailing-edge resize commit: the whole selection as one batch intent
+    // = one undo entry. dDuration is the uniform duration delta mirroring
+    // production resizeNotes.
+    @discardableResult
+    func resizeNotes(noteIds: [UInt64], dDuration: Int64) -> SgcOutcome {
+        submit(.noteResizeBatch(noteIds: noteIds, dDuration: dDuration))
+    }
+
+    // Delete commit: the whole selection as one batch intent = one undo
+    // entry.
+    @discardableResult
+    func deleteNotes(_ noteIds: [UInt64]) -> SgcOutcome {
+        submit(.noteDelete(noteIds: noteIds))
+    }
+
+    // Selection commit: the complete desired set (empty → clear).
+    @discardableResult
+    func selectNotes(_ noteIds: [UInt64]) -> SgcOutcome {
+        noteIds.isEmpty
+            ? submit(.selectionClear)
+            : submit(.selectionSetNotes(noteIds: noteIds))
+    }
+}
+
 private extension SgcCommandPipe {
     static func result(_ raw: SwiftGridCommands.SgcResult) -> SgcResult {
         // The imported C enum exposes rawValue only (no case names), so the
@@ -78,8 +131,8 @@ private extension SgcCommandPipe {
         case noteAdd = 0, noteMove, noteResize, noteDelete
         case trackAdd, trackDuplicate, trackDelete, trackReorder, trackRename
         case selectionSetNotes, selectionClear, trackMute, trackSolo
+        case noteMoveBatch = 13, noteResizeBatch
     }
-
     private static func rawIntent(_ raw: RawIntent) -> SwiftGridCommands.SgcIntent {
         // The imported initializer is non-failable: an out-of-range raw value
         // still constructs, so RawIntent's order freeze is what carries safety.
@@ -116,6 +169,22 @@ private extension SgcCommandPipe {
             return noteIds.withUnsafeBufferPointer { buffer in
                 command.payload.noteList = SwiftGridCommands.SgcNoteList(
                     noteIds: buffer.baseAddress, count: Int32(buffer.count))
+                return body(&command)
+            }
+        case let .noteMoveBatch(noteIds, deltaTicks, deltaKeys):
+            command.intent = Self.rawIntent(.noteMoveBatch)
+            return noteIds.withUnsafeBufferPointer { buffer in
+                command.payload.noteMoveBatch = SwiftGridCommands.SgcNoteMoveBatch(
+                    noteIds: buffer.baseAddress, count: Int32(buffer.count),
+                    deltaTicks: deltaTicks, deltaKeys: deltaKeys)
+                return body(&command)
+            }
+        case let .noteResizeBatch(noteIds, dDuration):
+            command.intent = Self.rawIntent(.noteResizeBatch)
+            return noteIds.withUnsafeBufferPointer { buffer in
+                command.payload.noteResizeBatch = SwiftGridCommands.SgcNoteResizeBatch(
+                    noteIds: buffer.baseAddress, count: Int32(buffer.count),
+                    dDuration: dDuration)
                 return body(&command)
             }
         case let .trackAdd(voice):

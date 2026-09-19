@@ -5,6 +5,7 @@
 #include "project/decompproject.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/swiftgrid/swift_roll_band.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/workspaceui.h"
@@ -18,6 +19,7 @@
 #include <QUndoStack>
 #include <QWheelEvent>
 #include <QtTest/QTest>
+#include <algorithm>
 
 SwiftRollGatedTest::SwiftRollGatedTest(QString projectRoot, QString songA, QString songB)
     : m_projectRoot(std::move(projectRoot))
@@ -62,7 +64,11 @@ void SwiftRollGatedTest::testInitialRenderWithoutEdit()
 
     auto *const gridModel = quickWin->findChild<QObject *>(QStringLiteral("swiftGridModel"));
     QVERIFY2(gridModel != nullptr, "swiftGridModel must exist in overlay QML");
-    QVERIFY(gridModel->property("readOnly").toBool());
+    // Wave 4: the mounted roll binds the writable seams, so readOnly clears
+    // once editingBound flips; gestures commit through sgc_ intents.
+    QVERIFY2(overlay->property("editingBound").toBool(),
+             "mounted roll must bind the writable seams when PORYDAW_SWIFT_ROLL is set");
+    QVERIFY(!gridModel->property("readOnly").toBool());
 
     const int noteCount = overlay->property("noteCount").toInt();
     QVERIFY2(noteCount > 0, "Initial render must populate notes without requiring an edit");
@@ -377,7 +383,7 @@ void SwiftRollGatedTest::testRemountFreshToken()
     QVERIFY2(token1 != token2, "Reopening a song must mint a fresh document token");
 }
 
-void SwiftRollGatedTest::testPointerEditingBlockedWithoutFocusChange()
+void SwiftRollGatedTest::testBandEditWithoutFocusChange()
 {
     selectionkey::WindowSession session;
     QString error;
@@ -387,41 +393,443 @@ void SwiftRollGatedTest::testPointerEditingBlockedWithoutFocusChange()
     QVERIFY2(tab != nullptr, qUtf8Printable(error));
 
     SongView &view = tab->view();
-    const SongDocument &document = tab->document();
+    SongDocument &document = tab->document();
     QQuickWindow *const quickWin = view.quickView()->quickWindow();
 
     auto *const overlay = quickWin->findChild<QQuickItem *>(QStringLiteral("swiftRollOverlay"));
     QVERIFY(overlay != nullptr);
 
-    auto *const swiftRollInput = overlay->findChild<QQuickItem *>(QStringLiteral("swiftRollInput"));
+    auto *const swiftRollInput =
+        quickWin->findChild<QQuickItem *>(QStringLiteral("timelineRollInput"));
     QVERIFY(swiftRollInput != nullptr);
 
     const uint64_t beforeRev = document.revision();
     const auto beforeNotes = document.notesForTrack(0);
-
+    const int undoBase = document.undoStack()->count();
     const QPoint center(static_cast<int>(swiftRollInput->width() / 2),
                         static_cast<int>(swiftRollInput->height() / 2));
     const QPointF scenePos = swiftRollInput->mapToScene(QPointF(center));
     const QPoint globalPos = quickWin->mapToGlobal(scenePos.toPoint());
+    // A full beat of drag guarantees a nonzero snapped delta whether the
+    // press lands on a note (move) or empty space (draw).
+    auto *const gridModel = quickWin->findChild<QObject *>(QStringLiteral("swiftGridModel"));
+    QVERIFY(gridModel != nullptr);
+    const int drag = qMax(50, qRound(gridModel->property("beatWidth").toDouble()));
+    const QPointF movedPos = scenePos + QPointF(drag, 0);
+    const QPoint globalMoved = quickWin->mapToGlobal(movedPos.toPoint());
 
     QMouseEvent press(QEvent::MouseButtonPress, scenePos, globalPos, Qt::LeftButton, Qt::LeftButton,
                       Qt::NoModifier);
     QCoreApplication::sendEvent(quickWin, &press);
 
-    QMouseEvent move(QEvent::MouseMove, scenePos + QPointF(50, 0), globalPos + QPoint(50, 0),
-                     Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent move(QEvent::MouseMove, movedPos, globalMoved, Qt::LeftButton, Qt::LeftButton,
+                     Qt::NoModifier);
     QCoreApplication::sendEvent(quickWin, &move);
 
-    QMouseEvent release(QEvent::MouseButtonRelease, scenePos + QPointF(50, 0),
-                        globalPos + QPoint(50, 0), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    QMouseEvent release(QEvent::MouseButtonRelease, movedPos, globalMoved, Qt::LeftButton,
+                        Qt::NoButton, Qt::NoModifier);
     QCoreApplication::sendEvent(quickWin, &release);
     selectionkey::settle();
 
-    QCOMPARE(document.revision(), beforeRev);
-    QCOMPARE(document.notesForTrack(0).size(), beforeNotes.size());
+    // With the writable seams bound the same gesture now commits through
+    // the band as one intent = one undo entry; the overlay still never
+    // takes focus.
+    QCOMPARE(document.undoStack()->count(), undoBase + 1);
+    QVERIFY(document.revision() > beforeRev);
 
     QVERIFY(quickWin->activeFocusItem() != overlay);
     QVERIFY(quickWin->activeFocusItem() != swiftRollInput);
+
+    document.undoStack()->undo();
+    selectionkey::settle();
+    QCOMPARE(document.notesForTrack(0).size(), beforeNotes.size());
+}
+
+void SwiftRollGatedTest::testBandEditUndoRedoRerender()
+{
+    selectionkey::WindowSession session;
+    QString error;
+    QVERIFY2(selectionkey::openWindowSession(session, m_projectRoot, error), qUtf8Printable(error));
+
+    SongTab *const tab = selectionkey::openSongTab(session, m_songA, false, error);
+    QVERIFY2(tab != nullptr, qUtf8Printable(error));
+
+    SongView &view = tab->view();
+    SongDocument &document = tab->document();
+    QQuickWindow *const quickWin = view.quickView()->quickWindow();
+
+    auto *const overlay = quickWin->findChild<QQuickItem *>(QStringLiteral("swiftRollOverlay"));
+    QVERIFY(overlay != nullptr);
+    QVERIFY2(overlay->property("editingBound").toBool(),
+             "mounted roll must bind the writable seams when PORYDAW_SWIFT_ROLL is set");
+    auto *const gridModel = quickWin->findChild<QObject *>(QStringLiteral("swiftGridModel"));
+    QVERIFY(gridModel != nullptr);
+    QVERIFY(!gridModel->property("readOnly").toBool());
+
+    // The band input item sits under the disabled overlay MouseArea; presses
+    // reach it and forward through the sgb_ surface as tick/key facts.
+    auto *const rollInput = quickWin->findChild<QQuickItem *>(QStringLiteral("timelineRollInput"));
+    QVERIFY2(rollInput != nullptr, "roll band input item must exist under the overlay");
+
+    const auto notes0 = document.notesForTrack(0);
+    QVERIFY(!notes0.empty());
+    const DocNote target = notes0.front();
+    const int undoBase = document.undoStack()->count();
+    const uint64_t revBase = document.revision();
+
+    // Drain queued QtBridge metric notifications before sampling coordinates.
+    // Settling after sampling can combine old row sizes with the new camera.
+    selectionkey::settle();
+    // Note center in content coordinates, then to the input item's scene.
+    const double beatWidth = gridModel->property("beatWidth").toDouble();
+    const double rowHeight = gridModel->property("rowHeight").toDouble();
+    const double leadPad = gridModel->property("leadPadWidth").toDouble();
+    const int ticksPerBeat = gridModel->property("ticksPerBeat").toInt();
+    QVERIFY(beatWidth > 0 && rowHeight > 0 && ticksPerBeat > 0);
+    auto *const surface = overlay->findChild<QQuickItem *>(QStringLiteral("pianoGridSurface"));
+    QVERIFY(surface != nullptr);
+    const auto contentPoint = [&](double tick, int key) {
+        return QPointF(leadPad + tick * beatWidth / ticksPerBeat, (127.0 - key + 0.5) * rowHeight);
+    };
+    const QPointF centerScene =
+        surface->mapToScene(contentPoint(target.tick + target.duration / 2, target.key));
+    const QPointF movedScene = surface->mapToScene(
+        contentPoint(target.tick + target.duration / 2 + ticksPerBeat, target.key));
+    const QPoint globalCenter = quickWin->mapToGlobal(centerScene.toPoint());
+    const QPoint globalMoved = quickWin->mapToGlobal(movedScene.toPoint());
+
+    QMouseEvent press(QEvent::MouseButtonPress, centerScene, globalCenter, Qt::LeftButton,
+                      Qt::LeftButton, Qt::NoModifier);
+    QCoreApplication::sendEvent(quickWin, &press);
+    QMouseEvent move(QEvent::MouseMove, movedScene, globalMoved, Qt::LeftButton, Qt::LeftButton,
+                     Qt::NoModifier);
+    QCoreApplication::sendEvent(quickWin, &move);
+    // The live drag is a Swift-side preview: no document mutation yet.
+    QCOMPARE(document.revision(), revBase);
+    QMouseEvent release(QEvent::MouseButtonRelease, movedScene, globalMoved, Qt::LeftButton,
+                        Qt::NoButton, Qt::NoModifier);
+    QCoreApplication::sendEvent(quickWin, &release);
+    const auto moved = document.notesForTrack(0);
+    QCOMPARE(moved.size(), notes0.size());
+    // One gesture = one intent = one undo entry (S-3).
+    QCOMPARE(document.undoStack()->count(), undoBase + 1);
+    QVERIFY(document.revision() > revBase);
+    bool foundMoved = false;
+    for (const DocNote &note : moved)
+        if (note.noteId == target.noteId && note.tick != target.tick)
+            foundMoved = true;
+    QVERIFY2(foundMoved, "drag release did not move the note through an sgc_ intent");
+
+    // sgd_ re-render: the overlay reflects the post-edit snapshot.
+    // QtBridge queues property notifications; the document commit is
+    // synchronous, but the QML binding observes it on the next event turn.
+    selectionkey::settle();
+    QCOMPARE(overlay->property("appliedRevisionText").toString(),
+             QString::number(document.revision()));
+
+    document.undoStack()->undo();
+    selectionkey::settle();
+    QCOMPARE(overlay->property("appliedRevisionText").toString(),
+             QString::number(document.revision()));
+    const auto undone = document.notesForTrack(0);
+    bool foundRestored = false;
+    for (const DocNote &note : undone)
+        if (note.noteId == target.noteId && note.tick == target.tick)
+            foundRestored = true;
+    QVERIFY2(foundRestored, "production undo did not restore the moved note");
+
+    document.undoStack()->redo();
+    selectionkey::settle();
+    QCOMPARE(overlay->property("appliedRevisionText").toString(),
+             QString::number(document.revision()));
+    QVERIFY(selectionkey::undoTabToClean(*session.workspace, document,
+                                         QStringLiteral("cleaning band edit test"), &error));
+}
+
+void SwiftRollGatedTest::testEscapeMidDragZeroEffect()
+{
+    selectionkey::WindowSession session;
+    QString error;
+    QVERIFY2(selectionkey::openWindowSession(session, m_projectRoot, error), qUtf8Printable(error));
+
+    SongTab *const tab = selectionkey::openSongTab(session, m_songA, false, error);
+    QVERIFY2(tab != nullptr, qUtf8Printable(error));
+
+    SongView &view = tab->view();
+    SongDocument &document = tab->document();
+    QQuickWindow *const quickWin = view.quickView()->quickWindow();
+
+    auto *const overlay = quickWin->findChild<QQuickItem *>(QStringLiteral("swiftRollOverlay"));
+    QVERIFY(overlay != nullptr);
+    QVERIFY(overlay->property("editingBound").toBool());
+    auto *const gridModel = quickWin->findChild<QObject *>(QStringLiteral("swiftGridModel"));
+    QVERIFY(gridModel != nullptr);
+
+    const auto notes0 = document.notesForTrack(0);
+    QVERIFY(!notes0.empty());
+    const DocNote target = notes0.front();
+    const int undoBase = document.undoStack()->count();
+    const uint64_t revBase = document.revision();
+
+    const double beatWidth = gridModel->property("beatWidth").toDouble();
+    const double rowHeight = gridModel->property("rowHeight").toDouble();
+    const double leadPad = gridModel->property("leadPadWidth").toDouble();
+    const int ticksPerBeat = gridModel->property("ticksPerBeat").toInt();
+    auto *const surface = overlay->findChild<QQuickItem *>(QStringLiteral("pianoGridSurface"));
+    QVERIFY(surface != nullptr);
+    const QPointF centerScene = surface->mapToScene(
+        QPointF(leadPad + (target.tick + target.duration / 2.0) * beatWidth / ticksPerBeat,
+                (127.0 - target.key + 0.5) * rowHeight));
+    const QPointF movedScene = centerScene + QPointF(beatWidth, 0);
+    const QPoint globalCenter = quickWin->mapToGlobal(centerScene.toPoint());
+    const QPoint globalMoved = quickWin->mapToGlobal(movedScene.toPoint());
+
+    QMouseEvent press(QEvent::MouseButtonPress, centerScene, globalCenter, Qt::LeftButton,
+                      Qt::LeftButton, Qt::NoModifier);
+    QCoreApplication::sendEvent(quickWin, &press);
+    QMouseEvent move(QEvent::MouseMove, movedScene, globalMoved, Qt::LeftButton, Qt::LeftButton,
+                     Qt::NoModifier);
+    QCoreApplication::sendEvent(quickWin, &move);
+
+    // Escape mid-drag: the host arbiter cancels the gesture through the
+    // band's cancel path — the preview drops with zero document effect.
+    QTest::keyClick(quickWin, Qt::Key_Escape);
+    selectionkey::settle();
+
+    QCOMPARE(document.revision(), revBase);
+    QCOMPARE(document.undoStack()->count(), undoBase);
+    const auto after = document.notesForTrack(0);
+    QCOMPARE(after.size(), notes0.size());
+    bool unchanged = false;
+    for (const DocNote &note : after)
+        if (note.noteId == target.noteId && note.tick == target.tick && note.key == target.key &&
+            note.duration == target.duration)
+            unchanged = true;
+    QVERIFY2(unchanged, "Escape mid-drag mutated the document");
+
+    // The cancelled gesture released the band: a trailing release is a
+    // no-op, not a commit.
+    QMouseEvent release(QEvent::MouseButtonRelease, movedScene, globalMoved, Qt::LeftButton,
+                        Qt::NoButton, Qt::NoModifier);
+    QCoreApplication::sendEvent(quickWin, &release);
+    selectionkey::settle();
+    QCOMPARE(document.revision(), revBase);
+    QCOMPARE(document.undoStack()->count(), undoBase);
+}
+
+// Spec §5 deviation (S-3): a leading resize shifts every selected note's
+// start by +d and its duration by -d, which the frozen §2 vocabulary carries
+// only as separate intents — two undo entries against one gesture = one
+// entry. The editing lane declines a left-grip press instead: the real
+// mounted band must open no gesture, cross no intent, and leave the undo
+// stack, the document, and the host selection untouched.
+void SwiftRollGatedTest::testBandLeadingGripDecline()
+{
+    selectionkey::WindowSession session;
+    QString error;
+    QVERIFY2(selectionkey::openWindowSession(session, m_projectRoot, error), qUtf8Printable(error));
+
+    SongTab *const tab = selectionkey::openSongTab(session, m_songA, false, error);
+    QVERIFY2(tab != nullptr, qUtf8Printable(error));
+
+    SongView &view = tab->view();
+    SongDocument &document = tab->document();
+    QQuickWindow *const quickWin = view.quickView()->quickWindow();
+    QVERIFY(quickWin != nullptr);
+
+    auto *const overlay = quickWin->findChild<QQuickItem *>(QStringLiteral("swiftRollOverlay"));
+    QVERIFY(overlay != nullptr);
+    QVERIFY2(overlay->property("editingBound").toBool(),
+             "mounted roll must bind the writable seams when PORYDAW_SWIFT_ROLL is set");
+    auto *const gridModel = quickWin->findChild<QObject *>(QStringLiteral("swiftGridModel"));
+    QVERIFY(gridModel != nullptr);
+    QVERIFY(!gridModel->property("readOnly").toBool());
+    songview::SwiftRollBand *const band = view.quickView()->swiftRollBand();
+    QVERIFY2(band != nullptr, "the Swift roll band must be attached behind PORYDAW_SWIFT_ROLL");
+
+    const auto notes0 = document.notesForTrack(0);
+    QVERIFY(!notes0.empty());
+    const DocNote target = notes0.front();
+    const int undoBase = document.undoStack()->count();
+    const uint64_t revBase = document.revision();
+
+    // Drain queued QtBridge metric notifications before sampling coordinates.
+    selectionkey::settle();
+    const double beatWidth = gridModel->property("beatWidth").toDouble();
+    const double rowHeight = gridModel->property("rowHeight").toDouble();
+    const double leadPad = gridModel->property("leadPadWidth").toDouble();
+    const int ticksPerBeat = gridModel->property("ticksPerBeat").toInt();
+    QVERIFY(beatWidth > 0 && rowHeight > 0 && ticksPerBeat > 0);
+    auto *const surface = overlay->findChild<QQuickItem *>(QStringLiteral("pianoGridSurface"));
+    QVERIFY(surface != nullptr);
+    const QPointF leftEdge = surface->mapToScene(QPointF(
+        leadPad + target.tick * beatWidth / ticksPerBeat, (127.0 - target.key + 0.5) * rowHeight));
+    const QPointF dragged = leftEdge + QPointF(beatWidth, 0.0);
+    const auto sendMouse = [&](QEvent::Type type, const QPointF &scene) {
+        const QPoint global = quickWin->mapToGlobal(scene.toPoint());
+        QMouseEvent event(type, scene, global, Qt::LeftButton,
+                          type == QEvent::MouseButtonRelease ? Qt::NoButton : Qt::LeftButton,
+                          Qt::NoModifier);
+        QCoreApplication::sendEvent(quickWin, &event);
+    };
+
+    // Positive control: the note body opens a move gesture and takes the host
+    // selection at these coordinates, so the declined press below is the
+    // grip's doing rather than a miss. A zero-delta release commits nothing.
+    const QPointF body = surface->mapToScene(
+        QPointF(leadPad + (target.tick + target.duration / 2.0) * beatWidth / ticksPerBeat,
+                (127.0 - target.key + 0.5) * rowHeight));
+    sendMouse(QEvent::MouseButtonPress, body);
+    selectionkey::settle();
+    QVERIFY2(band->gestureActive(), "the grip rows never reached the note body");
+    QVERIFY2(view.selectionModel().isNoteSelected(target.noteId),
+             "the grip rows never reached the note body (selection did not follow the press)");
+    sendMouse(QEvent::MouseButtonRelease, body);
+    selectionkey::settle();
+    QCOMPARE(document.undoStack()->count(), undoBase);
+    const auto selectionBefore = view.selectionModel().noteSelection();
+
+    sendMouse(QEvent::MouseButtonPress, leftEdge);
+    selectionkey::settle();
+
+    QVERIFY2(!band->gestureActive(), "the declined leading grip opened a band gesture");
+    QCOMPARE(document.undoStack()->count(), undoBase);
+    QCOMPARE(document.revision(), revBase);
+    const auto selectionUnchanged = [&] {
+        const auto &now = view.selectionModel().noteSelection();
+        return now.size() == selectionBefore.size() &&
+               std::all_of(selectionBefore.begin(), selectionBefore.end(),
+                           [&](NoteId id) { return view.selectionModel().isNoteSelected(id); });
+    };
+    QVERIFY2(selectionUnchanged(), "the declined leading grip changed the host note selection");
+
+    // A drag and release after the declined press still lands nothing: no
+    // gesture opened, so there is no commit to land.
+    sendMouse(QEvent::MouseMove, dragged);
+    sendMouse(QEvent::MouseButtonRelease, dragged);
+    selectionkey::settle();
+
+    QVERIFY2(!band->gestureActive(), "the declined leading grip left a live gesture");
+    QCOMPARE(document.undoStack()->count(), undoBase);
+    QCOMPARE(document.revision(), revBase);
+    const auto after = document.notesForTrack(0);
+    QCOMPARE(after.size(), notes0.size());
+    bool unchanged = false;
+    for (const DocNote &note : after)
+        if (note.noteId == target.noteId && note.tick == target.tick && note.key == target.key &&
+            note.duration == target.duration && note.velocity == target.velocity)
+            unchanged = true;
+    QVERIFY2(unchanged, "the declined leading grip mutated the document");
+}
+
+// The trailing grip is the resize the frozen §2 vocabulary lands atomically:
+// press, Swift-side preview, and one SGC_NOTE_RESIZE_BATCH on release — one
+// gesture = one undo entry (S-3), with the note's start preserved.
+void SwiftRollGatedTest::testBandTrailingGripResizeCommitOnce()
+{
+    selectionkey::WindowSession session;
+    QString error;
+    QVERIFY2(selectionkey::openWindowSession(session, m_projectRoot, error), qUtf8Printable(error));
+
+    SongTab *const tab = selectionkey::openSongTab(session, m_songA, false, error);
+    QVERIFY2(tab != nullptr, qUtf8Printable(error));
+
+    SongView &view = tab->view();
+    SongDocument &document = tab->document();
+    QQuickWindow *const quickWin = view.quickView()->quickWindow();
+    QVERIFY(quickWin != nullptr);
+
+    auto *const overlay = quickWin->findChild<QQuickItem *>(QStringLiteral("swiftRollOverlay"));
+    QVERIFY(overlay != nullptr);
+    QVERIFY(overlay->property("editingBound").toBool());
+    auto *const gridModel = quickWin->findChild<QObject *>(QStringLiteral("swiftGridModel"));
+    QVERIFY(gridModel != nullptr);
+    QVERIFY(!gridModel->property("readOnly").toBool());
+    songview::SwiftRollBand *const band = view.quickView()->swiftRollBand();
+    QVERIFY2(band != nullptr, "the Swift roll band must be attached behind PORYDAW_SWIFT_ROLL");
+
+    const auto notes0 = document.notesForTrack(0);
+    QVERIFY(!notes0.empty());
+    const DocNote target = notes0.front();
+    const int undoBase = document.undoStack()->count();
+    const uint64_t revBase = document.revision();
+
+    // Drain queued QtBridge metric notifications before sampling coordinates.
+    selectionkey::settle();
+    const double beatWidth = gridModel->property("beatWidth").toDouble();
+    const double rowHeight = gridModel->property("rowHeight").toDouble();
+    const double leadPad = gridModel->property("leadPadWidth").toDouble();
+    const int ticksPerBeat = gridModel->property("ticksPerBeat").toInt();
+    const double baseFontPx = gridModel->property("baseFontPx").toDouble();
+    QVERIFY(beatWidth > 0 && rowHeight > 0 && ticksPerBeat > 0 && baseFontPx > 0);
+    auto *const surface = overlay->findChild<QQuickItem *>(QStringLiteral("pianoGridSurface"));
+    QVERIFY(surface != nullptr);
+
+    // Grip band arithmetic mirrors the grid's own metrics (GridMetrics:
+    // edgeGripReach = 0.25 * baseFontPx, moveZoneMinWidth = 0.5 * baseFontPx,
+    // innerReach = min(reach, (width - moveZoneMinWidth) / 2)). The press sits
+    // inside the inner reach, and the guard keeps the pixel round-trip from
+    // sampling the note body on a fixture note too narrow for a grip.
+    const double pxPerTick = beatWidth / ticksPerBeat;
+    const double gripReach = 0.25 * baseFontPx;
+    const double noteWidth = target.duration * pxPerTick;
+    const double gripInner =
+        std::min(gripReach, std::max(0.0, (noteWidth - 0.5 * baseFontPx) / 2.0));
+    QVERIFY2(gripInner >= 0.5, "fixture note is too narrow for a stable trailing-grip press");
+    const QPointF rightEdge =
+        surface->mapToScene(QPointF(leadPad + (target.tick + target.duration) * pxPerTick,
+                                    (127.0 - target.key + 0.5) * rowHeight));
+    const QPointF grip = rightEdge - QPointF(std::min(1.0, gripInner / 2.0), 0.0);
+    const QPointF dragged = grip + QPointF(beatWidth, 0.0);
+    const auto sendMouse = [&](QEvent::Type type, const QPointF &scene) {
+        const QPoint global = quickWin->mapToGlobal(scene.toPoint());
+        QMouseEvent event(type, scene, global, Qt::LeftButton,
+                          type == QEvent::MouseButtonRelease ? Qt::NoButton : Qt::LeftButton,
+                          Qt::NoModifier);
+        QCoreApplication::sendEvent(quickWin, &event);
+    };
+
+    sendMouse(QEvent::MouseButtonPress, grip);
+    selectionkey::settle();
+    QVERIFY2(band->gestureActive(), "the trailing-grip press opened no band gesture");
+
+    sendMouse(QEvent::MouseMove, dragged);
+    selectionkey::settle();
+    // The live resize is a Swift-side preview: the document mutates once, at
+    // release.
+    QCOMPARE(document.revision(), revBase);
+    QCOMPARE(document.undoStack()->count(), undoBase);
+
+    sendMouse(QEvent::MouseButtonRelease, dragged);
+    selectionkey::settle();
+
+    // One gesture = one intent = one undo entry (S-3): the single
+    // SGC_NOTE_RESIZE_BATCH lands as exactly one production undo step, and it
+    // resizes (start preserved, end grown) rather than moves.
+    QCOMPARE(document.undoStack()->count(), undoBase + 1);
+    QVERIFY(document.revision() > revBase);
+    const auto resized = document.notesForTrack(0);
+    QCOMPARE(resized.size(), notes0.size());
+    const DocNote *after = nullptr;
+    for (const DocNote &note : resized)
+        if (note.noteId == target.noteId)
+            after = &note;
+    QVERIFY2(after != nullptr, "the resized note vanished from the document");
+    QCOMPARE(after->tick, target.tick);
+    QCOMPARE(after->key, target.key);
+    QVERIFY2(after->duration > target.duration, "the resize batch did not extend the note");
+
+    document.undoStack()->undo();
+    selectionkey::settle();
+    const auto restored = document.notesForTrack(0);
+    bool foundRestored = false;
+    for (const DocNote &note : restored)
+        if (note.noteId == target.noteId && note.tick == target.tick &&
+            note.duration == target.duration)
+            foundRestored = true;
+    QVERIFY2(foundRestored, "production undo did not restore the resized note");
+    QVERIFY(selectionkey::undoTabToClean(*session.workspace, document,
+                                         QStringLiteral("cleaning trailing grip test"), &error));
 }
 
 void SwiftRollGatedTest::testViewingInputLive()

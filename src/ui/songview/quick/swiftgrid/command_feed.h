@@ -32,8 +32,12 @@ typedef enum {
     SGC_SELECTION_CLEAR = 10,
     SGC_TRACK_MUTE = 11,
     SGC_TRACK_SOLO = 12,
+    // Batch document intents (undoable; one batch = one undo entry).
+    // Appended after the session block so the 0-12 raw values the Swift
+    // mirror freezes never shift.
+    SGC_NOTE_MOVE_BATCH = 13,
+    SGC_NOTE_RESIZE_BATCH = 14,
 } SgcIntent;
-
 typedef enum {
     SGC_EXECUTED = 0,
     // Malformed payload, stale NoteId token, or out-of-range field; nothing
@@ -69,6 +73,25 @@ typedef struct {
     int32_t count;
 } SgcNoteList;
 
+// Token list + uniform deltas for SGC_NOTE_MOVE_BATCH: one gesture's move as
+// one moveNotes call, one undo entry.
+typedef struct {
+    const uint64_t *noteIds;
+    int32_t count;
+    int64_t deltaTicks;
+    int32_t deltaKeys;
+} SgcNoteMoveBatch;
+
+// Token list + uniform duration delta for SGC_NOTE_RESIZE_BATCH: one
+// gesture's resize as one resizeNotes call, one undo entry. The delta
+// mirrors the production resizeNotes API exactly (uniform dDuration;
+// per-note clamp/trim rules stay C++-side).
+typedef struct {
+    const uint64_t *noteIds;
+    int32_t count;
+    int64_t dDuration;
+} SgcNoteResizeBatch;
+
 // The voicegroup program seeding the new track's slot.
 typedef struct {
     int32_t voice;
@@ -103,6 +126,8 @@ typedef struct {
         SgcNoteAdd noteAdd;
         SgcNoteMove noteMove;
         SgcNoteResize noteResize;
+        SgcNoteMoveBatch noteMoveBatch;
+        SgcNoteResizeBatch noteResizeBatch;
         SgcNoteList noteList;
         SgcTrackAdd trackAdd;
         SgcTrackIndex trackIndex;

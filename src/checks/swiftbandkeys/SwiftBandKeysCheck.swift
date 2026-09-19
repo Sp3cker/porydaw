@@ -12,7 +12,12 @@ private final class BandKeysRegistry {
 
     private init() {}
 
-    func create(targetId: UInt64, sessionId: UInt64) -> Int32 {
+    // Full bind (sgs_ + sgk_ + sgb_) for the harness-owned private delivery
+    // target: a scratch router/band pair never attached to input items, so its
+    // sgb_ endpoint is unclaimed and the surface observes the band's
+    // plain-value and key deliveries directly. The production target takes no
+    // harness surface — the mounted grid owns both of its slots.
+    func createFull(targetId: UInt64, sessionId: UInt64) -> Int32 {
         guard targetId != 0, sessionId != 0, surfaces[targetId] == nil else { return 0 }
         let surface = SgcKeySurface(targetId: targetId, sessionId: sessionId)
         guard surface.connect() else { return 0 }
@@ -38,10 +43,10 @@ private func withSurface(targetId: UInt64, _ body: @MainActor (SgcKeySurface) ->
     }
 }
 
-@_cdecl("bandkeys_surface_create")
-public func bandkeysSurfaceCreate(targetId: UInt64, sessionId: UInt64) -> Int32 {
+@_cdecl("bandkeys_surface_create_full")
+public func bandkeysSurfaceCreateFull(targetId: UInt64, sessionId: UInt64) -> Int32 {
     MainActor.assumeIsolated {
-        BandKeysRegistry.shared.create(targetId: targetId, sessionId: sessionId)
+        BandKeysRegistry.shared.createFull(targetId: targetId, sessionId: sessionId)
     }
 }
 

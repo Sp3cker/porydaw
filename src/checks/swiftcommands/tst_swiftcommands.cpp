@@ -279,6 +279,102 @@ class SwiftCommandsTest final : public QObject
         QCOMPARE(undo->count(), beforeInvalid);
     }
 
+    void batchMoveAndResizeUndoGranularity()
+    {
+        CommandFixture fixture;
+        QString error;
+        QVERIFY2(fixture.prepare(m_projectRoot, m_songLabel, error), qPrintable(error));
+        SongDocument &document = fixture.document();
+        QUndoStack *const undo = document.undoStack();
+        const uint64_t id = fixture.documentId();
+        QVERIFY(document.engineTrackCount() >= 2);
+
+        // Cross-track members: the batch's own clamp logic never pairs
+        // notes from different engine tracks, so the uniform delta lands
+        // exactly and the assertions below are fixture-deterministic.
+        const auto trackZero = document.notesForTrack(0);
+        const auto trackOne = document.notesForTrack(1);
+        QVERIFY(!trackZero.empty() && !trackOne.empty());
+        const DocNote first = trackZero.front();
+        const DocNote second = trackOne.front();
+        const uint64_t tokens[] = {tokenOf(first), tokenOf(second)};
+        const int baseUndo = undo->count();
+
+        // Batch move: one undo entry, every member position applied.
+        SgcIntentCommand command{};
+        command.documentId = id;
+        command.intent = SGC_NOTE_MOVE_BATCH;
+        command.payload.noteMoveBatch = {tokens, 2, 96, 0};
+        expectSubmit(command, SGC_EXECUTED);
+        QCOMPARE(undo->count(), baseUndo + 1);
+        DocNote moved;
+        QVERIFY(document.findNote(NoteId{tokens[0]}, &moved));
+        QCOMPARE(moved.tick, first.tick + 96);
+        QVERIFY(document.findNote(NoteId{tokens[1]}, &moved));
+        QCOMPARE(moved.tick, second.tick + 96);
+
+        // A zero-delta batch move is a well-formed no-op: executed, no entry.
+        command.payload.noteMoveBatch = {tokens, 2, 0, 0};
+        expectSubmit(command, SGC_EXECUTED);
+        QCOMPARE(undo->count(), baseUndo + 1);
+
+        // A stale member rejects the whole batch; nothing moves.
+        const uint64_t mixed[] = {tokens[0], tokens[0] + 100000};
+        command.payload.noteMoveBatch = {mixed, 2, 48, 0};
+        expectSubmit(command, SGC_REJECTED_INVALID);
+        QVERIFY(document.findNote(NoteId{tokens[0]}, &moved));
+        QCOMPARE(moved.tick, first.tick + 96);
+        // Duplicate tokens are malformed.
+        const uint64_t duplicates[] = {tokens[0], tokens[0]};
+        command.payload.noteMoveBatch = {duplicates, 2, 48, 0};
+        expectSubmit(command, SGC_REJECTED_INVALID);
+        // Empty and null lists are malformed.
+        command.payload.noteMoveBatch = {tokens, 0, 48, 0};
+        expectSubmit(command, SGC_REJECTED_INVALID);
+        command.payload.noteMoveBatch = {nullptr, 1, 48, 0};
+        expectSubmit(command, SGC_REJECTED_INVALID);
+        // An out-of-range delta rejects like the single move.
+        command.payload.noteMoveBatch = {tokens, 2, int64_t(CoreTimeDefaults::kMaxTick) + 1, 0};
+        expectSubmit(command, SGC_REJECTED_INVALID);
+        QCOMPARE(undo->count(), baseUndo + 1);
+
+        // Batch resize: one undo entry, the uniform delta over every member.
+        QVERIFY(document.findNote(NoteId{tokens[0]}, &moved));
+        const uint32_t firstDuration = moved.duration;
+        QVERIFY(document.findNote(NoteId{tokens[1]}, &moved));
+        const uint32_t secondDuration = moved.duration;
+        command.intent = SGC_NOTE_RESIZE_BATCH;
+        command.payload.noteResizeBatch = {tokens, 2, 24};
+        expectSubmit(command, SGC_EXECUTED);
+        QCOMPARE(undo->count(), baseUndo + 2);
+        QVERIFY(document.findNote(NoteId{tokens[0]}, &moved));
+        QCOMPARE(moved.duration, firstDuration + 24);
+        QVERIFY(document.findNote(NoteId{tokens[1]}, &moved));
+        QCOMPARE(moved.duration, secondDuration + 24);
+
+        // A zero-delta batch resize is a well-formed no-op: executed, no entry.
+        command.payload.noteResizeBatch = {tokens, 2, 0};
+        expectSubmit(command, SGC_EXECUTED);
+        QCOMPARE(undo->count(), baseUndo + 2);
+
+        // A stale member rejects the whole batch; nothing resizes.
+        command.payload.noteResizeBatch = {mixed, 2, 24};
+        expectSubmit(command, SGC_REJECTED_INVALID);
+        QVERIFY(document.findNote(NoteId{tokens[0]}, &moved));
+        QCOMPARE(moved.duration, firstDuration + 24);
+        // Duplicates, empty and null lists are malformed.
+        command.payload.noteResizeBatch = {duplicates, 2, 24};
+        expectSubmit(command, SGC_REJECTED_INVALID);
+        command.payload.noteResizeBatch = {tokens, 0, 24};
+        expectSubmit(command, SGC_REJECTED_INVALID);
+        command.payload.noteResizeBatch = {nullptr, 1, 24};
+        expectSubmit(command, SGC_REJECTED_INVALID);
+        // A delta that pushes a member past the end of time rejects.
+        command.payload.noteResizeBatch = {tokens, 2, int64_t(CoreTimeDefaults::kMaxTick)};
+        expectSubmit(command, SGC_REJECTED_INVALID);
+        QCOMPARE(undo->count(), baseUndo + 2);
+    }
+
     void trackIntentValidationAndRouting()
     {
         CommandFixture fixture;

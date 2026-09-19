@@ -42,6 +42,37 @@ public struct SgkKeyArrival: Sendable, Equatable {
     public let handled: Bool
 }
 
+// Band-side key eligibility (spec §4): the one implementation every sgk_
+// recipient answers through — the harness SgcKeySurface and the production
+// PianoGrid both call it, so a verdict cannot drift between them. Pure over
+// value inputs: the host's arbitrated command id and its live availability
+// answer, plus the recipient's own surface facts (a live gesture and the
+// latest sgs_ snapshot).
+enum SgkBandEligibility {
+    // nil when the delivered ids fall outside the policy vocabulary (an ABI or
+    // fixture bug): the recipient takes no action and the key defers.
+    static func verdict(
+        command: Int32, origin: Int32, autoRepeat: Bool, commandAvailable: Bool,
+        gestureActive: Bool, session: SgsSession?
+    ) -> SgkKeyVerdict? {
+        guard let mapped = EditCommand(rawValue: Int(command)),
+            let mappedOrigin = EditKeyOrigin(rawValue: Int(origin))
+        else { return nil }
+        let surface = EditSurfaceState(
+            pointerGestureActive: gestureActive,
+            timeSelectionActive: session?.timeSelection.active ?? false,
+            noteSelectionEmpty: session?.selectedNoteIds.isEmpty ?? true,
+            origin: mappedOrigin,
+            autoRepeat: autoRepeat,
+            commandAvailable: commandAvailable)
+        switch EditKeyArbiter.decide(command: mapped, surface: surface) {
+        case .decline: return .decline
+        case .consume: return .consume
+        case .execute: return .execute
+        }
+    }
+}
+
 // Owned copy of one forwarded pointer sample: the full C fact set (Task 4
 // needs the modifier and surface facts for shift-constrained drags). Tick
 // carries SGB_INVALID_TICK for gutter samples.
@@ -80,6 +111,7 @@ public final class SgcKeySurface {
 
     private let sessions: SessionFeed
     private var connected = false
+    private var keyPathOnly = false
 
     public init(targetId: UInt64, sessionId: UInt64) {
         precondition(targetId != 0)
@@ -87,10 +119,18 @@ public final class SgcKeySurface {
         self.sessions = SessionFeed(sessionId: sessionId)
     }
 
+    // Phased binding so callers (and diagnostics) can distinguish which
+    // endpoint refused: sessions (sgs_), key delivery (sgk_), or the band
+    // surface (sgb_). connect() runs all three in order.
     @discardableResult
-    public func connect() -> Bool {
+    public func bindSessions() -> Bool {
         guard !connected else { return false }
-        guard sessions.connect() else { return false }
+        return sessions.connect()
+    }
+
+    @discardableResult
+    public func bindKeyDelivery() -> Bool {
+        guard !connected else { return false }
         let context = Unmanaged.passUnretained(self).toOpaque()
         guard
             sgk_set_delivery(
@@ -110,6 +150,36 @@ public final class SgcKeySurface {
                     }
                 }, context)
         else {
+            return false
+        }
+        return true
+    }
+
+    // Key-path-only binding for surfaces that need the key recipient slot
+    // without owning the band's pointer surface (a target whose sgb_ slot is
+    // already claimed refuses a second claimant at sgb_set_surface).
+    @discardableResult
+    public func connectKeyPath() -> Bool {
+        guard !connected else { return false }
+        guard bindSessions() else { return false }
+        guard bindKeyDelivery() else {
+            sessions.disconnect()
+            return false
+        }
+        keyPathOnly = true
+        connected = true
+        return true
+    }
+
+    // Full bind: the session receiver, the key recipient, and the band
+    // surface, in that order. The phases compose through bindSessions() and
+    // bindKeyDelivery(); only the sgb_ slot is built here, and every partial
+    // failure unwinds what the phases already claimed.
+    @discardableResult
+    public func connect() -> Bool {
+        guard !connected else { return false }
+        guard bindSessions() else { return false }
+        guard bindKeyDelivery() else {
             sessions.disconnect()
             return false
         }
@@ -167,7 +237,7 @@ public final class SgcKeySurface {
                         .takeUnretainedValue()
                     return surface.gestureActive ? 1 : 0
                 }
-            }, context: context)
+            }, context: Unmanaged.passUnretained(self).toOpaque())
         guard sgb_set_surface(targetId, &surface) else {
             sgk_clear_delivery(targetId)
             sessions.disconnect()
@@ -181,49 +251,51 @@ public final class SgcKeySurface {
         // A surface whose binding failed must not clear the actual recipient.
         guard connected else { return }
         connected = false
-        sgb_clear_surface(targetId)
+        if !keyPathOnly {
+            sgb_clear_surface(targetId)
+        }
+        keyPathOnly = false
         sgk_clear_delivery(targetId)
         sessions.disconnect()
     }
 
-    // Synchronous sgk_ answer: eligibility from the sgp_ policy mirror over
-    // the latest sgs_ snapshot. Only consume verdicts return true; execute and
-    // decline defer so execution stays in the single host tier.
+    // Synchronous sgk_ answer: the shared band eligibility over the latest
+    // sgs_ snapshot. Only consume verdicts return true; execute and decline
+    // defer so execution stays in the single host tier.
     public func answer(
         command: Int32, modifiers: Int32, autoRepeat: Bool, origin: Int32,
         commandAvailable: Bool
     ) -> Bool {
-        guard let mapped = EditCommand(rawValue: Int(command)),
-            let mappedOrigin = EditKeyOrigin(rawValue: Int(origin))
+        guard
+            let verdict = SgkBandEligibility.verdict(
+                command: command, origin: origin, autoRepeat: autoRepeat,
+                commandAvailable: commandAvailable, gestureActive: gestureActive,
+                session: sessions.session)
         else { return false }
-        let snapshot = sessions.session
-        let surface = EditSurfaceState(
-            pointerGestureActive: gestureActive,
-            timeSelectionActive: snapshot?.timeSelection.active ?? false,
-            noteSelectionEmpty: snapshot?.selectedNoteIds.isEmpty ?? true,
-            origin: mappedOrigin,
-            autoRepeat: autoRepeat,
-            commandAvailable: commandAvailable)
-        let verdict = EditKeyArbiter.decide(command: mapped, surface: surface)
-        let handled = verdict == .consume
-        let stored: SgkKeyVerdict
-        switch verdict {
-        case .decline: stored = .decline
-        case .consume: stored = .consume
-        case .execute: stored = .execute
-        }
         arrivals.append(
             SgkKeyArrival(
-                command: mapped.rawValue, modifiers: modifiers, autoRepeat: autoRepeat,
-                origin: mappedOrigin.rawValue, commandAvailable: commandAvailable, verdict: stored,
-                handled: handled))
+                command: Int(command), modifiers: modifiers, autoRepeat: autoRepeat,
+                origin: Int(origin), commandAvailable: commandAvailable, verdict: verdict,
+                handled: verdict == .consume))
         if arrivals.count > 128 { arrivals.removeFirst(arrivals.count - 128) }
-        return handled
+        return verdict == .consume
     }
 
     // Pointer forwarding: press and double-click open the Swift gesture and
     // absorb; moves report handled only while the gesture owns the stream;
     // release closes it and absorbs. Unknown kinds decline.
+    //
+    // A declined sample is not the end of the event: TimelineInputItem turns
+    // the false verdict into event->ignore(), and Qt Quick keeps walking down
+    // the flag-on stack beneath the stood-down swiftRollInput MouseArea
+    // (NoButton, disabled, hover off). Under the overlay's pianoGridSurface
+    // sits the scene's own rollBand TimelineSceneBand: the timelineRollInput
+    // (plot, z 8.5) or timelineRollGutterInput (gutter, z 2) item — the very
+    // item that delivered the sample — then the non-accepting
+    // TimelineChromeBand visuals, then sibling bands and the scene root up to
+    // the Quick window fallback. Declining is how the Swift roll yields a
+    // press it has no gesture for (right-button gutter audition, exotic plot
+    // buttons) to whatever the scene hung below it.
     public func receivePointer(
         kind: Int32, tick: Double, key: Int32, button: Int32, buttons: Int32, modifiers: Int32,
         surface: Int32
@@ -235,8 +307,24 @@ public final class SgcKeySurface {
                     modifiers: modifiers, surface: surface))
             if pointers.count > 64 { pointers.removeFirst(pointers.count - 64) }
         }
+        // Press decline rules mirror PianoRoll::pointerPress
+        // (pianoroll_interaction.cpp): the gutter auditions by key on left
+        // presses only, the plot serves left/right/middle only, and presses
+        // the roll has no gesture for decline. Record-and-decline keeps the
+        // sample in the log while yielding the event to the chain above.
+        // Qt::MouseButton values: left 1, right 2, middle 4.
+        func pressAllowed() -> Bool {
+            if surface == Int32(SGB_SURFACE_GUTTER) {
+                return button == 1
+            }
+            return button == 1 || button == 2 || button == 4
+        }
         switch kind {
         case Int32(SGB_POINTER_PRESS), Int32(SGB_POINTER_DOUBLE_CLICK):
+            guard pressAllowed() else {
+                record()
+                return false
+            }
             gestureActive = true
             record()
             return true
