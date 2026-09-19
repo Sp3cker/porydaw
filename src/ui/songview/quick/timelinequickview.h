@@ -43,6 +43,8 @@ class TimelineInputItem;
 class QuickPopupSession;
 
 #ifdef Q_OS_MACOS
+class SwiftGridKeyRouter;
+class SwiftRollBand;
 class SwiftRollMount;
 #endif
 class TimelineGestureScrollbar;
@@ -193,6 +195,11 @@ class TimelineQuickView final : public QObject
     // Shared canvas popup owner for typed menus and forms; null after
     // detachWindow().
     QuickPopupSession *popupSession() const noexcept;
+#ifdef Q_OS_MACOS
+    // The Swift roll's band peer under PORYDAW_SWIFT_ROLL; null when the flag
+    // is unset or the mount failed. Harness seam for target-id discovery.
+    SwiftRollBand *swiftRollBand() const noexcept;
+#endif
 
     // One-way ownership transfer to the external embedding adapter
     // (SongTabQuickHost): the sole-owned unhosted window moves out exactly
@@ -326,6 +333,13 @@ class TimelineQuickView final : public QObject
     void forgetGestureScrollbar(TimelineGestureScrollbar *scrollbar);
     void installKeyPolicyHandlers();
     void clearKeyPolicyHandlers();
+#ifdef Q_OS_MACOS
+    // Idempotent Swift-band teardown: rebinds the roll inputs to the C++ roll
+    // when they still point at the band, then drops the band and the router.
+    // Runs on windowAboutToDetach, transferred-window death, and mount
+    // failure; safe to call when no band exists.
+    void teardownSwiftRollBand();
+#endif
     bool dispatchSongKey(const TimelineKeyInput &input);
     bool dispatchSongKeyRelease(const TimelineKeyInput &input);
     void flushUpdate();
@@ -406,6 +420,10 @@ class TimelineQuickView final : public QObject
     std::array<QPointer<TimelineChromeItem>, 12> m_chromeItems{};
     TimelineBandLayout m_bandLayout;
 #ifdef Q_OS_MACOS
+    // The sgk_ key seam owner and the Swift roll's band peer. The router is
+    // declared first so it outlives the band that shares its target id.
+    std::unique_ptr<SwiftGridKeyRouter> m_swiftKeyRouter;
+    std::unique_ptr<SwiftRollBand> m_swiftRollBand;
     std::unique_ptr<SwiftRollMount> m_swiftRollMount;
 #endif
     // Published canonical timeline split (SongView::timelineSplitX()).

@@ -49,6 +49,9 @@ int runSwiftCommandsCheck(const QString &projectRoot, const QString &songLabel,
 // Gated read-only Swift roll overlay in production (src/checks/swiftrollgated).
 int runSwiftRollGatedCheck(const QString &projectRoot, const QString &songA, const QString &songB,
                            const QStringList &qtArguments);
+// sgk_ key seam and SwiftRollBand adapter (src/checks/swiftbandkeys).
+int runSwiftBandKeysCheck(const QString &projectRoot, const QString &songA, const QString &songB,
+                          const QStringList &qtArguments);
 #endif
 
 // Roll frame-cost bench, both roll flavors (src/checks/swiftrollbench).

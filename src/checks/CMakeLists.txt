@@ -414,6 +414,20 @@ if(APPLE)
         swiftcommands/tst_swiftcommands.cpp
         swiftcommands/commands_check.h
     )
+    qt_add_library(swift_band_keys_check STATIC
+        swiftbandkeys/SwiftBandKeysCheck.swift
+    )
+    set_target_properties(swift_band_keys_check PROPERTIES
+        AUTOMOC OFF
+        AUTOUIC OFF
+        AUTORCC OFF
+    )
+    target_link_libraries(swift_band_keys_check PRIVATE swiftgrid)
+    target_link_libraries(porydaw_checks PRIVATE swift_band_keys_check)
+    target_sources(porydaw_checks PRIVATE
+        swiftbandkeys/tst_swiftbandkeys.cpp
+        swiftbandkeys/keys_check.h
+    )
     target_sources(porydaw_checks PRIVATE
         swiftrollgated/tst_swiftrollgated.cpp
         swiftrollgated/tst_swiftrollgated.h

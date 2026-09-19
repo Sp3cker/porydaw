@@ -773,6 +773,20 @@ const std::vector<CheckDefinition> &catalog()
                 .windowing = Windowing::WindowSystem,
             },
             {
+                .name = "swiftbandkeys",
+                // sgk_ key seam and SwiftRollBand adapter: command-id arrival,
+                // eligibility gating with/without selection, gesture-active
+                // blocking, autoRepeat consumption, fallback when unhandled,
+                // cancel-reason delivery mid-gesture, pointer/wheel/leave
+                // forwarding as plain values.
+                .argv = strings({"--swiftbandkeys", "{scratch}", "mus_route101", "mus_petalburg"}),
+                .handler = qtWithThreeArguments<runSwiftBandKeysCheck>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = twoSongRichFiles,
+                .windowing = Windowing::WindowSystem,
+            },
+            {
                 .name = "swiftrollbench-swift",
                 // Roll frame-cost bench, Swift lane: PORYDAW_SWIFT_ROLL mounts the
                 // overlay; compare cadence against the flag-off swiftrollbench row.

@@ -7,6 +7,8 @@
 // timelinequickview_pianoroll.cpp.
 
 #include "ui/mousehints/mousehints.h"
+#include "ui/songview/quick/swiftgrid/key_feed.h"
+#include "ui/songview/quick/swiftgrid/swift_roll_band.h"
 #include "ui/songview/quick/timelinequickview.h"
 
 #include "ui/editordrawer/automationcanvas.h"

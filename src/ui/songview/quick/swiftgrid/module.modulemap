@@ -12,3 +12,13 @@ module SwiftGridSessionFeed {
     header "session_feed.h"
     export *
 }
+
+module SwiftGridKeyFeed {
+    header "key_feed.h"
+    export *
+}
+
+module SwiftGridRollBand {
+    header "swift_roll_band.h"
+    export *
+}

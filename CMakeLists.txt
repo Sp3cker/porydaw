@@ -188,6 +188,7 @@ if(APPLE)
         "${SWIFT_GRID_DIR}/PitchGraph.swift"
         "${SWIFT_GRID_DIR}/PitchProjection.swift"
         "${SWIFT_GRID_DIR}/SgcCommands.swift"
+        "${SWIFT_GRID_DIR}/SgcKeys.swift"
         "${SWIFT_GRID_DIR}/SgdDocument.swift"
         "${SWIFT_GRID_DIR}/Tick.swift"
         "${SWIFT_GRID_DIR}/TimeAxis.swift"
@@ -526,6 +527,8 @@ if(APPLE)
         "${SWIFT_GRID_FEED_DIR}/command_feed.h"
         "${SWIFT_GRID_FEED_DIR}/intent_executor.cpp"
         "${SWIFT_GRID_FEED_DIR}/intent_executor.h"
+        "${SWIFT_GRID_FEED_DIR}/key_feed.cpp"
+        "${SWIFT_GRID_FEED_DIR}/key_feed.h"
         "${SWIFT_GRID_FEED_DIR}/document_feed.cpp"
         "${SWIFT_GRID_FEED_DIR}/document_feed.h"
         "${SWIFT_GRID_FEED_DIR}/swift_grid_document_feed.cpp"
@@ -535,6 +538,8 @@ if(APPLE)
         "${SWIFT_GRID_FEED_DIR}/grid_host.h"
         "${SWIFT_GRID_FEED_DIR}/swift_roll_mount.cpp"
         "${SWIFT_GRID_FEED_DIR}/swift_roll_mount.h"
+        "${SWIFT_GRID_FEED_DIR}/swift_roll_band.cpp"
+        "${SWIFT_GRID_FEED_DIR}/swift_roll_band.h"
     )
     # The native seams reuse the engine/core/math objects already in this target.
     set_source_files_properties("${SWIFT_GRID_AUDIO_DIR}/audio_session_internal.h"

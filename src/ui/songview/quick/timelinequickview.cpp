@@ -18,6 +18,8 @@
 #include "ui/songview/trackheadermodel.h"
 #include "ui/theme/themeruntime.h"
 #ifdef Q_OS_MACOS
+#include "ui/songview/quick/swiftgrid/key_feed.h"
+#include "ui/songview/quick/swiftgrid/swift_roll_band.h"
 #include "ui/songview/quick/swiftgrid/swift_roll_mount.h"
 #endif
 #include <QColor>
@@ -376,7 +378,6 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         });
         requestMouseHintRecovery(&hints);
     });
-
     syncAppearance();
 #ifdef Q_OS_MACOS
     if (qEnvironmentVariableIsSet("PORYDAW_SWIFT_ROLL")) {
@@ -384,11 +385,45 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         if (!m_swiftRollMount->mount(songView, *m_quickView)) {
             qCritical("Failed to mount Swift roll overlay behind PORYDAW_SWIFT_ROLL");
             m_swiftRollMount.reset();
-        } else if (m_view) {
-            connect(m_view.data(), &QObject::destroyed, this, [this] {
-                if (m_swiftRollMount)
-                    m_swiftRollMount->handleTransferredWindowDeath();
-            });
+            teardownSwiftRollBand();
+        } else {
+            // The Swift roll graduates from absorbing overlay to band peer:
+            // the roll plot and gutter inputs rebind from the C++ roll to the
+            // adapter, which forwards through the typed sgb_/sgk_ seams.
+            // setInteraction clears each item's key policy, so the shared
+            // song-policy handlers are reinstalled for the rebound items.
+            m_swiftKeyRouter = std::make_unique<SwiftGridKeyRouter>();
+            m_swiftRollBand = std::make_unique<SwiftRollBand>(songView, *m_swiftKeyRouter);
+            const std::size_t rollIndex = timelineBandIndex(TimelineBand::Roll);
+            if (TimelineInputItem *const rollInput = m_inputItems[rollIndex])
+                rollInput->setInteraction(m_swiftRollBand.get(), TimelineInputSurface::Plot, true);
+            if (TimelineInputItem *const rollGutter = m_gutterInputItems[rollIndex])
+                rollGutter->setInteraction(m_swiftRollBand.get(), TimelineInputSurface::Gutter,
+                                           false);
+            installKeyPolicyHandlers();
+            // The overlay keeps viewing scroll through its WheelHandler (which
+            // never absorbed presses); only the press-absorbing MouseArea
+            // stands down so presses reach the band. Null-guarded: the band
+            // forwards even without the named area.
+            if (QQuickItem *const overlay = m_swiftRollMount->overlayItem()) {
+                if (QQuickItem *const rollMouse =
+                        overlay->findChild<QQuickItem *>(QStringLiteral("swiftRollInput"))) {
+                    rollMouse->setAcceptedMouseButtons(Qt::NoButton);
+                    rollMouse->setAcceptHoverEvents(false);
+                    rollMouse->setEnabled(false);
+                }
+            }
+            if (m_view) {
+                connect(m_view.data(), &QObject::destroyed, this, [this] {
+                    if (m_swiftRollBand)
+                        m_swiftRollBand->handleTransferredWindowDeath();
+                    teardownSwiftRollBand();
+                    if (m_swiftRollMount)
+                        m_swiftRollMount->handleTransferredWindowDeath();
+                });
+            }
+            connect(this, &TimelineQuickView::windowAboutToDetach, this,
+                    [this] { teardownSwiftRollBand(); });
         }
     }
 #endif
@@ -803,6 +838,37 @@ void TimelineQuickView::publishTimelineBandLayout()
     if (horizontalScrollbarChanged || verticalScrollbarChanged)
         emit scrollbarRectsChanged();
 }
+#ifdef Q_OS_MACOS
+SwiftRollBand *TimelineQuickView::swiftRollBand() const noexcept
+{
+    return m_swiftRollBand.get();
+}
+
+void TimelineQuickView::teardownSwiftRollBand()
+{
+    if (!m_swiftKeyRouter && !m_swiftRollBand)
+        return;
+    // Rebind the roll inputs while they still point at the outgoing band; a
+    // null C++ roll (a direct-owned band destroyed first) leaves the items
+    // for the normal detach path instead of rebinding to a dead interaction.
+    // setInteraction clears each item's key policy, so the shared song-policy
+    // handlers are reinstalled for the rebound items.
+    if (m_swiftRollBand && m_roll) {
+        const std::size_t rollIndex = timelineBandIndex(TimelineBand::Roll);
+        if (TimelineInputItem *const rollInput = m_inputItems[rollIndex]) {
+            if (rollInput->interaction() == m_swiftRollBand.get())
+                rollInput->setInteraction(m_roll, TimelineInputSurface::Plot, true);
+        }
+        if (TimelineInputItem *const rollGutter = m_gutterInputItems[rollIndex]) {
+            if (rollGutter->interaction() == m_swiftRollBand.get())
+                rollGutter->setInteraction(m_roll, TimelineInputSurface::Gutter, false);
+        }
+        installKeyPolicyHandlers();
+    }
+    m_swiftRollBand.reset();
+    m_swiftKeyRouter.reset();
+}
+#endif
 
 void TimelineQuickView::syncAppearance()
 {
