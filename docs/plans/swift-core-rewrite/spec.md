@@ -277,6 +277,69 @@ List exact deferred case names with the final implementation evidence. Do not
 claim the historical whole-app suite passed. Unfiltered verification then means
 the entire **declared rewrite manifest** only.
 
+### Case-by-case coverage reconciliation
+
+**Effective immediately for active task 1.** Before accepting it, create
+`coverage-ledger.json` beside this spec. Preserve work already implemented;
+backfill its mapping and evidence rather than restart. This file is execution
+evidence, not a pre-populated claim that the conversion has passed.
+
+Freeze the reference revision before check migration. Inventory every existing
+C++ case covering an in-scope core behavior, including meaningful data rows,
+fixture variants and core assertions embedded in mixed UI/service cases.
+The table above is a starting index, not the inventory's completeness proof.
+Reconcile catalogue registrations, test source and generated row discovery;
+independent review must detect omitted cases, not merely inspect listed rows.
+Keep the frozen identities even after their C++ source or registration retires.
+
+The JSON has `referenceRevision`, `inventoryEvidence`, and `cases`. Each case
+records `cppId` (harness/class/function/data-row or explicit no-row marker),
+`source`, `fixturesAndInputs`, `operations`, `observableAssertions`, `dueTask`,
+`swiftTargets`, `status`, `runEvidence`, and `exclusionReview`.
+`swiftTargets` identifies the production-Swift test path and corresponding
+assertions, not just a containing QTest slot. Run evidence records exact command,
+tested revision, executed case/row identities, results and durable output paths.
+Use only `pending`, `verified`, `excluded` or `deferred-ui` for status.
+
+**1:1 means behavioral traceability, not copied test code or equal counts.**
+Preserve each baseline input, operation and observable assertion. Consolidated
+tests must retain every mapped scenario and identify failures by baseline ID.
+Split mixed cases by their observable assertions: excluding the UI portion must
+not discard core coverage. No weakening expected values or widening tolerances
+to fit Swift. Existing tolerances remain; any necessary comparison normalization
+requires an explicit rationale and independent review before it counts.
+
+`verified` requires execution against production Swift, expected-result
+assertions, and comparison with C++ while the oracle exists. A passing C++ run,
+an unexecuted Swift target, or skipped/disabled row is not verification.
+Task 1 assigns the complete inventory to tasks 1–8 and closes its own rows;
+later-task rows may remain pending only until their named acceptance gate.
+Tasks 2–6 close their due rows with their recorded covering commands. Native
+integration cases due in task 7 are exercised before reference retirement.
+
+Exclusions require case/assertion-level reason and independent reviewer approval.
+Only genuinely obsolete transport/implementation assertions may be `excluded`;
+only approved absent-surface assertions may be `deferred-ui`. Core behavior
+cannot be relabelled as UI simply because its old test constructed a widget.
+Any behavioral ambiguity or requested scope reduction remains pending until
+resolved; implementation difficulty is not an exclusion reason.
+
+**Task 7 retirement gate, before deleting any C++ core/oracle:** reconcile the
+frozen inventory against the ledger with zero missing IDs, unmapped assertions,
+unapproved exclusions, or pending/failed/skipped core rows. All retained core
+rows must have reviewed Swift and C++ execution evidence. Task 8's retained
+grid-only rows may remain pending, but its core assertions must already pass
+through a headless driver. Capture the reference results before removing it.
+
+After task 7 repoints drivers, reconcile the ledger against the actual retained
+manifest and executed results: every required core row still runs on Swift.
+Task 8 closes retained grid rows and repeats final reconciliation. Do not shrink
+the denominator by editing the baseline or silently dropping a registration.
+Record totals for baseline, verified, approved exclusions, deferred UI and
+pending rows, with zero unexplained gaps; totals supplement assertion review,
+never replace it. No permanent coverage framework or impossible-state tests
+are required by this amendment.
+
 Native smoke uses the actual production window and staged project fixture:
 load a looping song, draw/move/resize/delete, undo/redo, save/reopen, play/pause,
 edit during playback, cancel by Escape and ordinary focus/window transitions,

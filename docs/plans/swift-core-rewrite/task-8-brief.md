@@ -123,6 +123,10 @@ The last run is the **declared rewrite manifest**, not the historical whole-app
 suite. Exact deferred rows must be recorded. `swiftrollgated` retains its name
 for check discoverability but no longer asserts a rollout flag. Its scenarios
 must drive the actual retained QML/host, not invoke only private model functions.
+Close every retained grid row in coverage-ledger.json and repeat the final
+[case-by-case reconciliation](spec.md#case-by-case-coverage-reconciliation)
+against executed results. All retained core rows remain verified; only reviewed
+absent-UI/obsolete-implementation exclusions may be left out.
 
 Native smoke requires an available desktop. Launch the built bundle through the
 supervised process tool with `--project <staged-root> --song mus_route101`, capture

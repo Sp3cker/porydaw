@@ -6,6 +6,9 @@ Establish the Qt-free `PorydawCore` representation consumed by document editing
 (task 2), XCMD/import (task 3), and playback (task 5). This is a complete codec
 and musical-primitives change, not an empty module scaffold. Governing scope:
 [plan.md](plan.md#global-constraints), [spec.md](spec.md#canonical-state-and-storage).
+Execution amendment: this task is already active. Before acceptance, backfill
+the [case-by-case coverage ledger](spec.md#case-by-case-coverage-reconciliation)
+for work already done; continue the implementation rather than restart it.
 
 ## Exact write set
 
@@ -18,11 +21,14 @@ Create:
 - `src/checks/swiftcore/MidiChecks.swift`
 - `src/checks/swiftcore/tst_swiftcore.h`
 - `src/checks/swiftcore/tst_swiftcore.cpp`
+- `docs/plans/swift-core-rewrite/coverage-ledger.json`
 
 Modify only build/registration integration in `CMakeLists.txt`,
 `src/checks/CMakeLists.txt`, `src/checks/checkcatalog.cpp`, `src/checks/fwd.hpp`.
 Read-only oracle: `src/core/{smf,timedefaults,tempo,tracklimits,noteid,m4asemantics,mid2agbtables,velocitymodel}*`,
 `src/checks/midi/tst_midismf.{h,cpp}`, `src/checks/keyboard/tst_velocitymodel.cpp`.
+For the baseline inventory only, also read `src/checks/checkcatalog.cpp` and
+the registered check sources covering core, including mixed UI/service cases.
 
 ## Prerequisites
 
@@ -54,6 +60,10 @@ The adapter is check-only; it supplies no application document API.
    Register the check target using the repo's existing Swift/QTest pattern.
 5. Connect callable comparisons to current checks/fixtures; retain existing
    expected behavior rather than adding a second general test framework.
+6. Freeze the reference revision and build the complete baseline case/row
+   inventory under the linked reconciliation contract. Assign later cases to
+   their owning task; map and execute every task-1 scenario through production
+   Swift, preserving all observable assertions and case-specific failure IDs.
 
 ## Acceptance predicate
 
@@ -63,13 +73,18 @@ survive round trips and invalid files fail completely. Controller commands:
 
 ```sh
 deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics
-deno task verify --filter smfcheck --verbose
+deno task verify --filter smfcheck --filter velocity-model --verbose
 ```
 
-`swiftcore` is new in this task, not a currently available command. The second
-command guards the unchanged reference. Existing import/XCMD cases run only on
-the reference here; their Swift completion belongs to task 3. Offscreen checks
+`swiftcore` is introduced by this task. The second command guards the unchanged
+codec/velocity references. Existing import/XCMD cases run only on the reference
+here; their Swift completion belongs to task 3. Offscreen checks
 use runner-staged fixtures; no desktop or external decomp copy is required.
+
+Acceptance also requires independent inventory-completeness review and zero
+unresolved task-1 rows in coverage-ledger.json. Codec and pure musical/velocity
+semantics are due here; importer/XCMD and native voice-kind resolution retain
+their explicit later owners. The broad Swift slot names are not a coverage map.
 
 ## Task-specific constraints
 

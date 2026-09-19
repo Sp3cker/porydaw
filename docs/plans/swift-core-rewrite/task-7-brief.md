@@ -34,7 +34,9 @@ Modify:
   Swift check files already introduced by tasks 1–6.
 - This plan's evidence/deferred-check ledger in `plan.md` and `spec.md`.
 
-Delete every old `src/core` file named in spec.md after its final comparison.
+Delete every old `src/core` file named in spec.md only after the
+[case-by-case retirement gate](spec.md#case-by-case-coverage-reconciliation)
+passes; a green aggregate suite or final comparison sample is insufficient.
 Exclude old editor/shell sources in build lists without editing their bodies.
 The grid/old transport source retirement belongs to task 8.
 
@@ -43,6 +45,9 @@ The grid/old transport source retirement belongs to task 8.
 Tasks 1–6 and cumulative core semantic review accepted. Task 5's realtime API and
 task 6's session/project interface are stable. Record the final live comparison
 before removing the C++ reference; do not use historical passing output for it.
+The coverage inventory from task 1 is frozen. Close native-integration rows
+and obtain independent retirement-gate acceptance before removing any oracle;
+the post-cutover manifest must then retain every required Swift-backed core row.
 
 ## Interface contract
 
@@ -133,6 +138,9 @@ Launch the actual app with staged project/song arguments; use native actions to
 play/pause, save/reopen and close. This proves host/service operation, not a grid.
 The controller records the generated build source/link evidence and manifest
 case partition before accepting the core milestone.
+Acceptance requires both pre-deletion reconciliation and post-cutover executed
+case reconciliation against coverage-ledger.json, including data rows and
+assertion mappings. A removed/renamed registration cannot erase its obligation.
 
 ## Task-specific constraints
 

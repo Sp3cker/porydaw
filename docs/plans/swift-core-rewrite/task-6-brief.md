@@ -102,6 +102,10 @@ deno task verify --filter swiftcore --verbose
 Review the complete inventory and reference comparisons at this gate. Playback
 through the device is task 7's acceptance; the actual grid is task 8's. This
 independently checked core is not yet the production app.
+This cumulative gate also reconciles all rows due through task 6 under
+[the coverage contract](spec.md#case-by-case-coverage-reconciliation).
+Only explicitly assigned native-integration and grid rows may remain pending;
+they do not authorize deletion of the reference core.
 
 ## Task-specific constraints
 

@@ -1,8 +1,9 @@
 # Swift core rewrite → piano grid
 
-Status: proposed implementation plan, 2026-09-19. Planning is authorized;
-implementation has not been dispatched. This replaces the M1/M2 sequence in
-[swift-ownership-cutover](../swift-ownership-cutover/plan.md).
+Status: implementation underway; task 1 is active (user-reported). The coverage
+reconciliation amendment below applies to that active task before acceptance;
+it does not require restarting its implementation. This replaces the M1/M2
+sequence in [swift-ownership-cutover](../swift-ownership-cutover/plan.md).
 
 ## Scope and stop
 
@@ -50,6 +51,15 @@ playback. Unconverted editors are absent, not misleadingly read-only.
   Check-only adapters stay in `src/checks/`; they never become a production
   `SongDocument` facade. Do not keep a second permanent suite or old production
   implementation just to keep obsolete drivers compiling.
+- Required coverage accounting is defined in
+  [spec.md](spec.md#case-by-case-coverage-reconciliation). Task 1 creates
+  `docs/plans/swift-core-rewrite/coverage-ledger.json`; every task's exact write
+  set additionally permits updates to its own rows in that file. The controller
+  serializes ledger integration alongside other shared files. This is evidence,
+  not a second test framework. Each task's acceptance includes independent
+  reconciliation of its due rows against executed Swift-backed assertions.
+  Passing suite names or equal test counts cannot substitute for this gate.
+  No C++ core/oracle deletion is authorized while the retirement gate is open.
 - Each accepted task and each cumulative milestone receives independent,
   read-only thermo-nuclear review, plus the SDD task/spec gate. Review settled
   scope against its recorded base, interface/deletion contract, verification,
@@ -88,11 +98,14 @@ merely to increase the agent count.
 
 ## Milestones
 
-1. **Storage accepted:** task 1 establishes types and the comparison path.
+1. **Storage accepted:** task 1 establishes types, the comparison path and the
+   complete baseline coverage inventory; its own due rows are reconciled.
 2. **Core accepted:** tasks 2–7 provide all old core responsibilities, real
    persistence/playback and the native application host. The old core is gone;
    the editor area is intentionally absent until the next task. Record final
    core comparisons before retirement.
+   Retirement additionally requires the case-by-case gate in spec.md, followed
+   by post-cutover proof that the mapped retained cases still execute on Swift.
 3. **One consumer accepted:** task 8 converts the grid, repoints its actual-surface
    checks and removes obsolete transport. This is the terminal milestone.
    Do not dispatch a second consumer.
@@ -142,7 +155,8 @@ Independent core-design and native-integration reviews completed. Their findings
 are incorporated: timing query, history-token ownership, snapshot/bank lifetimes,
 save/close completion, registered-action boundaries and audition routing.
 The final module graph and native clipboard/scene-lifetime contracts were also
-checked; no review blocker remains.
+checked. The later case-by-case coverage amendment adds a mandatory execution
+gate; the original planning review does not establish coverage completeness.
 
 Planning validation covers all 33 source files, eight bounded briefs, local links/
 anchors, source-path declarations and verification filter names. `swiftcore` and
