@@ -1,6 +1,10 @@
 import Foundation
 
 private let midiNoteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+private let voiceKeysplitAll: UInt8 = 0x80
+private let voiceDirectSoundNoResample: UInt8 = 0x08
+private let voiceDirectSoundAlternate: UInt8 = 0x10
+private let voiceCGBMask: UInt8 = 0x07
 
 public enum M4aLane: Int, CaseIterable, Sendable {
     case modulation
@@ -267,13 +271,10 @@ public func m4aAdvancedCCLabel(controller: UInt8, value: UInt8) -> String {
 }
 
 public func m4aVoiceTypeName(_ type: UInt8) -> String {
-    let voiceKeysplitAll: UInt8 = 0x80
-    let voiceDirectSoundNoResample: UInt8 = 0x08
-    let voiceDirectSoundAlternate: UInt8 = 0x10
     if type == voiceKeysplitAll { return "Drumkit" }
     if type == voiceDirectSoundNoResample { return "Sample (fixed pitch)" }
     if type == voiceDirectSoundAlternate { return "Sample (reverse)" }
-    switch type & 0x07 {
+    switch type & voiceCGBMask {
     case 0x01: return "Square 1"
     case 0x02: return "Square 2"
     case 0x03: return "Wave"

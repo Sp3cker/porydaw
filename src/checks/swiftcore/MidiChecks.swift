@@ -10,6 +10,7 @@ private struct CodecObservation {
     var error = ""
 }
 
+// Keep raw values in sync with OracleSemanticValueOperation in oracle_check.h.
 private enum OracleValueOp: UInt32 {
     case ccClass = 1
     case ccLane = 2
@@ -41,6 +42,7 @@ private enum OracleValueOp: UInt32 {
     case noteIDStorage = 34
 }
 
+// Keep raw values in sync with OracleSemanticTextOperation in oracle_check.h.
 private enum OracleTextOp: UInt32 {
     case ccName = 1
     case ccDisplay = 2
@@ -241,9 +243,12 @@ func runMusicalSemanticsSuite(_ report: CheckReport) {
         expectOracleValue(actual, .xcmdLane, Int64(selector), row: "xcmd-\(selector)-lane",
                           cppID: m4aSemanticsID, report: report)
     }
-    report.expectEqual(M4aLane.echoVolume,
-                       m4aLane(forXCMDSelector: 0xFF), cppID: m4aSemanticsID,
-                       what: "row=xcmd-255-out-of-contract fallback")
+    let unknownSelectorLane = m4aLane(forXCMDSelector: 0xFF)
+    expectOracleValue(Int64(unknownSelectorLane.rawValue), .xcmdLane, 0xFF,
+                      row: "xcmd-255-out-of-contract oracle fallback",
+                      cppID: m4aSemanticsID, report: report)
+    report.expectEqual(M4aLane.echoVolume, unknownSelectorLane, cppID: m4aSemanticsID,
+                       what: "row=xcmd-255-out-of-contract literal fallback")
     for bend in -8192...8191 {
         expectOracleText(m4aFormatBend(bend), .bend, Int64(bend), row: "bend-\(bend)",
                          cppID: m4aSemanticsID, report: report)
@@ -258,6 +263,8 @@ func runMusicalSemanticsSuite(_ report: CheckReport) {
         expectOracleText(midiKeyName(key), .keyName, Int64(key), row: "key-\(key)",
                          cppID: m4aSemanticsID, report: report)
     }
+    // The frozen C++ midiKeyName indexes names[key % 12]; for -1 that is names[-1].
+    // Keep this regression Swift-only rather than invoking undefined oracle behavior.
     report.expectEqual("B-2", midiKeyName(-1), cppID: m4aSemanticsID,
                        what: "row=key-negative floor modulo")
     for numerator in 1...16 {

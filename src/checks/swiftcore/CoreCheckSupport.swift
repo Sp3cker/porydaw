@@ -9,7 +9,7 @@ struct CheckReport {
     private final class State {
         let callback: PdcCheckCallback?
         let context: UnsafeMutableRawPointer?
-        var reportedPasses: Set<String> = []
+        var reportedRows: Set<String> = []
         var assertionCount = 0
 
         init(callback: PdcCheckCallback?, context: UnsafeMutableRawPointer?) {
@@ -26,10 +26,14 @@ struct CheckReport {
 
     var assertionCount: Int { state.assertionCount }
 
-    func pass(_ cppID: String) {
+    /// Green-run identity contract: each distinct cppId + row/what emits one
+    /// pass callback line. Only duplicate assertions for that same row are
+    /// suppressed; `assertionCount` still counts every assertion.
+    func pass(_ cppID: String, row: String = "suite-complete") {
         state.assertionCount += 1
-        guard state.reportedPasses.insert(cppID).inserted else { return }
-        invoke(failed: false, cppID: cppID, message: "passed")
+        let identity = "\(cppID)\u{1F}\(row)"
+        guard state.reportedRows.insert(identity).inserted else { return }
+        invoke(failed: false, cppID: cppID, message: "\(row): passed")
     }
 
     func fail(_ cppID: String, _ message: String) {
@@ -39,7 +43,7 @@ struct CheckReport {
 
     func expect(_ condition: @autoclosure () -> Bool, cppID: String, message: String) {
         if condition() {
-            pass(cppID)
+            pass(cppID, row: message)
         } else {
             fail(cppID, message)
         }
@@ -48,7 +52,7 @@ struct CheckReport {
     func expectEqual<T: Equatable>(_ expected: T, _ actual: T, cppID: String,
                                     what: String) {
         if expected == actual {
-            pass(cppID)
+            pass(cppID, row: what)
         } else {
             fail(cppID, "\(what): expected=\(expected) actual=\(actual)")
         }

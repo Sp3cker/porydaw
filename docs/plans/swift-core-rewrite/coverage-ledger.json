@@ -45,11 +45,13 @@
     "unreconciledCatalogEntries": [],
     "acceptanceProbeEvidence": {
       "source": ".scratch/t1-acceptance-probes.md",
-      "unknownQTestSlot": {
-        "command": "... --qt bogusSlot",
+      "unknownSwiftCoreSuite": {
+        "command": "deno task verify --filter swiftcore --verbose --qt unknownSwiftCoreSuite",
         "expectedExit": 1,
         "observedExit": 1,
-        "result": "PASS: rejection proved"
+        "diagnostic": "Function not found: unknownSwiftCoreSuite; Totals: 0 passed, 1 failed",
+        "argvRootFix": "Restored qExec argv[0] program-name prefix after the initial migrated harness silently ignored slot selection.",
+        "slotIsolation": "--qt midiCodec executed exactly initTestCase, midiCodec, and cleanupTestCase (3 passed)."
       },
       "unknownHarness": {
         "command": "... --filter definitely-not-a-real-harness",
@@ -64,9 +66,12 @@
         "diagnostic": "cppId and expected/actual identified the mismatch; source reverted; clean run passed"
       },
       "deliberateMismatchPostMigration": {
-        "injection": "src/checks/swiftcore/MidiChecks.swift expectOracleValue actual argument",
-        "status": "controller-run-pending",
-        "requirement": "Inject one wrong Swift value, require exit 1 with cppId and expected/actual, then revert before acceptance."
+        "injection": "Off-by-one in src/checks/swiftcore/MidiChecks.swift expectOracleValue row cc-0-class",
+        "command": "deno task verify --filter swiftcore --verbose --qt musicalSemantics",
+        "expectedExit": 1,
+        "observedExit": 1,
+        "diagnostic": "cppId=no-row/core/m4asemantics.cpp: row=cc-0-class: expected=3 actual=4",
+        "revertEvidence": "Injection reverted; rebuild green; full swiftcore PASS."
       }
     }
   },

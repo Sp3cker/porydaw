@@ -122,7 +122,7 @@ VelocityMap velocityMap(int kind)
     }
 }
 
-QByteArray semanticText(uint32_t operation, int64_t a, int64_t b)
+std::optional<QByteArray> semanticText(uint32_t operation, int64_t a, int64_t b)
 {
     QString text;
     switch (operation) {
@@ -157,7 +157,7 @@ QByteArray semanticText(uint32_t operation, int64_t a, int64_t b)
         text = QString::fromLatin1(velocityMap(int(a)).voiceName());
         break;
     default:
-        return {};
+        return std::nullopt;
     }
     return text.toUtf8();
 }
@@ -307,11 +307,11 @@ extern "C" int64_t oracle_semantic_value(uint32_t operation, int64_t a, int64_t 
 extern "C" int64_t oracle_semantic_text(uint32_t operation, int64_t a, int64_t b, char *output,
                                         size_t outputCapacity)
 {
-    const QByteArray bytes = semanticText(operation, a, b);
-    if (bytes.isEmpty() && operation > ORACLE_VELOCITY_NAME)
+    const std::optional<QByteArray> bytes = semanticText(operation, a, b);
+    if (!bytes)
         return -1;
-    copyBytes(bytes, output, outputCapacity);
-    return bytes.size();
+    copyBytes(*bytes, output, outputCapacity);
+    return bytes->size();
 }
 
 namespace {
