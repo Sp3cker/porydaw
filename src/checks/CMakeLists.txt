@@ -400,6 +400,20 @@ if(APPLE)
         swiftdocfeed/tst_swiftdocfeed.cpp
         swiftdocfeed/document_feed_check.h
     )
+    qt_add_library(swift_commands_check STATIC
+        swiftcommands/SwiftCommandsCheck.swift
+    )
+    set_target_properties(swift_commands_check PROPERTIES
+        AUTOMOC OFF
+        AUTOUIC OFF
+        AUTORCC OFF
+    )
+    target_link_libraries(swift_commands_check PRIVATE swiftgrid)
+    target_link_libraries(porydaw_checks PRIVATE swift_commands_check)
+    target_sources(porydaw_checks PRIVATE
+        swiftcommands/tst_swiftcommands.cpp
+        swiftcommands/commands_check.h
+    )
     target_sources(porydaw_checks PRIVATE
         swiftrollgated/tst_swiftrollgated.cpp
         swiftrollgated/tst_swiftrollgated.h

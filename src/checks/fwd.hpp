@@ -43,6 +43,9 @@ int runNoteIdentityCheck(const QStringList &checkArguments, const QStringList &q
 // Production Swift document value feed (src/checks/swiftdocfeed).
 int runSwiftDocFeedCheck(const QString &projectRoot, const QString &songLabel,
                          const QStringList &qtArguments);
+// sgc_ intent pipe and executor (src/checks/swiftcommands).
+int runSwiftCommandsCheck(const QString &projectRoot, const QString &songLabel,
+                          const QStringList &qtArguments);
 // Gated read-only Swift roll overlay in production (src/checks/swiftrollgated).
 int runSwiftRollGatedCheck(const QString &projectRoot, const QString &songA, const QString &songB,
                            const QStringList &qtArguments);

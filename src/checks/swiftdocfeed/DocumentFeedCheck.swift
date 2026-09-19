@@ -1,5 +1,6 @@
 import SwiftGrid
 import SwiftGridDocumentFeed
+import SwiftGridSessionFeed
 
 @MainActor
 private func runDocumentFeedCheck() -> Int32 {
@@ -30,7 +31,7 @@ private func runDocumentFeedCheck() -> Int32 {
             duplicate = nil
             guard firstEndpoint.pointee.fn != nil else { return 4 }
 
-            var note = SgdNote(trackIndex: 1, key: 72, onTick: UInt32.max - 64,
+            var note = SgdNote(noteId: 7, trackIndex: 1, key: 72, onTick: UInt32.max - 64,
                                durationTicks: 32, velocity: 99)
             var signature = SgdTimeSignature(startTick: 0, numerator: 0, denomPow2: 255)
             var header = SgdDocumentHeader(documentId: firstId, revision: 0, ticksPerBeat: 480,
@@ -98,9 +99,112 @@ private func runDocumentFeedCheck() -> Int32 {
     }
 }
 
+@MainActor
+private func runSessionFeedCheck() -> Int32 {
+    let firstId = UInt64.max - 3
+    let secondId = UInt64.max - 2
+    var firstSlot = SgsDelivery()
+    var secondSlot = SgsDelivery()
+    return withUnsafeMutablePointer(to: &firstSlot) { firstEndpoint in
+        withUnsafeMutablePointer(to: &secondSlot) { secondEndpoint in
+            sgs_register_feed(firstId, firstEndpoint)
+            sgs_register_feed(secondId, secondEndpoint)
+            defer {
+                sgs_unregister_feed(firstId)
+                sgs_unregister_feed(secondId)
+            }
+            var first: SessionFeed? = SessionFeed(sessionId: firstId)
+            var second: SessionFeed? = SessionFeed(sessionId: secondId)
+            weak let releasedFirst = first
+            var firstNotifications = 0
+            var secondNotifications = 0
+            first!.onSession = { _ in firstNotifications += 1 }
+            second!.onSession = { _ in secondNotifications += 1 }
+            guard first!.connect(), second!.connect(), !first!.connect() else { return 101 }
+            guard firstNotifications == 0, secondNotifications == 0 else { return 102 }
+            // Failed recipients must not clear the real binding when destroyed.
+            var duplicate: SessionFeed? = SessionFeed(sessionId: firstId)
+            guard !duplicate!.connect() else { return 103 }
+            duplicate = nil
+            guard firstEndpoint.pointee.fn != nil else { return 104 }
+
+            var lane = SgsLane(track: 1, controller: 21)
+            var noteId = UInt64(42)
+            var state = SgsSessionState(
+                sessionId: firstId, revision: 0, primaryTrack: 1, trackScope: 0b110,
+                selectedNoteCount: 1,
+                timeSelection: SgsTimeSelection(
+                    startTick: 24, endTick: 96, scope: Int32(SGS_TIME_SELECTION_LANES),
+                    laneCount: 1, tempo: 1),
+                muteMask: 1, soloMask: 2)
+            withUnsafePointer(to: &state) { statePointer in
+                withUnsafePointer(to: &noteId) { idPointer in
+                    withUnsafePointer(to: &lane) { lanePointer in
+                        let slot = firstEndpoint.pointee
+                        slot.fn!(statePointer, idPointer, lanePointer, slot.context)
+                    }
+                }
+            }
+            // The call-scoped source storage can change without changing the accepted value.
+            lane.controller = 99
+            noteId = 7
+            guard first!.appliedRevision == 0, firstNotifications == 1,
+                  first!.session?.selectedNoteIds == [42],
+                  first!.session?.timeSelection.lanes.first?.controller == 21,
+                  first!.session?.timeSelection.tempo == true,
+                  first!.session?.muteMask == 1, first!.session?.soloMask == 2 else { return 105 }
+
+            state.selectedNoteCount = 0
+            state.timeSelection.laneCount = 0
+            guard !first!.apply(state: state, noteIds: nil, lanes: nil),
+                  firstNotifications == 1, first!.session?.selectedNoteIds == [42] else { return 106 }
+            state.revision = 7
+            guard first!.apply(state: state, noteIds: nil, lanes: nil),
+                  firstNotifications == 2, first!.session?.selectedNoteIds == [] else { return 107 }
+            state.revision = 6
+            guard !first!.apply(state: state, noteIds: nil, lanes: nil),
+                  first!.appliedRevision == 7, firstNotifications == 2 else { return 108 }
+            state.sessionId = secondId
+            state.revision = 100
+            guard !first!.apply(state: state, noteIds: nil, lanes: nil),
+                  first!.appliedRevision == 7, firstNotifications == 2 else { return 109 }
+            state.revision = 0
+            guard second!.apply(state: state, noteIds: nil, lanes: nil),
+                  second!.appliedRevision == 0, secondNotifications == 1 else { return 110 }
+            state.sessionId = firstId
+            state.revision = 8
+            guard first!.apply(state: state, noteIds: nil, lanes: nil),
+                  !second!.apply(state: state, noteIds: nil, lanes: nil),
+                  firstNotifications == 3, secondNotifications == 1 else { return 111 }
+            state.sessionId = secondId
+            state.revision = 1
+            guard second!.apply(state: state, noteIds: nil, lanes: nil),
+                  secondNotifications == 2, first!.appliedRevision == 8 else { return 112 }
+
+            sgs_unregister_feed(firstId)
+            first = nil
+            guard releasedFirst == nil, firstEndpoint.pointee.fn == nil,
+                  firstEndpoint.pointee.context == nil else { return 113 }
+            // A fresh mount has no revision history from the closed receiver.
+            let remount = SessionFeed(sessionId: firstId - 1)
+            state.sessionId = firstId - 1
+            state.revision = 0
+            guard remount.apply(state: state, noteIds: nil, lanes: nil),
+                  remount.appliedRevision == 0, second!.appliedRevision == 1 else { return 114 }
+            // Receiver destruction also clears a still-registered endpoint.
+            second = nil
+            guard secondEndpoint.pointee.fn == nil, secondEndpoint.pointee.context == nil else { return 115 }
+            guard !remount.connect() else { return 116 }
+            return 0
+        }
+    }
+}
+
 @_cdecl("sgd_check_swift_guard")
 public func sgdCheckSwiftGuard() -> Int32 {
     MainActor.assumeIsolated {
-        runDocumentFeedCheck()
+        let documentResult = runDocumentFeedCheck()
+        guard documentResult == 0 else { return documentResult }
+        return runSessionFeedCheck()
     }
 }

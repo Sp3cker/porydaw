@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 typedef struct {
+    uint64_t noteId; // raw NoteId token; document-scoped, never persisted to MIDI
     int32_t trackIndex;
     int32_t key;
     uint32_t onTick;

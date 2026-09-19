@@ -749,6 +749,18 @@ const std::vector<CheckDefinition> &catalog()
                 .fixtureFiles = route101Files,
             },
             {
+                .name = "swiftcommands",
+                // sgc_ intent pipe: per-intent validation matrix, undo granularity
+                // (move = 1 entry, delete batch = 1 entry), session routing leaves
+                // the undo stack untouched, add -> sgd_ revision-push round-trip,
+                // and the Swift submission API.
+                .argv = strings({"--swiftcommands", "{scratch}", "mus_route101"}),
+                .handler = qtWithTwoArguments<runSwiftCommandsCheck>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101Files,
+            },
+            {
                 .name = "swiftrollgated",
                 // Gated read-only Swift roll overlay in production: initial render,
                 // track follow, edit/undo/redo, interleaved documents, input absorption,

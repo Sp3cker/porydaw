@@ -745,11 +745,11 @@ void verifyDocumentFeed(Scene scene)
             "cannot bind the existing shown grid to a read-only document");
     require(delivery.fn && delivery.context, "production receiver did not bind the endpoint");
     scene.ticksPerBeat = 480;
-    std::vector<SgdNote> notes{{0, 60, 480, 240, 98},
-                               {1, 64, 960, 480, 127},
-                               {0, 67, 1440, 360, 110},
-                               {0, 72, 48000, 480, 100},
-                               {1, 72, 48000, 480, 100}};
+    std::vector<SgdNote> notes{{1, 0, 60, 480, 240, 98},
+                               {2, 1, 64, 960, 480, 127},
+                               {3, 0, 67, 1440, 360, 110},
+                               {4, 0, 72, 48000, 480, 100},
+                               {5, 1, 72, 48000, 480, 100}};
     std::vector<SgdTimeSignature> signatures{{480, 3, 2}, {1920, 7, 3}, {1920, 5, 3}};
     const auto push = [&](uint64_t revision, int tracks = 2) {
         const SgdDocumentHeader header{

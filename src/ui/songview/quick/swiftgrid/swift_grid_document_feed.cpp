@@ -1,7 +1,7 @@
 #include "swift_grid_document_feed.h"
 
+#include <bit>
 #include <limits>
-#include <vector>
 
 #include "core/songdocument.h"
 
@@ -51,7 +51,8 @@ void SwiftGridDocumentFeed::pushSnapshot()
         if (trackNotes.size() > size_t(std::numeric_limits<int32_t>::max()) - notes.size())
             qFatal("Swift document snapshot exceeds the ABI note count range");
         for (const DocNote &note : trackNotes)
-            notes.push_back({track, note.key, note.tick, note.duration, note.velocity});
+            notes.push_back({std::bit_cast<uint64_t>(note.noteId), track, note.key, note.tick,
+                             note.duration, note.velocity});
     }
     const auto timeSigs = m_document.timeSigs();
     const int32_t signatureCount = snapshotCount(timeSigs.size());
