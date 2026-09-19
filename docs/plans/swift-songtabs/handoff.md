@@ -97,12 +97,26 @@ The old `PORYDAW_SONGTABS_QML_REFERENCE_DIR` and production reference export hoo
 
 ## Remaining steps for next agent
 
-1. Integrate: `git merge feature/swift-qml-grid` into this branch. The
-   known conflict surface (checked by merge-tree against 004f5894) is six
-   files: `src/checks/swiftgridprototype/grid_smoke.cpp`,
-   `App.swift`, `GridPalette.swift`, `Main.qml`, `CMakeLists.txt`, and
-   `qtbridge-object-return.patch` under
-   `src/ui/songview/quick/swift-grid-prototype/` (wave-3/4 mount and
-   seam work landed there after this branch forked at 21ebd6cd).
-2. Re-run the three-scale smoke after resolving, then merge this branch
-   into `feature/swift-qml-grid`.
+1. Integration was attempted and is preserved complete-but-unlandable at
+   branch `swift-qml-songtabs-integration` (d86af24d): all six merge
+   conflicts resolved (tabs session ownership + wave-3/4 seams preserved),
+   thermo-nuclear audit fixes applied, and the prototype-lane link closure
+   partially wired (shared `cmake/SwiftGridFeeds.cmake` closure;
+   `session_feed` split into a pure C ABI registry plus a SongView-coupled
+   `session_feed_view` owned by `porydaw_app`; `songdocument.cpp` added to
+   the lane core lib). It does not finish linking: wave-4's committed
+   prototype lane still needs `clampVelocity`/`SongHistory` and possibly
+   more of the core chain, and that wiring is being built by the active
+   session in the `swift-qml-grid` worktree (its in-flight file set changes
+   hourly). Do not race it.
+2. One behavioral failure is known on the integration branch: "existing
+   note did not preview before cancel". Lead: wave-4
+   `PianoGrid.swift:469` clamps unbound demo grids to
+   `GridMetrics.songLengthTicks`; the moved note_5 ends at tick 176 and
+   every passing note ends earlier. Verify that value against the fixture
+   before touching anything else.
+3. When the grid branch's prototype lane links and passes on its own,
+   redo the merge here (the resolution is on the integration branch;
+   `git checkout swift-qml-songtabs-integration -- <path>` per file), then
+   re-run the three-scale smoke and merge this branch into
+   `feature/swift-qml-grid`.
