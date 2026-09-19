@@ -2,7 +2,14 @@
 
 ## User direction — latest takes precedence
 
-The user accepted the corrected tab appearance: **“it is visually close enough now, please get check parity and then commit.”** Do not resume visual tuning or demand pixel-perfect tab-label widths. They subsequently requested: **“please stop soon and leave a summary document for the next agent to continue from.”** Work is paused here, not declared complete. Commit/push remains authorized after the remaining checks pass; no commit or push has been made.
+Work completed 2026-09-18. The prototype smoke settled PASS at font bases
+12/13/16 after two check-harness corrections (window-activation
+prerequisites before shortcut-dependent scenarios; horizontal-only reveal
+predicate for the scroll controls — see plan.md "Settled smoke
+corrections"). No production or QML change. Native-input runs need a quiet
+desktop: three earlier mid-run failures (hover cursor, activation
+contention, empty-click pending) were real desktop interference, each at a
+different untouched scenario, none repeating on a quiet desktop.
 
 ## Checkout and scope
 
@@ -54,42 +61,18 @@ run_checks: PASS (all harnesses in 91.94s)
 
 Includes all eight production visual suites, production `tabcheck`, selection-key routing, audio, transport, grid, rendering and other default harnesses. No baselines changed. Build took 14.23s; full command 106.62s. One harness was skipped; output did not name it. A separate earlier DPR1/font16 visual run had exposed a pre-existing B3-hover baseline mismatch; it was not rebaselined. Do not claim every DPR/profile passed.
 
-### NOT PASSING: final prototype native-input smoke
-
-The corrected QML now builds and loads without the earlier QML errors. Two new control-property collisions were fixed: inline scroll property `left` became `pointsLeft`; Button delegate `required property var display` became `required property var model` with `session: model.display`.
-
-Latest default-font run:
+### PASSING: final prototype native-input smoke
 
 ```sh
-deno task prototype:swift-grid --smoke
-```
-
-Passed original math, policy, real PCM, strict grid raster, note gestures, pitch-curve, popup-keyboard and **real-audio-play-pause-stop-and-playhead** checks. Then failed:
-
-```text
-Space transport diagnostic: windowActive=0 windowVisible=1 activeFocusItem='transportStop' gridShortcutsEnabled=1 currentPage='songTab_1' noteMenuOpen=0 pitchEditorOpen=0 rootAudioMatches=1 selectedId=1 selectedIndex=0 audioPlaying=0
-SWIFT_GRID_SMOKE FAIL: focused Stop button stole Space from the window transport command
-```
-
-The final in-flight small-font run also completed before this handoff:
-
-```sh
+deno task prototype:swift-grid --smoke                      # font 13 default
 PORYDAW_VISUAL_FONT_PX=12 deno task prototype:swift-grid --smoke
+PORYDAW_VISUAL_FONT_PX=16 deno task prototype:swift-grid --smoke
 ```
 
-It passed the same original checks through real audio, then failed the same Space check with `windowActive=0`, `windowVisible=1`, and `activeFocusItem='<null>'`. Other diagnostic fields matched. Runtime: 8.65s. Font16 has not been run after the correction.
-
-**Root cause is not established.** Window inactivity is observed; desktop interference is only a hypothesis, not a proven diagnosis. A subsequent correctly parenthesized AppleScript reported `cmux` as frontmost after the process exited; this does not prove what deactivated the window during the test. An earlier malformed AppleScript mentioned loginwindow; do not interpret that error as evidence the desktop was locked.
-
-One preceding run failed earlier at `Play did not advance the real poryaaaa transport`; the two latest runs passed that audio scenario. Do not hide these failed runs or claim the final prototype suite passes.
-
-### Where to investigate next
-
-- `grid_smoke.cpp`, around lines 826–828: already calls `window->requestActivate()` and `QTest::qWaitForWindowActive(window)` once before `exercise(...)`. Preserve this native test prerequisite.
-- `interaction_smoke.cpp`, roughly lines 200–260: real transport controls followed by the failing focused-Stop/Space priority scenario; existing diagnostic includes active window, active focus, popup and selected-page state.
-- This failure occurs **before the newly corrected tab smoke scenarios execute**. Their final settled version therefore remains unverified.
-- Prior to the visual correction, the complete prototype smoke including all eight tab scenarios passed. That historical result is not final-tree acceptance.
-- Do not repeatedly stress-run human-input tests to troubleshoot. Establish the activation cause and keep original routing/raster assertions intact. No production focus-manager workaround; workarounds require approval.
+All three report `SWIFT_GRID_SMOKE PASS`, including the Space/Enter
+transport priority row and all eight tab scenarios. Run natively and
+sequentially on an available desktop; do not stress-run on failures — the
+activation preconditions fail loudly by name if the desktop steals focus.
 
 ## Final tab-check contract
 
@@ -114,7 +97,12 @@ The old `PORYDAW_SONGTABS_QML_REFERENCE_DIR` and production reference export hoo
 
 ## Remaining steps for next agent
 
-1. Diagnose the observed native window deactivation at the Space transport check. Distinguish environment/input interference from application or test lifecycle behavior; do not assume either.
-2. Obtain a complete settled prototype smoke pass, including the tab scenarios. Check the supported font scales if retaining their new geometry contract. No further visual refinement is requested.
-3. Update `plan.md` with exact final results and remove its stale in-progress state. Production suite already passed; rerun only checks affected by subsequent fixes.
-4. Commit the scoped prototype/check/document changes and push `feature/swift-qml-songtabs` to its corresponding GitHub remote branch, per user authorization and repository rules. No commit currently exists for this work.
+1. Integrate: `git merge feature/swift-qml-grid` into this branch. The
+   known conflict surface (checked by merge-tree against 004f5894) is six
+   files: `src/checks/swiftgridprototype/grid_smoke.cpp`,
+   `App.swift`, `GridPalette.swift`, `Main.qml`, `CMakeLists.txt`, and
+   `qtbridge-object-return.patch` under
+   `src/ui/songview/quick/swift-grid-prototype/` (wave-3/4 mount and
+   seam work landed there after this branch forked at 21ebd6cd).
+2. Re-run the three-scale smoke after resolving, then merge this branch
+   into `feature/swift-qml-grid`.

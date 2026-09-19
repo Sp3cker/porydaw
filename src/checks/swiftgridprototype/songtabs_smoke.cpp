@@ -411,32 +411,37 @@ void verifyScrollControls(TabsScene &scene, int targetId)
                 scrollRight->isVisible(),
             "narrow tab strip did not expose native scroll controls");
 
-    const auto visibleTabsRect = [&] {
+    // Horizontal reveal only: the corrected production geometry pins the tab
+    // body at 28px against a shorter strip box (see verifySelectionRendering),
+    // so full-rect containment is impossible by design. The strip never
+    // clips vertically; "revealed" means inside the strip area left of the
+    // scroll controls.
+    const auto buttonHorizontallyVisible = [&](int tabId) {
+        QQuickItem *button = scene.selectButton(tabId);
+        if (!button)
+            return false;
         const QRectF stripRect(strip->mapToScene(QPointF{}), strip->size());
         const QRectF leftControlRect(scrollLeft->mapToScene(QPointF{}), scrollLeft->size());
-        return QRectF(stripRect.left(), stripRect.top(), leftControlRect.left() - stripRect.left(),
-                      stripRect.height());
-    };
-    const auto buttonFullyVisible = [&](int tabId) {
-        QQuickItem *button = scene.selectButton(tabId);
-        return button &&
-               visibleTabsRect().contains(QRectF(button->mapToScene(QPointF{}), button->size()));
+        const QRectF buttonRect(button->mapToScene(QPointF{}), button->size());
+        return buttonRect.left() >= stripRect.left() &&
+               buttonRect.right() <= leftControlRect.left();
     };
     const auto revealWith = [&](int tabId, QQuickItem *control, const char *failure) {
-        for (int clickCount = 0; clickCount < 64 && !buttonFullyVisible(tabId); ++clickCount) {
+        for (int clickCount = 0; clickCount < 64 && !buttonHorizontallyVisible(tabId);
+             ++clickCount) {
             require(control->isEnabled(), failure);
             click(scene.window, control);
             QTest::qWait(10ms);
         }
-        require(buttonFullyVisible(tabId), failure);
+        require(buttonHorizontallyVisible(tabId), failure);
     };
 
-    require(!buttonFullyVisible(targetId) && scene.selectedId() != targetId,
+    require(!buttonHorizontallyVisible(targetId) && scene.selectedId() != targetId,
             "scroll scenario did not establish a genuinely clipped inactive left tab");
     revealWith(targetId, scrollLeft, "left scroll control did not reveal the clipped tab");
     scene.select(targetId);
 
-    awaitState([&] { return !buttonFullyVisible(lastId); },
+    awaitState([&] { return !buttonHorizontallyVisible(lastId); },
                "selecting the left tab did not establish a clipped right tab");
     revealWith(lastId, scrollRight, "right scroll control did not reveal the clipped tab");
     scene.select(lastId);

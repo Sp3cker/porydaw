@@ -165,6 +165,24 @@ void verifyGridInteractions(QQuickWindow *window, QObject *model)
         QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, center(item(name)));
         QTest::qWait(30ms);
     };
+
+    // Window-tier QML Shortcuts (Space, G) only fire while the window is
+    // active, and synthetic QTest input cannot restore OS activation once
+    // the desktop deactivates the window mid-run. startSmoke() activates
+    // once before exercise(); every shortcut-dependent scenario below
+    // re-establishes that prerequisite instead of trusting it to hold.
+    const auto ensureActive = [&] {
+        // macOS refuses focus steals while the user is actively typing in
+        // another app, so a single requestActivate can lose the race; keep
+        // requesting across a bounded window instead of failing a scenario
+        // whose only unmet input is OS focus.
+        for (int attempt = 0; attempt < 16; ++attempt) {
+            window->requestActivate();
+            if (QTest::qWaitForWindowActive(window, 500))
+                return;
+        }
+        require(false, "smoke window lost OS activation before a shortcut scenario");
+    };
     reset();
 
     const QRectF band =
@@ -229,6 +247,11 @@ void verifyGridInteractions(QQuickWindow *window, QObject *model)
     click("transportStop");
     require(audio->property("playheadTick").toDouble() == 0, "Stop did not return to song start");
     pass("real-audio-play-pause-stop-and-playhead");
+    // Premise: a focused persistent Quick control plus an active window.
+    // The Stop click focused the button, but window deactivation clears
+    // active focus, so both halves are pinned here rather than inherited.
+    ensureActive();
+    item("transportStop")->forceActiveFocus();
     QTest::keyClick(window, Qt::Key_Space);
     const bool spaceStarted =
         QTest::qWaitFor([&] { return audio->property("playing").toBool(); }, 3s);
@@ -260,6 +283,7 @@ void verifyGridInteractions(QQuickWindow *window, QObject *model)
     pass("transport-space-priority-and-local-enter");
 
     click("gridNote_1");
+    ensureActive();
     QTest::keyClick(window, Qt::Key_G);
     awaitState([&] { return item("pitchBendGraph") && item("pitchBendGraph")->isVisible(); },
                "G did not open a functional pitch popup");
@@ -288,6 +312,7 @@ void verifyGridInteractions(QQuickWindow *window, QObject *model)
     QTest::keyClick(window, Qt::Key_Escape);
     awaitState([&] { return !window->property("pitchBridge").value<QObject *>(); },
                "Escape did not dismiss the pitch popup");
+    ensureActive();
     QTest::keyClick(window, Qt::Key_G);
     awaitState([&] { return item("pitchBendGraph") && item("pitchBendGraph")->isVisible(); },
                "pitch popup did not reopen");
@@ -313,6 +338,7 @@ void verifyGridInteractions(QQuickWindow *window, QObject *model)
     QTest::keyClick(window, Qt::Key_Escape);
     awaitState([&] { return !window->property("pitchBridge").value<QObject *>(); },
                "pitch popup did not close after numeric editing");
+    ensureActive();
     QTest::keyClick(window, Qt::Key_G);
     awaitState(
         [&] {
@@ -344,6 +370,7 @@ void verifyGridInteractions(QQuickWindow *window, QObject *model)
         awaitState([&] { return !window->property("pitchBridge").value<QObject *>(); },
                    "Escape did not dismiss an active pitch gesture");
         QTest::mouseRelease(window, Qt::LeftButton, Qt::ShiftModifier, high);
+        ensureActive();
         QTest::keyClick(window, Qt::Key_G);
         awaitState([&] { return item("pitchBendGraph") && item("pitchBendGraph")->isVisible(); },
                    "pitch popup did not reopen after cancelling a live gesture");
@@ -375,6 +402,7 @@ void verifyGridInteractions(QQuickWindow *window, QObject *model)
     QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, QPoint(window->width() - 10, 100));
     awaitState([&] { return !window->property("pitchBridge").value<QObject *>(); },
                "outside click did not dismiss the pitch popup");
+    ensureActive();
     QTest::keyClick(window, Qt::Key_G);
     awaitState(
         [&] {

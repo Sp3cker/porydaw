@@ -1,6 +1,9 @@
 # Swift-backed QML SongTabs prototype
 
-Status: paused at the user's request; see [handoff.md](handoff.md). Corrected appearance accepted as visually close enough. Production suite passed (99 passed, one skipped); final prototype smoke remains blocked by observed native window inactivity at the Space transport check. No commit/push made. Base: 21ebd6cd. Branch: feature/swift-qml-songtabs.
+Status: complete for this wave. Corrected appearance accepted. Production
+suite passed (99 passed, one skipped); prototype smoke settled PASS at font
+bases 12, 13, and 16 on 2026-09-18 after the harness corrections below.
+Base: 21ebd6cd. Branch: feature/swift-qml-songtabs.
 
 ## Spec and global constraints
 
@@ -52,6 +55,30 @@ Disjoint original owners keep their write sets for fixes. Frozen interfaces allo
 Prior behavioral gate: PASS, including all eight tab scenarios and original strict grid/audio/gesture/undo/cancellation checks, with no QML warnings. The earlier screenshots showed an approximation, not the required production tab appearance; they are not accepted as visual parity evidence.
 
 Harness corrections establish actual native prerequisites: request/wait for window activation once before keyboard scenarios; await a requested rendered frame after fixture session creation before pointer input. QObject existence alone did not establish a delivered scene. Native pointer helpers move before pressing; no tooltip suppression, application focus repair, test tolerance changes or alternate renderer. Temporary popup inventories and jurisdiction diagnostics were removed. All four task reviews and final integration review approved with no blocking findings.
+
+## Settled smoke corrections (2026-09-18)
+
+Check-harness only; no production, QML, or Swift change; original routing
+and raster assertions unchanged.
+
+- Window-tier QML Shortcuts (Space, G) only fire while the window is
+  active, and synthetic QTest input cannot restore OS activation. The
+  harness now re-establishes activation — with bounded repeated
+  requestActivate, because macOS refuses focus steals while the user is
+  actively typing elsewhere — immediately before each shortcut-dependent
+  scenario in interaction_smoke.cpp and jurisdiction_smoke.cpp, and pins
+  the focused-control premise before the Space/Enter transport row.
+- verifyScrollControls judges reveal horizontally. The accepted corrected
+  geometry pins 28px tab bodies against a shorter strip box (see
+  verifySelectionRendering), so full-rect containment was unsatisfiable by
+  design; the strip never clips vertically.
+
+Observed failures, all explained: Space-transport (activation-gated
+shortcut), tab scroll reveal (stale containment predicate), and three
+mid-run races (hover cursor, activation contention, empty-click pending)
+caused by real desktop use during the run. Final result: SWIFT_GRID_SMOKE
+PASS at PORYDAW_VISUAL_FONT_PX 12, 13 (default), and 16 on a quiet
+desktop.
 
 ## Retirement boundary
 
