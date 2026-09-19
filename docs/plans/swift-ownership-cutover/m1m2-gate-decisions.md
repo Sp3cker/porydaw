@@ -40,7 +40,9 @@ Mutating caller sites by surface (all on the shared stack):
 | Time ruler | `timeruler_interaction.cpp:216,224`, `timeruler.cpp:373` | moveTimeSig, setLoopTick, setTimeSig |
 | Edit-key routing | `editkeyrouting.cpp:88-89,106,108-110,371,375,388` | setLoopTick ×6, deleteTimeSig |
 | Event list controller | `eventlistcontroller.cpp:651,672,700,703,705,721` | insertRawEvent, removeRawEventsAndEditTempo, deleteRawEvents, applyTempoEdit, moveRawEvent |
+| Controller lanes | `cclanes.cpp:175` | writeLanePoints |
 | Automation canvas | `automationcanvas_gesture.cpp:139` | applyRangeEdit |
+| Voice-change area | `voicechangearea.cpp:539`, `voicechangemenu.cpp:251,254,308` | move/add/deleteLanePoints |
 | Tempo lane | `tempoadapter.cpp:58` (tap-tempo reaches it indirectly via `TempoLane::replaceSpan`, `automationcanvas_taptempo.cpp:56`) | applyTempoEdit |
 | Event table editor | `eventtablemodeledit.cpp:42,55,90,135,272` | setTrackEndTick, applyTempoEdit, raw-event conversions, modifyRawEvent |
 | Pitch bend editor (C++) | `pitchbendeditor.cpp:227,236` | writeLanePoints |
@@ -82,15 +84,16 @@ Mechanics an authority move must preserve (verified sources):
 ## B. M2 legacy-client strategy — recommendation
 
 **Options.** (A) Migrate every caller with the authority: one cutover ports
-~15 C++ surfaces' mutation calls to Swift-submitted ops while the document
-moves. (B) A bounded shared legacy-client adapter: after the Swift authority
+the §A table's 17 C++ editor surfaces' mutation calls to Swift-submitted ops
+while the document moves. (B) A bounded shared legacy-client adapter: after
+the Swift authority
 lands, not-yet-migrated C++ editors submit typed ops to Swift through one
 narrow seam with a single invalidation feed back; the adapter retires when
 the last legacy editor migrates.
 
 **Recommendation: B.** Costs and reasoning:
 
-- Option A couples the authority move to 50+ enumerated call sites across 16
+- Option A couples the authority move to 50+ enumerated call sites across 17
   surfaces (§A table); any missed surface means a disabled editor —
   explicitly unauthorized — and the single acceptance gate becomes unbounded.
   The surfaces also retire at different times anyway (legacy pianoroll dies
