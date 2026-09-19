@@ -180,8 +180,17 @@ A permanent parallel suite is a defect.
 - Host target: `QMainWindow` shell (native menu bar, native frame) plus a
   single Quick central surface. A full-QML host and per-tab embedded windows
   are rejected.
-- Chrome and dialogs stay C++/QWidgets. Timeline bands are the track's
-  entire blast radius until they are done.
+- Chrome migration (amended 2026-09-18): persistent chrome panels — the
+  song list and voicegroup browser docks and their successors — migrate to
+  QML content hosted inside the existing `QDockWidget`s. The shell —
+  native menu bar, native frame, docking, and the INV-1/INV-2/INV-3 focus
+  and input arbitration boundary — stays C++/QWidgets permanently. Modal
+  dialogs stay C++/QWidgets until a later wave names them. Dock waves
+  inherit the prime directive whole: no widget twin survives past its
+  retirement gate, and production suites run unmodified against the QML
+  surface at cutover (V-1); only harness drivers may be re-pointed (INV-2
+  precedent). Timeline waves do not touch chrome; dock waves do not touch
+  timeline surfaces.
 - Ordering: shared seams first (view math → input jurisdiction → document
-  feed and commands), surfaces after (grid, track headers, ruler, lanes). No
-  surface serializes behind math it does not consume.
+  feed and commands), surfaces after (grid, track headers, ruler, lanes,
+  docks). No surface serializes behind math it does not consume.
