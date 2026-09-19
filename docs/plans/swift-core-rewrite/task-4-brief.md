@@ -40,8 +40,9 @@ insertion and XCMD reconciliation from task 3.
    identity, signature/value seeding, opaque events and XCMD reconciliation.
 4. Preserve ordinary boundary behavior at tick zero, empty selections and the
    maximum file tick; detect overflow before installing a candidate state.
-5. Add `swiftcore` slot `timeEdits` from the existing range/time/clipboard
-   scenarios, comparing final bytes, note identities and single-step undo.
+5. Implement `timeEdits` in `TimeChecks.swift` from existing range/time/clipboard
+   scenarios. Swift asserts final bytes, note identities and single-step undo;
+   the C++ selector only invokes/reports the suite.
 
 ## Acceptance predicate
 

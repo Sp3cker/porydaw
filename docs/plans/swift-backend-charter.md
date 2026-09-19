@@ -56,6 +56,21 @@ surfaces. Production implementations and interfaces are designed to stay:
 
 ## Swift implementation policy
 
+**Core independence takes precedence over test-host convenience.** Design Core
+as native Swift for its domain and production consumers. C++ testability is not
+a compatibility requirement on its types, APIs, ownership, isolation, errors,
+access control or build configuration. Never weaken a sound Swift design to
+make it importable or callable from C++. Change the test integration instead.
+Real musical/file contracts, supported deployment and production realtime/native
+service boundaries still apply; their adapters absorb language differences.
+
+Swift tests may use the full supported language and call Core directly. Do not
+add C-shaped domain records, operation codes, public test hooks, artificial
+copyability/sendability or C++ interop settings solely for the test harness.
+Temporary oracle conversion and test reporting belong outside Core. A harness
+that cannot exercise the required Swift design must be replaced or adapted,
+not used to veto that design.
+
 - Use the verified Swift toolchain recorded in the integration contract.
   Prefer current language features when they reduce code or improve concrete
   ownership/performance; a compiler upgrade is not a rewrite prerequisite.

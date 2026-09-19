@@ -12,7 +12,7 @@ at this accepted implementation. See [plan.md](plan.md#global-constraints) and
 
 Create `src/swift/core/PlaybackTimeline.swift`,
 `src/swift/playback/Sequencer.swift`, `src/swift/playback/PlaybackBridge.swift`,
-`src/swift/playback/module.modulemap`, `src/swift/playback/CMakeLists.txt`,
+`src/swift/playback/module.modulemap.in`, `src/swift/playback/CMakeLists.txt`,
 `src/audio/swift_playback.h`, `src/checks/swiftcore/PlaybackChecks.swift`.
 Modify `CMakeLists.txt`, `src/swift/core/CMakeLists.txt`,
 `src/checks/CMakeLists.txt`,
@@ -20,6 +20,8 @@ Modify `CMakeLists.txt`, `src/swift/core/CMakeLists.txt`,
 Read-only oracle: `src/core/{miditimeline,timelineplayer,mid2agbtables}.{h,cpp}`,
 `src/audio/timeline_handoff.h`, `src/checks/playback/`,
 `src/checks/audio/tst_trackactivity.cpp`, `src/checks/midi/tst_midiexport.cpp`.
+The playback module map is generated in the build directory by `configure_file`
+using the resolved `PORYAAAA_DIR`; preserve shared-submodule worktree support.
 
 ## Prerequisites
 
@@ -64,11 +66,17 @@ No per-field getter ABI or Swift object access in render.
 
 The Swift 6.4 comparison required by the plan has this bounded scope:
 
-- Compare `RigidArray` from `Containers` with the manual owned buffers for
-  `Sequencer.keyedOn`, `keyedOnTick` and `pendingReleases`. Preserve capacities,
-  initialization, release ordering and current full-buffer behavior. Fixed
-  capacity must not turn an existing handled condition into a trap.
-  `UniqueArray` has automatic growth and is not the default callback container.
+- Compare the manual owned `Sequencer.keyedOn`, `keyedOnTick` and
+  `pendingReleases` buffers with fixed-size `InlineArray` storage where
+  appropriate. Preserve capacities, initialization, release ordering and current
+  full-buffer behavior; do not introduce traps or large callback-stack copies.
+  The installed 6.4 interface makes `InlineArray` available on macOS 26, but
+  `UniqueArray`/`UniqueBox` require macOS 27. They are not adoption candidates
+  at the current macOS-26 default without an approved deployment-target change.
+  Even at a supported target, `UniqueArray` grows automatically and would need
+  separate no-growth proof. `RigidArray`/`Containers` were not accepted for 6.4;
+  do not add a prototype package to obtain them. See the plan's acceptance link
+  and integration contract's inspected availability evidence.
 - Compare scoped `Span`/`MutableSpan` and borrowing access with current buffer
   views; preserve one forward timing rule and one loop-validity rule. Different
   tempo element layouts still require adaptation. Do not add a generic timing
@@ -96,8 +104,13 @@ operation; a safe spelling is not proof of stack allocation or realtime safety.
    buffers. Port seek, replace, chase, prime and render behavior as a unit.
 3. Implement the narrow native entrypoints without actor hops, runtime allocation,
    ARC traffic or locks on the callback path. Do not use packed event structs.
-4. Add `swiftcore` slot `playback` comparing events and rendered PCM against the
-   existing C++ scheduler and real poryaaaa engine on existing loop/prime cases.
+4. Implement `playback` scenarios, projection assertions and PCM comparisons in
+   `PlaybackChecks.swift`. Call production Swift directly; a native oracle may
+   return C++ scheduler results and native helpers may supply the real engine.
+   Keep genuine engine/ABI integration checks native, not pure timing assertions
+   disguised as native tests. Remove superseded per-operation `pdc_playback_*`
+   Swift test exports/C++ drivers once their callers migrate; production `pd_*`
+   exports and their real native-client tests remain.
 5. Inspect optimized callback code and run a bounded ordinary-render allocation
    probe. Remove the probe after recording evidence; do not add telemetry to
    production. Reuse existing fixtures and render sizes rather than inventing

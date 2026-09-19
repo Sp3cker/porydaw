@@ -1,7 +1,7 @@
 # Swift core rewrite → piano grid
 
-Status: implementation underway. The coverage reconciliation and Swift 6.4
-qualification amendments apply before acceptance of affected work; neither
+Status: implementation underway. The coverage reconciliation, Swift 6.4 and
+test-language amendments apply before acceptance of affected work; none
 requires restarting the implementation. This replaces the M1/M2 sequence in
 [swift-ownership-cutover](../swift-ownership-cutover/plan.md).
 
@@ -35,6 +35,11 @@ playback. Unconverted editors are absent, not misleadingly read-only.
   direct Swift calls, no mirror document, C-shaped domain API, command bus,
   general observer framework, or compatibility modes. Do not transliterate
   `EditOp`/`QUndoCommand` class machinery. Public declarations come first.
+- Core independence is the governing priority: C++ testability must never
+  constrain Core's Swift API, representation, ownership or concurrency model.
+  Apply the charter's [Swift implementation policy](../swift-backend-charter.md#swift-implementation-policy).
+  Runner/envelope reuse is subordinate to that rule. A demonstrated host
+  limitation requires a test-integration correction, not a Core compromise.
 - Preserve normal-use behavior and real file errors. Do not add impossible-state
   stress matrices, repeated token guards, synthetic race frameworks, or new
   product features. Existing meaningful assertions remain reference contracts;
@@ -46,11 +51,14 @@ playback. Unconverted editors are absent, not misleadingly read-only.
   runner mismatch. New check names are explicitly marked prospective. All
   shared builds, tests, formatting, and native smoke runs belong to the
   controller after writers settle. Writers still inspect their own code.
-- Existing C++ QTest cases and checked-in fixtures are the behavioral oracle.
-  Adapt their drivers to Swift, not expectations to a new implementation.
-  Check-only adapters stay in `src/checks/`; they never become a production
-  `SongDocument` facade. Do not keep a second permanent suite or old production
-  implementation just to keep obsolete drivers compiling.
+- Existing C++ QTest cases and checked-in fixtures are the behavioral oracle,
+  not the required language of replacement tests. Apply
+  [test-language ownership](spec.md#test-language-ownership): Swift owns domain
+  scenarios, direct production calls, comparisons and expected-result assertions.
+  C++ is limited to runner/reporting glue, temporary oracle access and genuine
+  native integration checks. No permanent C++ domain driver or per-operation
+  Swift test ABI; no production `SongDocument` facade. Preserve coverage rather
+  than retaining obsolete test bodies or a permanent duplicate suite.
 - Required coverage accounting is defined in
   [spec.md](spec.md#case-by-case-coverage-reconciliation). Task 1 creates
   `docs/plans/swift-core-rewrite/coverage-ledger.json`; every task's exact write
@@ -77,6 +85,12 @@ playback. Unconverted editors are absent, not misleadingly read-only.
   affected work. Each task's write set additionally permits its own qualification
   evidence in this plan and the integration contract; the controller serializes
   those shared documentation edits. Production write sets remain closed.
+- The test-language amendment applies to active work before acceptance. Migrate
+  already-written C++ domain assertions to the task-owned Swift checks without
+  restarting production implementation. Every task's check write set also
+  permits `src/checks/swiftcore/{CoreCheckSupport.swift,oracle_check.h,oracle_check.cpp,module.modulemap}`
+  for its bounded runner/oracle integration; shared edits remain serialized.
+  This is not permission for new C++ domain scenarios.
 
 ## Swift 6.4 qualification
 
@@ -124,7 +138,7 @@ migrate the app to SwiftPM or preemptively select its legacy build system.
 Report a required build fix outside a task's closed write set before editing it.
 
 Feature references: [Swift 6.4 release](https://www.swift.org/blog/swift-6.4-released/),
-[unique/fixed-capacity arrays](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0527-rigidarray-uniquearray.md),
+[UniqueArray acceptance and rejected RigidArray/Containers scope](https://forums.swift.org/t/accepted-in-principle-se-0527-uniquearray/86943),
 [UniqueBox](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0517-uniquebox.md).
 
 ## Tasks
@@ -208,10 +222,21 @@ Independent core-design and native-integration reviews completed. Their findings
 are incorporated: timing query, history-token ownership, snapshot/bank lifetimes,
 save/close completion, registered-action boundaries and audition routing.
 The final module graph and native clipboard/scene-lifetime contracts were also
-checked. The later case-by-case coverage amendment adds a mandatory execution
-gate; the original planning review does not establish coverage completeness.
+checked. The later coverage, Swift 6.4 and test-language amendments add
+acceptance requirements; the original reviews do not establish their execution
+or coverage completeness.
 
 Planning validation covers all 33 source files, eight bounded briefs, local links/
-anchors, source-path declarations and verification filter names. `swiftcore` and
-`build:render` are explicitly prospective. No implementation, application build,
+anchors, source-path declarations and verification filter names. `swiftcore`
+is now registered; `build:render` remains prospective. No application build,
 runtime check or native-window smoke is claimed by this planning review.
+
+Post-amendment `evidence-plan-architect` audit: initially NEEDS_REVISION; final
+targeted recheck PASS after restoring 22 task-1 rows to pending with historical
+evidence preserved, correcting SE-0527 acceptance/deployment assumptions, and
+fixing module-map/registration drift. The wider audit found the Swift-owned
+test design and retained native boundaries implementable and consistent.
+Mechanical validation passed for 11 Markdown documents, 41 local links/anchors,
+eight brief schemas and ledger totals; all 834 baseline identities and historical
+per-row evidence were preserved. This closes the planning findings, not task
+acceptance: Swift-body execution, storage comparison and retirement gates remain.

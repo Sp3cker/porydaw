@@ -99,9 +99,11 @@ Keep their task names. Replace `porydaw_app`'s monolithic source membership with
 an explicit closure of retained native services/bootstrap and this small host;
 remove its `src/core` and legacy UI entries. Do not keep a flag-selected old app.
 The check manifest declares retained coverage only; preserve exact deferred case
-names in the evidence ledger. C++ test scenarios retain meaningful assertions,
-with operation drivers repointed to Swift. Delete comparison-only plumbing once
-its oracle retires; no production reverse facade.
+names in the evidence ledger. Swift-domain scenarios and assertions remain in
+the permanent `swiftcore` harness. Retained C++ tests assert actual native
+service/Qt/ABI contracts only. Delete oracle-only adapters, obsolete per-operation
+Swift test exports and superseded C++ domain bodies/registrations after the
+coverage gate; do not repoint those bodies through a reverse test facade.
 
 ## Implementation steps
 
@@ -111,9 +113,12 @@ its oracle retires; no production reverse facade.
 2. Implement the small native host and Swift application composition. Reuse real
    project/session services, canonical QActions, theme/font startup and save/close
    behavior. The editor area stays absent until the next task.
-3. Cut over build membership and all retained core/service test drivers together.
-   Exclude old workspace/ProjectIo orchestration and every unconverted editor.
-   Preserve source for deferred UI checks; remove implementation-pinning cases.
+3. Cut over build membership and retained native integration drivers together.
+   Keep Swift-domain suites; retire superseded C++ domain registrations and
+   oracle adapters only after final comparisons. Split mixed checks without
+   dropping domain assertions. Exclude old workspace/ProjectIo orchestration
+   and unconverted editors; preserve deferred UI source and remove obsolete
+   implementation-pinning cases.
 4. Run final comparisons before deletion; remove all old core implementations and
    the native blank-song constructor. Migrate render CLI build/launch through the
    Deno runner, adding a `build:render` task only for that existing executable.
@@ -127,17 +132,24 @@ settings task 8 will use. This is its baseline, not acceptance of the new consum
 ## Acceptance predicate
 
 `porydaw` opens/saves/plays real songs with Swift as the only core. Native engine
-clients and retained C++ behavioral checks use that implementation. No `src/core`
+clients and retained native-boundary checks use that implementation. No `src/core`
 file or unconverted editor is compiled into the app or rewrite check executable.
 Controller commands:
 
 ```sh
 deno task build:app
-deno task verify --filter smfcheck --filter editcheck --filter noteidcheck --filter xcmdcheck --filter automation-domain --filter velocity-model --verbose
+deno task verify --filter swiftcore --verbose
 deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --filter roundtrip --verbose
 deno task verify --filter loopcheck --filter primecheck --filter transportcheck --filter trackactivitycheck --filter exportcheck --verbose
 deno task build:render
 ```
+
+`swiftcore` now supplies permanent codec/edit/identity/XCMD/automation/velocity
+and other migrated domain coverage. The retired pure-domain registration names
+are reference IDs in the ledger, not post-cutover command aliases. The remaining
+commands cover retained native project, converter, engine and host boundaries.
+Reconcile mixed-suite partitions before removing any registration; a passing
+Swift suite without every mapped assertion is insufficient.
 
 `build:render` is prospective in this task; it builds `porydaw_render_cli` through
 the existing Deno CLI, not direct cmake. Preserve its existing arguments and run

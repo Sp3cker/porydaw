@@ -19,7 +19,7 @@ Read-only oracle: `src/core/songdocument.{h,cpp}`, `src/core/songhistory.{h,cpp}
 
 ## Prerequisites
 
-Task 1's `MidiFile`, musical types and check adapter accepted.
+Task 1's `MidiFile`, musical types and Swift-owned check/reporting boundary accepted.
 
 ## Interface contract
 
@@ -49,8 +49,10 @@ real service integration is task 6, not a placeholder bank implementation here.
 4. Implement save identity and the confirmed-bank entry variant on the same
    history sequence; bank entries do not dirty document state. Keep native
    replay separate from the core's ordering decision.
-5. Extend `swiftcore` slots `noteEdits` and `documentHistory` with the existing
-   editcheck scenarios and differential outcomes, not new impossible-state grids.
+5. Implement `noteEdits` and `documentHistory` scenarios and assertions in
+   `NoteChecks.swift`, calling production Swift directly. Existing editcheck
+   cases supply inputs/expected outcomes and temporary oracle comparisons;
+   C++ slot edits are invocation/reporting only.
 
 ## Acceptance predicate
 

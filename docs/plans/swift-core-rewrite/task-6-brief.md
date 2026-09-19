@@ -75,9 +75,11 @@ work/owned results have finished, following the existing service lifetime policy
 4. Complete real confirmed-bank undo/redo on the single Swift history. Exercise
    normal edit/save/undo sequences with the actual native bank service, not
    callback-echo mocks or an unimplemented future-bank entry.
-5. Add `swiftcore` slots `projectSession` and `bankHistory` using existing staged
-   project/save/bank fixtures. Supply an immutable playback publication callback
-   for task 7; do not bind the old AudioEngine timeline API in this task.
+5. Implement `projectSession` and `bankHistory` scenarios/assertions in
+   `SessionChecks.swift` using real staged project/save/bank fixtures. Retain C++
+   assertions only for genuine native service contracts. Supply an immutable
+   playback publication callback for task 7; do not bind the old AudioEngine
+   timeline API here. Async Swift checks finish before runner completion.
 
 ## Acceptance predicate
 

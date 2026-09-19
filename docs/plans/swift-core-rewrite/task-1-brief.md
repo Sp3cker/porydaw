@@ -22,6 +22,10 @@ Create:
 - `src/checks/swiftcore/tst_swiftcore.h`
 - `src/checks/swiftcore/tst_swiftcore.cpp`
 - `docs/plans/swift-core-rewrite/coverage-ledger.json`
+- `src/checks/swiftcore/CoreCheckSupport.swift`
+- `src/checks/swiftcore/oracle_check.h`
+- `src/checks/swiftcore/oracle_check.cpp`
+- `src/checks/swiftcore/module.modulemap`
 
 Modify only build/registration integration in `CMakeLists.txt`,
 `src/checks/CMakeLists.txt`, `src/checks/checkcatalog.cpp`, `src/checks/fwd.hpp`.
@@ -42,11 +46,24 @@ a resolved `VoiceKind`; native instrument traversal stays outside core and is
 verified with the real service in task 6. Preserve all level/range/representative
 and duration quantization results. `NoteID` is UInt64 and remains unserialized.
 
-Register prospective harness `swiftcore` with independently selectable QTest
-slots `midiCodec` and `musicalSemantics`. Its C++ driver compares production Swift
-results with existing C++ codec/semantic results using the checked-in corpus and
-existing synthetic file cases. Failure output identifies case and both results.
-The adapter is check-only; it supplies no application document API.
+Keep harness `swiftcore` and selectors `midiCodec` and `musicalSemantics`.
+Under [test-language ownership](spec.md#test-language-ownership), `MidiChecks.swift`
+owns complete scenarios, direct production calls and assertions. Reduce
+`tst_swiftcore.{h,cpp}` to suite invocation and failure reporting; it must not own
+the corpus expectation tables, musical loops or comparison decisions.
+
+`CoreCheckSupport.swift` owns bounded suite completion and case/row diagnostics;
+`core_check.h` declares only the suite execution/reporting boundary. A failed
+Swift assertion must fail the harness with its baseline ID and expected/actual
+results. Successful execution identifies the executed rows for reconciliation.
+Unknown selectors or no executed selected cases must fail, not return green.
+
+`oracle_check.{h,cpp}` exposes only temporary calls to the old C++ implementation;
+`module.modulemap` imports that check-only interface into Swift. Swift compares
+its production results with the oracle and with retained expected values.
+Remove obsolete `pdc_codec_roundtrip`, `pdc_blank_song`, `pdc_semantic_value`
+and `pdc_semantic_text` test exports and their C++ callers when these checks
+migrate. Do not replace them with another per-operation Swift ABI.
 
 ## Implementation steps
 
@@ -56,10 +73,13 @@ The adapter is check-only; it supplies no application document API.
    factory behavior. No file-I/O wrapper or best-effort parser is needed here.
 3. Implement existing musical classifications/defaults, velocity levels and
    mid2agb quantization. Do not add new classifications or copied instrument trees.
-4. Build `PorydawCore` independently of Qt, using explicit source registration.
-   Register the check target using the repo's existing Swift/QTest pattern.
-5. Connect callable comparisons to current checks/fixtures; retain existing
-   expected behavior rather than adding a second general test framework.
+4. Build `PorydawCore` independently of Qt and check/oracle modules; compile the
+   Swift test bodies as direct Core consumers through explicit CMake registration.
+   Preserve runner/selectors where compatible with the governing Core-independence
+   rule. Migrate domain drivers to `MidiChecks.swift`, not Core APIs toward C++.
+5. Connect the separate native oracle to Swift-owned comparisons. Qualify suite
+   selection, diagnostics and failure propagation through the real Deno path;
+   no second fixture runner or production domain exports.
 6. Freeze the reference revision and build the complete baseline case/row
    inventory under the linked reconciliation contract. Assign later cases to
    their owning task; map and execute every task-1 scenario through production
@@ -85,6 +105,25 @@ Acceptance also requires independent inventory-completeness review and zero
 unresolved task-1 rows in coverage-ledger.json. Codec and pure musical/velocity
 semantics are due here; importer/XCMD and native voice-kind resolution retain
 their explicit later owners. The broad Swift slot names are not a coverage map.
+
+Qualify the reporting envelope with a disposable deliberately failing assertion
+in a selected Swift case: the first command must exit nonzero and identify that
+case/row and its expected/actual values. Remove the injected failure and require
+a passing run. Unknown-selector rejection is exercised with:
+
+```sh
+deno task verify --filter swiftcore --verbose --qt unknownSwiftCoreSuite
+```
+
+That command must exit nonzero; its failure is expected probe evidence, not an
+unresolved application failure. Record both probes without retaining a permanent
+tautological runner test. The C++ shell must contain no task-1 musical assertions
+after migration.
+The host/reporting smoke must exercise the actual Swift Core calls and ownership
+used by these cases. No production access widening, C-shaped result projection,
+forced conformance or weakened Swift ownership is acceptable to pass it. If the
+envelope cannot host the real design, report the specific test-integration change
+needed outside the write set; Core is not the fallback repair location.
 
 ## Task-specific constraints
 

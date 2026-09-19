@@ -22,6 +22,9 @@ Modify:
 - `src/checks/{CMakeLists.txt,checkcatalog.cpp,fwd.hpp}`;
   existing files in `src/checks/{swiftrollgated,swiftbandkeys,swiftqtml,swiftrollbench,selectionkey,rollcheck,clipboard}`:
   only retained grid/window/input/clipboard cases and fixture driver conversion.
+- `src/checks/swiftcore/{NoteChecks.swift,EventChecks.swift,TimeChecks.swift}`:
+  only any remaining pure domain assertions extracted from mixed grid/clipboard
+  cases; preserve the task-1 reporting boundary and coverage IDs.
 - `docs/plans/qtbridge-integration-contract.md`, this plan's `plan.md`/`spec.md`
   evidence and deferred-case ledger.
 
@@ -97,10 +100,11 @@ clipboard methods in the audio service or invent Swift access to QClipboard.
 3. Move retained note command execution out of the old C++ host into direct
    Swift operations. Preserve grouping, clipboard scaling, selection and
    mute/solo behavior; do not implement excluded prompt/editor commands.
-4. Repoint existing actual-window/grid behavioral tests to the new host and
-   native session. Re-enable only retained grid/window cases in the manifest;
-   leave excluded-surface cases explicitly deferred. Remove flag/token-only
-   assertions and old transport after replacement proof.
+4. Repoint actual-window/grid behavioral tests to the new host and native session.
+   Keep native input/render/lifetime assertions native; put extracted pure
+   note/clipboard semantics in the existing Swift checks, not a C++ domain
+   driver. Re-enable retained grid/window cases, explicitly defer absent UI,
+   and remove flag/token-only assertions and old transport after proof.
 5. Run the actual application smoke, final declared-manifest checks and structural
    reduction review. Record native QtBridge lifetime evidence on this surface.
    Remove throwaway probes and record the terminal gate; do not begin another view.

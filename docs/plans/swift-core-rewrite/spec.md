@@ -27,6 +27,15 @@ C engine through one native module map. `src/swift/app/DocumentSession.swift`
 owns per-open-song state; `ApplicationSession.swift` is the QML-facing composition
 owner. Existing grid math/scene/palette stay in `swiftroll/`; no broad rehome.
 
+Core has no C++-testability contract. Its Swift APIs and representation are
+chosen for domain correctness, ownership and production use, not what the C++
+importer or a QTest driver can express. Generics, associated-value enums,
+noncopyable/borrowed values, isolation and Swift error models remain available
+when appropriate and supported by the qualified toolchain/deployment.
+Core imports no check/oracle module and needs no test ABI, generated C++ header
+or C++ interoperability setting solely for verification. Native service
+adaptation remains outside it.
+
 ## Canonical state and storage
 
 `MidiFile` stores `division`, ordered `[MidiChunk]`, and `wasFormat0`.
@@ -245,14 +254,58 @@ No QML shortcut map. The host delivers the four named cancel reasons correctly.
 
 ## Verification
 
-During parity the existing C++ checks remain the oracle. New `swiftcore` QTest
-registration (prospective, task 1) runs the same named semantic scenarios against
-production Swift implementations via a check-only adapter. Pass fixture bytes,
-operation facts, and observed results across that adapter; do not implement a
-C++ `SongDocument` replacement class. Compare callable results with the C++
-oracle until task 7, then repoint retained QTest cases to the Swift driver and
-remove duplicate bridge-only scaffolding. Preserve assertion meaning and fixture
-eligibility; do not copy entire suites into a permanent second test framework.
+### Test-language ownership
+
+Swift owns the setup, operations, expected results and comparisons for Swift
+codec, musical semantics, document edits/history, imports and timeline logic.
+Checks call production Swift directly; they are not Swift forwarding functions
+whose results are asserted by a C++ semantic driver. Preserve baseline inputs
+and assertions, not the language or class structure of their original tests.
+
+Reuse the existing Deno/CMake execution and fixture-staging path where it does
+not constrain Core. `swiftcore` remains the permanent Swift-domain harness.
+Named QTest slots may remain selection/reporting envelopes: they invoke a Swift
+suite and forward its completion/failures, never receive or manipulate Core
+objects. This hosting choice is replaceable test infrastructure, not a Core
+compatibility obligation. If it cannot support a required Swift lifetime or
+execution model, correct the test host and its bounded integration write set;
+do not simplify Core to fit it. Preserve selection, staging, diagnostics,
+failure propagation and coverage through that correction.
+
+New cases/data rows live in Swift without a C++ test body, expectation table
+or per-operation export. Native glue may report a Swift failure but must not
+decide musical expected values or reconstruct domain state. Assertion-specific
+projections belong in Swift test code, not public Core inspection APIs.
+Use normal Swift test access where needed rather than widening production
+visibility for C++. Keep reporting support small; no test DSL, custom discovery
+framework or parallel fixture runner.
+
+Swift Testing/XCTest adoption is not required to move assertions into Swift.
+If proposed, qualify its supported entrypoint, linkage, selection and failure
+propagation on the actual toolchain first; do not assume SwiftPM integration,
+use private test-library entrypoints, or migrate the app's build system.
+Async service checks must finish before the envelope reports completion and
+must not block the main actor waiting for their own continuation.
+
+During parity, a separate check-only native oracle adapter calls the frozen C++
+implementation and returns observed results to Swift for comparison. It owns no
+Swift implementation driver, musical policy or alternate domain model. Keep it
+separate from the permanent suite-reporting boundary and delete it with the
+oracle at task 7. Expected-result assertions survive that deletion; equality
+between two implementations is not their sole correctness condition.
+
+C++ tests remain appropriate for real Qt/QML interaction, retained engine/device
+behavior, native project services and C ABI/lifetime integration. Split mixed
+suites at their observable contracts: pure Swift-domain assertions move to Swift;
+native interaction assertions remain where native access is required. Calling
+Swift through a C wrapper does not by itself make a test native integration.
+No new C++ domain checks or permanent reverse Swift-operation adapter.
+
+Acceptance review rejects any Core type/signature/conformance/access-control or
+compiler-setting change justified only by C/C++ harness compatibility. Prove
+tests execute the actual Swift API/ownership model, not a copyable or C-shaped
+test-only variant of Core. The old oracle returns comparison observations to
+Swift; it does not dictate the replacement model.
 
 | Source evidence / current filter | Required rewrite coverage |
 | --- | --- |
@@ -265,9 +318,11 @@ eligibility; do not copy entire suites into a permanent second test framework.
 | `clipcheck`, `clipmimecheck` | Retained grid clipboard semantics; absent lane UI is not needed to preserve stored clip data |
 | `swiftrollgated`, `swiftbandkeys`, grid/window portions of `selectionkey`, `swiftqtml` | Repoint actual-surface input/render/lifetime coverage; remove old flag/token/plumbing assertions |
 
-Task 7 builds `porydaw_checks` with retained core/service suites and shared
-support; task 8 adds the converted grid/window cases. The `swiftcore` comparison
-registration retires as retained original QTest cases take over its Swift driver.
+Task 7 builds `porydaw_checks` with permanent Swift-domain suites and retained
+native-service checks; task 8 adds converted grid/window cases. `swiftcore`
+survives; its oracle dependency does not. Retire superseded pure-domain C++
+test bodies/registrations after their mapped Swift assertions pass. Do not keep
+alias registrations or repoint those bodies through per-operation Swift exports.
 Absent UI scenarios stay in source as deferred references, excluded from
 registration/compilation: headers, rulers, drawers, browser/settings dialogs,
 event views, pitch-bend editor, multi-tab/workspace chrome, and their visual
@@ -296,10 +351,18 @@ The JSON has `referenceRevision`, `inventoryEvidence`, and `cases`. Each case
 records `cppId` (harness/class/function/data-row or explicit no-row marker),
 `source`, `fixturesAndInputs`, `operations`, `observableAssertions`, `dueTask`,
 `swiftTargets`, `status`, `runEvidence`, and `exclusionReview`.
-`swiftTargets` identifies the production-Swift test path and corresponding
-assertions, not just a containing QTest slot. Run evidence records exact command,
-tested revision, executed case/row identities, results and durable output paths.
+`swiftTargets` identifies the executed case/data row and assertion location.
+For domain rows, that location must be a Swift test body, not just a containing
+QTest slot or a C++ assertion over a Swift result. Native integration rows name
+their real native boundary and may identify a C++ assertion. Run evidence records
+exact command, tested revision, executed case/row identities, results and durable
+output paths.
 Use only `pending`, `verified`, `excluded` or `deferred-ui` for status.
+
+Prior C++-assertion results remain historical parity evidence, not proof of
+Swift test ownership. A migrated row is pending until its new Swift assertion
+location and fresh execution evidence are reconciled. Preserve the old evidence
+and frozen identity; do not relabel an old run or erase the baseline.
 
 **1:1 means behavioral traceability, not copied test code or equal counts.**
 Preserve each baseline input, operation and observable assertion. Consolidated
@@ -331,8 +394,10 @@ rows must have reviewed Swift and C++ execution evidence. Task 8's retained
 grid-only rows may remain pending, but its core assertions must already pass
 through a headless driver. Capture the reference results before removing it.
 
-After task 7 repoints drivers, reconcile the ledger against the actual retained
-manifest and executed results: every required core row still runs on Swift.
+After task 7 retires oracle adapters and superseded test drivers, reconcile the
+ledger against the retained manifest and executed results: every required core
+row still runs, with domain assertions in Swift and native-boundary assertions
+exercising the actual replacement.
 Task 8 closes retained grid rows and repeats final reconciliation. Do not shrink
 the denominator by editing the baseline or silently dropping a registration.
 Record totals for baseline, verified, approved exclusions, deferred UI and

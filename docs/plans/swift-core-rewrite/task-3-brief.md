@@ -44,8 +44,9 @@ tempo-to-raw replacement in one history transaction.
    and opaque preservation. Share collision/value rules across ordinary lanes.
 4. Implement complete import analysis/rescaling/redundant-setter behavior. Import
    reports remain plain values/strings; do not add UI or diagnostic features.
-5. Add `swiftcore` slots `eventEdits`, `xcmdEdits`, `midiImport` comparing existing
-   musical outputs, raw order, undo results, and preserved bytes.
+5. Implement `eventEdits`, `xcmdEdits` and `midiImport` in `EventChecks.swift`.
+   Swift owns musical-output, raw-order, undo and preserved-byte assertions;
+   C++ changes are limited to suite invocation and temporary oracle access.
 
 ## Acceptance predicate
 
