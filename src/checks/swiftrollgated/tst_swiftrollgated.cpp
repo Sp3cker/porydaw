@@ -6,8 +6,10 @@
 #include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/theme/themeruntime.h"
 #include "ui/workspaceui.h"
 
+#include <QColor>
 #include <QCoreApplication>
 #include <QMouseEvent>
 #include <QPoint>
@@ -73,6 +75,16 @@ void SwiftRollGatedTest::testInitialRenderWithoutEdit()
     QCOMPARE(revText, QString::number(document.revision()));
 
     QVERIFY(!overlay->hasActiveFocus());
+
+    auto *const viewport = overlay->findChild<QQuickItem *>(QStringLiteral("swiftRollViewport"));
+    QVERIFY(viewport != nullptr);
+    QVERIFY2(viewport->property("contentY").toReal() > 0.0,
+             "Overlay must scroll to the note range, not the empty high keys");
+    auto *const background =
+        overlay->findChild<QQuickItem *>(QStringLiteral("swiftRollBackground"));
+    QVERIFY(background != nullptr);
+    QCOMPARE(background->property("color").value<QColor>(),
+             themes::color(themes::Role::song_view_piano_roll_background));
 }
 
 void SwiftRollGatedTest::testTrackFollow()

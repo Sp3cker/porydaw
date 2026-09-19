@@ -294,6 +294,8 @@ qt_add_executable(porydaw_checks
     selectionkey/localinputtier_text.cpp
     selectionkey/localinputtier_pitchbend.cpp
     selectionkey/localinputtier_eventlist.cpp
+    swiftrollbench/tst_swiftrollbench.h
+    swiftrollbench/tst_swiftrollbench.cpp
     automation/raster/tst_automationraster.h
     automation/raster/painting.cpp
     automation/raster/interaction.cpp

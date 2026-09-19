@@ -5,6 +5,10 @@ Item {
     id: root
     objectName: "swiftRollOverlay"
     clip: true
+    property bool centeredOnNotes: false
+    // Mirrors TimelineInputCancelReason::Hidden (timelineinput.h). The host
+    // names cancel reasons; QML cannot import the C++ enum.
+    readonly property int cancelReasonHidden: 2
 
     onWidthChanged: configureViewport()
     onHeightChanged: configureViewport()
@@ -25,6 +29,7 @@ Item {
     }
 
     Rectangle {
+        objectName: "swiftRollBackground"
         anchors.fill: parent
         color: swiftGridModel.palette.rollBackground
         z: -1
@@ -104,7 +109,7 @@ Item {
 
                 onVisibleChanged: {
                     if (!visible)
-                        swiftGridModel.inputCancelled(2);
+                        swiftGridModel.inputCancelled(root.cancelReasonHidden);
                 }
 
                 PianoRollCanvas {
@@ -162,15 +167,10 @@ Item {
     function configureViewport() {
         var dpr = Screen.devicePixelRatio > 0 ? Screen.devicePixelRatio : 1.0;
         swiftGridModel.configureViewport(swiftGridModel.baseFontPx, dpr, Math.max(rollPlot.width, 1.0), Math.max(rollPlot.height, 1.0));
-    }
-    function setViewportScroll(y) {
-        flick.contentY = y;
-        swiftGridModel.setViewportScroll(y);
-    }
-
-    function setViewportScrollX(x) {
-        flick.contentX = x;
-        swiftGridModel.setViewportScrollX(x);
+        if (rollPlot.height > 1 && !root.centeredOnNotes) {
+            flick.contentY = swiftGridModel.initialScrollY;
+            root.centeredOnNotes = true;
+        }
     }
     function scrollBy(dx, dy) {
         var maxX = Math.max(0, flick.contentWidth - flick.width);

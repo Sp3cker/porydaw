@@ -48,6 +48,10 @@ int runSwiftRollGatedCheck(const QString &projectRoot, const QString &songA, con
                            const QStringList &qtArguments);
 #endif
 
+// Roll frame-cost bench, both roll flavors (src/checks/swiftrollbench).
+int runSwiftRollBenchCheck(const QString &projectRoot, const QString &song,
+                           const QStringList &qtArguments);
+
 // Onboarding (src/checks/onboardcheck).
 int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath,
                     const QStringList &qtArguments);

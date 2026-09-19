@@ -30,6 +30,7 @@ class SwiftRollMount final
 
     void updateBandGeometry(const std::optional<TimelineBandGeometry> &rollGeometry);
     void handleTransferredWindowDeath();
+    void applyHostPalette();
 
     bool isMounted() const noexcept { return m_mounted; }
     QQuickItem *overlayItem() const noexcept { return m_overlayItem.data(); }

@@ -159,3 +159,44 @@ deno task verify --verbose
 Run deterministic lint on new/changed QML, format the settled C++ union, and obtain actual native surface/framebuffer evidence. The full final suite has **not** been run for the completed wave because Task 4 remains absent. Complete Task 4 spec/quality review, whole-change review, modern Swift ownership/performance/declaration-order audit, cleanup of only owned scratch artifacts, then commit/push.
 
 Known non-blocking toolchain warnings: upstream Qt Swift Clang-import cycles, QtCorePrivate version coupling, local clang-format 21 vs CI 22. Do not suppress or expand scope merely to remove them.
+
+## Wave 3 close-out (2026-09-18)
+
+Decision: a same-day default-mount experiment (compile-time Swift default, no
+runtime flag) was reverted at the user's direction. The overlay stays behind
+`PORYDAW_SWIFT_ROLL`; default-on returns only at the Wave 4 editable cutover
+per the charter retirement table. Evidence that drove the revert: with the
+overlay default-mounted, eight input-routing harnesses fail because the
+overlay absorbs wheel/pointer that the checks route to the C++ roll band
+(`rollcheck-static gatedAndReadyRollZoom` asserts `camera().pxPerBeat()`
+change); all eight pass with the overlay unmounted. Kept from that work: host
+palette push (`SwiftRollMount::applyHostPalette` + `PianoGrid.reloadVisuals`)
+and initial note-range centering, both now asserted by `swiftrollgated`.
+
+Closed items:
+
+- Task-4 review minors: unused overlay `setViewportScroll`/`setViewportScrollX`
+  removed; `inputCancelled(2)` named (`cancelReasonHidden` mirroring
+  `TimelineInputCancelReason::Hidden`); mount syncs roll geometry once after
+  mounting.
+- `swiftrollbench` + `swiftrollbench-swift`: frame-cost bench rows
+  (vgloadbench pattern) — one build, two lanes via manifest environment.
+  2026-09-18 evidence on this machine (mus_route101): scroll median 17.3ms
+  Swift vs 17.6ms C++ (0.98x), p95 24.2 vs 26.0ms; zoom-phase cadence ~0.99x
+  (the overlay maps ctrl+wheel to scroll until Wave 4 input work). Within the
+  2x perf bar: PASS. The cpp lane retires with the C++ roll at cutover.
+
+Gate results: `build:app` PASS; filtered verify (`swiftrollgated`,
+`swiftdocfeed`, `selectionkey-core`, `rollcheck-static`) 4/4 PASS; full
+verify 94/104 — the 8 visual harnesses (chrome/quick/browsers/dialogs at
+font12/16) fail identically with and without the Swift grid and predate this
+close-out (row-height and raster deltas against frozen baselines; artifacts
+under `/var/folders/.../porydaw-visual-artifacts/`); unresolved, not
+rebaselined. `prototype:swift-grid --smoke` passed on this tree's
+prototype-lane inputs; three later runs failed three different native-input
+rows during active desktop use (documented interference pattern; do not
+stress-rerun) — rerun once on an idle desktop to reconfirm.
+`selectionkey-gesture` flaked inside the full run and passed isolated.
+
+Wave 4 dispatch gate: perf-bar evidence recorded above; awaiting user
+acceptance and checkpoint authorization.

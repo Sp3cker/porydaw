@@ -727,6 +727,17 @@ const std::vector<CheckDefinition> &catalog()
                 // Custom QSGVertexColorMaterial geometry requires the default scenegraph backend.
                 .windowing = Windowing::WindowSystem,
             },
+            {
+                .name = "swiftrollbench",
+                // Roll frame-cost bench, flag-off lane: scripted scroll/zoom cadence
+                // for the active C++ roll (Swift lane runs as swiftrollbench-swift).
+                .argv = strings({"--swiftrollbench", "{scratch}", "mus_route101"}),
+                .handler = qtWithTwoArguments<runSwiftRollBenchCheck>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101RichFiles,
+                .windowing = Windowing::WindowSystem,
+            },
 #ifdef __APPLE__
             {
                 .name = "swiftdocfeed",
@@ -747,6 +758,18 @@ const std::vector<CheckDefinition> &catalog()
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = twoSongRichFiles,
+                .windowing = Windowing::WindowSystem,
+            },
+            {
+                .name = "swiftrollbench-swift",
+                // Roll frame-cost bench, Swift lane: PORYDAW_SWIFT_ROLL mounts the
+                // overlay; compare cadence against the flag-off swiftrollbench row.
+                .argv = strings({"--swiftrollbench", "{scratch}", "mus_route101"}),
+                .handler = qtWithTwoArguments<runSwiftRollBenchCheck>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101RichFiles,
+                .environment = {{QStringLiteral("PORYDAW_SWIFT_ROLL"), QStringLiteral("1")}},
                 .windowing = Windowing::WindowSystem,
             },
             {

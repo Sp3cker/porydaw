@@ -384,11 +384,16 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         if (!m_swiftRollMount->mount(songView, *m_quickView)) {
             qCritical("Failed to mount Swift roll overlay behind PORYDAW_SWIFT_ROLL");
             m_swiftRollMount.reset();
-        } else if (m_view) {
-            connect(m_view.data(), &QObject::destroyed, this, [this] {
-                if (m_swiftRollMount)
-                    m_swiftRollMount->handleTransferredWindowDeath();
-            });
+        } else {
+            // Sync the overlay with the roll geometry already computed instead of
+            // waiting for the next band-layout publish.
+            m_swiftRollMount->updateBandGeometry(m_bandLayout.geometry(TimelineBand::Roll));
+            if (m_view) {
+                connect(m_view.data(), &QObject::destroyed, this, [this] {
+                    if (m_swiftRollMount)
+                        m_swiftRollMount->handleTransferredWindowDeath();
+                });
+            }
         }
     }
 #endif
@@ -834,6 +839,10 @@ void TimelineQuickView::syncAppearance()
     requestUpdate(PianoRollQuickDirty::All);
     requestTimelineUpdate(TimelineQuickDirty::All);
     requestAutomationUpdate(AutomationRefresh::All);
+#ifdef Q_OS_MACOS
+    if (m_swiftRollMount)
+        m_swiftRollMount->applyHostPalette();
+#endif
 }
 
 bool TimelineQuickView::eventListSurfaceFocused() const

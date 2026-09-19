@@ -435,6 +435,11 @@ public final class PianoGrid: QmlInstantiableStatus {
         scene.rebuildNotes(input)
     }
 
+    public func reloadVisuals() {
+        rebuildScene()
+        publishOutputs()
+    }
+
     private func refreshNotes() {
         let previousWidth = gridWidth
         let measured = recomputeGeometry()
