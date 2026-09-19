@@ -1,9 +1,9 @@
 # Swift core rewrite → piano grid
 
-Status: implementation underway; task 1 is active (user-reported). The coverage
-reconciliation amendment below applies to that active task before acceptance;
-it does not require restarting its implementation. This replaces the M1/M2
-sequence in [swift-ownership-cutover](../swift-ownership-cutover/plan.md).
+Status: implementation underway. The coverage reconciliation and Swift 6.4
+qualification amendments apply before acceptance of affected work; neither
+requires restarting the implementation. This replaces the M1/M2 sequence in
+[swift-ownership-cutover](../swift-ownership-cutover/plan.md).
 
 ## Scope and stop
 
@@ -73,6 +73,59 @@ playback. Unconverted editors are absent, not misleadingly read-only.
 - Checkpoint accepted work at the milestones below and before later tasks
   re-edit an earlier uncommitted write set. Batch ready work at each checkpoint;
   no separate commit chore in each brief. Push every resulting commit.
+- Apply [Swift 6.4 qualification](#swift-64-qualification) before accepting
+  affected work. Each task's write set additionally permits its own qualification
+  evidence in this plan and the integration contract; the controller serializes
+  those shared documentation edits. Production write sets remain closed.
+
+## Swift 6.4 qualification
+
+Swift 6.4 is installed (user-reported), but installation is not project
+qualification. Preserve the recorded 6.3.3 evidence as historical. The controller
+records the selected compiler executable/version, SDK, deployment target,
+language/interoperability flags, QtBridge pin/patch and macro compiler in the
+[integration contract](../qtbridge-integration-contract.md#swift-64-qualification).
+Ensure CMake and QtBridge macros select the intended compatible toolchain and
+rebuild affected compiler-dependent artifacts. Keep `Swift_LANGUAGE_VERSION 6`;
+it selects a language mode, not compiler release 6.4.
+
+After writers settle, run:
+
+```sh
+deno task build:app
+deno task verify --filter swiftqtml --filter swiftcore --verbose
+```
+
+These qualify app/macro compilation, real QML bridge capability primitives, and
+the currently implemented Swift core checks. They do not prove an unexercised
+new API, deployment on another OS, realtime safety, or final consumer behavior.
+Task-specific checks and case-by-case coverage gates remain mandatory.
+
+Before changing an accepted storage or ABI choice, complete a bounded disposable
+comparison on the selected toolchain with the actual deployment/interop flags.
+Task 5 owns the playback storage/export comparison; task 7 consumes its accepted
+decision rather than reopening it. Record the candidate, exact probe command,
+observed result, removed/added ownership and adapter concepts, and the decision.
+Freeze any changed representation in the affected brief before implementation;
+retain correct existing code when no concrete simplification is demonstrated.
+Do not retain alternate implementations or introduce a benchmark framework.
+
+Use new syntax, borrowing iteration, safe memory APIs or concurrency facilities
+only where they remove existing work or express a required contract. Do not
+replace useful snapshot/history sharing with unique ownership, add async work to
+the render path, suppress upgrade diagnostics, retry failing tests until green,
+or adopt unverified 6.5/proposal-only APIs. New library availability must be
+proven for the deployment target; do not raise it or add fallback branches
+without approval.
+
+The app remains Deno/CMake-driven. Audit any SwiftPM invocation in the actual
+QtBridge macro build for artifact discovery and compiler selection; do not
+migrate the app to SwiftPM or preemptively select its legacy build system.
+Report a required build fix outside a task's closed write set before editing it.
+
+Feature references: [Swift 6.4 release](https://www.swift.org/blog/swift-6.4-released/),
+[unique/fixed-capacity arrays](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0527-rigidarray-uniquearray.md),
+[UniqueBox](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0517-uniquebox.md).
 
 ## Tasks
 

@@ -62,6 +62,32 @@ owners both hold the publication. Callback consumers borrow only. Preserve the
 existing current/retired-owner handoff and control-thread release points.
 No per-field getter ABI or Swift object access in render.
 
+The Swift 6.4 comparison required by the plan has this bounded scope:
+
+- Compare `RigidArray` from `Containers` with the manual owned buffers for
+  `Sequencer.keyedOn`, `keyedOnTick` and `pendingReleases`. Preserve capacities,
+  initialization, release ordering and current full-buffer behavior. Fixed
+  capacity must not turn an existing handled condition into a trap.
+  `UniqueArray` has automatic growth and is not the default callback container.
+- Compare scoped `Span`/`MutableSpan` and borrowing access with current buffer
+  views; preserve one forward timing rule and one loop-validity rule. Different
+  tempo element layouts still require adaptation. Do not add a generic timing
+  framework or export extra concepts merely to demonstrate a language feature.
+- Compare `@c` plus `@implementation` against the current exports, using the
+  existing C header as authority. Preserve all `pd_*` symbol names, signatures,
+  nullability, natural layout, ownership and synchronous calling semantics;
+  prove calls from a native client. Do not keep both export mechanisms.
+- `UniqueBox` is not an assumed replacement for the escaping opaque player
+  handle: stable allocation alone does not provide the required pointer/lifetime
+  API. Keep the current handle and shared publication ownership unless a
+  separately accepted comparison proves a simpler complete implementation.
+
+The C-only playback ABI stays C-only. `std::span` bridging is not authorization
+to expose C++ templates here, reinterpret distinct record layouts, or change
+`TimelineHandoff`. Safe temporary allocation/raw-memory APIs are candidates
+only where their initialization, lifetime and compiled cost preserve the actual
+operation; a safe spelling is not proof of stack allocation or realtime safety.
+
 ## Implementation steps
 
 1. Implement exact sample projection, tempo conversion and shared track mapping;
@@ -76,6 +102,10 @@ No per-field getter ABI or Swift object access in render.
    probe. Remove the probe after recording evidence; do not add telemetry to
    production. Reuse existing fixtures and render sizes rather than inventing
    a concurrency torture suite.
+   Repeat this evidence for any adopted 6.4 storage/export replacement. Check
+   borrowed mutation and all exercised render/chase/loop paths, not merely the
+   container's advertised ownership model. Creation/destruction stay on the
+   control thread; no automatic growth or new initialization work enters render.
 
 ## Acceptance predicate
 
@@ -93,9 +123,17 @@ production Swift render against the real engine, including a loop crossing and
 replacement at the current playback position. Device/AudioEngine handoff and WAV
 client migration are task 7's explicit remaining integration proof.
 
+Acceptance also requires the plan's 6.4 qualification and the recorded storage/
+export decision. If a candidate is rejected, name the concrete API, deployment,
+ownership or complexity reason; feature non-adoption is not a failed rewrite.
+If adopted, the existing Swift-backed PCM checks and optimized-code/allocation
+evidence must cover the changed production path. Keep the exact temporary probe
+command and results in task evidence, then remove its source/artifacts.
+
 ## Task-specific constraints
 
 Do not alter DSP, resamplers or miniaudio. If the verified Swift toolchain cannot
 produce the required callback without runtime work, report that concrete blocker;
-do not silently keep the old sequencer or move it to another directory. No
-hypothetical timing framework or new platform/toolchain work belongs here.
+do not silently keep the old sequencer or move it to another directory. The
+plan's bounded 6.4 qualification is in scope; new platform support, speculative
+timing frameworks and an unrelated build-system migration are not.

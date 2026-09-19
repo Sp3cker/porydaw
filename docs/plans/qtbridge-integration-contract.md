@@ -106,6 +106,25 @@ Select supported update operations based on pinned-source inspection and runtime
 
 Every guarantee needs: requirement, pinned implementation/source anchor, reproduction scenario, exact command, tested revisions/toolchain, observed result, and status (`Unverified`, `Verified`, or `Unsupported`). Source inspection establishes mechanism; runtime execution establishes evidence. Never silently promote one into the other.
 
+### Swift 6.4 qualification
+
+Status: **Unverified for the project**. Swift 6.4 installation is user-reported;
+the 6.3.3 baseline and M0 observations below remain historical evidence, not
+6.4 results. Do not overwrite their toolchain labels or carry their Verified
+status forward to the new compiler.
+
+The [core rewrite qualification gate](swift-core-rewrite/plan.md#swift-64-qualification)
+owns commands and execution policy. Record the compiler executable/version,
+SDK/deployment target, language/interop flags, QtBridge revision/patch identity,
+macro compiler, exact commands and observed results here after qualification.
+App/macro compilation and `swiftqtml` capability primitives need fresh evidence;
+existing unsupported bridge paths remain unsupported absent a specific fix and
+reproduction. Core/playback and final consumer acceptance remain separate.
+
+No new standard-library availability, callback performance or borrowed-lifetime
+guarantee is established by this planning amendment. Task 5's bounded comparison
+records the actual decision before a new storage/export implementation is used.
+
 ### M0 capability probe — recorded 2026-09-19
 
 Harness: `src/checks/swiftqtml/` (registered check `swiftqtml`; harness-local

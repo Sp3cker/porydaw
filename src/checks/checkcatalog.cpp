@@ -740,6 +740,21 @@ const std::vector<CheckDefinition> &catalog()
             },
 #ifdef __APPLE__
             {
+                .name = "swiftcore",
+                // Production Swift MIDI codec and musical semantics against
+                // the frozen C++ oracle and checked-in SMF corpus.
+                .argv = strings({"--swiftcore", "{scratch}"}),
+                .handler = qtWithOneArgument<runSwiftCoreCheck>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles =
+                    decompMidiFiles + strings({"test_midis/smf/valid/opaque_sysex.mid",
+                                               "test_midis/smf/valid/vlq_running_status.mid",
+                                               "test_midis/smf/valid/note_lifecycle.mid",
+                                               "test_midis/smf/malformed/duplicate_eot.mid",
+                                               "test_midis/smf/stress/automation_burst.mid"}),
+            },
+            {
                 .name = "swiftdocfeed",
                 // Real document snapshots, observer lifetime, and the shared Swift revision guard.
                 .argv = strings({"--swiftdocfeed", "{scratch}", "mus_route101"}),

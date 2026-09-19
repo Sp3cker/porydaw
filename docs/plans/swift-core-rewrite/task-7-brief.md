@@ -48,6 +48,9 @@ before removing the C++ reference; do not use historical passing output for it.
 The coverage inventory from task 1 is frozen. Close native-integration rows
 and obtain independent retirement-gate acceptance before removing any oracle;
 the post-cutover manifest must then retain every required Swift-backed core row.
+The plan's 6.4 qualification and task 5's storage/export decision are accepted.
+Consume the accepted playback ABI; do not independently replace its containers
+or repeat its language-feature experiment during host cutover.
 
 ## Interface contract
 
@@ -72,6 +75,13 @@ consume the new immutable view. Native shared_ptr owners adopt a retained
 publication with `pd_playback_data_release` as deleter, preserving
 `TimelineHandoff`'s actual lifetime algorithm and device quiescence points.
 No callback allocation, retain or release.
+
+Use the qualified export mechanism from task 5 for Swift implementations of
+the C-only host entrypoints. New C++ borrowed-view adapters may use verified
+`Span`/`std::span` interoperability only when it removes a conversion at an
+existing C++ boundary; it must not replace the C-only playback/project contracts.
+Borrowed views never replace retained publications or bank leases. Preserve
+control-thread retirement and device quiescence regardless of container choice.
 
 The app provides Open Project/Open Song, Save, Undo/Redo, Play/Pause native
 actions and dirty-close handling. Existing registered actions use
@@ -141,6 +151,9 @@ case partition before accepting the core milestone.
 Acceptance requires both pre-deletion reconciliation and post-cutover executed
 case reconciliation against coverage-ledger.json, including data rows and
 assertion mappings. A removed/renamed registration cannot erase its obligation.
+The native client smoke must exercise the accepted export mechanism through
+AudioEngine and the render CLI. Compilation of an isolated Swift declaration
+does not establish native symbol linkage, publication lifetime or PCM behavior.
 
 ## Task-specific constraints
 
