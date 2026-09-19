@@ -260,6 +260,39 @@ bool stageBatchVoicegroup(const QString &root, QString &error)
     return true;
 }
 
+// A file name is only a convention: the assembler resolves `voicegroup_<name>`
+// from the `voice_group` declaration, so a group may live in a file named after
+// something else. `check_alias_parts.inc` declares `check_alias_kit`, and the
+// host bank reaches it through `voice_keysplit_all voicegroup_check_alias_kit`.
+// The discovery list stays untouched: voicegroup dirs are found by scanning the
+// project, and an extra include would hand the preceding fixture a ROM
+// contiguity successor.
+bool stageAliasedVoicegroup(const QString &root, QString &error)
+{
+    const QDir directory(root);
+    const QByteArray parts =
+        QByteArrayLiteral("\t.align 2\n"
+                          "voice_group check_alias_kit, 60\n"
+                          "\tvoice_directsound 60, 0, DirectSoundWaveData_fixture_drum, 255, 80, "
+                          "144, 40\n"
+                          "\tvoice_directsound 60, 0, DirectSoundWaveData_fixture_pluck, 240, 140, "
+                          "176, 64\n");
+    QFile partsFile(directory.filePath(QStringLiteral("sound/voicegroups/check_alias_parts.inc")));
+    if (!partsFile.open(QIODevice::WriteOnly) || partsFile.write(parts) != parts.size()) {
+        error = QStringLiteral("could not write aliased voicegroup");
+        return false;
+    }
+    const QByteArray host = QByteArrayLiteral("\t.align 2\n"
+                                              "voice_group check_alias_host\n"
+                                              "\tvoice_keysplit_all voicegroup_check_alias_kit\n");
+    QFile hostFile(directory.filePath(QStringLiteral("sound/voicegroups/check_alias_host.inc")));
+    if (!hostFile.open(QIODevice::WriteOnly) || hostFile.write(host) != host.size()) {
+        error = QStringLiteral("could not write aliased host voicegroup");
+        return false;
+    }
+    return true;
+}
+
 VoicegroupProject *openContext(const QString &root, BatchAdapter &adapter)
 {
     adapter.root = root;
