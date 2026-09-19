@@ -46,8 +46,9 @@ void PianoRollTest::resizeOffGrid()
     const int rowY = rows.centerY(d.key);
     const qreal leftX = view.camera().displayX(double(d.tick), 0.0, dpr);
     const qreal rightX = view.camera().displayX(double(d.tick + offDur), 0.0, dpr);
-    const QPointF leftHandle(leftX + 2.8, rowY);
-    const QPointF rightHandle(rightX - 2.8, rowY);
+    const qreal gripInset = layout::fontPxF(0.25) / 2.0;
+    const QPointF leftHandle(leftX + gripInset, rowY);
+    const QPointF rightHandle(rightX - gripInset, rowY);
     const QSize cursorSize(layout::fontPx(2.0), layout::fontPx(2.0));
     const QImage leftImage =
         QIcon(QStringLiteral(":/cursors/left-drag.png")).pixmap(cursorSize, dpr).toImage();
@@ -103,7 +104,8 @@ void PianoRollTest::resizeSelection()
     const int undo = doc.undoStack()->index();
     const SnappedRows rows{view, roll};
     const qreal dpr = roll.devicePixelRatio();
-    const QPointF edge(view.camera().displayX(double(d.tick + 2 * d.dur), 0.0, dpr) - 2.8,
+    const QPointF edge(view.camera().displayX(double(d.tick + 2 * d.dur), 0.0, dpr) -
+                           layout::fontPxF(0.25) / 2.0,
                        rows.centerY(d.key));
     checks::events::sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
                               Qt::LeftButton, Qt::NoModifier);
@@ -230,8 +232,9 @@ void PianoRollTest::resizeAbutting()
     const qreal dpr = roll.devicePixelRatio();
     const Tick snap = view.grid().snapTicksAt(g.tick);
     const qreal boundary = view.camera().displayX(double(g.tick + g.dur), 0.0, dpr);
-    const QPointF left(boundary - 2.8, rows.centerY(g.key));
-    const QPointF right(boundary + 2.8, rows.centerY(g.key));
+    const qreal gripInset = layout::fontPxF(0.25) / 2.0;
+    const QPointF left(boundary - gripInset, rows.centerY(g.key));
+    const QPointF right(boundary + gripInset, rows.centerY(g.key));
     const QSize cursorSize(layout::fontPx(2.0), layout::fontPx(2.0));
     checks::events::sendMouse(roll, QEvent::MouseMove, left, Qt::NoButton, Qt::NoButton,
                               Qt::NoModifier);

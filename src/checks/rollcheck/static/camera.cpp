@@ -264,7 +264,8 @@ void PianoRollStaticTest::horizontalCameraWheelContract()
     auto &roll = *fixture.rollInput();
     const SongView::ViewState original = view.viewState();
     SongView::ViewState state = original;
-    state.pxPerBeat = 500.125;
+    // Stay below the font-scaled maximum on every supported platform.
+    state.pxPerBeat = 300.125;
     state.scrollPx = 23.625;
     const QPointF anchor(73.375, 200.0);
     view.applyViewState(state);
@@ -274,8 +275,8 @@ void PianoRollStaticTest::horizontalCameraWheelContract()
     const double partialScroll = view.camera().scrollX();
     view.applyViewState(state);
     wheel(roll, anchor, {}, {0, 120});
-    QVERIFY(std::abs(view.camera().pxPerBeat() - state.pxPerBeat * std::pow(1.0015, 120.0)) <=
-            1e-10);
+    const double expectedScale = state.pxPerBeat * std::pow(1.0015, 120.0);
+    QVERIFY(std::abs(view.camera().pxPerBeat() - expectedScale) <= expectedScale * 1e-12);
     QVERIFY(std::abs(view.camera().pxPerBeat() - partialScale) <= 1e-12);
     QVERIFY(std::abs(view.camera().scrollX() - partialScroll) <= 1e-9);
     const double fullScale = view.camera().pxPerBeat();

@@ -13,7 +13,13 @@ diff --git a/Sources/QtBridgeMacros/Extensions.swift b/Sources/QtBridgeMacros/Ex
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -62,6 +62,7 @@ ExternalProject_Add(QtBridgeMacros_External
+@@ -59,9 +59,13 @@ ExternalProject_Add(QtBridgeMacros_External
+     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Sources/QtBridgeMacros"
+     CMAKE_ARGS
+         -G Ninja
++        -DCMAKE_MAKE_PROGRAM:FILEPATH=${CMAKE_MAKE_PROGRAM}
++        -DCMAKE_Swift_COMPILER:FILEPATH=${CMAKE_Swift_COMPILER}
++        -DCMAKE_Swift_FLAGS:STRING=${CMAKE_Swift_FLAGS}
          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
          -DBUILD_SHARED_LIBS=YES
          -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=${QTBRIDGE_MACROS_EP_ROOT}/build/bin
@@ -126,3 +132,48 @@ diff --git a/Sources/QtBridgeCpp/include/abstractlistmodel.h b/Sources/QtBridgeC
      void beginRemoveRows(const QModelIndex &parent, int first, int last);
      void endRemoveRows();
  
+diff --git a/Sources/QtBridge/QmlInstantiable.swift b/Sources/QtBridge/QmlInstantiable.swift
+--- a/Sources/QtBridge/QmlInstantiable.swift
++++ b/Sources/QtBridge/QmlInstantiable.swift
+@@ -50,7 +50,7 @@ extension QmlInstantiable {
+ }
+ 
+ extension QmlInstantiable {
+-    package static func registerQmlElement() {
++    public static func registerQmlElement() {
+         metaObjectBuilder.registerInitializer(initFn: self.init)
+         metaObjectBuilder.registerQmlElement(from: Self.self)
+     }
+diff --git a/Sources/QtBridge/QVariant.swift b/Sources/QtBridge/QVariant.swift
+--- a/Sources/QtBridge/QVariant.swift
++++ b/Sources/QtBridge/QVariant.swift
+@@ -95,6 +95,17 @@ public struct QVariant
+     public init(value: QObjectBuildable) {
+         self.variant = value.objectHolder.proxy.toVariant()
+     }
+ 
++    /// Creates a variant containing an optional Swift object exposed to QML.
++    /// A missing value is stored as a typed null QObject pointer.
++    public init<Wrapped: QObjectBuildable>(value: Wrapped?) {
++        if let value {
++            self.variant = value.objectHolder.proxy.toVariant()
++        } else {
++            self.variant = QtBridgeCpp.QVariant.fromMetaType(
++                QMetaType(Wrapped.metaType()), nil)
++        }
++    }
++
+     /// Creates a variant from a Swift dictionary.
+     ///
+@@ -181,6 +192,11 @@ public protocol QVariantSettable : QVariantGettable {
+     /// - Parameter variant: The variant containing the QML value.
+     /// - Returns: A Swift value converted from the variant.
+     static func value(from variant: QVariant) -> Self
+ }
+ 
++extension Optional: QVariantGettable where Wrapped: QObjectBuildable {
++    public func toVariant() -> QVariant { QVariant(value: self) }
++    public static func metaType() -> Int32 { Wrapped.metaType() }
++}
++
+ extension Bool: QVariantSettable {

@@ -226,7 +226,15 @@ async function runVerify(rawArgs: string[]): Promise<void> {
     usage("verify", error instanceof Error ? error.message : String(error));
   }
   if (options.help) showHelp("verify");
-  await runBuild(["porydaw", "porydaw_checks", "mid2agb"]);
+  const productionStartupSelected = options.filters.length === 0
+    ? !options.exclusions.includes("production-startup")
+    : options.filters.some((filter) => "production-startup".includes(filter)) &&
+      !options.exclusions.includes("production-startup");
+  await runBuild([
+    ...(productionStartupSelected ? ["porydaw"] : []),
+    "porydaw_checks",
+    "mid2agb",
+  ]);
   const binary = join(
     BUILD_DIR,
     ...((Deno.build.os === "windows" && await usesMultiConfigBuild())

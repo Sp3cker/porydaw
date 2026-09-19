@@ -364,7 +364,6 @@ const checkManifest = await loadManifest(checksBinary);
 // The macOS compatibility entry is a symlink to the checks bundle executable.
 // Resolve its containing build directory before resolving the executable itself.
 const buildRoot = await Deno.realPath(dirname(checksInputPath));
-const applicationBinary = await findApplication(buildRoot);
 const mid2agb = await findMid2Agb(buildRoot);
 const decompFixture = join(
   repoRoot,
@@ -398,7 +397,7 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
       scratch,
     );
     const binary = check.binary === "application"
-      ? applicationBinary
+      ? applicationBinary!
       : checksBinary;
     const args = expandArguments(check, scratch, mid2agb);
     if (qtPayload !== undefined) {
@@ -481,6 +480,37 @@ if (exclusions.length > 0) {
     !excludedNames.has(check.name)
   );
 }
+const visualPlatform = Deno.build.os === "darwin" ? "macos" : Deno.build.os;
+let hasVisualBaselines = false;
+try {
+  for await (
+    const entry of Deno.readDir(
+      join(repoRoot, "src", "checks", "fixtures", "visual"),
+    )
+  ) {
+    if (entry.isDirectory && entry.name.startsWith(`${visualPlatform}-`)) {
+      hasVisualBaselines = true;
+      break;
+    }
+  }
+} catch (error) {
+  if (!(error instanceof Deno.errors.NotFound)) throw error;
+}
+if (
+  selection === "--default" && filters.length === 0 && !hasVisualBaselines
+) {
+  runnableChecks = runnableChecks.filter((check) =>
+    !check.name.startsWith("visual-")
+  );
+  console.log(
+    `verify: no reviewed ${visualPlatform} visual baselines; skipping visual-* ` +
+      "(use --filter=visual to run them)",
+  );
+}
+const applicationBinary =
+  runnableChecks.some((check) => check.binary === "application")
+    ? await findApplication(buildRoot)
+    : undefined;
 if (qtPayload !== undefined) {
   if (runnableChecks.length === 0) {
     console.error("run_checks: --qt selected no harness");

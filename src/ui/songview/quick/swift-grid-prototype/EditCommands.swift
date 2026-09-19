@@ -8,7 +8,7 @@
 
 /// Mirrors `SongView::EditCommand` (src/ui/songview.h): 35 values in
 /// declaration order, copy = 0 … gridTriplet = 34.
-public enum EditCommand: Int, CaseIterable {
+public enum EditCommand: Int, CaseIterable, Sendable {
     case copy = 0
     case cut
     case duplicate
@@ -47,19 +47,19 @@ public enum EditCommand: Int, CaseIterable {
 }
 
 /// Mirrors `EditRangeOperation` (editactions.h).
-public enum EditRangeOperation: Int {
+public enum EditRangeOperation: Int, Sendable {
     case none, copySelection, cut, duplicate, delete, transpose, nudge, insertTime, removeContents,
         clearTimeSelection, loopFromSelection
 }
 
 /// Mirrors `EditNotesOperation` (editactions.h).
-public enum EditNotesOperation: Int {
+public enum EditNotesOperation: Int, Sendable {
     case none, copySelection, cut, delete, transpose, nudge, selectAll, pitchBend, setVelocity,
         duplicate, split, join, lengthen, shorten
 }
 
 /// Mirrors `EditStandaloneOperation` (editactions.h).
-public enum EditStandaloneOperation: Int {
+public enum EditStandaloneOperation: Int, Sendable {
     case none, paste, muteTracks, soloTracks, insertTime, pencilToggle, moveEventRow, setLoopStart,
         setLoopEnd, removeLoop, editTimeSignature, removeTimeSignature, gridNarrow, gridWiden,
         gridTriplet
@@ -72,34 +72,34 @@ public enum EditDeliveryClass: Int {
 }
 
 /// Mirrors `EditKeyRoute` (editactions.h).
-public enum EditKeyRoute: Int {
+public enum EditKeyRoute: Int, Sendable {
     case selectionTargeted, alwaysConsume, availabilityGated
 }
 
 /// Mirrors `EditAutoRepeatRule` (editactions.h).
-public enum EditAutoRepeatRule: Int {
+public enum EditAutoRepeatRule: Int, Sendable {
     case reexecute, consumeWhenEligible
 }
 
 /// Mirrors `EditKeyOwnershipOnUnavailable` (editactions.h).
-public enum EditKeyOwnershipOnUnavailable: Int {
+public enum EditKeyOwnershipOnUnavailable: Int, Sendable {
     case resolvedByRow, ownsKey
 }
 
 /// Mirrors `EditOriginRule` (editactions.h).
-public enum EditOriginRule: Int {
+public enum EditOriginRule: Int, Sendable {
     case anyOrigin, eventListOnly, timelineOnly
 }
 
 /// Mirrors `EditFocusedTextOwnership` (editactions.h).
-public enum EditFocusedTextOwnership: Int {
+public enum EditFocusedTextOwnership: Int, Sendable {
     case none, copy, solo
 }
 
 /// One policy row of the canonical command table: `command` plus the 13
 /// `EditCommandPolicy` fields under their C++ names (the 14 fields the
 /// `sgp_*` row carries). Defaults mirror the C++ in-class initializers.
-public struct EditCommandPolicy {
+public struct EditCommandPolicy: Sendable {
     public var command: EditCommand
     public var rangeOperation: EditRangeOperation = .none
     public var notesOperation: EditNotesOperation = .none

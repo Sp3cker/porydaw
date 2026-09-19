@@ -727,7 +727,63 @@ const std::vector<CheckDefinition> &catalog()
                 // Custom QSGVertexColorMaterial geometry requires the default scenegraph backend.
                 .windowing = Windowing::WindowSystem,
             },
+            {
+                .name = "swiftrollbench",
+                // Roll frame-cost bench, flag-off lane: scripted scroll/zoom cadence
+                // for the active C++ roll (Swift lane runs as swiftrollbench-swift).
+                .argv = strings({"--swiftrollbench", "{scratch}", "mus_route101"}),
+                .handler = qtWithTwoArguments<runSwiftRollBenchCheck>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101RichFiles,
+                .windowing = Windowing::WindowSystem,
+            },
 #ifdef __APPLE__
+            {
+                .name = "swiftdocfeed",
+                // Real document snapshots, observer lifetime, and the shared Swift revision guard.
+                .argv = strings({"--swiftdocfeed", "{scratch}", "mus_route101"}),
+                .handler = qtWithTwoArguments<runSwiftDocFeedCheck>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101Files,
+            },
+            {
+                .name = "swiftcommands",
+                // sgc_ intent pipe: per-intent validation matrix, undo granularity
+                // (move = 1 entry, delete batch = 1 entry), session routing leaves
+                // the undo stack untouched, add -> sgd_ revision-push round-trip,
+                // and the Swift submission API.
+                .argv = strings({"--swiftcommands", "{scratch}", "mus_route101"}),
+                .handler = qtWithTwoArguments<runSwiftCommandsCheck>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101Files,
+            },
+            {
+                .name = "swiftrollgated",
+                // Gated read-only Swift roll overlay in production: initial render,
+                // track follow, edit/undo/redo, interleaved documents, input absorption,
+                // viewing input, transferred-window teardown, flag-off absence.
+                .argv = strings({"--swiftrollgated", "{scratch}", "mus_route101", "mus_petalburg"}),
+                .handler = qtWithThreeArguments<runSwiftRollGatedCheck>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = twoSongRichFiles,
+                .windowing = Windowing::WindowSystem,
+            },
+            {
+                .name = "swiftrollbench-swift",
+                // Roll frame-cost bench, Swift lane: PORYDAW_SWIFT_ROLL mounts the
+                // overlay; compare cadence against the flag-off swiftrollbench row.
+                .argv = strings({"--swiftrollbench", "{scratch}", "mus_route101"}),
+                .handler = qtWithTwoArguments<runSwiftRollBenchCheck>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101RichFiles,
+                .environment = {{QStringLiteral("PORYDAW_SWIFT_ROLL"), QStringLiteral("1")}},
+                .windowing = Windowing::WindowSystem,
+            },
             {
                 .name = "rendering-playhead-native",
                 // Cocoa playhead layer lifecycle: native ownership, clipping, and surface teardown

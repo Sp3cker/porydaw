@@ -42,6 +42,9 @@ class EventListInteraction;
 class TimelineInputItem;
 class QuickPopupSession;
 
+#ifdef Q_OS_MACOS
+class SwiftRollMount;
+#endif
 class TimelineGestureScrollbar;
 enum class TimelineQuickHoverOwner : quint8 {
     None,
@@ -402,6 +405,9 @@ class TimelineQuickView final : public QObject
         m_items{};
     std::array<QPointer<TimelineChromeItem>, 12> m_chromeItems{};
     TimelineBandLayout m_bandLayout;
+#ifdef Q_OS_MACOS
+    std::unique_ptr<SwiftRollMount> m_swiftRollMount;
+#endif
     // Published canonical timeline split (SongView::timelineSplitX()).
     qreal m_publishedRulerPlotOrigin = 0.0;
     QRectF m_publishedHorizontalScrollbarRect;

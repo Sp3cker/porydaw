@@ -1,0 +1,1392 @@
+diff --git a/src/ui/songview/editcommandtable.cpp b/src/ui/songview/editcommandtable.cpp
+new file mode 100644
+index 00000000..213f3b82
+--- /dev/null
++++ b/src/ui/songview/editcommandtable.cpp
+@@ -0,0 +1,395 @@
++#include "ui/songview/editactions.h"
++
++#include <array>
++#include <cstddef>
++
++namespace songview {
++namespace {
++
++using EditCommand = SongView::EditCommand;
++
++// The canonical command table: one row per EditCommand value, in enum
++// order. Construction, installWindowShortcuts, refresh and the key
++// recognizer below all iterate this one table. `delivery` mirrors the
++// keymap catalogue's Scope for the id (keymap stays SongView-agnostic, so
++// the constructor asserts the agreement after attach); `windowObjectName`
++// is the window back-channel name, nullptr when the command has none.
++// `policy` owns availability, execution, keyboard routing, command arguments
++// and text-focus precedence; omitted fields retain their in-class defaults.
++struct CommandRow {
++    EditCommand command;
++    const char *id;
++    bool checkable;
++    const char *windowObjectName;
++    EditDeliveryClass delivery;
++    EditCommandPolicy policy;
++};
++
++constexpr std::size_t actionIndex(EditCommand command)
++{
++    return static_cast<std::size_t>(command);
++}
++constexpr CommandRow transposeRow(EditCommand command, const char *id, int semitones)
++{
++    return {
++        command,
++        id,
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .rangeOperation = EditRangeOperation::Transpose,
++            .notesOperation = EditNotesOperation::Transpose,
++            .keyRoute = EditKeyRoute::SelectionTargeted,
++            // Lane-scoped Up/Down is an ineligible mutation, not a foreign
++            // key: the selection owns it as a consumed no-op.
++            .ownershipOnUnavailable = EditKeyOwnershipOnUnavailable::OwnsKey,
++            .transposeSemitones = semitones,
++        },
++    };
++}
++
++constexpr CommandRow nudgeRow(EditCommand command, const char *id, int delta)
++{
++    return {
++        command,
++        id,
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .rangeOperation = EditRangeOperation::Nudge,
++            .notesOperation = EditNotesOperation::Nudge,
++            .keyRoute = EditKeyRoute::SelectionTargeted,
++            .nudgeDelta = delta,
++        },
++    };
++}
++
++// One production row shape for the seven unbound cursor/marker/signature
++// commands beside transpose/nudge/event: all are EditorRouted, availability
++// is their only gate, and keys consume unconditionally once eligible. Each
++// row names its vocabulary operation explicitly — without one, availability
++// falls through every switch and the command is dead.
++constexpr CommandRow unboundRow(EditCommand command, const char *id,
++                                EditRangeOperation range = EditRangeOperation::None,
++                                EditNotesOperation notes = EditNotesOperation::None,
++                                EditStandaloneOperation standalone = EditStandaloneOperation::None)
++{
++    return {
++        command,
++        id,
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .rangeOperation = range,
++            .notesOperation = notes,
++            .standaloneOperation = standalone,
++            .keyRoute = EditKeyRoute::AlwaysConsume,
++        },
++    };
++}
++
++constexpr CommandRow eventRow(EditCommand command, const char *id, int delta)
++{
++    return {
++        command,
++        id,
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .standaloneOperation = EditStandaloneOperation::MoveEventRow,
++            .keyRoute = EditKeyRoute::AlwaysConsume,
++            .originRule = EditOriginRule::EventListOnly,
++            .eventRowDelta = delta,
++        },
++    };
++}
++
++constexpr std::array kCommandTable = {
++    CommandRow{
++        EditCommand::Copy,
++        "roll.copy",
++        false,
++        "copyWindowAction",
++        EditDeliveryClass::Window,
++        {
++            .rangeOperation = EditRangeOperation::CopySelection,
++            .notesOperation = EditNotesOperation::CopySelection,
++            .keyRoute = EditKeyRoute::AlwaysConsume,
++            .focusedTextOwnership = EditFocusedTextOwnership::Copy,
++        },
++    },
++    CommandRow{
++        EditCommand::Cut,
++        "roll.cut",
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .rangeOperation = EditRangeOperation::Cut,
++            .notesOperation = EditNotesOperation::Cut,
++            .keyRoute = EditKeyRoute::SelectionTargeted,
++        },
++    },
++    CommandRow{
++        EditCommand::Duplicate,
++        "roll.duplicate_time",
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .rangeOperation = EditRangeOperation::Duplicate,
++            .notesOperation = EditNotesOperation::Duplicate,
++            .keyRoute = EditKeyRoute::SelectionTargeted,
++            .terminalWhenUnmatched = true,
++        },
++    },
++    CommandRow{
++        EditCommand::Paste,
++        "roll.paste",
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .standaloneOperation = EditStandaloneOperation::Paste,
++            .keyRoute = EditKeyRoute::AlwaysConsume,
++        },
++    },
++    CommandRow{
++        EditCommand::SelectAll,
++        "roll.select_all",
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .notesOperation = EditNotesOperation::SelectAll,
++            .keyRoute = EditKeyRoute::SelectionTargeted,
++        },
++    },
++    CommandRow{
++        EditCommand::Delete,
++        "roll.delete",
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .rangeOperation = EditRangeOperation::Delete,
++            .notesOperation = EditNotesOperation::Delete,
++            .keyRoute = EditKeyRoute::SelectionTargeted,
++        },
++    },
++    CommandRow{
++        EditCommand::PitchBend,
++        "roll.pitch_bend",
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .notesOperation = EditNotesOperation::PitchBend,
++            .keyRoute = EditKeyRoute::SelectionTargeted,
++            .autoRepeatRule = EditAutoRepeatRule::ConsumeWhenEligible,
++        },
++    },
++    transposeRow(EditCommand::TransposeUp, "roll.transpose_up", 1),
++    transposeRow(EditCommand::TransposeDown, "roll.transpose_down", -1),
++    transposeRow(EditCommand::TransposeUpOctave, "roll.transpose_up_octave", 12),
++    transposeRow(EditCommand::TransposeDownOctave, "roll.transpose_down_octave", -12),
++    nudgeRow(EditCommand::NudgeLeft, "roll.nudge_left", -1),
++    nudgeRow(EditCommand::NudgeRight, "roll.nudge_right", 1),
++    CommandRow{
++        EditCommand::MuteTracks,
++        "roll.mute_tracks",
++        true,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .standaloneOperation = EditStandaloneOperation::MuteTracks,
++            .keyRoute = EditKeyRoute::AlwaysConsume,
++        },
++    },
++    CommandRow{
++        EditCommand::SoloTracks,
++        "roll.solo_tracks",
++        true,
++        "soloWindowAction",
++        EditDeliveryClass::Window,
++        {
++            .standaloneOperation = EditStandaloneOperation::SoloTracks,
++            .keyRoute = EditKeyRoute::AlwaysConsume,
++            .focusedTextOwnership = EditFocusedTextOwnership::Solo,
++        },
++    },
++    CommandRow{
++        EditCommand::InsertTime,
++        "edit.insert_time",
++        false,
++        "insertTimeWindowAction",
++        EditDeliveryClass::Window,
++        {
++            .rangeOperation = EditRangeOperation::InsertTime,
++            .standaloneOperation = EditStandaloneOperation::InsertTime,
++            .keyRoute = EditKeyRoute::AlwaysConsume,
++        },
++    },
++    CommandRow{
++        EditCommand::DeleteTime,
++        "edit.delete_time",
++        false,
++        "deleteTimeWindowAction",
++        EditDeliveryClass::Window,
++        {
++            .rangeOperation = EditRangeOperation::RemoveContents,
++            .keyRoute = EditKeyRoute::AlwaysConsume,
++        },
++    },
++    CommandRow{
++        EditCommand::ClearTimeSelection,
++        "edit.clear_time_selection",
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .rangeOperation = EditRangeOperation::ClearTimeSelection,
++            .keyRoute = EditKeyRoute::AlwaysConsume,
++        },
++    },
++    // Commands whose operation arm resolves from cursor/marker/signature
++    // state: availability is the only gate, so keys consume unconditionally
++    // once eligible.
++    unboundRow(EditCommand::SetVelocity, "edit.set_velocity", EditRangeOperation::None,
++               EditNotesOperation::SetVelocity),
++    unboundRow(EditCommand::SetLoopStart, "edit.set_loop_start", EditRangeOperation::None,
++               EditNotesOperation::None, EditStandaloneOperation::SetLoopStart),
++    unboundRow(EditCommand::SetLoopEnd, "edit.set_loop_end", EditRangeOperation::None,
++               EditNotesOperation::None, EditStandaloneOperation::SetLoopEnd),
++    unboundRow(EditCommand::LoopFromSelection, "edit.loop_from_selection",
++               EditRangeOperation::LoopFromSelection),
++    unboundRow(EditCommand::RemoveLoop, "edit.remove_loop", EditRangeOperation::None,
++               EditNotesOperation::None, EditStandaloneOperation::RemoveLoop),
++    unboundRow(EditCommand::EditTimeSignature, "edit.edit_time_signature", EditRangeOperation::None,
++               EditNotesOperation::None, EditStandaloneOperation::EditTimeSignature),
++    unboundRow(EditCommand::RemoveTimeSignature, "edit.remove_time_signature",
++               EditRangeOperation::None, EditNotesOperation::None,
++               EditStandaloneOperation::RemoveTimeSignature),
++    CommandRow{
++        EditCommand::PencilMode,
++        "automation.pencil_mode",
++        true,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .standaloneOperation = EditStandaloneOperation::PencilToggle,
++            .keyRoute = EditKeyRoute::AvailabilityGated,
++            .autoRepeatRule = EditAutoRepeatRule::ConsumeWhenEligible,
++            .survivesPointerGesture = true,
++        },
++    },
++    eventRow(EditCommand::MoveEventUp, "eventlist.move_up", -1),
++    eventRow(EditCommand::MoveEventDown, "eventlist.move_down", 1),
++    CommandRow{
++        EditCommand::Split,
++        "roll.split",
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .notesOperation = EditNotesOperation::Split,
++            .keyRoute = EditKeyRoute::SelectionTargeted,
++        },
++    },
++    CommandRow{
++        EditCommand::Join,
++        "roll.join",
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .notesOperation = EditNotesOperation::Join,
++            .keyRoute = EditKeyRoute::SelectionTargeted,
++        },
++    },
++    CommandRow{
++        EditCommand::LengthenNote,
++        "roll.lengthen_note",
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .notesOperation = EditNotesOperation::Lengthen,
++            .keyRoute = EditKeyRoute::SelectionTargeted,
++        },
++    },
++    CommandRow{
++        EditCommand::ShortenNote,
++        "roll.shorten_note",
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .notesOperation = EditNotesOperation::Shorten,
++            .keyRoute = EditKeyRoute::SelectionTargeted,
++        },
++    },
++    CommandRow{
++        EditCommand::GridNarrow,
++        "roll.grid_narrow",
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .standaloneOperation = EditStandaloneOperation::GridNarrow,
++            .keyRoute = EditKeyRoute::AlwaysConsume,
++            .originRule = EditOriginRule::TimelineOnly,
++        },
++    },
++    CommandRow{
++        EditCommand::GridWiden,
++        "roll.grid_widen",
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .standaloneOperation = EditStandaloneOperation::GridWiden,
++            .keyRoute = EditKeyRoute::AlwaysConsume,
++            .originRule = EditOriginRule::TimelineOnly,
++        },
++    },
++    CommandRow{
++        EditCommand::GridTriplet,
++        "roll.grid_triplet",
++        false,
++        nullptr,
++        EditDeliveryClass::EditorRouted,
++        {
++            .standaloneOperation = EditStandaloneOperation::GridTriplet,
++            .keyRoute = EditKeyRoute::AvailabilityGated,
++            .originRule = EditOriginRule::TimelineOnly,
++            // Toggling feel re-lattices the drag's snap positions, so it
++            // stays gesture-gated; repeats consume without retoggling.
++            .autoRepeatRule = EditAutoRepeatRule::ConsumeWhenEligible,
++        },
++    },
++};
++
++constexpr bool commandTableFollowsEnumOrder()
++{
++    for (std::size_t index = 0; index < kCommandTable.size(); ++index) {
++        if (actionIndex(kCommandTable[index].command) != index)
++            return false;
++    }
++    return true;
++}
++
++static_assert(kCommandTable.size() == actionIndex(EditCommand::GridTriplet) + 1);
++static_assert(commandTableFollowsEnumOrder());
++
++} // namespace
++const EditCommandPolicy &editCommandPolicy(EditCommand command)
++{
++    return kCommandTable[actionIndex(command)].policy;
++}
++
++} // namespace songview
+diff --git a/src/ui/songview/quick/swift-grid-prototype/EditCommands.swift b/src/ui/songview/quick/swift-grid-prototype/EditCommands.swift
+new file mode 100644
+index 00000000..073749b1
+--- /dev/null
++++ b/src/ui/songview/quick/swift-grid-prototype/EditCommands.swift
+@@ -0,0 +1,281 @@
++// EditCommands.swift — Swift port of the canonical EditCommandPolicy table
++// (src/ui/songview/editcommandtable.cpp, the production oracle). Pure frozen
++// data: the policy column of CommandRow only — keymap id, checkable,
++// windowObjectName and delivery stay host-side and are not mirrored here.
++// Rows are frozen against the C++ table; a mismatch is a defect report
++// (spec §3.3), never a silent edit. The sgp_* parity sweep
++// (PolicySelftest.swift) locks every field of every row against production.
++
++/// Mirrors `SongView::EditCommand` (src/ui/songview.h): 35 values in
++/// declaration order, copy = 0 … gridTriplet = 34.
++public enum EditCommand: Int, CaseIterable {
++    case copy = 0
++    case cut
++    case duplicate
++    case paste
++    case selectAll
++    case delete
++    case pitchBend
++    case transposeUp
++    case transposeDown
++    case transposeUpOctave
++    case transposeDownOctave
++    case nudgeLeft
++    case nudgeRight
++    case muteTracks
++    case soloTracks
++    case insertTime
++    case deleteTime
++    case clearTimeSelection
++    case setVelocity
++    case setLoopStart
++    case setLoopEnd
++    case loopFromSelection
++    case removeLoop
++    case editTimeSignature
++    case removeTimeSignature
++    case pencilMode
++    case moveEventUp
++    case moveEventDown
++    case split
++    case join
++    case lengthenNote
++    case shortenNote
++    case gridNarrow
++    case gridWiden
++    case gridTriplet = 34
++}
++
++/// Mirrors `EditRangeOperation` (editactions.h).
++public enum EditRangeOperation: Int {
++    case none, copySelection, cut, duplicate, delete, transpose, nudge, insertTime, removeContents,
++        clearTimeSelection, loopFromSelection
++}
++
++/// Mirrors `EditNotesOperation` (editactions.h).
++public enum EditNotesOperation: Int {
++    case none, copySelection, cut, delete, transpose, nudge, selectAll, pitchBend, setVelocity,
++        duplicate, split, join, lengthen, shorten
++}
++
++/// Mirrors `EditStandaloneOperation` (editactions.h).
++public enum EditStandaloneOperation: Int {
++    case none, paste, muteTracks, soloTracks, insertTime, pencilToggle, moveEventRow, setLoopStart,
++        setLoopEnd, removeLoop, editTimeSignature, removeTimeSignature, gridNarrow, gridWiden,
++        gridTriplet
++}
++
++/// Mirrors `EditDeliveryClass` (editactions.h); explicit C++ values kept.
++public enum EditDeliveryClass: Int {
++    case editorRouted = 1
++    case window = 2
++}
++
++/// Mirrors `EditKeyRoute` (editactions.h).
++public enum EditKeyRoute: Int {
++    case selectionTargeted, alwaysConsume, availabilityGated
++}
++
++/// Mirrors `EditAutoRepeatRule` (editactions.h).
++public enum EditAutoRepeatRule: Int {
++    case reexecute, consumeWhenEligible
++}
++
++/// Mirrors `EditKeyOwnershipOnUnavailable` (editactions.h).
++public enum EditKeyOwnershipOnUnavailable: Int {
++    case resolvedByRow, ownsKey
++}
++
++/// Mirrors `EditOriginRule` (editactions.h).
++public enum EditOriginRule: Int {
++    case anyOrigin, eventListOnly, timelineOnly
++}
++
++/// Mirrors `EditFocusedTextOwnership` (editactions.h).
++public enum EditFocusedTextOwnership: Int {
++    case none, copy, solo
++}
++
++/// One policy row of the canonical command table: `command` plus the 13
++/// `EditCommandPolicy` fields under their C++ names (the 14 fields the
++/// `sgp_*` row carries). Defaults mirror the C++ in-class initializers.
++public struct EditCommandPolicy {
++    public var command: EditCommand
++    public var rangeOperation: EditRangeOperation = .none
++    public var notesOperation: EditNotesOperation = .none
++    public var standaloneOperation: EditStandaloneOperation = .none
++    public var keyRoute: EditKeyRoute = .selectionTargeted
++    public var originRule: EditOriginRule = .anyOrigin
++    public var autoRepeatRule: EditAutoRepeatRule = .reexecute
++    public var ownershipOnUnavailable: EditKeyOwnershipOnUnavailable = .resolvedByRow
++    public var transposeSemitones: Int = 0
++    public var nudgeDelta: Int = 0
++    public var eventRowDelta: Int = 0
++    public var survivesPointerGesture: Bool = false
++    public var terminalWhenUnmatched: Bool = false
++    public var focusedTextOwnership: EditFocusedTextOwnership = .none
++}
++
++// Row helpers mirror the C++ constexpr builders verbatim: same field sets,
++// same comments. Lane-scoped Up/Down is an ineligible mutation, not a
++// foreign key: the selection owns it as a consumed no-op.
++private func transposeRow(_ command: EditCommand, _ semitones: Int) -> EditCommandPolicy {
++    EditCommandPolicy(
++        command: command,
++        rangeOperation: .transpose,
++        notesOperation: .transpose,
++        ownershipOnUnavailable: .ownsKey,
++        transposeSemitones: semitones)
++}
++
++private func nudgeRow(_ command: EditCommand, _ delta: Int) -> EditCommandPolicy {
++    EditCommandPolicy(
++        command: command,
++        rangeOperation: .nudge,
++        notesOperation: .nudge,
++        nudgeDelta: delta)
++}
++
++// One production row shape for the seven unbound cursor/marker/signature
++// commands beside transpose/nudge/event: all are EditorRouted, availability
++// is their only gate, and keys consume unconditionally once eligible. Each
++// row names its vocabulary operation explicitly — without one, availability
++// falls through every switch and the command is dead.
++private func unboundRow(
++    _ command: EditCommand,
++    range: EditRangeOperation = .none,
++    notes: EditNotesOperation = .none,
++    standalone: EditStandaloneOperation = .none
++) -> EditCommandPolicy {
++    EditCommandPolicy(
++        command: command,
++        rangeOperation: range,
++        notesOperation: notes,
++        standaloneOperation: standalone,
++        keyRoute: .alwaysConsume)
++}
++
++private func eventRow(_ command: EditCommand, _ delta: Int) -> EditCommandPolicy {
++    EditCommandPolicy(
++        command: command,
++        standaloneOperation: .moveEventRow,
++        keyRoute: .alwaysConsume,
++        originRule: .eventListOnly,
++        eventRowDelta: delta)
++}
++
++/// The canonical command table: one row per EditCommand value, in enum
++/// order — the policy column of the production `kCommandTable`, frozen.
++public let editCommandTable: [EditCommandPolicy] = [
++    EditCommandPolicy(
++        command: .copy,
++        rangeOperation: .copySelection,
++        notesOperation: .copySelection,
++        keyRoute: .alwaysConsume,
++        focusedTextOwnership: .copy),
++    EditCommandPolicy(
++        command: .cut,
++        rangeOperation: .cut,
++        notesOperation: .cut),
++    EditCommandPolicy(
++        command: .duplicate,
++        rangeOperation: .duplicate,
++        notesOperation: .duplicate,
++        terminalWhenUnmatched: true),
++    EditCommandPolicy(
++        command: .paste,
++        standaloneOperation: .paste,
++        keyRoute: .alwaysConsume),
++    EditCommandPolicy(
++        command: .selectAll,
++        notesOperation: .selectAll),
++    EditCommandPolicy(
++        command: .delete,
++        rangeOperation: .delete,
++        notesOperation: .delete),
++    EditCommandPolicy(
++        command: .pitchBend,
++        notesOperation: .pitchBend,
++        autoRepeatRule: .consumeWhenEligible),
++    transposeRow(.transposeUp, 1),
++    transposeRow(.transposeDown, -1),
++    transposeRow(.transposeUpOctave, 12),
++    transposeRow(.transposeDownOctave, -12),
++    nudgeRow(.nudgeLeft, -1),
++    nudgeRow(.nudgeRight, 1),
++    EditCommandPolicy(
++        command: .muteTracks,
++        standaloneOperation: .muteTracks,
++        keyRoute: .alwaysConsume),
++    EditCommandPolicy(
++        command: .soloTracks,
++        standaloneOperation: .soloTracks,
++        keyRoute: .alwaysConsume,
++        focusedTextOwnership: .solo),
++    EditCommandPolicy(
++        command: .insertTime,
++        rangeOperation: .insertTime,
++        standaloneOperation: .insertTime,
++        keyRoute: .alwaysConsume),
++    EditCommandPolicy(
++        command: .deleteTime,
++        rangeOperation: .removeContents,
++        keyRoute: .alwaysConsume),
++    EditCommandPolicy(
++        command: .clearTimeSelection,
++        rangeOperation: .clearTimeSelection,
++        keyRoute: .alwaysConsume),
++    // Commands whose operation arm resolves from cursor/marker/signature
++    // state: availability is the only gate, so keys consume unconditionally
++    // once eligible.
++    unboundRow(.setVelocity, notes: .setVelocity),
++    unboundRow(.setLoopStart, standalone: .setLoopStart),
++    unboundRow(.setLoopEnd, standalone: .setLoopEnd),
++    unboundRow(.loopFromSelection, range: .loopFromSelection),
++    unboundRow(.removeLoop, standalone: .removeLoop),
++    unboundRow(.editTimeSignature, standalone: .editTimeSignature),
++    unboundRow(.removeTimeSignature, standalone: .removeTimeSignature),
++    EditCommandPolicy(
++        command: .pencilMode,
++        standaloneOperation: .pencilToggle,
++        keyRoute: .availabilityGated,
++        autoRepeatRule: .consumeWhenEligible,
++        survivesPointerGesture: true),
++    eventRow(.moveEventUp, -1),
++    eventRow(.moveEventDown, 1),
++    EditCommandPolicy(
++        command: .split,
++        notesOperation: .split),
++    EditCommandPolicy(
++        command: .join,
++        notesOperation: .join),
++    EditCommandPolicy(
++        command: .lengthenNote,
++        notesOperation: .lengthen),
++    EditCommandPolicy(
++        command: .shortenNote,
++        notesOperation: .shorten),
++    EditCommandPolicy(
++        command: .gridNarrow,
++        standaloneOperation: .gridNarrow,
++        keyRoute: .alwaysConsume,
++        originRule: .timelineOnly),
++    EditCommandPolicy(
++        command: .gridWiden,
++        standaloneOperation: .gridWiden,
++        keyRoute: .alwaysConsume,
++        originRule: .timelineOnly),
++    EditCommandPolicy(
++        command: .gridTriplet,
++        standaloneOperation: .gridTriplet,
++        keyRoute: .availabilityGated,
++        originRule: .timelineOnly,
++        // Toggling feel re-lattices the drag's snap positions, so it
++        // stays gesture-gated; repeats consume without retoggling.
++        autoRepeatRule: .consumeWhenEligible),
++]
++
++/// The policy row of one command, read out of the canonical table.
++public func editCommandPolicy(_ command: EditCommand) -> EditCommandPolicy {
++    editCommandTable[command.rawValue]
++}
+diff --git a/src/checks/swiftgridprototype/policy_smoke.h b/src/checks/swiftgridprototype/policy_smoke.h
+new file mode 100644
+index 00000000..a8b6f9c1
+--- /dev/null
++++ b/src/checks/swiftgridprototype/policy_smoke.h
+@@ -0,0 +1,30 @@
++#pragma once
++
++// Parity seam for the Swift EditCommandPolicy table port (spec §4): C ABI
++// over the extracted production table (src/ui/songview/editcommandtable.cpp),
++// imported by Swift through the NativeGridSmoke module. Swift drives, C++
++// answers — no @_cdecl, no C++→Swift calls. Prefix sgp_ (sgm_ is the Wave-1
++// math seam, sgc_ the curve seam; both stay frozen).
++
++#include <stdint.h>
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++typedef struct SGECommandPolicyRow { // one EditCommandPolicy, flat ints
++    int32_t command;                 // SongView::EditCommand ordinal
++    int32_t rangeOperation, notesOperation, standaloneOperation;
++    int32_t keyRoute, originRule, autoRepeatRule;
++    int32_t ownershipOnUnavailable, focusedTextOwnership;
++    int32_t transposeSemitones, nudgeDelta, eventRowDelta;
++    int32_t survivesPointerGesture; // 0/1
++    int32_t terminalWhenUnmatched;  // 0/1
++} SGECommandPolicyRow;
++
++int32_t sgp_command_count(void); // 35
++void sgp_policy_row(int32_t commandOrdinal, SGECommandPolicyRow *out);
++
++#ifdef __cplusplus
++} // extern "C"
++#endif
+diff --git a/src/checks/swiftgridprototype/policy_smoke.cpp b/src/checks/swiftgridprototype/policy_smoke.cpp
+new file mode 100644
+index 00000000..5e534eb6
+--- /dev/null
++++ b/src/checks/swiftgridprototype/policy_smoke.cpp
+@@ -0,0 +1,33 @@
++#include "policy_smoke.h"
++
++#include "ui/songview/editactions.h"
++
++// Thin conversion over the extracted production table (spec §4): the C ABI
++// answers what songview::editCommandPolicy returns — no logic, no second
++// table. editcommandtable.cpp is compiled into this same target, so the
++// parity sweep reads the exact production rows.
++
++int32_t sgp_command_count(void)
++{
++    return static_cast<int32_t>(SongView::EditCommand::GridTriplet) + 1;
++}
++
++void sgp_policy_row(int32_t commandOrdinal, SGECommandPolicyRow *out)
++{
++    const songview::EditCommandPolicy &policy =
++        songview::editCommandPolicy(static_cast<SongView::EditCommand>(commandOrdinal));
++    out->command = commandOrdinal;
++    out->rangeOperation = static_cast<int32_t>(policy.rangeOperation);
++    out->notesOperation = static_cast<int32_t>(policy.notesOperation);
++    out->standaloneOperation = static_cast<int32_t>(policy.standaloneOperation);
++    out->keyRoute = static_cast<int32_t>(policy.keyRoute);
++    out->originRule = static_cast<int32_t>(policy.originRule);
++    out->autoRepeatRule = static_cast<int32_t>(policy.autoRepeatRule);
++    out->ownershipOnUnavailable = static_cast<int32_t>(policy.ownershipOnUnavailable);
++    out->focusedTextOwnership = static_cast<int32_t>(policy.focusedTextOwnership);
++    out->transposeSemitones = policy.transposeSemitones;
++    out->nudgeDelta = policy.nudgeDelta;
++    out->eventRowDelta = policy.eventRowDelta;
++    out->survivesPointerGesture = policy.survivesPointerGesture ? 1 : 0;
++    out->terminalWhenUnmatched = policy.terminalWhenUnmatched ? 1 : 0;
++}
+diff --git a/src/ui/songview/quick/swift-grid-prototype/PolicySelftest.swift b/src/ui/songview/quick/swift-grid-prototype/PolicySelftest.swift
+new file mode 100644
+index 00000000..10374e18
+--- /dev/null
++++ b/src/ui/songview/quick/swift-grid-prototype/PolicySelftest.swift
+@@ -0,0 +1,77 @@
++import Foundation
++import NativeGridSmoke
++
++// Wave-2 policy selftest driver (spec §4, §6.3). Task 3 asserts the
++// policy-table-parity sweep: every command, every field, Swift ==
++// production through sgp_*. Task 4 appends the policy-dimensions matrix
++// here. Called from App.init after runMathSelftestIfRequested so a
++// mismatch fails fast, before any window opens. A FAIL exits nonzero; the
++// final `SWIFT_GRID_SMOKE PASS` line still comes from the C++ exercise().
++
++/// No-op unless PORYDAW_SWIFT_GRID_SMOKE == "1".
++func runPolicySelftestIfRequested() {
++    guard ProcessInfo.processInfo.environment["PORYDAW_SWIFT_GRID_SMOKE"] == "1" else {
++        return
++    }
++    runPolicyTableParitySweep()
++}
++
++private func policyFail(_ detail: String) -> Never {
++    fputs("SWIFT_GRID_SMOKE policy-table-parity FAIL: \(detail)\n", stderr)
++    fflush(stderr)
++    exit(EXIT_FAILURE)
++}
++
++// MARK: - policy-table-parity (spec §6.3, frozen)
++
++/// For every command 0…34 and all 14 fields, Swift `editCommandTable`
++/// equals `sgp_policy_row`; a mismatch names command, field, Swift value,
++/// C++ value.
++private func runPolicyTableParitySweep() {
++    let count = Int(sgp_command_count())
++    if count != EditCommand.allCases.count || editCommandTable.count != count {
++        policyFail(
++            "command count: swift enum=\(EditCommand.allCases.count) "
++                + "table=\(editCommandTable.count) c++=\(count)")
++    }
++
++    for command in EditCommand.allCases {
++        var row = SGECommandPolicyRow()
++        sgp_policy_row(Int32(command.rawValue), &row)
++        let swift = editCommandTable[command.rawValue]
++        let name = String(describing: command)
++
++        check(name, "command", Int32(swift.command.rawValue), row.command)
++        check(name, "rangeOperation", Int32(swift.rangeOperation.rawValue), row.rangeOperation)
++        check(name, "notesOperation", Int32(swift.notesOperation.rawValue), row.notesOperation)
++        check(
++            name, "standaloneOperation", Int32(swift.standaloneOperation.rawValue),
++            row.standaloneOperation)
++        check(name, "keyRoute", Int32(swift.keyRoute.rawValue), row.keyRoute)
++        check(name, "originRule", Int32(swift.originRule.rawValue), row.originRule)
++        check(name, "autoRepeatRule", Int32(swift.autoRepeatRule.rawValue), row.autoRepeatRule)
++        check(
++            name, "ownershipOnUnavailable", Int32(swift.ownershipOnUnavailable.rawValue),
++            row.ownershipOnUnavailable)
++        check(
++            name, "focusedTextOwnership", Int32(swift.focusedTextOwnership.rawValue),
++            row.focusedTextOwnership)
++        check(name, "transposeSemitones", Int32(swift.transposeSemitones), row.transposeSemitones)
++        check(name, "nudgeDelta", Int32(swift.nudgeDelta), row.nudgeDelta)
++        check(name, "eventRowDelta", Int32(swift.eventRowDelta), row.eventRowDelta)
++        check(
++            name, "survivesPointerGesture", swift.survivesPointerGesture ? 1 : 0,
++            row.survivesPointerGesture)
++        check(
++            name, "terminalWhenUnmatched", swift.terminalWhenUnmatched ? 1 : 0,
++            row.terminalWhenUnmatched)
++    }
++
++    print("SWIFT_GRID_SMOKE policy-table-parity PASS")
++}
++
++private func check(_ command: String, _ field: String, _ swift: Int32, _ cxx: Int32) {
++    if swift != cxx {
++        policyFail("\(command).\(field) swift=\(swift) c++=\(cxx)")
++    }
++}
+diff --git a/src/ui/songview/editactions.cpp b/src/ui/songview/editactions.cpp
+index 30483ee2..6db1a3be 100644
+--- a/src/ui/songview/editactions.cpp
++++ b/src/ui/songview/editactions.cpp
+@@ -15,421 +15,45 @@
+ #include <QLineEdit>
+ #include <QPlainTextEdit>
+ #include <QTextEdit>
+ #include <QWidget>
+ 
+ #include <array>
+ #include <cstddef>
+ #include <cstdint>
+ #include <optional>
+ 
++// The canonical command table and editCommandPolicy live in
++// editcommandtable.cpp (the data-only TU the Swift parity seam links
++// standalone). It is included here rather than compiled separately so this
++// translation unit keeps the same anonymous-namespace symbols it had before
++// the extraction — CommandRow, kCommandTable, actionIndex — with exactly one
++// editCommandPolicy definition in the app link.
++#include "ui/songview/editcommandtable.cpp"
++
+ namespace songview {
+ namespace {
+ 
+-using EditCommand = SongView::EditCommand;
+-
+-// The canonical command table: one row per EditCommand value, in enum
+-// order. Construction, installWindowShortcuts, refresh and the key
+-// recognizer below all iterate this one table. `delivery` mirrors the
+-// keymap catalogue's Scope for the id (keymap stays SongView-agnostic, so
+-// the constructor asserts the agreement after attach); `windowObjectName`
+-// is the window back-channel name, nullptr when the command has none.
+-// `policy` owns availability, execution, keyboard routing, command arguments
+-// and text-focus precedence; omitted fields retain their in-class defaults.
+-struct CommandRow {
+-    EditCommand command;
+-    const char *id;
+-    bool checkable;
+-    const char *windowObjectName;
+-    EditDeliveryClass delivery;
+-    EditCommandPolicy policy;
+-};
+-
+-constexpr std::size_t actionIndex(EditCommand command)
+-{
+-    return static_cast<std::size_t>(command);
+-}
+-constexpr CommandRow transposeRow(EditCommand command, const char *id, int semitones)
+-{
+-    return {
+-        command,
+-        id,
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .rangeOperation = EditRangeOperation::Transpose,
+-            .notesOperation = EditNotesOperation::Transpose,
+-            .keyRoute = EditKeyRoute::SelectionTargeted,
+-            // Lane-scoped Up/Down is an ineligible mutation, not a foreign
+-            // key: the selection owns it as a consumed no-op.
+-            .ownershipOnUnavailable = EditKeyOwnershipOnUnavailable::OwnsKey,
+-            .transposeSemitones = semitones,
+-        },
+-    };
+-}
+-
+-constexpr CommandRow nudgeRow(EditCommand command, const char *id, int delta)
+-{
+-    return {
+-        command,
+-        id,
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .rangeOperation = EditRangeOperation::Nudge,
+-            .notesOperation = EditNotesOperation::Nudge,
+-            .keyRoute = EditKeyRoute::SelectionTargeted,
+-            .nudgeDelta = delta,
+-        },
+-    };
+-}
+-
+-// One production row shape for the seven unbound cursor/marker/signature
+-// commands beside transpose/nudge/event: all are EditorRouted, availability
+-// is their only gate, and keys consume unconditionally once eligible. Each
+-// row names its vocabulary operation explicitly — without one, availability
+-// falls through every switch and the command is dead.
+-constexpr CommandRow unboundRow(EditCommand command, const char *id,
+-                                EditRangeOperation range = EditRangeOperation::None,
+-                                EditNotesOperation notes = EditNotesOperation::None,
+-                                EditStandaloneOperation standalone = EditStandaloneOperation::None)
+-{
+-    return {
+-        command,
+-        id,
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .rangeOperation = range,
+-            .notesOperation = notes,
+-            .standaloneOperation = standalone,
+-            .keyRoute = EditKeyRoute::AlwaysConsume,
+-        },
+-    };
+-}
+-
+-constexpr CommandRow eventRow(EditCommand command, const char *id, int delta)
+-{
+-    return {
+-        command,
+-        id,
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .standaloneOperation = EditStandaloneOperation::MoveEventRow,
+-            .keyRoute = EditKeyRoute::AlwaysConsume,
+-            .originRule = EditOriginRule::EventListOnly,
+-            .eventRowDelta = delta,
+-        },
+-    };
+-}
+-
+-constexpr std::array kCommandTable = {
+-    CommandRow{
+-        EditCommand::Copy,
+-        "roll.copy",
+-        false,
+-        "copyWindowAction",
+-        EditDeliveryClass::Window,
+-        {
+-            .rangeOperation = EditRangeOperation::CopySelection,
+-            .notesOperation = EditNotesOperation::CopySelection,
+-            .keyRoute = EditKeyRoute::AlwaysConsume,
+-            .focusedTextOwnership = EditFocusedTextOwnership::Copy,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::Cut,
+-        "roll.cut",
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .rangeOperation = EditRangeOperation::Cut,
+-            .notesOperation = EditNotesOperation::Cut,
+-            .keyRoute = EditKeyRoute::SelectionTargeted,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::Duplicate,
+-        "roll.duplicate_time",
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .rangeOperation = EditRangeOperation::Duplicate,
+-            .notesOperation = EditNotesOperation::Duplicate,
+-            .keyRoute = EditKeyRoute::SelectionTargeted,
+-            .terminalWhenUnmatched = true,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::Paste,
+-        "roll.paste",
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .standaloneOperation = EditStandaloneOperation::Paste,
+-            .keyRoute = EditKeyRoute::AlwaysConsume,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::SelectAll,
+-        "roll.select_all",
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .notesOperation = EditNotesOperation::SelectAll,
+-            .keyRoute = EditKeyRoute::SelectionTargeted,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::Delete,
+-        "roll.delete",
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .rangeOperation = EditRangeOperation::Delete,
+-            .notesOperation = EditNotesOperation::Delete,
+-            .keyRoute = EditKeyRoute::SelectionTargeted,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::PitchBend,
+-        "roll.pitch_bend",
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .notesOperation = EditNotesOperation::PitchBend,
+-            .keyRoute = EditKeyRoute::SelectionTargeted,
+-            .autoRepeatRule = EditAutoRepeatRule::ConsumeWhenEligible,
+-        },
+-    },
+-    transposeRow(EditCommand::TransposeUp, "roll.transpose_up", 1),
+-    transposeRow(EditCommand::TransposeDown, "roll.transpose_down", -1),
+-    transposeRow(EditCommand::TransposeUpOctave, "roll.transpose_up_octave", 12),
+-    transposeRow(EditCommand::TransposeDownOctave, "roll.transpose_down_octave", -12),
+-    nudgeRow(EditCommand::NudgeLeft, "roll.nudge_left", -1),
+-    nudgeRow(EditCommand::NudgeRight, "roll.nudge_right", 1),
+-    CommandRow{
+-        EditCommand::MuteTracks,
+-        "roll.mute_tracks",
+-        true,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .standaloneOperation = EditStandaloneOperation::MuteTracks,
+-            .keyRoute = EditKeyRoute::AlwaysConsume,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::SoloTracks,
+-        "roll.solo_tracks",
+-        true,
+-        "soloWindowAction",
+-        EditDeliveryClass::Window,
+-        {
+-            .standaloneOperation = EditStandaloneOperation::SoloTracks,
+-            .keyRoute = EditKeyRoute::AlwaysConsume,
+-            .focusedTextOwnership = EditFocusedTextOwnership::Solo,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::InsertTime,
+-        "edit.insert_time",
+-        false,
+-        "insertTimeWindowAction",
+-        EditDeliveryClass::Window,
+-        {
+-            .rangeOperation = EditRangeOperation::InsertTime,
+-            .standaloneOperation = EditStandaloneOperation::InsertTime,
+-            .keyRoute = EditKeyRoute::AlwaysConsume,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::DeleteTime,
+-        "edit.delete_time",
+-        false,
+-        "deleteTimeWindowAction",
+-        EditDeliveryClass::Window,
+-        {
+-            .rangeOperation = EditRangeOperation::RemoveContents,
+-            .keyRoute = EditKeyRoute::AlwaysConsume,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::ClearTimeSelection,
+-        "edit.clear_time_selection",
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .rangeOperation = EditRangeOperation::ClearTimeSelection,
+-            .keyRoute = EditKeyRoute::AlwaysConsume,
+-        },
+-    },
+-    // Commands whose operation arm resolves from cursor/marker/signature
+-    // state: availability is the only gate, so keys consume unconditionally
+-    // once eligible.
+-    unboundRow(EditCommand::SetVelocity, "edit.set_velocity", EditRangeOperation::None,
+-               EditNotesOperation::SetVelocity),
+-    unboundRow(EditCommand::SetLoopStart, "edit.set_loop_start", EditRangeOperation::None,
+-               EditNotesOperation::None, EditStandaloneOperation::SetLoopStart),
+-    unboundRow(EditCommand::SetLoopEnd, "edit.set_loop_end", EditRangeOperation::None,
+-               EditNotesOperation::None, EditStandaloneOperation::SetLoopEnd),
+-    unboundRow(EditCommand::LoopFromSelection, "edit.loop_from_selection",
+-               EditRangeOperation::LoopFromSelection),
+-    unboundRow(EditCommand::RemoveLoop, "edit.remove_loop", EditRangeOperation::None,
+-               EditNotesOperation::None, EditStandaloneOperation::RemoveLoop),
+-    unboundRow(EditCommand::EditTimeSignature, "edit.edit_time_signature", EditRangeOperation::None,
+-               EditNotesOperation::None, EditStandaloneOperation::EditTimeSignature),
+-    unboundRow(EditCommand::RemoveTimeSignature, "edit.remove_time_signature",
+-               EditRangeOperation::None, EditNotesOperation::None,
+-               EditStandaloneOperation::RemoveTimeSignature),
+-    CommandRow{
+-        EditCommand::PencilMode,
+-        "automation.pencil_mode",
+-        true,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .standaloneOperation = EditStandaloneOperation::PencilToggle,
+-            .keyRoute = EditKeyRoute::AvailabilityGated,
+-            .autoRepeatRule = EditAutoRepeatRule::ConsumeWhenEligible,
+-            .survivesPointerGesture = true,
+-        },
+-    },
+-    eventRow(EditCommand::MoveEventUp, "eventlist.move_up", -1),
+-    eventRow(EditCommand::MoveEventDown, "eventlist.move_down", 1),
+-    CommandRow{
+-        EditCommand::Split,
+-        "roll.split",
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .notesOperation = EditNotesOperation::Split,
+-            .keyRoute = EditKeyRoute::SelectionTargeted,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::Join,
+-        "roll.join",
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .notesOperation = EditNotesOperation::Join,
+-            .keyRoute = EditKeyRoute::SelectionTargeted,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::LengthenNote,
+-        "roll.lengthen_note",
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .notesOperation = EditNotesOperation::Lengthen,
+-            .keyRoute = EditKeyRoute::SelectionTargeted,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::ShortenNote,
+-        "roll.shorten_note",
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .notesOperation = EditNotesOperation::Shorten,
+-            .keyRoute = EditKeyRoute::SelectionTargeted,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::GridNarrow,
+-        "roll.grid_narrow",
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .standaloneOperation = EditStandaloneOperation::GridNarrow,
+-            .keyRoute = EditKeyRoute::AlwaysConsume,
+-            .originRule = EditOriginRule::TimelineOnly,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::GridWiden,
+-        "roll.grid_widen",
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .standaloneOperation = EditStandaloneOperation::GridWiden,
+-            .keyRoute = EditKeyRoute::AlwaysConsume,
+-            .originRule = EditOriginRule::TimelineOnly,
+-        },
+-    },
+-    CommandRow{
+-        EditCommand::GridTriplet,
+-        "roll.grid_triplet",
+-        false,
+-        nullptr,
+-        EditDeliveryClass::EditorRouted,
+-        {
+-            .standaloneOperation = EditStandaloneOperation::GridTriplet,
+-            .keyRoute = EditKeyRoute::AvailabilityGated,
+-            .originRule = EditOriginRule::TimelineOnly,
+-            // Toggling feel re-lattices the drag's snap positions, so it
+-            // stays gesture-gated; repeats consume without retoggling.
+-            .autoRepeatRule = EditAutoRepeatRule::ConsumeWhenEligible,
+-        },
+-    },
+-};
+-
+-constexpr bool commandTableFollowsEnumOrder()
+-{
+-    for (std::size_t index = 0; index < kCommandTable.size(); ++index) {
+-        if (actionIndex(kCommandTable[index].command) != index)
+-            return false;
+-    }
+-    return true;
+-}
+-
+-static_assert(kCommandTable.size() == actionIndex(EditCommand::GridTriplet) + 1);
+-static_assert(commandTableFollowsEnumOrder());
+-
+ // Copy alone becomes enabled for focused text; Solo still requires its
+ // existing song target even though text focus owns its execution.
+ // Presentation refresh ignores the transient pointer gesture: every live
+ // dispatch path (keys, execute, triggered) re-applies the gate itself, so
+ // the cached state describes the committed selection and never the sweep
+ // that produced it.
+ bool liveRowEnabled(const SongView &target, const CommandRow &row, bool textFocused)
+ {
+     if (textFocused && row.policy.focusedTextOwnership == EditFocusedTextOwnership::Copy)
+         return true;
+     return target.editCommandAvailable(row.command, /*ignorePointerGesture=*/true);
+ }
+ 
+ } // namespace
+-const EditCommandPolicy &editCommandPolicy(EditCommand command)
+-{
+-    return kCommandTable[actionIndex(command)].policy;
+-}
+ 
+ EditActions::EditActions(QObject *parent) : QObject(parent)
+ {
+     static_assert(kCommandTable.size() == cActionCount,
+                   "the command table and the m_actions array must cover the same commands");
+     keymap::Registry &keys = keymap::Registry::instance();
+     for (const CommandRow &row : kCommandTable) {
+         auto *const commandAction = new QAction(keys.label(QLatin1String(row.id)), this);
+         keys.attach(QLatin1String(row.id), commandAction);
+         commandAction->setCheckable(row.checkable);
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9588add6..cffca33a 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -338,20 +338,21 @@ qt_add_library(porydaw_app STATIC
+     src/ui/songview/grid.cpp
+     src/ui/songview/grid.h
+     src/ui/songview/timeaxis.cpp
+     src/ui/songview/timeaxis.h
+     src/ui/songview/timecamera.cpp
+     src/ui/songview/timecamera.h
+     src/ui/songview/rangeedit.cpp
+     src/ui/songview/editkeyrouting.cpp
+     src/ui/songview/editactions.cpp
+     src/ui/songview/editactions.h
++    src/ui/songview/editcommandtable.cpp
+     src/ui/songview/scalecontroller.cpp
+     src/ui/songview/scalecontroller.h
+     src/ui/songview/clipmime.cpp
+     src/ui/songview/trackvoiceops.cpp
+     src/ui/songview/viewstate.cpp
+     src/ui/songview/drawercoordination.cpp
+     src/ui/songview/timeruler.cpp
+     src/ui/songview/timeruler.h
+     src/ui/songview/timeruler_interaction.cpp
+     src/ui/songview/pianoroll.cpp
+@@ -456,20 +457,26 @@ qt_add_library(porydaw_app STATIC
+     src/ui/editordrawer/tempolane.cpp
+     src/ui/editordrawer/tempolane.h
+     src/ui/editordrawer/velocityarea/velocityarea.cpp
+     src/ui/editordrawer/velocityarea/velocityarea.h
+     src/ui/editordrawer/velocityarea/velocityarea_interaction.cpp
+     src/ui/editordrawer/velocityarea/detail.h
+     src/ui/editordrawer/linearramp.h
+     src/ui/editordrawer/velocityaxis.cpp
+     src/ui/editordrawer/velocityaxis.h
+ )
++# editcommandtable.cpp is the data-only TU the Swift parity seam compiles
++# standalone; in the app it is included by editactions.cpp (which still
++# consumes CommandRow/kCommandTable/actionIndex), so it must not compile a
++# second editCommandPolicy into this target.
++set_source_files_properties(src/ui/songview/editcommandtable.cpp PROPERTIES
++    HEADER_FILE_ONLY ON)
+ if(APPLE)
+     target_sources(porydaw_app PRIVATE
+         src/ui/nativelayerutils_macos_p.h
+         src/ui/playheadrenderer_macos.mm
+     )
+     # Qt's qdebug.h UInt alias collides with macOS OSTypes.h only in this
+     # Objective-C++ bridge; keep project -Wshadow enabled everywhere else.
+     set_property(SOURCE src/ui/playheadrenderer_macos.mm APPEND PROPERTY
+         COMPILE_OPTIONS -Wno-shadow)
+     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
+diff --git a/src/checks/swiftgridprototype/module.modulemap b/src/checks/swiftgridprototype/module.modulemap
+index 054d509a..1278e257 100644
+--- a/src/checks/swiftgridprototype/module.modulemap
++++ b/src/checks/swiftgridprototype/module.modulemap
+@@ -1,5 +1,6 @@
+ module NativeGridSmoke {
+     header "grid_smoke.h"
+     header "math_smoke.h"
++    header "policy_smoke.h"
+     export *
+ }
+diff --git a/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt b/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt
+index 13a638c2..86f7635c 100644
+--- a/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt
++++ b/src/ui/songview/quick/swift-grid-prototype/CMakeLists.txt
+@@ -118,20 +118,22 @@ target_link_libraries(swift_grid_window_cancel PUBLIC Qt6::Quick)
+ set(SWIFT_GRID_SMOKE_DIR
+     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../checks/swiftgridprototype"
+ )
+ 
+ add_library(swift_grid_smoke STATIC
+     "${SWIFT_GRID_SMOKE_DIR}/grid_smoke.cpp"
+     "${SWIFT_GRID_SMOKE_DIR}/audio_smoke.cpp"
+     "${SWIFT_GRID_SMOKE_DIR}/interaction_smoke.cpp"
+     "${SWIFT_GRID_SMOKE_DIR}/math_smoke.cpp"
+     "${SWIFT_GRID_SMOKE_DIR}/jurisdiction_smoke.cpp"
++    "${SWIFT_GRID_SMOKE_DIR}/policy_smoke.cpp"
++    "${SWIFT_GRID_ROOT}/src/ui/songview/editcommandtable.cpp"
+ )
+ target_include_directories(swift_grid_smoke PRIVATE
+     "${SWIFT_GRID_SMOKE_DIR}"
+ )
+ target_link_libraries(swift_grid_smoke PRIVATE
+     Qt6::Quick
+     Qt6::Test
+     swift_grid_audio
+     swift_grid_curve
+ )
+diff --git a/src/ui/songview/quick/swift-grid-prototype/App.swift b/src/ui/songview/quick/swift-grid-prototype/App.swift
+index 8a6c4835..cd92e5c6 100644
+--- a/src/ui/songview/quick/swift-grid-prototype/App.swift
++++ b/src/ui/songview/quick/swift-grid-prototype/App.swift
+@@ -16,15 +16,16 @@ struct SwiftGridApp: QApp {
+     let qmlFileName: String = "Main"
+ 
+     let gridModel = PianoGrid()
+ 
+     var initialProperties: [String: QObjectBuildable] {
+         ["gridModel": gridModel]
+     }
+ 
+     init() {
+         runMathSelftestIfRequested()
++        runPolicySelftestIfRequested()
+         sgw_installWindowCancelHost(
+             deliverWindowCancel, Unmanaged.passUnretained(gridModel).toOpaque())
+         installGridSmoke()
+     }
+ }

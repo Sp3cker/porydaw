@@ -45,8 +45,8 @@ typedef struct {
 
 typedef struct {
     uint32_t startTick;
-    int32_t numerator;
-    int32_t denominator;
+    uint8_t numerator;      // raw SMF value; normalization belongs to TimeAxis
+    uint8_t denomPow2;      // raw exponent, not a computed denominator
 } SgdTimeSignature;
 
 typedef struct {
@@ -143,11 +143,15 @@ charter retirement gate.
   accepted snapshot without passing it through the revision guard again.
   Invalid/no selected track renders no notes, never another track.
 - Metrics and scene generation consume actual document ticks-per-beat and
-  signature changes, including default 4/4 only when production semantics
-  imply it and last-event-wins for coincident signatures. Notes remain in
-  document tick space. The demo's 24-tick/4/4 defaults remain unchanged.
-  Parameterize the existing grid geometry/scene path; do not duplicate math,
-  change frozen Wave-1 sources, or convert TimeCamera/Grid/PitchBendKernel.
+  raw signature fields through the existing Swift `TimeMap` / `TimeSigPoint`
+  / `TimeAxis` semantics. Preserve every imported UInt8 numerator/exponent,
+  including zero numerator and exponents >=31; do not expand denominators or
+  reject events at the feed boundary. `TimeAxis` already owns normalization,
+  bounded beat-stride shifts, implicit opening 4/4 and coincident-event
+  last-wins precedence. Notes remain in document tick space; demo defaults
+  remain unchanged. Parameterize the existing grid geometry/scene path using
+  those values; do not duplicate math, edit frozen Wave-1 sources, or convert
+  TimeCamera/Grid/PitchBendKernel.
 - Unmount releases grid, receiver, accepted snapshot and callback together.
   Existing editable smoke outcomes remain required, not permanent demo API
   compatibility.
@@ -187,7 +191,7 @@ import is `SwiftGrid 1.0`. It never launches prototype `Main.qml`.
 not a QObject address. This avoids narrowing through QtBridge's Qt `UInt`
 variant conversion or QML numeric precision. `documentTrack: Int` is the
 engine-track index. `componentComplete()` calls public scalar
-`bindDocument(_ documentToken: String)`, which parses a nonzero token,
+`bindDocument(documentToken: String)`, which parses a nonzero token,
 constructs/binds one receiver and calls `connect()`. The same binding method
 supports a host-created grid; snapshot mapping itself remains Swift-internal.
 A missing/invalid/unregistered token or duplicate recipient is a mount error,

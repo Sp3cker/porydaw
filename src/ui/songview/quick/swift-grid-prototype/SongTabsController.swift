@@ -33,6 +33,14 @@ public final class SongTabsController {
         return tabs[index].grid
     }
 
+    // Demo bootstrap seeds every session's grid (audio fixture + notes); the
+    // app owns demo initialization, never the controller. Migration-only
+    // (charter demo-lane row): retires with the standalone lane's gate.
+    @QtIgnored
+    var grids: [PianoGrid] {
+        tabs.map { $0.grid }
+    }
+
     public init() {
         openTab()
     }

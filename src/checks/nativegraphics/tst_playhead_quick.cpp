@@ -48,7 +48,9 @@ std::unique_ptr<checks::nativegraphics::Rig> quickRig(const QString &projectRoot
 
 bool frameHasPlayhead(const QImage &frame, const QColor &color)
 {
-    return !frame.isNull() && checks::support::hasSolidPlayheadPixel(frame, frame.rect(), color);
+    // At tick zero the core is centered on the left clip boundary. Backends
+    // may rasterize that half-covered pixel below the solid-alpha threshold.
+    return !frame.isNull() && checks::support::hasPlayheadPixel(frame, frame.rect(), color);
 }
 
 bool polarityMatches(bool present)
@@ -121,14 +123,17 @@ void RenderingPlayheadTest::quickPolarityAndEdges()
 
     QString captureError;
     const qreal initialTimelineX = view.camera().contentX(0.0);
-    overlay->setPlayhead(initialTimelineX, false, playing);
+    // Keep the body core one pixel inside the left clip. A core centered
+    // exactly on the clip edge can have no covered sample at DPR 1.
+    const qreal bodyTimelineX = initialTimelineX + layout::singlePixel();
+    overlay->setPlayhead(bodyTimelineX, false, playing);
     checks::support::pumpQuick();
     QVERIFY(headers);
     const QImage headerWithoutPlayhead =
         checks::support::captureQuickBand(view, headers->rect, &captureError);
     QVERIFY2(!headerWithoutPlayhead.isNull(), qPrintable(captureError));
 
-    overlay->setPlayhead(initialTimelineX, true, playing);
+    overlay->setPlayhead(bodyTimelineX, true, playing);
     checks::support::pumpQuick();
     const QImage headerFrame =
         checks::support::captureQuickBand(view, headers->rect, &captureError);
@@ -175,17 +180,17 @@ void RenderingPlayheadTest::quickPolarityAndEdges()
         const QRect gutter{0, 0, (std::max)(0, plot.left()), frame.height()};
         // Controls may share the playhead hue. Compare pixels against the
         // hidden playhead instead of treating that color as unique to it.
-        overlay->setPlayhead(initialTimelineX, false, playing);
+        overlay->setPlayhead(bodyTimelineX, false, playing);
         checks::support::pumpQuick();
         const QImage hiddenFrame =
             checks::support::captureQuickBand(view, geometry->rect, &captureError);
         QVERIFY2(!hiddenFrame.isNull(), qPrintable(captureError));
-        overlay->setPlayhead(initialTimelineX, true, playing);
+        overlay->setPlayhead(bodyTimelineX, true, playing);
         checks::support::pumpQuick();
         if (kQuickCarriesPlayhead) {
             const QRect gutterPixels = checks::support::devicePixelRect(frame, gutter);
             QVERIFY2(frame.copy(gutterPixels) == hiddenFrame.copy(gutterPixels), name);
-            QVERIFY2(checks::support::hasSolidPlayheadPixel(frame, plot, color), name);
+            QVERIFY2(checks::support::hasPlayheadPixel(frame, plot, color), name);
         } else {
             // Native-only movement must leave its Quick pixels unchanged.
             QVERIFY2(frame == hiddenFrame, name);
@@ -197,6 +202,9 @@ void RenderingPlayheadTest::quickPolarityAndEdges()
     assertBand(songview::TimelineBand::VoiceChanges, "voice changes");
     assertBand(songview::TimelineBand::OtherEvents, "other events");
 
+    // The ruler triangle deliberately exercises the exact tick-zero edge.
+    overlay->setPlayhead(initialTimelineX, true, playing);
+    checks::support::pumpQuick();
     const QImage rulerFrame = checks::support::captureQuickBand(view, ruler->rect, &captureError);
     QVERIFY2(!rulerFrame.isNull(), qPrintable(captureError));
     const QRect rulerPlot =
@@ -207,8 +215,8 @@ void RenderingPlayheadTest::quickPolarityAndEdges()
     const QRect permitted{forbiddenWidth, 0, rulerPlot.left() - forbiddenWidth,
                           rulerFrame.height()};
     if (kQuickCarriesPlayhead) {
-        QVERIFY(!checks::support::hasSolidPlayheadPixel(rulerFrame, forbidden, color));
-        QVERIFY(checks::support::hasSolidPlayheadPixel(rulerFrame, permitted, color));
+        QVERIFY(!checks::support::hasPlayheadPixel(rulerFrame, forbidden, color));
+        QVERIFY(checks::support::hasPlayheadPixel(rulerFrame, permitted, color));
         QVERIFY(frameHasPlayhead(rulerFrame, color));
     } else {
         QVERIFY(!frameHasPlayhead(rulerFrame, color));

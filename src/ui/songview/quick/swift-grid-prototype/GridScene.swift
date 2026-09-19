@@ -87,6 +87,7 @@ struct GridSceneInput {
     var drawPreview: (tick: Int, duration: Int, pitch: Int)?
     var lastVelocity: Int = 100
     var hoverKey: Int = -1
+    var viewportScrollX: Double = 0
     var viewportScrollY: Double = 0
     var selectionBand: (x: Double, y: Double, w: Double, h: Double)?
 }
@@ -120,7 +121,10 @@ public final class GridScene {
     public var hoverChipFont: [String: QVariantSettable] = [:]
     public var hoverChipRadius: Double = 0
 
-    public init() {}
+    public init() {
+        let metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 0, height: 0)
+        hoverChipFont = GridTypography.fonts(metrics: metrics)[.chip]!.map
+    }
 
     private func sync(_ model: QListModel<SceneRect>, _ rects: [SceneRect]) {
         let common = min(model.count, rects.count)
@@ -239,6 +243,17 @@ public final class GridScene {
             insetPixels: insetPixels, metrics: m)
     }
 
+    private func visibleTicks(_ input: GridSceneInput) -> (begin: Tick, end: Tick) {
+        let m = input.metrics
+        // One viewport of overscan retains labels crossing the left edge without
+        // walking or allocating marks for the rest of a long document.
+        let left = max(0, input.viewportScrollX - m.viewportWidth)
+        let right = min(input.gridWidth, input.viewportScrollX + 2 * m.viewportWidth)
+        let begin = tickFromDouble(m.tickAtContentX(left))
+        let end = UInt32(min(Double(kNoTick), max(0, ceil(m.contentEndTick(gridWidth: right)))))
+        return (begin, end)
+    }
+
     @QtIgnored
     func rebuildStatic(_ input: GridSceneInput) {
         let m = input.metrics
@@ -273,37 +288,27 @@ public final class GridScene {
                     x: 0, y: 0, width: tickZero, height: gridH,
                     fillColor: p.preRollMask))
         }
-        let endTick = m.contentEndTick(gridWidth: gridW)
-        var tick = 0
-        while Double(tick) < endTick {
+        let range = visibleTicks(input)
+        m.forEachSubdivision(from: range.begin, to: range.end) { tick, level in
             let x = m.displayX(Double(tick))
-            if tick % (4 * GridMetrics.ticksPerBeat) == 0 {
-                time.append(
-                    SceneRect(
-                        x: x - m.gridLineStroke / 2, y: 0,
-                        width: m.gridLineStroke, height: gridH,
-                        fillColor: p.gridLineBar))
-            } else if tick % GridMetrics.ticksPerBeat == 0 {
-                let finest = m.visibleGridTicks == 1
-                time.append(
-                    SceneRect(
-                        x: x - m.gridLineStroke / 2, y: 0,
-                        width: m.gridLineStroke, height: gridH,
-                        fillColor: finest ? p.gridLineBeatFine : p.gridLineBeat))
-            } else if tick % m.visibleGridTicks == 0 {
-                let rel = tick % GridMetrics.ticksPerBeat
-                let level = rel % 12 == 0 ? 1 : (rel % 6 == 0 ? 2 : 3)
-                let color =
-                    level == 1
-                    ? p.gridLineSub1
-                    : level == 2 ? p.gridLineSub2 : p.gridLineSub3
-                time.append(
-                    SceneRect(
-                        x: x - m.gridLineStroke / 2, y: 0,
-                        width: m.gridLineStroke, height: gridH,
-                        fillColor: color))
+            let color = level == 1 ? p.gridLineSub1
+                : level == 2 ? p.gridLineSub2 : p.gridLineSub3
+            time.append(SceneRect(
+                x: x - m.gridLineStroke / 2, y: 0,
+                width: m.gridLineStroke, height: gridH, fillColor: color))
+        }
+        var segment = m.timeAxis.segmentAt(range.begin)
+        var finest = m.visibleGridTicks(in: segment) == 1
+        m.timeAxis.forEachGridLine(from: range.begin, to: range.end) { tick, isBar, _, _ in
+            let x = m.displayX(Double(tick))
+            if tick >= segment.next {
+                segment = m.timeAxis.segmentAt(tick)
+                finest = m.visibleGridTicks(in: segment) == 1
             }
-            tick += m.visibleGridTicks
+            time.append(SceneRect(
+                x: x - m.gridLineStroke / 2, y: 0,
+                width: m.gridLineStroke, height: gridH,
+                fillColor: isBar ? p.gridLineBar : finest ? p.gridLineBeatFine : p.gridLineBeat))
         }
         sync(pianoGridTime, time)
 
@@ -385,37 +390,37 @@ public final class GridScene {
         let indicator = p.gridLine
         var marks: [SceneRect] = []
         var labels: [SceneText] = []
-        let endTick = m.contentEndTick(gridWidth: gridW)
-
-        var tick = 0
-        while Double(tick) < endTick {
-            if tick % GridMetrics.ticksPerBeat != 0 && tick % m.visibleGridTicks == 0 {
-                let rel = tick % GridMetrics.ticksPerBeat
-                let level = rel % 12 == 0 ? 1 : (rel % 6 == 0 ? 2 : 3)
-                let h = level == 1 ? m.spaceHalf : 1.0
-                let x = m.displayX(Double(tick))
-                marks.append(
-                    SceneRect(
-                        x: x - 0.5, y: tickBottom - h + 1,
-                        width: 1, height: h, fillColor: indicator))
-            }
-            tick += m.visibleGridTicks
+        let range = visibleTicks(input)
+        m.forEachSubdivision(from: range.begin, to: range.end) { tick, level in
+            let h = level == 1 ? m.spaceHalf : 1.0
+            let x = m.displayX(Double(tick))
+            marks.append(SceneRect(
+                x: x - 0.5, y: tickBottom - h + 1,
+                width: 1, height: h, fillColor: indicator))
         }
 
-        let drawBeatTicks = m.beatWidth >= m.detailMinPxPerBeat
-        let showBeatLabels =
-            m.beatWidth
-            >= m.rulerBeatLabelZoomFactor
-            * (barCap + 2 * labelGap + reserve + t.widestBeatAdvance)
-
+        // The ruler font is monospaced. Measure only the longest bar/beat
+        // spelling instead of allocating width tables for every song bar.
+        let maxBar = m.maxRulerBar(gridWidth: gridW)
+        var segment = m.timeAxis.segmentAt(range.begin)
+        var drawBeatTicks = false
+        var showBeatLabels = false
+        func updateBeatDetail() {
+            let beatWidth = Double(segment.beatTicks) * m.pxPerTick
+            drawBeatTicks = beatWidth >= m.detailMinPxPerBeat
+            showBeatLabels = beatWidth >= m.rulerBeatLabelZoomFactor
+                * (barCap + 2 * labelGap + reserve
+                    + t.beatAdvance(bar: maxBar, beat: Int(segment.beatsPerBar)))
+        }
+        updateBeatDetail()
         var lastLabelRight = -labelGap
-        tick = 0
-        while Double(tick) < endTick {
-            let isBar = tick % (4 * GridMetrics.ticksPerBeat) == 0
-            let barNumber = tick / 96 + 1
-            let beatNumber = (tick % 96) / 24 + 1
+        m.timeAxis.forEachGridLine(from: range.begin, to: range.end) {
+            tick, isBar, barNumber, beatNumber in
+            if tick >= segment.next {
+                segment = m.timeAxis.segmentAt(tick)
+                updateBeatDetail()
+            }
             let x = m.displayX(Double(tick))
-            defer { tick += GridMetrics.ticksPerBeat }
             if !isBar && !showBeatLabels {
                 if drawBeatTicks {
                     marks.append(
@@ -424,7 +429,7 @@ public final class GridScene {
                             width: 1, height: tickBottom - (tickCenter - indicatorRise),
                             fillColor: indicator))
                 }
-                continue
+                return
             }
             let labelX = x + barCap
             if labelX < lastLabelRight + labelGap {
@@ -435,7 +440,7 @@ public final class GridScene {
                             width: 1, height: tickBottom - (tickCenter - indicatorRise),
                             fillColor: indicator))
                 }
-                continue
+                return
             }
             let label =
                 isBar
@@ -473,18 +478,35 @@ public final class GridScene {
             lastLabelRight = labelX + labelW
         }
 
-        let sigX = m.displayX(0)
-        marks.append(
-            SceneRect(
-                x: sigX - 0.5, y: 0, width: 1, height: markerHeight - 1,
-                fillColor: p.implicitSignature))
-        let sigW = t.sigAdvance
-        if sigW > 0 {
+        func appendSignature(at tick: Tick, next: Tick) {
+            guard tick >= range.begin && tick < range.end else { return }
+            let signature = m.timeAxis.signatureAt(tick)
+            let sigX = m.displayX(Double(tick))
+            let color = signature.implicit ? p.implicitSignature : p.primaryText
+            marks.append(SceneRect(
+                x: sigX - 0.5, y: 0, width: 1, height: markerHeight - 1, fillColor: color))
+            // Match production detail::timeSigLabel presentation, while the
+            // TimeAxis retains the original exponent for timing interpretation.
+            let label = "\(signature.numerator)/\(1 << min(signature.denomPow2, 6))"
+            let width = t.signatureAdvance(label)
+            if next != kNoTick && sigX + 2 * m.spaceHalf + width > m.displayX(Double(next)) {
+                return
+            }
             let y = (markerHeight - t.boldHeight) / 2
-            labels.append(
-                SceneText(
-                    rect: (sigX + m.spaceHalf, y, sigW, t.boldHeight),
-                    text: "4/4", color: p.implicitSignature, font: input.fontSpec(.bold)))
+            labels.append(SceneText(
+                rect: (sigX + m.spaceHalf, y, width, t.boldHeight),
+                text: label, color: color, font: input.fontSpec(.bold)))
+        }
+        let signatures = m.timeAxis.explicitTimeSignatures
+        if m.timeAxis.hasImplicitOpeningSignature {
+            appendSignature(at: 0, next: signatures.first?.tick ?? kNoTick)
+        }
+        for index in signatures.indices {
+            let tick = signatures[index].tick
+            if tick >= range.end { break }
+            let next = index + 1 < signatures.count ? signatures[index + 1].tick : kNoTick
+            if next == tick { continue }
+            appendSignature(at: tick, next: next)
         }
 
         sync(rulerMarks, marks)

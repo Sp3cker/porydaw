@@ -262,8 +262,9 @@ void PianoRollTest::keyboardSplitNoop()
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     view.selectionModel().clearNoteSelection();
-    // Park the edit cursor past the seeded note's end so no note straddles it.
-    view.setEditCursorTick(d.tick + 2 * d.dur);
+    // The timeline end cannot be strictly inside any finite note, regardless
+    // of pitch or the source song's existing notes.
+    view.setEditCursorTick(check.timeline().lengthTicks);
     sendCommandKey(roll, Qt::Key_E);
     QCOMPARE(doc.undoStack()->index(), undo);
     QCOMPARE(doc.smf().write(), before);

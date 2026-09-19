@@ -122,60 +122,64 @@ enum PaletteMath {
 @QtBridgeable
 public final class GridPalette {
 
-    public let windowBackground: String = "#C9C1BB"
-    public let rollBackground: String = "#D4CCC7"
-    public let accidentalLane: String = "#B4ACA6"
-    public let chromeBackground: String = "#BDB5AF"
-    public let separator: String = "#5B5652"
-    public let outline: String = "#8C857F"
-    public let tabBackground: String = "#E1DBD6"
-    public let tabHoverBackground: String = "#ECE7E1"
-    public let tabSelectedBackground: String = "#B9E8EE"
+    // Roles are var per the production-mount track (wave 3): the host mount
+    // owns theme application into these values. The prototype demo only
+    // reads them; nothing inside this directory writes them.
+
+    public var windowBackground: String = "#C9C1BB"
+    public var rollBackground: String = "#D4CCC7"
+    public var accidentalLane: String = "#B4ACA6"
+    public var chromeBackground: String = "#BDB5AF"
+    public var separator: String = "#5B5652"
+    public var outline: String = "#8C857F"
+    public var tabBackground: String = "#E1DBD6"
+    public var tabHoverBackground: String = "#ECE7E1"
+    public var tabSelectedBackground: String = "#B9E8EE"
     // QPushButton/QToolButton surfaces: the tab strip's overflow controls are
     // ordinary tool buttons, so they take the button roles, not the tab faces.
-    public let buttonBackground: String = "#E1DBD6"
-    public let buttonHoverBackground: String = "#ECE7E1"
-    public let buttonPressedBackground: String = "#F5B61C"
+    public var buttonBackground: String = "#E1DBD6"
+    public var buttonHoverBackground: String = "#ECE7E1"
+    public var buttonPressedBackground: String = "#F5B61C"
 
-    public let keyboardNatural: String = "#F4F4F4"
-    public let keyboardBlack: String = "#202224"
-    public let keyboardSeparator: String = "#BCB4AF"
-    public let keyboardLabel: String = "#1A1A1A"
-    public let keyboardActiveKey: String = "#B9E8EE"
-    public let keyboardHover: String = "#50B9E8EE"
+    public var keyboardNatural: String = "#F4F4F4"
+    public var keyboardBlack: String = "#202224"
+    public var keyboardSeparator: String = "#BCB4AF"
+    public var keyboardLabel: String = "#1A1A1A"
+    public var keyboardActiveKey: String = "#B9E8EE"
+    public var keyboardHover: String = "#50B9E8EE"
 
-    public let gridLine: String = "#3F040000"
-    public let gridLineSub1: String = PaletteMath.gridLineColor(125)
-    public let gridLineSub2: String = PaletteMath.gridLineColor(100)
-    public let gridLineSub3: String = PaletteMath.gridLineColor(75)
-    public let gridLineBeat: String = PaletteMath.gridLineColor(160)
-    public let gridLineBeatFine: String = PaletteMath.gridLineColor(200)
-    public let gridLineBar: String = PaletteMath.gridLineColor()
-    public let rowLine: String = PaletteMath.gridLineColor(50)
+    public var gridLine: String = "#3F040000"
+    public var gridLineSub1: String = PaletteMath.gridLineColor(125)
+    public var gridLineSub2: String = PaletteMath.gridLineColor(100)
+    public var gridLineSub3: String = PaletteMath.gridLineColor(75)
+    public var gridLineBeat: String = PaletteMath.gridLineColor(160)
+    public var gridLineBeatFine: String = PaletteMath.gridLineColor(200)
+    public var gridLineBar: String = PaletteMath.gridLineColor()
+    public var rowLine: String = PaletteMath.gridLineColor(50)
 
-    public let preRollMask: String = PaletteMath.hex(
+    public var preRollMask: String = PaletteMath.hex(
         PaletteMath.mixTowardOklab(PaletteMath.oklab(r: 0xD4, g: 0xCC, b: 0xC7),
                                  PaletteMath.oklab(r: 0x04, g: 0x00, b: 0x00), 0.15))
-    public let rulerPreRollMask: String = PaletteMath.hex(
+    public var rulerPreRollMask: String = PaletteMath.hex(
         PaletteMath.mixTowardOklab(PaletteMath.oklab(r: 0xBD, g: 0xB5, b: 0xAF),
                                  PaletteMath.oklab(r: 0x04, g: 0x00, b: 0x00), 0.15))
 
-    public let noteVelocityZero: String = "#8B847E"
-    public let noteBorder: String = "#FF000000"
-    public let selectionRing: String = "#B9E8EE"
-    public let selectionFill: String = "#1EB9E8EE"
-    public let selectionEdge: String = "#00CADB"
+    public var noteVelocityZero: String = "#8B847E"
+    public var noteBorder: String = "#FF000000"
+    public var selectionRing: String = "#B9E8EE"
+    public var selectionFill: String = "#1EB9E8EE"
+    public var selectionEdge: String = "#00CADB"
 
-    public let primaryText: String = "#302C29"
-    public let windowText: String = "#302C29"
-    public let secondaryText: String = "#57514C"
-    public let editCursor: String = "#302C29"
-    public let playhead: String = "#E24242"
-    public let hoverChipFill: String = "#E6303030"
-    public let hoverChipText: String = "#FFFFFF"
-    public let implicitSignature: String = "#8B847E"
+    public var primaryText: String = "#302C29"
+    public var windowText: String = "#302C29"
+    public var secondaryText: String = "#57514C"
+    public var editCursor: String = "#302C29"
+    public var playhead: String = "#E24242"
+    public var hoverChipFill: String = "#E6303030"
+    public var hoverChipText: String = "#FFFFFF"
+    public var implicitSignature: String = "#8B847E"
 
-    public let rulerDetailText: String = {
+    public var rulerDetailText: String = {
         let fg = (0x57, 0x51, 0x4C), bg = (0xBD, 0xB5, 0xAF)
         let recede = { (191 * $0 + 64 * $1 + 127) / 255 }
         return PaletteMath.hex(r: recede(fg.0, bg.0), g: recede(fg.1, bg.1),

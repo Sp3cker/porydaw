@@ -2,33 +2,30 @@ cmake_minimum_required(VERSION 3.29)
 
 project(SwiftGridPrototype LANGUAGES C CXX Swift)
 
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 6.10 REQUIRED COMPONENTS
     Core
     Gui
+    Widgets
     Qml
     Quick
     Test
 )
 
-include(FetchContent)
-FetchContent_Declare(QtBridge
-    GIT_REPOSITORY https://github.com/qt/qtbridge-swift.git
-    GIT_TAG 407714006dd21107b70db6547ce75e43df0c8a75
-    PATCH_COMMAND "${CMAKE_COMMAND}"
-        "-DPATCH=${CMAKE_CURRENT_SOURCE_DIR}/qtbridge-object-return.patch"
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/PatchQtBridge.cmake"
-)
-FetchContent_MakeAvailable(QtBridge)
+qt_standard_project_setup()
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/../../../../../cmake/QtBridge.cmake")
 
 if(APPLE)
     # Same framework-header precedence fix as the root build: keep Qt's exact
     # framework-header paths ahead of unrelated non-framework Qt installs such
     # as /usr/local/include/Qt*. Treating imported frameworks as system
     # headers lets Clang select the unrelated include tree first.
-    foreach(qt_target IN ITEMS Core Gui Qml Quick Test)
+    foreach(qt_target IN ITEMS Core Gui Widgets Qml Quick Test)
         get_target_property(qt_include_dirs Qt6::${qt_target}
             INTERFACE_INCLUDE_DIRECTORIES)
         if(qt_include_dirs)
@@ -36,14 +33,6 @@ if(APPLE)
                 INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${qt_include_dirs}")
         endif()
     endforeach()
-endif()
-
-
-if(APPLE)
-    # NO_SYSTEM_FROM_IMPORTED must apply to the upstream targets too; the
-    # property is per-target and does not propagate through linking.
-    set_target_properties(QtBridgeCpp QtBridge
-        PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
 endif()
 
 
@@ -70,6 +59,7 @@ add_library(swift_grid_audio STATIC
     "${SWIFT_GRID_ROOT}/src/core/timelineplayer.cpp"
     "${SWIFT_GRID_ROOT}/src/core/smf.cpp"
     "${SWIFT_GRID_ROOT}/src/core/mid2agbtables.cpp"
+    "${SWIFT_GRID_ROOT}/src/core/songdocument.cpp"
 )
 set_source_files_properties("${SWIFT_GRID_AUDIO_DIR}/audio_session_internal.h" PROPERTIES
     HEADER_FILE_ONLY ON
@@ -88,6 +78,7 @@ target_include_directories(swift_grid_audio SYSTEM PUBLIC
 )
 target_link_libraries(swift_grid_audio PUBLIC
     Qt6::Core
+    Qt6::Widgets
     poryaaaa_engine
 )
 
@@ -111,6 +102,15 @@ target_link_libraries(swift_grid_typography PUBLIC Qt6::Gui)
 add_library(swift_grid_window_cancel STATIC "${SWIFT_GRID_AUDIO_DIR}/window_cancel.cpp")
 target_include_directories(swift_grid_window_cancel PUBLIC "${SWIFT_GRID_AUDIO_DIR}")
 target_link_libraries(swift_grid_window_cancel PUBLIC Qt6::Quick)
+
+# Shared seam closure (cmake/SwiftGridFeeds.cmake): compiles the feed TUs and
+# carries their include roots identically for this lane and the production
+# app target. Lane-specific TUs (the SongView-coupled observer, the mount)
+# stay with porydaw_app, which owns those symbols.
+include("${SWIFT_GRID_ROOT}/cmake/SwiftGridFeeds.cmake")
+set(SWIFT_GRID_FEED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../swiftgrid")
+qt_add_library(swift_grid_document_feed STATIC)
+target_link_libraries(swift_grid_document_feed PUBLIC swift_grid_feed_closure)
 
 # Verification-only native smoke driver (event injection; no UI/model logic).
 # Kept as a separate static target so Qt6::Test's QT_TESTCASE_* compile
@@ -150,8 +150,12 @@ file(GLOB SWIFT_GRID_QML_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.qml"
 )
 
-add_executable(swift_grid_prototype
+qt_add_executable(swift_grid_prototype
     ${SWIFT_GRID_SOURCES}
+)
+set_target_properties(swift_grid_prototype PROPERTIES
+    Swift_MODULE_NAME SwiftGrid
+    Swift_LANGUAGE_VERSION 6
 )
 
 if(APPLE)
@@ -162,7 +166,9 @@ endif()
 target_compile_options(swift_grid_prototype PRIVATE
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_SMOKE_DIR}/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_AUDIO_DIR}/module.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_FEED_DIR}/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_AUDIO_DIR}>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_FEED_DIR}>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_ROOT}/src>"
 )
 
@@ -173,6 +179,7 @@ target_link_libraries(swift_grid_prototype PRIVATE
     swift_grid_curve
     swift_grid_typography
     swift_grid_window_cancel
+    swift_grid_document_feed
     "$<LINK_ONLY:swift_grid_smoke>"
 )
 
@@ -182,6 +189,16 @@ set(SWIFT_GRID_FONT_QRC
 
 set_target_properties(swift_grid_prototype PROPERTIES AUTORCC ON)
 target_sources(swift_grid_prototype PRIVATE "${SWIFT_GRID_FONT_QRC}" "tabart.qrc")
+if(APPLE)
+    qt_add_resources(swift_grid_prototype "swift_grid_qml"
+        PREFIX "/swiftgrid"
+        BASE "${CMAKE_CURRENT_SOURCE_DIR}"
+        FILES
+            "${CMAKE_CURRENT_SOURCE_DIR}/SwiftRollOverlay.qml"
+            "${CMAKE_CURRENT_SOURCE_DIR}/PianoRollCanvas.qml"
+            "${CMAKE_CURRENT_SOURCE_DIR}/TimelineQuickItem.qml"
+    )
+endif()
 
 if(APPLE)
     set_target_properties(swift_grid_prototype PROPERTIES
@@ -204,4 +221,11 @@ if(APPLE)
         )
         target_sources(swift_grid_prototype PRIVATE "${SWIFT_GRID_FIXTURE_SRC}")
     endforeach()
+elseif(WIN32)
+    file(COPY ${SWIFT_GRID_QML_FILES}
+        DESTINATION "${CMAKE_CURRENT_BINARY_DIR}"
+    )
+    file(COPY "${SWIFT_GRID_ROOT}/src/checks/fixtures/decompproject/sound"
+        DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/AudioFixture"
+    )
 endif()

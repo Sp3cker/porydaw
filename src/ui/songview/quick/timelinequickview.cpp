@@ -17,6 +17,9 @@
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheadermodel.h"
 #include "ui/theme/themeruntime.h"
+#ifdef Q_OS_MACOS
+#include "ui/songview/quick/swiftgrid/swift_roll_mount.h"
+#endif
 #include <QColor>
 #include <QGuiApplication>
 #include <QQmlContext>
@@ -375,6 +378,20 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     });
 
     syncAppearance();
+#ifdef Q_OS_MACOS
+    if (qEnvironmentVariableIsSet("PORYDAW_SWIFT_ROLL")) {
+        m_swiftRollMount = std::make_unique<SwiftRollMount>();
+        if (!m_swiftRollMount->mount(songView, *m_quickView)) {
+            qCritical("Failed to mount Swift roll overlay behind PORYDAW_SWIFT_ROLL");
+            m_swiftRollMount.reset();
+        } else if (m_view) {
+            connect(m_view.data(), &QObject::destroyed, this, [this] {
+                if (m_swiftRollMount)
+                    m_swiftRollMount->handleTransferredWindowDeath();
+            });
+        }
+    }
+#endif
 }
 
 void TimelineQuickView::detachInputInteraction(TimelineBand band)
@@ -748,6 +765,11 @@ void TimelineQuickView::publishTimelineBandLayout()
             qFatal("Qt Quick timeline QML has incomplete band properties");
         }
     }
+#ifdef Q_OS_MACOS
+    if (m_swiftRollMount) {
+        m_swiftRollMount->updateBandGeometry(m_bandLayout.geometry(TimelineBand::Roll));
+    }
+#endif
 
     // The event page replaces the roll band in EventList mode; its canonical
     // rectangle publishes like every band's.
@@ -812,6 +834,10 @@ void TimelineQuickView::syncAppearance()
     requestUpdate(PianoRollQuickDirty::All);
     requestTimelineUpdate(TimelineQuickDirty::All);
     requestAutomationUpdate(AutomationRefresh::All);
+#ifdef Q_OS_MACOS
+    if (m_swiftRollMount)
+        m_swiftRollMount->applyHostPalette();
+#endif
 }
 
 bool TimelineQuickView::eventListSurfaceFocused() const

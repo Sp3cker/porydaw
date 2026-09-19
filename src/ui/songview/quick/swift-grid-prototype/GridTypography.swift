@@ -22,29 +22,6 @@ struct GridFontSpec {
 }
 
 @MainActor
-private final class NativeFontMetrics {
-    let session: OpaquePointer
-    let extents: SGFontExtents
-
-    init(_ spec: GridFontSpec) {
-        session = spec.family.withCString {
-            sgf_create($0, Int32(spec.pixelSize), Int32(spec.weight), spec.letterSpacing)!
-        }
-        extents = sgf_extents(session)
-    }
-
-    isolated deinit { sgf_destroy(session) }
-
-    func advance(_ text: String) -> Double {
-        text.withCString { sgf_advance(session, $0) }
-    }
-
-    func fittedSize(rowHeight: Double) -> Int {
-        Int(sgf_fit(session, rowHeight))
-    }
-}
-
-@MainActor
 struct GridTypography {
     let rulerAscent: Double
     let rulerHeight: Double
@@ -52,14 +29,13 @@ struct GridTypography {
     let beatHeight: Double
     let boldHeight: Double
     let chipHeight: Double
-    let sigAdvance: Double
-    let widestBeatAdvance: Double
-    private let rulerWidths: [Double]
-    private let beatWidths: [Double]
+    private let rulerMetrics: NativeFontMetrics
+    private let beatMetrics: NativeFontMetrics
+    private let signatureMetrics: NativeFontMetrics
     private let chipWidths: [Double]
     private let fontMaps: [GridFontKind: [String: QVariantSettable]]
 
-    init(fonts: [GridFontKind: GridFontSpec], rowHeight: Double, maxBar: Int) {
+    init(fonts: [GridFontKind: GridFontSpec], rowHeight: Double) {
         func measure(_ kind: GridFontKind) -> NativeFontMetrics {
             NativeFontMetrics(fonts[kind]!)
         }
@@ -73,24 +49,10 @@ struct GridTypography {
         beatHeight = beat.extents.height
         boldHeight = bold.extents.height
         chipHeight = chip.extents.height
-        sigAdvance = measure(.sig).advance("4/4")
+        rulerMetrics = ruler
+        beatMetrics = beat
+        signatureMetrics = measure(.sig)
         let keyLabelFit = measure(.keyLabel).fittedSize(rowHeight: rowHeight)
-        var rulerWidths: [Double] = []
-        var beatWidths: [Double] = []
-        rulerWidths.reserveCapacity(maxBar)
-        beatWidths.reserveCapacity(maxBar * 4)
-        var widest = 0.0
-        for bar in 1...maxBar {
-            rulerWidths.append(ruler.advance(GridTypography.barLabel(bar)))
-            for number in 1...4 {
-                let width = beat.advance(GridTypography.beatLabel(bar, number))
-                beatWidths.append(width)
-                widest = max(widest, width)
-            }
-        }
-        self.rulerWidths = rulerWidths
-        self.beatWidths = beatWidths
-        widestBeatAdvance = widest
         chipWidths = (0..<128).map { chip.advance(GridScene.keyName($0)) }
         var maps = fonts.mapValues { $0.map }
         maps[.keyLabel]!["pixelSize"] = keyLabelFit
@@ -101,9 +63,17 @@ struct GridTypography {
 
     static func beatLabel(_ bar: Int, _ beat: Int) -> String { "\(bar).\(beat)" }
 
-    func rulerAdvance(bar: Int) -> Double { rulerWidths[bar - 1] }
+    func rulerAdvance(bar: Int) -> Double {
+        rulerMetrics.advance(Self.barLabel(bar))
+    }
 
-    func beatAdvance(bar: Int, beat: Int) -> Double { beatWidths[(bar - 1) * 4 + beat - 1] }
+    func beatAdvance(bar: Int, beat: Int) -> Double {
+        beatMetrics.advance(Self.beatLabel(bar, beat))
+    }
+
+    func signatureAdvance(_ label: String) -> Double {
+        signatureMetrics.advance(label)
+    }
 
     func chipAdvance(pitch: Int) -> Double { chipWidths[pitch] }
 
@@ -128,5 +98,28 @@ struct GridTypography {
             .chip: spec(next, m.baseFontPx, 400),
             .keyLabel: spec(next, min(bodyPx, m.baseFontPx), 400),
         ]
+    }
+}
+
+@MainActor
+private final class NativeFontMetrics {
+    let session: OpaquePointer
+    let extents: SGFontExtents
+
+    init(_ spec: GridFontSpec) {
+        session = spec.family.withCString {
+            sgf_create($0, Int32(spec.pixelSize), Int32(spec.weight), spec.letterSpacing)!
+        }
+        extents = sgf_extents(session)
+    }
+
+    isolated deinit { sgf_destroy(session) }
+
+    func advance(_ text: String) -> Double {
+        text.withCString { sgf_advance(session, $0) }
+    }
+
+    func fittedSize(rowHeight: Double) -> Int {
+        Int(sgf_fit(session, rowHeight))
     }
 }

@@ -24,6 +24,26 @@ surfaces. Production implementations and interfaces are designed to stay:
 - Production focus applies to checks too: a check that only passes in the
   sandbox proves nothing about production.
 
+## Swift implementation policy
+
+- Target Swift 6.4 and use current language and standard-library features
+  where they improve ownership, safety, clarity, or performance. Apply this
+  during implementation, not as a deferred modernization pass.
+- Prefer spans for scoped borrowed access where supported. Verify concrete
+  APIs and deployment availability; do not invent compatibility fallbacks.
+- Raw pointer access is acceptable when bounds, initialization and lifetime
+  are proven. A view into a callback's buffers must not escape that callback.
+- Retained document state needs owned storage. Copy accepted input into that
+  storage once; avoid intermediate arrays, redundant mapping, boxing and
+  avoidable copy-on-write detachment. Reject stale snapshots before copying.
+- Review these properties in every Swift task. Use modern features for a
+  concrete benefit, not feature-count churn or unrelated rewrites.
+- Declarations before implementation: every Swift file opens with its
+  public surface — types, enums, protocol conformances, and entry points —
+  before private helpers and bodies. Swift has no headers; this ordering is
+  what preserves C++'s one interface-read advantage. An agent must be able
+  to learn a file's contract from its top without loading implementation.
+
 ## Compatibility and retirement decision (2026-09-18)
 
 Required user behavior and explicitly permanent host interfaces create
@@ -160,8 +180,17 @@ A permanent parallel suite is a defect.
 - Host target: `QMainWindow` shell (native menu bar, native frame) plus a
   single Quick central surface. A full-QML host and per-tab embedded windows
   are rejected.
-- Chrome and dialogs stay C++/QWidgets. Timeline bands are the track's
-  entire blast radius until they are done.
+- Chrome migration (amended 2026-09-18): persistent chrome panels — the
+  song list and voicegroup browser docks and their successors — migrate to
+  QML content hosted inside the existing `QDockWidget`s. The shell —
+  native menu bar, native frame, docking, and the INV-1/INV-2/INV-3 focus
+  and input arbitration boundary — stays C++/QWidgets permanently. Modal
+  dialogs stay C++/QWidgets until a later wave names them. Dock waves
+  inherit the prime directive whole: no widget twin survives past its
+  retirement gate, and production suites run unmodified against the QML
+  surface at cutover (V-1); only harness drivers may be re-pointed (INV-2
+  precedent). Timeline waves do not touch chrome; dock waves do not touch
+  timeline surfaces.
 - Ordering: shared seams first (view math → input jurisdiction → document
-  feed and commands), surfaces after (grid, track headers, ruler, lanes). No
-  surface serializes behind math it does not consume.
+  feed and commands), surfaces after (grid, track headers, ruler, lanes,
+  docks). No surface serializes behind math it does not consume.

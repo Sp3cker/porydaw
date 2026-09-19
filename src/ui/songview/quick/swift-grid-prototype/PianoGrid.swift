@@ -51,7 +51,7 @@ public enum GridEscapeAction: Int {
 
 @MainActor
 @QtBridgeable
-public final class PianoGrid {
+public final class PianoGrid: QmlInstantiableStatus {
 
     @QtIgnored
     private(set) var notes: [GridNote] = []
@@ -60,6 +60,36 @@ public final class PianoGrid {
     @QtTracked public var audio: AudioSession = AudioSession()
     @QtTracked public var scene: GridScene = GridScene()
     @QtTracked public var palette: GridPalette = GridPalette()
+
+    public var readOnly: Bool = false {
+        willSet {
+            if newValue {
+                gesture = nil
+                activeNoteId = -1
+                pitchEditor = nil
+                pitchPreview.removeAll()
+            }
+        }
+    }
+    public var documentToken: String = "" {
+        willSet {
+            if let documentFeed {
+                precondition(newValue == String(documentFeed.documentId), "Document binding is immutable")
+            }
+        }
+    }
+    public var documentTrack: Int = -1 {
+        willSet {
+            if newValue != documentTrack, let document = documentFeed?.document {
+                loadDocument(document, trackIndex: newValue)
+            }
+        }
+    }
+    public var renderedNoteCount: Int = 0
+    public var appliedRevisionText: String = ""
+    @QtIgnored private var documentFeed: DocumentFeed?
+    @QtIgnored private var appliedDocumentRevision: UInt64?
+    @QtIgnored private var documentEndTick: Int = 0
 
     // Published geometry snapshot for QML and the smoke harness. `metrics`
     // below is the single authority; these are write-once-per-configure
@@ -104,7 +134,8 @@ public final class PianoGrid {
     var hoverKey: Int = -1
     @QtIgnored
     var viewportScrollY: Double = 0
-    private var nextNoteId = GridFixture.nextNoteId
+    @QtIgnored private var viewportScrollX: Double = 0
+    private var nextNoteId = 1
     private var noteSummaryDirty = true
     private var selectionAtRightPress: Set<Int> = []
     @QtIgnored private var pitchEditor: PitchEditor?
@@ -137,16 +168,104 @@ public final class PianoGrid {
         return (x0, y0, x1 - x0, y1 - y0)
     }
 
-    public init() {
-        notes = GridFixture.makeNotes()
-        recomputeGridWidth()
-        measurementFonts = GridTypography.fonts(metrics: metrics)
-        scene.hoverChipFont = fontSpec(.chip)
+    public init() {}
+
+    public func componentComplete() {
+        bindDocument(documentToken: documentToken)
+    }
+
+    public func bindDocument(documentToken: String) {
+        precondition(documentFeed == nil, "Document binding is immutable")
+        guard let token = UInt64(documentToken), token != 0,
+            String(token) == documentToken
+        else {
+            preconditionFailure("A canonical nonzero document token is required")
+        }
+        let feed = DocumentFeed(documentId: token)
+        self.documentToken = documentToken
+        bindDocumentFeed(feed, trackIndex: documentTrack)
+        precondition(feed.connect(), "The document endpoint is absent or already bound")
+    }
+
+    @QtIgnored
+    func bindDocumentFeed(_ feed: DocumentFeed, trackIndex: Int) {
+        precondition(documentFeed == nil && feed.document == nil, "Bind before initial delivery")
+        documentToken = String(feed.documentId)
+        documentFeed = feed
+        documentTrack = trackIndex
+        feed.onDocument = { [weak self] document in
+            guard let self else { return }
+            self.loadDocument(document, trackIndex: self.documentTrack)
+        }
+    }
+
+    @QtIgnored
+    func setDocumentTrack(_ trackIndex: Int) {
+        documentTrack = trackIndex
+    }
+
+    @QtIgnored
+    func loadDocument(_ document: SgdDocument, trackIndex: Int) {
+        guard let feed = documentFeed, document.documentId == feed.documentId,
+            document.revision == feed.appliedRevision
+        else { return }
+        let snapshotChanged = appliedDocumentRevision != document.revision
+        if snapshotChanged {
+            let signatures = document.signatures.withUnsafeBufferPointer { buffer in
+                [TimeSigPoint](capacity: buffer.count) { output in
+                    let borrowed = Span(_unsafeElements: buffer)
+                    for index in borrowed.indices {
+                        let signature = borrowed[index]
+                        output.append(TimeSigPoint(
+                            tick: signature.startTick, numerator: signature.numerator,
+                            denomPow2: signature.denomPow2))
+                    }
+                }
+            }
+            metrics.timeAxis = TimeAxis(map: TimeMap(
+                ticksPerBeat: UInt32(max(0, document.ticksPerBeat)), timeSigs: signatures))
+            appliedDocumentRevision = document.revision
+            documentEndTick = Int(signatures.last?.tick ?? 0)
+            appliedRevisionText = String(document.revision)
+        }
+        // One retained receiver owns the snapshot. This is the only projection:
+        // no filter/map intermediates and no narrowing of UInt32 tick values.
+        notes.removeAll(keepingCapacity: true)
+        let validTrack = trackIndex >= 0 && trackIndex < Int(document.trackCount)
+        if snapshotChanged || validTrack {
+            document.notes.withUnsafeBufferPointer { buffer in
+                let borrowed = Span(_unsafeElements: buffer)
+                for index in borrowed.indices {
+                    let note = borrowed[index]
+                    if snapshotChanged {
+                        documentEndTick = max(documentEndTick, Int(note.onTick) + Int(note.durationTicks))
+                    }
+                    if !validTrack || Int(note.trackIndex) != trackIndex { continue }
+                    notes.append(GridNote(
+                        noteId: index + 1, tick: Int(note.onTick),
+                        duration: Int(note.durationTicks), pitch: Int(note.key),
+                        track: Int(note.trackIndex), velocity: Int(note.velocity), ghost: false))
+                }
+            }
+        }
+        gesture = nil
+        activeNoteId = -1
+        selection.removeAll()
+        selectionAtRightPress.removeAll()
+        controllerEvents.removeAll()
+        pitchEditor = nil
+        pitchPreview.removeAll()
+        undoStack.removeAll()
+        syncUndoFlags()
+        noteSummaryDirty = true
+        publishGeometry()
+        recomputeGeometry()
+        rebuildScene()
         publishOutputs()
-        synchronizeAudio()
     }
 
     public func synchronizeAudio() {
+        guard !readOnly else { return }
         audio.sync(notes: notes, controllers: controllerEvents)
     }
 
@@ -154,7 +273,7 @@ public final class PianoGrid {
 
     @QtIgnored
     var selectedEditableNote: GridNote? {
-        notes.first { !$0.ghost && isSelected($0.noteId) }
+        readOnly ? nil : notes.first { !$0.ghost && isSelected($0.noteId) }
     }
 
     public func hasEditableSelection() -> Bool { selectedEditableNote != nil }
@@ -162,9 +281,10 @@ public final class PianoGrid {
     public func makePitchEditor(
         titleHeight: Double, captionHeight: Double,
         bodyFamily: String, monoFamily: String
-    ) -> PitchEditor {
+    ) -> Optional<PitchEditor> {
+        guard !readOnly, let note = selectedEditableNote else { return nil }
         let editor = PitchEditor(
-            note: selectedEditableNote!, events: controllerEvents,
+            note: note, events: controllerEvents,
             baseFontPx: metrics.baseFontPx, dpr: metrics.dpr,
             titleHeight: titleHeight, captionHeight: captionHeight,
             bodyFamily: bodyFamily, monoFamily: monoFamily, palette: palette)
@@ -174,7 +294,7 @@ public final class PianoGrid {
     }
 
     public func pitchEditorAnchor() -> [String: QVariantSettable] {
-        let note = selectedEditableNote!
+        guard !readOnly, let note = selectedEditableNote else { return [:] }
         let rect = metrics.noteRect(
             x0: metrics.displayX(Double(note.tick)),
             x1: metrics.displayX(Double(note.tick + note.duration)),
@@ -183,27 +303,32 @@ public final class PianoGrid {
     }
 
     public func previewPitchCurves() {
-        pitchPreview = pitchEditor!.controllerEvents()
+        guard !readOnly, let pitchEditor else { return }
+        pitchPreview = pitchEditor.controllerEvents()
         audio.sync(notes: notes, controllers: pitchPreview)
     }
 
     public func commitPitchCurves() {
+        guard !readOnly, pitchEditor != nil else { return }
         let before = controllerEvents
         controllerEvents = pitchPreview
         pushCommand(.controllerEvents(before: before, after: controllerEvents))
     }
 
     public func cancelPitchCurves() {
+        guard !readOnly else { return }
         pitchPreview = controllerEvents
         synchronizeAudio()
     }
 
     public func closePitchEditor() {
+        guard !readOnly else { return }
         pitchEditor = nil
         pitchPreview.removeAll()
     }
 
     public func deleteSelection() {
+        guard !readOnly else { return }
         let beforeNotes = notes.map(GridNoteSnapshot.init)
         let before = notes.count
         notes.removeAll { !$0.ghost && isSelected($0.noteId) }
@@ -217,18 +342,21 @@ public final class PianoGrid {
     }
 
     public func undo() {
+        guard !readOnly else { return }
         guard let command = undoStack.undo() else { return }
         applyUndoCommand(command, undoing: true)
         syncUndoFlags()
     }
 
     public func redo() {
+        guard !readOnly else { return }
         guard let command = undoStack.redo() else { return }
         applyUndoCommand(command, undoing: false)
         syncUndoFlags()
     }
 
     private func pushCommand(_ command: GridEditCommand) {
+        guard !readOnly else { return }
         let depth = undoStack.undoCount
         undoStack.push(command)
         if undoStack.undoCount != depth { revision += 1 }
@@ -241,6 +369,7 @@ public final class PianoGrid {
     }
 
     private func applyUndoCommand(_ command: GridEditCommand, undoing: Bool) {
+        guard !readOnly else { return }
         switch command {
         case .notes(let before, let after):
             notes = (undoing ? before : after).map { $0.materialize() }
@@ -259,7 +388,7 @@ public final class PianoGrid {
     ) {
         metrics = GridMetrics(
             baseFontPx: baseFontPx, dpr: devicePixelRatio,
-            width: width, height: height)
+            width: width, height: height, timeAxis: metrics.timeAxis)
         initialScrollY = defaultVerticalScroll()
         publishGeometry()
         recomputeGeometry()
@@ -276,8 +405,14 @@ public final class PianoGrid {
         keyboardWidth = m.keyboardWidth
         leadPadWidth = m.leadPadWidth
         gridHeight = m.gridHeight
+        ticksPerBeat = m.documentTicksPerBeat
         snapTicks = m.snapTicks
         visibleGridTicks = m.visibleGridTicks
+    }
+
+    public func reloadVisuals() {
+        rebuildScene()
+        publishOutputs()
     }
 
     private func sceneInput() -> GridSceneInput {
@@ -294,6 +429,7 @@ public final class PianoGrid {
             drawPreview: drawPreview,
             lastVelocity: lastVelocity,
             hoverKey: hoverKey,
+            viewportScrollX: viewportScrollX,
             viewportScrollY: viewportScrollY,
             selectionBand: selectionBand)
     }
@@ -330,16 +466,20 @@ public final class PianoGrid {
     }
 
     private func recomputeGridWidth() {
-        var end = GridMetrics.songLengthTicks
-        for i in 0..<notes.count {
-            end = max(end, notes[i].tick + notes[i].duration)
+        var end = documentFeed == nil ? GridMetrics.songLengthTicks : documentEndTick
+        if documentFeed == nil {
+            for note in notes {
+                end = max(end, note.tick + note.duration)
+            }
         }
         if let preview = drawPreview {
             end = max(end, preview.tick + preview.duration)
         }
-        gridWidth =
-            metrics.leadPadWidth + Double(end) * metrics.pxPerTick
+        let contentWidth = metrics.leadPadWidth + Double(end) * metrics.pxPerTick
             + metrics.viewportWidth
+        // A shorter/empty snapshot must not force the host Flickable to pan.
+        gridWidth = readOnly
+            ? max(contentWidth, viewportScrollX + metrics.viewportWidth) : contentWidth
     }
 
     @discardableResult
@@ -348,23 +488,19 @@ public final class PianoGrid {
         return updateTypography()
     }
 
-    private var typographyKey: (fontPx: Double, dpr: Double, maxBar: Int)?
+    private var typographyKey: (fontPx: Double, dpr: Double)?
 
     @discardableResult
     private func updateTypography() -> Bool {
-        let key = (
-            fontPx: metrics.baseFontPx, dpr: metrics.dpr,
-            maxBar: metrics.maxRulerBar(gridWidth: gridWidth)
-        )
+        let key = (fontPx: metrics.baseFontPx, dpr: metrics.dpr)
         if let current = typographyKey,
             current.fontPx == key.fontPx && current.dpr == key.dpr
-                && current.maxBar == key.maxBar
         {
             return false
         }
         measurementFonts = GridTypography.fonts(metrics: metrics)
         let measured = GridTypography(
-            fonts: measurementFonts, rowHeight: metrics.rowHeight, maxBar: key.maxBar)
+            fonts: measurementFonts, rowHeight: metrics.rowHeight)
         typography = measured
         typographyKey = key
         rulerHeight = measured.boldHeight + 1 + measured.rulerHeight + 1
@@ -380,6 +516,7 @@ public final class PianoGrid {
     }
 
     public func beginPointer(x: Double, y: Double) {
+        guard !readOnly else { return }
         guard gesture == nil else { return }
         let pressTick = metrics.tickAtContentX(x)
         let pressKey = metrics.yToPitch(y)
@@ -421,6 +558,7 @@ public final class PianoGrid {
     }
 
     public func updatePointer(x: Double, y: Double) {
+        guard !readOnly else { return }
         guard let g = gesture, !g.isRight else { return }
         gesture = g.updated(x: x, y: y, metrics: metrics)
         refreshNotes()
@@ -428,6 +566,7 @@ public final class PianoGrid {
     }
 
     public func endPointer() {
+        guard !readOnly else { return }
         guard let g = gesture, !g.isRight else { return }
         let beforeNotes = notes.map(GridNoteSnapshot.init)
         var mutated = false
@@ -490,6 +629,7 @@ public final class PianoGrid {
     }
 
     public func cancelPointer(reason: Int) {
+        guard !readOnly else { return }
         guard let g = gesture else { return }
         guard let cancelReason = GridCancelReason(rawValue: reason) else { return }
         // Focus loss keeps both gesture families alive with zero state
@@ -537,6 +677,7 @@ public final class PianoGrid {
     // QML contract unchanged); GridEscapeAction stays the internal type.
     @discardableResult
     public func escapePressed(noteMenuOpen: Bool) -> Int {
+        guard !readOnly else { return GridEscapeAction.none.rawValue }
         if gesture != nil {
             cancelPointer(reason: GridCancelReason.pointerUngrabbed.rawValue)
             return GridEscapeAction.cancelGesture.rawValue
@@ -560,6 +701,7 @@ public final class PianoGrid {
     }
 
     public func beginRightPointer(x: Double, y: Double, threshold: Double) {
+        guard !readOnly else { return }
         if let g = gesture, !g.isRight {
             gesture = nil
             activeNoteId = -1
@@ -585,6 +727,7 @@ public final class PianoGrid {
     }
 
     public func updateRightPointer(x: Double, y: Double) {
+        guard !readOnly else { return }
         guard let g = gesture, g.isRight else { return }
         gesture = g.updated(x: x, y: y, metrics: metrics)
         if let band = selectionBand {
@@ -595,6 +738,7 @@ public final class PianoGrid {
     }
 
     public func endRightPointer(x: Double, y: Double) {
+        guard !readOnly else { return }
         guard let g = gesture, g.isRight else { return }
         if case .pendingMenu(let state) = g {
             if state.hitNoteId >= 0 {
@@ -610,6 +754,7 @@ public final class PianoGrid {
     }
 
     public func cancelRightPointer(reason: Int) {
+        guard !readOnly else { return }
         guard let g = gesture, g.isRight else { return }
         guard let cancelReason = GridCancelReason(rawValue: reason) else { return }
         if cancelReason == .focusLost { return }
@@ -624,6 +769,7 @@ public final class PianoGrid {
     }
 
     private func applyBandSelection(_ band: (x: Double, y: Double, w: Double, h: Double)) {
+        guard !readOnly else { return }
         var covered: Set<Int> = []
         for note in notes where !note.ghost {
             let r = metrics.noteRect(
@@ -641,6 +787,7 @@ public final class PianoGrid {
     }
 
     public func doublePointer(x: Double, y: Double) {
+        guard !readOnly else { return }
         guard gesture == nil else { return }
         let beforeNotes = notes.map(GridNoteSnapshot.init)
         if let hit = hitNote(x: x, y: y) {
@@ -686,6 +833,12 @@ public final class PianoGrid {
         scene.rebuildHover(sceneInput())
     }
 
+    public func setViewportScrollX(x: Double) {
+        guard viewportScrollX != x else { return }
+        viewportScrollX = x
+        scene.rebuildStatic(sceneInput())
+    }
+
     public func hoverKeyboard(y: Double) {
         let key = metrics.yToPitch(y)
         guard key != hoverKey else { return }
@@ -700,6 +853,7 @@ public final class PianoGrid {
     }
 
     public func resetDemo() {
+        guard !readOnly, documentFeed == nil else { return }
         gesture = nil
         activeNoteId = -1
         selection.removeAll()
@@ -715,9 +869,11 @@ public final class PianoGrid {
         lastCancelReason = -1
         syncUndoFlags()
         noteSummaryDirty = true
-        recomputeGeometry()
+        recomputeGridWidth()
         initialScrollY = defaultVerticalScroll()
-        rebuildScene()
+        // App initializes demo values before Qt starts. The first viewport
+        // configuration owns native font measurement and scene construction.
+        if typography != nil { rebuildScene() }
         publishOutputs()
         synchronizeAudio()
     }
@@ -793,7 +949,9 @@ public final class PianoGrid {
     }
 
     private func publishOutputs() {
-        if noteSummaryDirty {
+        renderedNoteCount = notes.count
+        // The standalone lane's JSON diagnostics are not document publication.
+        if !readOnly && noteSummaryDirty {
             noteSummaryDirty = false
             var parts: [String] = []
             parts.reserveCapacity(notes.count)

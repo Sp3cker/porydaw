@@ -97,10 +97,15 @@ export async function localQtPrefix(
   installation = currentQtInstallation(),
 ): Promise<string | undefined> {
   const directory = qtInstallationDirectory(root, installation);
+  // aqt's Windows architecture name includes a win64_ prefix, but the
+  // extracted kit directory does not.
+  const kitDirectory = installation.host === "windows"
+    ? "msvc2022_64"
+    : installation.architecture;
   try {
     for await (const version of Deno.readDir(directory)) {
       if (!version.isDirectory || !isRequestedQtVersion(version.name)) continue;
-      const prefix = join(directory, version.name, installation.architecture);
+      const prefix = join(directory, version.name, kitDirectory);
       if (await exists(qtConfig(prefix))) return prefix;
     }
   } catch (error) {

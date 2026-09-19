@@ -37,9 +37,7 @@ if(APPLE)
     set(CMAKE_OBJCXX_STANDARD 20)
     set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
 endif()
-set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
 
 # Strict diagnostics apply only to project C++ translation units. Vendored C
 # implementation units are excluded, and third-party headers are SYSTEM
@@ -117,6 +115,7 @@ if(PORYDAW_COVERAGE)
 endif()
 
 find_package(Qt6 6.11 REQUIRED COMPONENTS Qml Quick QuickControls2 Svg Widgets)
+qt_standard_project_setup()
 
 function(porydaw_mark_interface_includes_system dependency)
     get_target_property(dependency_include_dirs ${dependency} INTERFACE_INCLUDE_DIRECTORIES)
@@ -164,6 +163,55 @@ porydaw_add_release_engine()
 
 if(PORYDAW_COVERAGE)
     add_compile_options(-O0 -fno-inline)
+endif()
+
+if(APPLE)
+    enable_language(Swift)
+    include(cmake/QtBridge.cmake)
+
+    set(SWIFT_GRID_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swift-grid-prototype")
+    set(SWIFT_GRID_AUDIO_DIR "${SWIFT_GRID_DIR}/native")
+    set(SWIFT_GRID_FEED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swiftgrid")
+    qt_add_library(swiftgrid STATIC
+        "${SWIFT_GRID_DIR}/AudioSession.swift"
+        "${SWIFT_GRID_DIR}/EditCommands.swift"
+        "${SWIFT_GRID_DIR}/EditKeyArbiter.swift"
+        "${SWIFT_GRID_DIR}/GridFixture.swift"
+        "${SWIFT_GRID_DIR}/GridGeometry.swift"
+        "${SWIFT_GRID_DIR}/GridGesture.swift"
+        "${SWIFT_GRID_DIR}/GridPalette.swift"
+        "${SWIFT_GRID_DIR}/GridScene.swift"
+        "${SWIFT_GRID_DIR}/GridTypography.swift"
+        "${SWIFT_GRID_DIR}/GridUndo.swift"
+        "${SWIFT_GRID_DIR}/PianoGrid.swift"
+        "${SWIFT_GRID_DIR}/PitchEditor.swift"
+        "${SWIFT_GRID_DIR}/PitchGraph.swift"
+        "${SWIFT_GRID_DIR}/PitchProjection.swift"
+        "${SWIFT_GRID_DIR}/SgcCommands.swift"
+        "${SWIFT_GRID_DIR}/SgdDocument.swift"
+        "${SWIFT_GRID_DIR}/Tick.swift"
+        "${SWIFT_GRID_DIR}/TimeAxis.swift"
+        "${SWIFT_GRID_DIR}/SwiftGridHost.swift"
+    )
+    set_target_properties(swiftgrid PROPERTIES
+        Swift_MODULE_NAME SwiftGrid
+        Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swiftgrid"
+        Swift_LANGUAGE_VERSION 6
+        AUTOMOC OFF
+        AUTOUIC OFF
+        NO_SYSTEM_FROM_IMPORTED ON
+    )
+    target_include_directories(swiftgrid INTERFACE
+        "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:swiftgrid,Swift_MODULE_DIRECTORY>>"
+    )
+    target_compile_options(swiftgrid PUBLIC
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_AUDIO_DIR}/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_FEED_DIR}/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_AUDIO_DIR}>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_FEED_DIR}>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/src>"
+    )
+    target_link_libraries(swiftgrid PUBLIC QtBridge)
 endif()
 
 # ---- porydaw application ----
@@ -465,11 +513,33 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/velocityaxis.cpp
     src/ui/editordrawer/velocityaxis.h
 )
+# Shared seam closure (cmake/SwiftGridFeeds.cmake): both this target and the
+# standalone prototype lane compile the same feed TUs with the same include
+# roots from one definition.
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/SwiftGridFeeds.cmake")
+
 if(APPLE)
     target_sources(porydaw_app PRIVATE
         src/ui/nativelayerutils_macos_p.h
         src/ui/playheadrenderer_macos.mm
+        "${SWIFT_GRID_AUDIO_DIR}/audio_session.cpp"
+        "${SWIFT_GRID_AUDIO_DIR}/audio_session_internal.h"
+        "${SWIFT_GRID_AUDIO_DIR}/curve_session.cpp"
+        "${SWIFT_GRID_AUDIO_DIR}/font_metrics.cpp"
+        "${SWIFT_GRID_AUDIO_DIR}/window_cancel.cpp"
+        "${SWIFT_GRID_FEED_DIR}/swift_grid_document_feed.cpp"
+        "${SWIFT_GRID_FEED_DIR}/swift_grid_document_feed.h"
+        "${SWIFT_GRID_FEED_DIR}/session_feed_view.cpp"
+        "${SWIFT_GRID_FEED_DIR}/session_feed_view.h"
+        "${SWIFT_GRID_FEED_DIR}/grid_host.h"
+        "${SWIFT_GRID_FEED_DIR}/swift_roll_mount.cpp"
+        "${SWIFT_GRID_FEED_DIR}/swift_roll_mount.h"
     )
+    # The native seams reuse the engine/core/math objects already in this target.
+    set_source_files_properties("${SWIFT_GRID_AUDIO_DIR}/audio_session_internal.h"
+        PROPERTIES HEADER_FILE_ONLY ON)
+    target_link_libraries(porydaw_app PUBLIC swiftgrid)
+    target_link_libraries(porydaw_app PRIVATE swift_grid_feed_closure)
     # Qt's qdebug.h UInt alias collides with macOS OSTypes.h only in this
     # Objective-C++ bridge; keep project -Wshadow enabled everywhere else.
     set_property(SOURCE src/ui/playheadrenderer_macos.mm APPEND PROPERTY
@@ -505,14 +575,19 @@ porydaw_enable_project_warnings(porydaw_app)
 # The project() version is the single source of truth (docs/RELEASING.md);
 # release CI refuses a tag that doesn't match it.
 target_compile_definitions(porydaw_app PUBLIC
-    PORYDAW_VERSION="${PROJECT_VERSION}")
+    "$<$<NOT:$<COMPILE_LANGUAGE:Swift>>:PORYDAW_VERSION=\"${PROJECT_VERSION}\">")
 target_link_libraries(porydaw_app PUBLIC Qt6::Svg Qt6::Widgets poryaaaa_engine)
 target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick Qt6::QuickControls2)
 if(APPLE)
     # Keep framework headers ahead of stale non-framework Qt installs such
     # as /usr/local/include/Qt*. Treating imported frameworks as system
     # headers lets Clang select the unrelated include tree first.
-    set_target_properties(porydaw_app PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
+    # This archive contains only native objects; Swift's archive rule would
+    # incorrectly treat the C++ precompiled header as a Swift input.
+    set_target_properties(porydaw_app PROPERTIES
+        NO_SYSTEM_FROM_IMPORTED ON
+        LINKER_LANGUAGE CXX
+    )
 endif()
 set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 # Each Quick file is bundled at its basename; one loop instead of one
@@ -564,6 +639,16 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/InsertTimePrompt.qml
         src/ui/songview/quick/VoicePickerPrompt.qml
 )
+if(APPLE)
+    qt_add_resources(porydaw_app "swift_grid_qml"
+        PREFIX "/swiftgrid"
+        BASE "${SWIFT_GRID_DIR}"
+        FILES
+            "${SWIFT_GRID_DIR}/SwiftRollOverlay.qml"
+            "${SWIFT_GRID_DIR}/PianoRollCanvas.qml"
+            "${SWIFT_GRID_DIR}/TimelineQuickItem.qml"
+    )
+endif()
 target_precompile_headers(porydaw_app PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
 if(UNIX AND NOT APPLE)
@@ -576,6 +661,10 @@ qt_add_executable(porydaw
     resources/fonts.qrc
 )
 target_link_libraries(porydaw PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>")
+if(APPLE)
+    # Link native LTO objects with the same C++ toolchain that compiled them.
+    set_target_properties(porydaw PROPERTIES LINKER_LANGUAGE CXX)
+endif()
 
 if(PORYDAW_BUILD_CHECKS)
     add_subdirectory(src/checks)

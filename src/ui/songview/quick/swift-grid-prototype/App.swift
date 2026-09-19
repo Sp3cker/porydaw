@@ -28,6 +28,12 @@ struct SwiftGridApp: QApp {
         songTabs.openTab()
         songTabs.openTab()
         songTabs.selectTab(tabId: initialTabId)
+        // Demo-lane machinery (charter demo-lane row): seeds fixture grids;
+        // retires with the standalone lane's gate.
+        for grid in songTabs.grids {
+            grid.audio.initializeDemo()
+            grid.resetDemo()
+        }
         sgw_installWindowCancelHost(
             deliverWindowCancel, Unmanaged.passUnretained(songTabs).toOpaque())
         installGridSmoke()

@@ -22,7 +22,10 @@ public final class AudioSession {
 
     @QtIgnored private var session: OpaquePointer?
 
-    public init() {
+    public init() {}
+
+    public func initializeDemo() {
+        guard session == nil else { return }
         guard let resources = Bundle.main.resourceURL else {
             errorText = "The application bundle has no audio resource directory."
             return

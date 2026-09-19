@@ -39,6 +39,22 @@ int runEditCheck(const QStringList &checkArguments, const QStringList &qtArgumen
 int runScaleCheck(const QStringList &checkArguments, const QStringList &qtArguments);
 int runNoteIdentityCheck(const QStringList &checkArguments, const QStringList &qtArguments);
 
+#ifdef __APPLE__
+// Production Swift document value feed (src/checks/swiftdocfeed).
+int runSwiftDocFeedCheck(const QString &projectRoot, const QString &songLabel,
+                         const QStringList &qtArguments);
+// sgc_ intent pipe and executor (src/checks/swiftcommands).
+int runSwiftCommandsCheck(const QString &projectRoot, const QString &songLabel,
+                          const QStringList &qtArguments);
+// Gated read-only Swift roll overlay in production (src/checks/swiftrollgated).
+int runSwiftRollGatedCheck(const QString &projectRoot, const QString &songA, const QString &songB,
+                           const QStringList &qtArguments);
+#endif
+
+// Roll frame-cost bench, both roll flavors (src/checks/swiftrollbench).
+int runSwiftRollBenchCheck(const QString &projectRoot, const QString &song,
+                           const QStringList &qtArguments);
+
 // Onboarding (src/checks/onboardcheck).
 int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath,
                     const QStringList &qtArguments);

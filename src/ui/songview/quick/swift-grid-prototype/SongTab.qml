@@ -343,6 +343,7 @@ FocusScope {
                     contentWidth: pianoGridSurface.width
                     contentHeight: pianoGridSurface.height
                     onContentYChanged: root.gridModel.setViewportScroll(contentY)
+                    onContentXChanged: root.gridModel.setViewportScrollX(contentX)
 
                     ScrollBar.vertical: ScrollBar {
                         policy: ScrollBar.AsNeeded
