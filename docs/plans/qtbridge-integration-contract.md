@@ -152,10 +152,24 @@ Qualification commands (executed 2026-09-19, branch
 - Reference filters `loopcheck primecheck trackactivitycheck exportcheck`,
   `smfcheck velocity-model` → PASS (unchanged references).
 
-Not established by these rows: new standard-library availability on other
-deployment targets, callback realtime safety, RigidArray/Span/@c
+Standard-library interface inspection during the plan audit (not a runtime
+probe): the selected toolchain's
+`usr/lib/swift/macosx/Swift.swiftmodule/arm64-apple-macos.swiftinterface`
+declares `InlineArray` with `@available(anyAppleOS 26.0, *)`, and `UniqueArray`
+and `UniqueBox` with `@available(anyAppleOS 27.0, *)`. The compiler's
+`-print-target-info` reports default target `arm64-apple-macosx26.0`;
+`CMAKE_OSX_DEPLOYMENT_TARGET` remains empty. The two unique containers therefore
+require an approved deployment change before adoption. No availability fallback
+or target bump is authorized by this plan.
+
+The [SE-0527 acceptance decision](https://forums.swift.org/t/accepted-in-principle-se-0527-uniquearray/86943)
+excluded public `RigidArray` and the proposed `Containers` module; the proposal
+body still describes that earlier design. Do not use its blanket implementation
+status as proof that every proposed API shipped.
+
+Not established by these rows: callback realtime safety, InlineArray/Span/@c
 representation decisions (task 5's bounded comparison owns those), or final
-consumer behavior.
+consumer behavior. Source availability annotations do not prove runtime cost.
 
 ### M0 capability probe — recorded 2026-09-19
 
