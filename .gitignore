@@ -11,4 +11,8 @@ site/
 .worktrees
 
 # SDD loop review breadcrumbs
-docs/plans/**/*-review.diff
+docs/plans/**/*-review.diffbench/scale-bench/bench_scale
+bench/scale-bench/scale_sweep_native
+bench/scale-bench/scale_sweep_u32
+bench/scale-bench/sweep_nat300
+bench/scale-bench/sweep_u3000
