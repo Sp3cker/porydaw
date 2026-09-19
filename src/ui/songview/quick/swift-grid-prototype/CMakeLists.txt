@@ -121,6 +121,7 @@ set(SWIFT_GRID_SMOKE_DIR
 
 add_library(swift_grid_smoke STATIC
     "${SWIFT_GRID_SMOKE_DIR}/grid_smoke.cpp"
+    "${SWIFT_GRID_SMOKE_DIR}/document_feed_smoke.cpp"
     "${SWIFT_GRID_SMOKE_DIR}/songtabs_smoke.cpp"
     "${SWIFT_GRID_SMOKE_DIR}/audio_smoke.cpp"
     "${SWIFT_GRID_SMOKE_DIR}/interaction_smoke.cpp"

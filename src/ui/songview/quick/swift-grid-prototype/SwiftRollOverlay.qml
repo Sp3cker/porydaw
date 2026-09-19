@@ -86,8 +86,8 @@ Item {
 
             contentWidth: pianoGridSurface.width
             contentHeight: pianoGridSurface.height
-            onContentXChanged: swiftGridModel.setViewportScrollX(contentX)
-            onContentYChanged: swiftGridModel.setViewportScroll(contentY)
+            onContentXChanged: swiftGridModel.setViewportScroll(contentX, contentY)
+            onContentYChanged: swiftGridModel.setViewportScroll(contentX, contentY)
 
             // Unified viewing scroll: WheelHandler captures wheel/pan over the
             // visible viewport; rollInput.onWheel forwards content-area wheel events.

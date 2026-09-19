@@ -174,6 +174,20 @@ public final class PianoGrid: QmlInstantiableStatus {
         bindDocument(documentToken: documentToken)
     }
 
+    public func setViewportScroll(x: Double, y: Double) {
+        let xChanged = viewportScrollX != x
+        let yChanged = viewportScrollY != y
+        guard xChanged || yChanged else { return }
+        viewportScrollX = x
+        viewportScrollY = y
+        if xChanged {
+            scene.rebuildStatic(sceneInput())
+        }
+        if yChanged {
+            scene.rebuildHover(sceneInput())
+        }
+    }
+
     public func bindDocument(documentToken: String) {
         precondition(documentFeed == nil, "Document binding is immutable")
         guard let token = UInt64(documentToken), token != 0,
@@ -827,17 +841,6 @@ public final class PianoGrid: QmlInstantiableStatus {
         }
     }
 
-    public func setViewportScroll(y: Double) {
-        guard viewportScrollY != y else { return }
-        viewportScrollY = y
-        scene.rebuildHover(sceneInput())
-    }
-
-    public func setViewportScrollX(x: Double) {
-        guard viewportScrollX != x else { return }
-        viewportScrollX = x
-        scene.rebuildStatic(sceneInput())
-    }
 
     public func hoverKeyboard(y: Double) {
         let key = metrics.yToPitch(y)
