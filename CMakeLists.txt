@@ -167,6 +167,8 @@ endif()
 
 if(APPLE)
     enable_language(Swift)
+    add_subdirectory(src/swift/core)
+    add_subdirectory(src/swift/playback)
     include(cmake/QtBridge.cmake)
 
     set(SWIFT_GRID_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swiftroll")

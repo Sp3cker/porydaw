@@ -386,6 +386,25 @@ endif()
 
 porydaw_enable_project_warnings(porydaw_checks)
 if(APPLE)
+    add_library(swift_core_check STATIC
+        swiftcore/MidiChecks.swift
+        swiftcore/PlaybackChecks.swift
+    )
+    set_target_properties(swift_core_check PROPERTIES
+        Swift_MODULE_NAME SwiftCoreCheck
+        Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check"
+        Swift_LANGUAGE_VERSION 6
+        AUTOMOC OFF
+        AUTOUIC OFF
+        AUTORCC OFF
+    )
+    target_link_libraries(swift_core_check PRIVATE PorydawCore PorydawPlayback)
+    target_link_libraries(porydaw_checks PRIVATE swift_core_check)
+    target_sources(porydaw_checks PRIVATE
+        swiftcore/tst_swiftcore.cpp
+        swiftcore/tst_swiftcore.h
+        swiftcore/core_check.h
+    )
     qt_add_library(swift_doc_feed_check STATIC
         swiftdocfeed/DocumentFeedCheck.swift
     )

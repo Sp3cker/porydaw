@@ -1,0 +1,5 @@
+module PorydawPlaybackNative {
+    header "@PORYAAAA_DIR@/plugin/m4a_engine.h"
+    header "@CMAKE_CURRENT_SOURCE_DIR@/../../audio/swift_playback.h"
+    export *
+}

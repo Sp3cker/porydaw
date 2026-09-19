@@ -115,6 +115,44 @@ export async function localQtPrefix(
   return undefined;
 }
 
+// Bind the Swift compiler to the swiftly-managed toolchain named by
+// .swift-version when one is installed. CMake's Apple Swift discovery goes
+// through `xcrun --find swiftc`, which ignores PATH, so the swiftly shim
+// never wins without an explicit -D. Returns nothing on platforms or
+// checkouts without swiftly so other hosts are unaffected.
+export async function swiftToolchainArgument(
+  root = Deno.cwd(),
+): Promise<string | undefined> {
+  if (Deno.build.os !== "darwin") return undefined;
+  let version: string;
+  try {
+    version = (await Deno.readTextFile(join(root, ".swift-version"))).trim();
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) return undefined;
+    throw error;
+  }
+  if (!version) return undefined;
+  const home = Deno.env.get("HOME");
+  if (!home) return undefined;
+  let inUse: string | undefined;
+  try {
+    const config = JSON.parse(
+      await Deno.readTextFile(join(home, ".swiftly", "config.json")),
+    );
+    inUse = typeof config?.inUse === "string" ? config.inUse : undefined;
+  } catch (error) {
+    if (!(error instanceof Deno.errors.NotFound)) throw error;
+  }
+  if (inUse !== undefined && inUse !== version) {
+    throw new Error(
+      `swiftly in-use toolchain ${inUse} does not match pinned .swift-version ${version}; run: swiftly use ${version}`,
+    );
+  }
+  const compiler = join(home, ".swiftly", "bin", "swiftc");
+  if (!(await exists(compiler))) return undefined;
+  return `-DCMAKE_Swift_COMPILER=${compiler}`;
+}
+
 function defaultGeneratorArguments(): string[] {
   return currentQtInstallation().host === "windows"
     ? ["-G", "Visual Studio 17 2022", "-A", "x64"]
@@ -143,6 +181,7 @@ export async function cmakeConfigureArgs({
     await exists(join(buildDirectory, "CMakeCache.txt"))
       ? []
       : defaultGeneratorArguments();
+  const swiftToolchain = await swiftToolchainArgument();
   return [
     "-S",
     ".",
@@ -154,6 +193,7 @@ export async function cmakeConfigureArgs({
       ? []
       : [`-DPORYDAW_BUILD_CHECKS=${buildChecks ? "ON" : "OFF"}`]),
     ...(qtPrefix ? [`-DCMAKE_PREFIX_PATH=${qtPrefix}`] : []),
+    ...(swiftToolchain ? [swiftToolchain] : []),
     poryaaaaArgument,
   ];
 }

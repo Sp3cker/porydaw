@@ -108,22 +108,54 @@ Every guarantee needs: requirement, pinned implementation/source anchor, reprodu
 
 ### Swift 6.4 qualification
 
-Status: **Unverified for the project**. Swift 6.4 installation is user-reported;
-the 6.3.3 baseline and M0 observations below remain historical evidence, not
-6.4 results. Do not overwrite their toolchain labels or carry their Verified
-status forward to the new compiler.
+Status: **Qualified for app/checks compilation and bridge capability
+primitives — 2026-09-19, controller-executed.** The 6.3.3 baseline and M0
+observations below remain historical evidence with their own labels.
 
-The [core rewrite qualification gate](swift-core-rewrite/plan.md#swift-64-qualification)
-owns commands and execution policy. Record the compiler executable/version,
-SDK/deployment target, language/interop flags, QtBridge revision/patch identity,
-macro compiler, exact commands and observed results here after qualification.
-App/macro compilation and `swiftqtml` capability primitives need fresh evidence;
-existing unsupported bridge paths remain unsupported absent a specific fix and
-reproduction. Core/playback and final consumer acceptance remain separate.
+Toolchain facts (observed, not assumed):
 
-No new standard-library availability, callback performance or borrowed-lifetime
-guarantee is established by this planning amendment. Task 5's bounded comparison
-records the actual decision before a new storage/export implementation is used.
+- Compiler: `/Users/spencer/.swiftly/bin/swiftc`, Apple Swift 6.4
+  (`swift-6.4-RELEASE`), target `arm64-apple-macosx26.0`. Selected by the
+  runner (`tools/local_build_environment.ts` `swiftToolchainArgument`) from
+  the `.swift-version` pin (6.4.0) via `-DCMAKE_Swift_COMPILER`; CMake's
+  Apple Swift discovery otherwise resolves `xcrun --find swiftc` and ignores
+  PATH. swiftly config `inUse: 6.4.0` matches the pin; a mismatch fails the
+  configure loudly.
+- Main build and `QtBridgeMacros_External` both bind the swiftly 6.4
+  compiler (rules.ninja + external CMakeCache inspected); the macro package
+  binary was rebuilt under 6.4 before this qualification.
+- `CMAKE_OSX_DEPLOYMENT_TARGET`/`CMAKE_OSX_SYSROOT` are unset — toolchain
+  and SDK defaults apply. No explicit C++ interop flags on `PorydawCore`
+  (Qt-free); QtBridge targets keep their existing flags from the pinned
+  patch (pin `407714006dd…`, 4 local hunks — unchanged from the 6.3.3
+  baseline).
+- Language mode: `-swift-version 6` / `Swift_LANGUAGE_VERSION 6` on every
+  Swift target (mode, not compiler release). Observed emit-module mode
+  enforces borrow/consume diagnostics that plain typecheck does not: two
+  writer idiom patterns failed only under `-emit-module` (a `borrowing`
+  generic parameter whose property access is diagnosed as a consume — fixed
+  by passing the 16-byte view structs by value; and internal methods generic
+  over a private protocol — fixed by privatizing). Writers must not rely on
+  typecheck-only approval for emit-module-compiled targets.
+
+Qualification commands (executed 2026-09-19, branch
+`feature/swift-qml-grid` after `ea10dee2` + working tree):
+
+- `deno task build:checks` → build ok (PorydawCore now includes
+  `PlaybackTimeline.swift`; `PorydawPlayback` target + `swiftcore` playback
+  slot wired).
+- `deno task verify --filter swiftcore --verbose` → PASS (midiCodec,
+  musicalSemantics, playback — differential vs C++ oracle, real engine).
+- `deno task build:app` → build ok.
+- `deno task verify --filter swiftqtml --verbose` → PASS (bridge capability
+  primitives re-proven under 6.4).
+- Reference filters `loopcheck primecheck trackactivitycheck exportcheck`,
+  `smfcheck velocity-model` → PASS (unchanged references).
+
+Not established by these rows: new standard-library availability on other
+deployment targets, callback realtime safety, RigidArray/Span/@c
+representation decisions (task 5's bounded comparison owns those), or final
+consumer behavior.
 
 ### M0 capability probe — recorded 2026-09-19
 

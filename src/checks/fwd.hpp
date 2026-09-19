@@ -40,6 +40,8 @@ int runScaleCheck(const QStringList &checkArguments, const QStringList &qtArgume
 int runNoteIdentityCheck(const QStringList &checkArguments, const QStringList &qtArguments);
 
 #ifdef __APPLE__
+// Qt-free Swift MIDI codec and musical semantics (src/checks/swiftcore).
+int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);
 // Production Swift document value feed (src/checks/swiftdocfeed).
 int runSwiftDocFeedCheck(const QString &projectRoot, const QString &songLabel,
                          const QStringList &qtArguments);
