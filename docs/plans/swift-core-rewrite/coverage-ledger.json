@@ -267,10 +267,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -284,10 +285,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -304,10 +306,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -321,10 +324,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -338,10 +342,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -358,10 +363,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -420,10 +426,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -440,10 +447,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -1276,10 +1284,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -1512,10 +1521,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -1529,10 +1539,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -1546,10 +1557,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -1617,10 +1629,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -1960,10 +1973,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -1980,10 +1994,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -2000,10 +2015,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -2180,10 +2196,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -2200,10 +2217,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -2220,10 +2238,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -2240,10 +2259,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -2257,10 +2277,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -2277,10 +2298,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -2297,10 +2319,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -2317,10 +2340,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -2535,8 +2559,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 export integration checks preserving filter variant and function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -2549,8 +2577,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 export integration checks preserving filter variant and function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -2563,8 +2595,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 export integration checks preserving filter variant and function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -2577,8 +2613,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 export integration checks preserving filter variant and function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -2591,8 +2631,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 export integration checks preserving filter variant and function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -2605,8 +2649,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 export integration checks preserving filter variant and function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -2619,8 +2667,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 export integration checks preserving filter variant and function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -2633,8 +2685,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 export integration checks preserving filter variant and function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -3522,8 +3578,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 sequencer comparison preserving each row name in failure ID",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent fixed Swift expectation."
@@ -3537,8 +3597,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 sequencer comparison preserving each row name in failure ID",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent fixed Swift expectation."
@@ -3552,8 +3616,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 sequencer comparison preserving each row name in failure ID",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent fixed Swift expectation."
@@ -3567,8 +3635,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 sequencer comparison preserving each row name in failure ID",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent fixed Swift expectation."
@@ -3582,8 +3654,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 sequencer comparison preserving each row name in failure ID",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent fixed Swift expectation."
@@ -3597,8 +3673,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 sequencer comparison preserving each row name in failure ID",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent fixed Swift expectation."
@@ -3612,8 +3692,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 PlaybackTimeline exact loop point check",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to independent fixed loop-point expectations."
@@ -4372,8 +4456,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 PlaybackTimeline identity transport check",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to independent stamped and unassigned NoteID expectations."
@@ -4387,10 +4475,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4404,10 +4493,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4421,10 +4511,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4438,10 +4529,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4455,10 +4547,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4472,10 +4565,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4489,10 +4583,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4506,10 +4601,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4523,10 +4619,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4540,10 +4637,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4557,10 +4655,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4574,10 +4673,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4591,10 +4691,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4608,10 +4709,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4625,10 +4727,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4642,10 +4745,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4659,10 +4763,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4676,10 +4781,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4693,10 +4799,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4710,10 +4817,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4727,10 +4835,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4744,10 +4853,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4761,10 +4871,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4778,10 +4889,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4795,10 +4907,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4812,10 +4925,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4829,10 +4943,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4846,10 +4961,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4863,10 +4979,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4880,10 +4997,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4897,10 +5015,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4914,10 +5033,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4931,10 +5051,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4948,10 +5069,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4965,10 +5087,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4982,10 +5105,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -4999,10 +5123,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -5016,10 +5141,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -5033,10 +5159,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -5050,10 +5177,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -5067,10 +5195,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -5084,10 +5213,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -5101,10 +5231,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -5118,10 +5249,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -5135,10 +5267,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -5212,8 +5345,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 sequencer priming tests with function/row cppIds",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to independent fixed program and voice expectations."
@@ -5227,8 +5364,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 sequencer priming tests with function/row cppIds",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to independent fixed program and voice expectations."
@@ -5242,8 +5383,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 sequencer priming tests with function/row cppIds",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to independent fixed program and voice expectations."
@@ -5257,8 +5402,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 sequencer priming tests with function/row cppIds",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to independent fixed program and voice expectations."
@@ -5272,8 +5421,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 sequencer priming tests with function/row cppIds",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent audibility expectation."
@@ -5287,8 +5440,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 sequencer priming tests with function/row cppIds",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent silence expectation."
@@ -7738,10 +7895,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -7756,10 +7914,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -7774,10 +7933,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -7792,10 +7952,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -7810,10 +7971,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -7828,10 +7990,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -7846,10 +8009,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -7864,10 +8028,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -7882,10 +8047,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -7900,10 +8066,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -7918,10 +8085,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -7936,10 +8104,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -7954,10 +8123,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -7972,10 +8142,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -7990,10 +8161,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
@@ -9469,8 +9641,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "swiftcore/playback independent fixed engine-track mapping expectations under the exact cppId",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 controller verification.",
       "reconciliationNotes": "Scout classified this as Task 1; the source assertion is playback timeline/engine projection behavior due Task 5, while stored MIDI bytes remain lossless. Retired the C++ projection oracle parity; the unchanged cppId now maps to independent fixed engine-track expectations.",
@@ -9507,10 +9683,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -9524,10 +9701,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -9541,10 +9719,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -9558,10 +9737,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -9575,10 +9755,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -9592,10 +9773,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -9633,8 +9815,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 PlaybackTimeline/Sequencer tests with each baseline function ID",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Scout classified this as Task 1; the source assertion is playback timeline/engine projection behavior due Task 5, while stored MIDI bytes remain lossless."
@@ -9684,8 +9870,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 PlaybackTimeline/Sequencer tests with each baseline function ID",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Scout classified this as Task 1; the source assertion is playback timeline/engine projection behavior due Task 5, while stored MIDI bytes remain lossless."
@@ -9699,8 +9889,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 PlaybackTimeline independent exact-sample and inverse-tolerance expectations under this cppId",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 controller verification",
       "reconciliationNotes": "Scout classified this as Task 1; the source assertion is playback timeline/engine projection behavior due Task 5, while stored MIDI bytes remain lossless. Retired the C++ projection oracle parity; the unchanged cppId now maps to independent fixed sample positions and inverse-tolerance expectations."
@@ -10536,8 +10730,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 playback activity projection checks retaining function and row IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10550,8 +10748,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 playback activity projection checks retaining function and row IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10564,8 +10766,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 playback activity projection checks retaining function and row IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10578,8 +10784,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 playback activity projection checks retaining function and row IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10592,8 +10802,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 playback activity projection checks retaining function and row IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10606,8 +10820,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 playback activity projection checks retaining function and row IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10620,8 +10838,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 playback activity projection checks retaining function and row IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10634,8 +10856,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 playback activity projection checks retaining function and row IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10648,8 +10874,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 playback activity projection checks retaining function and row IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10662,8 +10892,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 playback activity projection checks retaining function and row IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10676,8 +10910,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 playback activity projection checks retaining function and row IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10690,8 +10928,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 playback activity projection checks retaining function and row IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10764,8 +11006,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer/retained AudioEngine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10778,8 +11024,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer retained-engine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ PCM parity; the unchanged cppId now maps to independent position and keyed-on-note expectations after live replacement."
@@ -10793,8 +11043,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer/retained AudioEngine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10807,8 +11061,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer/retained AudioEngine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10821,8 +11079,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer/retained AudioEngine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10835,8 +11097,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer/retained AudioEngine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10849,8 +11115,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer retained-engine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ PCM parity; the unchanged cppId now maps to independent CGB preview continuity and release expectations."
@@ -10864,8 +11134,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer retained-engine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison",
       "reconciliationNotes": "Retired Task 5 C++ PCM parity; the unchanged cppId now maps to an independent sounding CGB-note continuity expectation."
@@ -10879,8 +11153,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer/retained AudioEngine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10893,8 +11171,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer/retained AudioEngine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10907,8 +11189,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer/retained AudioEngine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10921,8 +11207,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer/retained AudioEngine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10949,8 +11239,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer/retained AudioEngine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10963,8 +11257,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer/retained AudioEngine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -10991,8 +11289,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer/retained AudioEngine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -11019,8 +11321,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 5,
       "swiftTargets": "Task 5 Sequencer/retained AudioEngine integration checks with per-function IDs",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (playback suite); reference filters loopcheck primecheck exportcheck trackactivitycheck",
+        "revision": "e36e0fea",
+        "result": "PASS; all 24 playback rows independent fixed expectations after oracle retirement (PlaybackRepairReview row-fidelity verified)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 5 Swift comparison"
     },
@@ -11995,10 +12301,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12012,10 +12319,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12029,10 +12337,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12046,10 +12355,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12063,10 +12373,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12080,10 +12391,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12097,10 +12409,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12114,10 +12427,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12131,10 +12445,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12148,10 +12463,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12165,10 +12481,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12182,10 +12499,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12199,10 +12517,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12216,10 +12535,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12233,10 +12553,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12250,10 +12571,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12267,10 +12589,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12284,10 +12607,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12301,10 +12625,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12318,10 +12643,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12335,10 +12661,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12352,10 +12679,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12369,10 +12697,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12386,10 +12715,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12403,10 +12733,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12420,10 +12751,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12437,10 +12769,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12454,10 +12787,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12471,10 +12805,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12488,10 +12823,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12505,10 +12841,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12522,10 +12859,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12539,10 +12877,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12556,10 +12895,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12573,10 +12913,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12590,10 +12931,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
@@ -12607,10 +12949,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "status": "controller-run-pending"
+        "revision": "e36e0fea",
+        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
