@@ -91,6 +91,16 @@ public struct SaveSnapshot: Sendable {
     public let destination: SongSource
     public let revision: UInt64
     public let identity: DocumentIdentity
+
+    public init(bytes: [UInt8], config: SongConfig, flagsNeeded: Bool,
+                destination: SongSource, revision: UInt64, identity: DocumentIdentity) {
+        self.bytes = bytes
+        self.config = config
+        self.flagsNeeded = flagsNeeded
+        self.destination = destination
+        self.revision = revision
+        self.identity = identity
+    }
 }
 
 public struct Note: Equatable, Sendable {

@@ -68,6 +68,16 @@ void SwiftCoreTest::timeEdits()
     pdc_suite_run(PDC_SUITE_TIME_EDITS, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::projectSession()
+{
+    pdc_suite_run(PDC_SUITE_PROJECT_SESSION, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::bankHistory()
+{
+    pdc_suite_run(PDC_SUITE_BANK_HISTORY, reportSwiftCheck, this);
+}
+
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);

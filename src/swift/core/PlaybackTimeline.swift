@@ -165,6 +165,16 @@ public struct PlaybackTimeline: Sendable {
         buildTimeline(file: file, authoritativeTempo: tempo, sampleRate: sampleRate,
                       settings: settings)
     }
+    /// The sole document-state projection factory (Task 6 amendment).
+    /// Delegates to the file-based builder with the authoritative state tempo
+    /// and PlaybackSettings derived from the state's decoded config; tempo
+    /// metas stay stripped from the file (never a file-tempo fallback).
+    /// Neither mutates, encodes/decodes, nor creates a settings owner.
+    public static func build(state: borrowing SongState, sampleRate: Double) -> PlaybackTimeline {
+        build(file: state.file, tempo: state.tempo, sampleRate: sampleRate,
+              settings: PlaybackSettings(exactGate: state.config.exactGate,
+                                         extendedClocks: state.config.extendedClocks))
+    }
 
     public var hasLoop: Bool {
         playbackHasLoop(startSample: loopStartSample, endSample: loopEndSample)

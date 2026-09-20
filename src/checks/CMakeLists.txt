@@ -393,6 +393,7 @@ if(APPLE)
         swiftcore/NoteChecks.swift
         swiftcore/EventChecks.swift
         swiftcore/TimeChecks.swift
+        swiftcore/SessionChecks.swift
     )
     set_target_properties(swift_core_check PROPERTIES
         Swift_MODULE_NAME SwiftCoreCheck
@@ -404,9 +405,11 @@ if(APPLE)
     )
     target_compile_options(swift_core_check PRIVATE
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap">
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/../project>"
     )
-    target_link_libraries(swift_core_check PRIVATE PorydawCore PorydawPlayback)
+    target_link_libraries(swift_core_check PRIVATE PorydawCore PorydawPlayback PorydawApp)
     target_link_libraries(porydaw_checks PRIVATE swift_core_check)
     target_sources(porydaw_checks PRIVATE
         support/corecheck/tst_swiftcore.cpp

@@ -22,6 +22,8 @@ class SwiftCoreTest final : public QObject
     void xcmdEdits();
     void midiImport();
     void timeEdits();
+    void projectSession();
+    void bankHistory();
 };
 
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);

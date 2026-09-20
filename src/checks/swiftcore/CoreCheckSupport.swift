@@ -127,6 +127,16 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         MainActor.assumeIsolated {
             runTimeEditsSuite(boxedTime.report)
         }
+    case 10:
+        let boxedSession = ReportBox(report)
+        MainActor.assumeIsolated {
+            runProjectSessionSuite(boxedSession.report)
+        }
+    case 11:
+        let boxedBank = ReportBox(report)
+        MainActor.assumeIsolated {
+            runBankHistorySuite(boxedBank.report)
+        }
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

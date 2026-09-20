@@ -16,6 +16,8 @@ enum PdcSuite {
     PDC_SUITE_XCMD_EDITS = 7,
     PDC_SUITE_MIDI_IMPORT = 8,
     PDC_SUITE_TIME_EDITS = 9,
+    PDC_SUITE_PROJECT_SESSION = 10,
+    PDC_SUITE_BANK_HISTORY = 11,
 };
 
 typedef void (*PdcCheckReport)(void *context, int failed, const char *cppId, const char *message);

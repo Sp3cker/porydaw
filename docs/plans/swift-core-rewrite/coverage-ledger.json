@@ -5569,11 +5569,11 @@
       "observableAssertions": "ordering/fallbacks and merge/cancel semantics exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 project/session history checks with per-function IDs",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::savedRecipe_dedupOrderSelection",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty",
@@ -5583,11 +5583,11 @@
       "observableAssertions": "ordering/fallbacks and merge/cancel semantics exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 project/session history checks with per-function IDs",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::savedRecipe_selectionFallbacks",
@@ -5597,11 +5597,11 @@
       "observableAssertions": "ordering/fallbacks and merge/cancel semantics exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 project/session history checks with per-function IDs",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::savedRecipe_selectionFallbacks",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry",
@@ -5611,11 +5611,11 @@
       "observableAssertions": "ordering/fallbacks and merge/cancel semantics exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 project/session history checks with per-function IDs",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter",
@@ -5625,11 +5625,11 @@
       "observableAssertions": "ordering/fallbacks and merge/cancel semantics exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 project/session history checks with per-function IDs",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge",
@@ -5639,11 +5639,11 @@
       "observableAssertions": "ordering/fallbacks and merge/cancel semantics exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 project/session history checks with per-function IDs",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::songHistory_startsClean",
@@ -5653,11 +5653,11 @@
       "observableAssertions": "ordering/fallbacks and merge/cancel semantics exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 project/session history checks with per-function IDs",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::songHistory_startsClean",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash",
@@ -5667,11 +5667,11 @@
       "observableAssertions": "All observable assertions in ProjectIdentityTest::songName_acceptRejectRoundtripHash pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
@@ -5681,11 +5681,11 @@
       "observableAssertions": "All observable assertions in ProjectIdentityTest::voicegroupId_normalizationAndSectionHash pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::voicegroupId_rejections[absolute]",
@@ -5695,11 +5695,11 @@
       "observableAssertions": "All observable assertions in ProjectIdentityTest::voicegroupId_rejections pass for this case row absolute",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-identity/ProjectIdentityTest::voicegroupId_rejections[absolute]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_rejections[absolute]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::voicegroupId_rejections[empty]",
@@ -5709,11 +5709,11 @@
       "observableAssertions": "All observable assertions in ProjectIdentityTest::voicegroupId_rejections pass for this case row empty",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-identity/ProjectIdentityTest::voicegroupId_rejections[empty]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_rejections[empty]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::voicegroupId_rejections[nested-parent]",
@@ -5723,11 +5723,11 @@
       "observableAssertions": "All observable assertions in ProjectIdentityTest::voicegroupId_rejections pass for this case row nested-parent",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-identity/ProjectIdentityTest::voicegroupId_rejections[nested-parent]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_rejections[nested-parent]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::voicegroupId_rejections[normalizes-to-root]",
@@ -5737,11 +5737,11 @@
       "observableAssertions": "All observable assertions in ProjectIdentityTest::voicegroupId_rejections pass for this case row normalizes-to-root",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-identity/ProjectIdentityTest::voicegroupId_rejections[normalizes-to-root]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_rejections[normalizes-to-root]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::voicegroupId_rejections[parent-file]",
@@ -5751,11 +5751,11 @@
       "observableAssertions": "All observable assertions in ProjectIdentityTest::voicegroupId_rejections pass for this case row parent-file",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-identity/ProjectIdentityTest::voicegroupId_rejections[parent-file]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_rejections[parent-file]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::voicegroupId_rejections[parent]",
@@ -5765,11 +5765,11 @@
       "observableAssertions": "All observable assertions in ProjectIdentityTest::voicegroupId_rejections pass for this case row parent",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-identity/ProjectIdentityTest::voicegroupId_rejections[parent]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_rejections[parent]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::voicegroupId_rejections[project-root]",
@@ -5779,11 +5779,11 @@
       "observableAssertions": "All observable assertions in ProjectIdentityTest::voicegroupId_rejections pass for this case row project-root",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-identity/ProjectIdentityTest::voicegroupId_rejections[project-root]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_rejections[project-root]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-flow/ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete",
@@ -5793,11 +5793,11 @@
       "observableAssertions": "All observable assertions in ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-flow/ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
@@ -5807,11 +5807,11 @@
       "observableAssertions": "All observable assertions in ProjectIoFlowTest::failedOpenKeepsWorkerProject pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-flow/ProjectIoFlowTest::fifoDeliversInSubmissionOrder",
@@ -5821,11 +5821,11 @@
       "observableAssertions": "All observable assertions in ProjectIoFlowTest::fifoDeliversInSubmissionOrder pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-flow/ProjectIoFlowTest::fifoDeliversInSubmissionOrder",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::fifoDeliversInSubmissionOrder",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
@@ -5835,11 +5835,11 @@
       "observableAssertions": "All observable assertions in ProjectIoFlowTest::openPublishesSnapshotDetached pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
@@ -5849,11 +5849,11 @@
       "observableAssertions": "All observable assertions in ProjectIoFlowTest::songChains_openReloadStageTag pass for this case row open",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
@@ -5863,11 +5863,11 @@
       "observableAssertions": "All observable assertions in ProjectIoFlowTest::songChains_openReloadStageTag pass for this case row private-load",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
@@ -5877,11 +5877,11 @@
       "observableAssertions": "All observable assertions in ProjectIoFlowTest::songChains_openReloadStageTag pass for this case row reload",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths",
@@ -5891,11 +5891,11 @@
       "observableAssertions": "All observable assertions in ProjectIoFlowTest::voicegroupLoadAndPreviewPaths pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
@@ -5905,11 +5905,11 @@
       "observableAssertions": "All observable assertions in ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-mutations/ProjectIoMutationsTest::creationCollisionRefusesLeavingStray",
@@ -5919,11 +5919,11 @@
       "observableAssertions": "All observable assertions in ProjectIoMutationsTest::creationCollisionRefusesLeavingStray pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-mutations/ProjectIoMutationsTest::creationCollisionRefusesLeavingStray",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::creationCollisionRefusesLeavingStray",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
@@ -5933,11 +5933,11 @@
       "observableAssertions": "All observable assertions in ProjectIoMutationsTest::editConflictVsApplied pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-mutations/ProjectIoMutationsTest::failureStages[midi]",
@@ -5947,11 +5947,11 @@
       "observableAssertions": "All observable assertions in ProjectIoMutationsTest::failureStages pass for this case row midi",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-mutations/ProjectIoMutationsTest::failureStages[midi]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::failureStages[midi]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-mutations/ProjectIoMutationsTest::failureStages[reconcile]",
@@ -5961,11 +5961,11 @@
       "observableAssertions": "All observable assertions in ProjectIoMutationsTest::failureStages pass for this case row reconcile",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-mutations/ProjectIoMutationsTest::failureStages[reconcile]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::failureStages[reconcile]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-mutations/ProjectIoMutationsTest::failureStages[save]",
@@ -5975,11 +5975,11 @@
       "observableAssertions": "All observable assertions in ProjectIoMutationsTest::failureStages pass for this case row save",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-mutations/ProjectIoMutationsTest::failureStages[save]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::failureStages[save]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-mutations/ProjectIoMutationsTest::failureStages[voicegroup]",
@@ -5989,11 +5989,11 @@
       "observableAssertions": "All observable assertions in ProjectIoMutationsTest::failureStages pass for this case row voicegroup",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-mutations/ProjectIoMutationsTest::failureStages[voicegroup]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::failureStages[voicegroup]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload",
@@ -6003,11 +6003,11 @@
       "observableAssertions": "All observable assertions in ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-mutations/ProjectIoMutationsTest::previewCleanupPrivateResult",
@@ -6017,11 +6017,11 @@
       "observableAssertions": "All observable assertions in ProjectIoMutationsTest::previewCleanupPrivateResult pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-mutations/ProjectIoMutationsTest::previewCleanupPrivateResult",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::previewCleanupPrivateResult",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project-io-mutations/ProjectIoMutationsTest::semanticSaveBareAndWithRecipe",
@@ -6031,11 +6031,11 @@
       "observableAssertions": "All observable assertions in ProjectIoMutationsTest::semanticSaveBareAndWithRecipe pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for project-io-mutations/ProjectIoMutationsTest::semanticSaveBareAndWithRecipe",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::semanticSaveBareAndWithRecipe",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "project/SongRegistry::blankSong/explicit factory parity",
@@ -6064,11 +6064,11 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for projectworkspacecheck/ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure[duplicate-voicegroup-is-unkeyed-failure]",
@@ -6078,11 +6078,11 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure pass for this case row duplicate-voicegroup-is-unkeyed-failure",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for projectworkspacecheck/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure[duplicate-voicegroup-is-unkeyed-failure]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure[duplicate-voicegroup-is-unkeyed-failure]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure[refresh-replaces-catalog]",
@@ -6092,11 +6092,11 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure pass for this case row refresh-replaces-catalog",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for projectworkspacecheck/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure[refresh-replaces-catalog]",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure[refresh-replaces-catalog]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
@@ -6106,11 +6106,11 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure pass for this case row expected-blank-conflict",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[scalar-edit-view-and-receipt]",
@@ -6120,11 +6120,11 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure pass for this case row scalar-edit-view-and-receipt",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[scalar-edit-view-and-receipt]",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[scalar-edit-view-and-receipt]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[unknown-voicegroup-hard-failure]",
@@ -6134,11 +6134,11 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure pass for this case row unknown-voicegroup-hard-failure",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[unknown-voicegroup-hard-failure]",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[unknown-voicegroup-hard-failure]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::missingSavedNameReconcileFailure",
@@ -6148,11 +6148,11 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::missingSavedNameReconcileFailure pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for projectworkspacecheck/ProjectWorkspaceTest::missingSavedNameReconcileFailure",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::missingSavedNameReconcileFailure",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten",
@@ -6162,11 +6162,11 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for projectworkspacecheck/ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::planEventsForwardKeyed",
@@ -6176,11 +6176,11 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::planEventsForwardKeyed pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for projectworkspacecheck/ProjectWorkspaceTest::planEventsForwardKeyed",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::planEventsForwardKeyed",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::reloadStagesMidiViewBound",
@@ -6190,11 +6190,11 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::reloadStagesMidiViewBound pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for projectworkspacecheck/ProjectWorkspaceTest::reloadStagesMidiViewBound",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::reloadStagesMidiViewBound",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication",
@@ -6204,11 +6204,11 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for projectworkspacecheck/ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder",
@@ -6218,11 +6218,11 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for projectworkspacecheck/ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot",
@@ -6232,11 +6232,11 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for projectworkspacecheck/ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "rendering-playhead-native/catalog-suite[case-names-pending]",
@@ -8301,11 +8301,11 @@
       "observableAssertions": "note/loop/config and unrelated bytes survive; identity/history boundaries exact; saved MIDI compiles",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 persistence/session checks with three function cppIds",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
@@ -8315,11 +8315,11 @@
       "observableAssertions": "note/loop/config and unrelated bytes survive; identity/history boundaries exact; saved MIDI compiles",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 persistence/session checks with three function cppIds",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "savecheck/ProjectSaveTest::savedMidiCompilesWhenAvailable",
@@ -8329,11 +8329,11 @@
       "observableAssertions": "note/loop/config and unrelated bytes survive; identity/history boundaries exact; saved MIDI compiles",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 persistence/session checks with three function cppIds",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId savecheck/ProjectSaveTest::savedMidiCompilesWhenAvailable",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "scalecheck/ScaleCheckTest::diatonicDestinations[downward-separates]",
@@ -11591,11 +11591,11 @@
       "observableAssertions": "PSG classification and names exactly match C++; compatibility requires identical PSG kind",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/musicalSemantics exhaustive kind matrix with failure cppId resolvesVoiceKinds",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId velocity-model/VelocityModelTest::resolvesVoiceKinds",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Task 6 native ToneData-to-VoiceKind traversal is not implemented.",
+      "pendingGap": "Awaiting controller-run verification",
       "reconciliationNotes": "Scout classified the whole case as Task 1; Swift Task 1 covers resolved VoiceKind laws, while native ToneData traversal remains due Task 6.",
       "partialRunEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
@@ -11626,11 +11626,11 @@
       "observableAssertions": "lease lifetime, conflicts, rollback, dirty/save and hard errors exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 native service integration checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
@@ -11640,11 +11640,11 @@
       "observableAssertions": "lease lifetime, conflicts, rollback, dirty/save and hard errors exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 native service integration checks with per-function IDs",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
@@ -11654,11 +11654,11 @@
       "observableAssertions": "lease lifetime, conflicts, rollback, dirty/save and hard errors exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 native service integration checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgbankcheck/VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels",
@@ -11668,11 +11668,11 @@
       "observableAssertions": "lease lifetime, conflicts, rollback, dirty/save and hard errors exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 native service integration checks with per-function IDs",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId vgbankcheck/VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
@@ -11682,11 +11682,11 @@
       "observableAssertions": "lease lifetime, conflicts, rollback, dirty/save and hard errors exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 native service integration checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
@@ -11696,11 +11696,11 @@
       "observableAssertions": "lease lifetime, conflicts, rollback, dirty/save and hard errors exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 native service integration checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
@@ -11710,11 +11710,11 @@
       "observableAssertions": "lease lifetime, conflicts, rollback, dirty/save and hard errors exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 native service integration checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
@@ -11724,11 +11724,11 @@
       "observableAssertions": "lease lifetime, conflicts, rollback, dirty/save and hard errors exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 native service integration checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgcheck/catalog-suite[case-names-pending]",
@@ -11753,11 +11753,11 @@
       "observableAssertions": "All observable assertions in VoicegroupLoadBenchTest::songLoadBenchmark pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for vgloadbench/VoicegroupLoadBenchTest::songLoadBenchmark",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgloadbench/VoicegroupLoadBenchTest::songLoadBenchmark",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgloadcheck/VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets",
@@ -11767,11 +11767,11 @@
       "observableAssertions": "All observable assertions in VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for vgloadcheck/VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgloadcheck/VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgloadcheck/VoicegroupLoaderTest::failedTransportReleasesPartialBatchAndContextHeals",
@@ -11781,11 +11781,11 @@
       "observableAssertions": "All observable assertions in VoicegroupLoaderTest::failedTransportReleasesPartialBatchAndContextHeals pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for vgloadcheck/VoicegroupLoaderTest::failedTransportReleasesPartialBatchAndContextHeals",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgloadcheck/VoicegroupLoaderTest::failedTransportReleasesPartialBatchAndContextHeals",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgloadcheck/VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnership",
@@ -11795,11 +11795,11 @@
       "observableAssertions": "All observable assertions in VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnership pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for vgloadcheck/VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnership",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgloadcheck/VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnership",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::adsrFieldSpaceTogglesTransport",
@@ -11823,11 +11823,11 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::blankTemplateMaterializesUndoably pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement",
@@ -11837,11 +11837,11 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 session/persistence/native service checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
@@ -11851,11 +11851,11 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 session/persistence/native service checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::cleanSaveEmitsNoReceipt",
@@ -11865,11 +11865,11 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 session/persistence/native service checks with per-function IDs",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId vgsavecheck/VoicegroupSaveTest::cleanSaveEmitsNoReceipt",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::dockMinimumWidthIsFamilyInvariant",
@@ -11879,11 +11879,11 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::dockMinimumWidthIsFamilyInvariant pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for vgsavecheck/VoicegroupSaveTest::dockMinimumWidthIsFamilyInvariant",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::dockMinimumWidthIsFamilyInvariant",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
@@ -11893,11 +11893,11 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 session/persistence/native service checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably",
@@ -11907,11 +11907,11 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for vgsavecheck/VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit",
@@ -11921,11 +11921,11 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 session/persistence/native service checks with per-function IDs",
+      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId vgsavecheck/VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild",
@@ -11935,11 +11935,11 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for vgsavecheck/VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
@@ -11949,11 +11949,11 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 session/persistence/native service checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
@@ -11963,11 +11963,11 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 session/persistence/native service checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
@@ -11977,11 +11977,11 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 session/persistence/native service checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline[drag-down]",
@@ -12047,11 +12047,11 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for vgsavecheck/VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::samplePickerAuditionsAndCommits",
@@ -12061,11 +12061,11 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::samplePickerAuditionsAndCommits pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for vgsavecheck/VoicegroupSaveTest::samplePickerAuditionsAndCommits",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::samplePickerAuditionsAndCommits",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::samplePickerKeysplitAuditions",
@@ -12075,11 +12075,11 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::samplePickerKeysplitAuditions pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for vgsavecheck/VoicegroupSaveTest::samplePickerKeysplitAuditions",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::samplePickerKeysplitAuditions",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits",
@@ -12089,11 +12089,11 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for vgsavecheck/VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit",
@@ -12103,11 +12103,11 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 session/persistence/native service checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
@@ -12117,11 +12117,11 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 session/persistence/native service checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
@@ -12131,11 +12131,11 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily",
@@ -12145,11 +12145,11 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::typeColumnMapsEveryFamily pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
@@ -12159,11 +12159,11 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 session/persistence/native service checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::undoShortcutRestoresWithoutWrite",
@@ -12173,11 +12173,11 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 session/persistence/native service checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::undoShortcutRestoresWithoutWrite",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
@@ -12187,11 +12187,11 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 session/persistence/native service checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
@@ -12201,11 +12201,11 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 session/persistence/native service checks with per-function IDs",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "view-buckets-grid/catalog-suite[case-names-pending]",
@@ -12350,11 +12350,11 @@
       "observableAssertions": "All observable assertions in VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
@@ -12364,11 +12364,11 @@
       "observableAssertions": "All observable assertions in VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
@@ -12378,11 +12378,11 @@
       "observableAssertions": "All observable assertions in VoicegroupViewCacheTest::mergeRules pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "Task 6 Swift replacement comparison for voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 6 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification"
     },
     {
       "cppId": "xcmdcheck/XcmdTest::addOnEmptyTrackEmitsCanonicalPair",
