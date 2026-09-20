@@ -120,6 +120,27 @@ public struct MidiEvent: Equatable, Sendable {
     }
 }
 
+internal struct TrackNameScan {
+    private var insideChannelPrefixSpan = false
+
+    internal init() {}
+
+    internal mutating func consume(_ event: borrowing MidiEvent) -> Bool {
+        if case let .meta(type, data) = event.payload, type == 0x20 {
+            insideChannelPrefixSpan = !data.isEmpty
+            return false
+        }
+        if event.isChannel {
+            insideChannelPrefixSpan = false
+            return false
+        }
+        if case let .meta(type, _) = event.payload, type == 0x03 {
+            return !insideChannelPrefixSpan
+        }
+        return false
+    }
+}
+
 public struct MidiChunk: Equatable, Sendable {
     public var events: [MidiEvent]
     public var endTick: Tick

@@ -520,15 +520,11 @@ private extension SongDocument {
             chunks: Array(repeating: ChunkEventRoles(), count: file.chunks.count))
         for (chunkIndex, chunk) in file.chunks.enumerated() {
             var nameSeen = false
-            var prefix: UInt8?
+            var nameScanner = TrackNameScan()
             for (index, event) in chunk.events.enumerated() {
-                if case let .meta(type, data) = event.payload, type == 0x20 {
-                    prefix = data.first.map { $0 & 0x0F }
-                    continue
-                }
-                if event.isChannel { prefix = nil }
+                let isTrackName = nameScanner.consume(event)
                 guard case let .meta(type, data) = event.payload else { continue }
-                if type == 0x03, prefix == nil {
+                if isTrackName {
                     result.chunks[chunkIndex].trackNames.append(index)
                     if !nameSeen { nameSeen = true; continue }
                 }

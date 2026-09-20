@@ -21,6 +21,7 @@ class SwiftCoreTest final : public QObject
     void eventEdits();
     void xcmdEdits();
     void midiImport();
+    void timeEdits();
 };
 
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);

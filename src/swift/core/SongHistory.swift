@@ -222,4 +222,9 @@ internal enum HistoryOperation: Hashable {
     case writeLane
     case moveLanePoints
     case deleteLanePoints
+    case applyRangeEdit
+    case moveRange
+    case removeTime
+    case insertBlankTime
+    case duplicateTime
 }

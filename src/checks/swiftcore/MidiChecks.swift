@@ -8,6 +8,30 @@ private struct CodecObservation {
     var wasFormatZero = false
     var summary = ""
     var error = ""
+    var decoded: MidiFile?
+}
+
+private struct DecodedEventExpectation {
+    let chunk: Int
+    let index: Int
+    let event: MidiEvent
+}
+
+private struct DecodedCodecExpectation {
+    let division: UInt16
+    let wasFormatZero: Bool
+    let endTicks: [Tick]
+    let eventCounts: [Int]
+    let events: [DecodedEventExpectation]
+
+    init(division: UInt16, wasFormatZero: Bool = false, endTicks: [Tick],
+         eventCounts: [Int], events: [DecodedEventExpectation] = []) {
+        self.division = division
+        self.wasFormatZero = wasFormatZero
+        self.endTicks = endTicks
+        self.eventCounts = eventCounts
+        self.events = events
+    }
 }
 
 // Keep raw values in sync with OracleSemanticValueOperation in oracle_check.h.
@@ -66,17 +90,110 @@ private let noteIdentityID =
     "noteidcheck/NoteIdentityCheckTest::identityDoesNotAffectEqualityOrSerialization"
 
 func runMidiCodecSuite(_ report: CheckReport) {
-    let fixtures: [(String, String)] = [
-        ("smfcheck/MidiSmfTest::opaqueSysExAndMetaEventsRoundTrip",
-         "test_midis/smf/valid/opaque_sysex.mid"),
-        ("smfcheck/MidiSmfTest::vlqRunningStatusResetsAcrossMeta",
-         "test_midis/smf/valid/vlq_running_status.mid"),
-        ("smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
-         "test_midis/smf/valid/note_lifecycle.mid"),
-        ("smfcheck/MidiSmfTest::duplicateEndOfTrackCanonicalizes",
-         "test_midis/smf/malformed/duplicate_eot.mid"),
-        ("smfcheck/MidiSmfTest::automationBurstPreservesEveryChannelEvent",
-         "test_midis/smf/stress/automation_burst.mid"),
+    let fixtures: [(cppID: String, path: String, canonical: [UInt8]?,
+                    decoded: DecodedCodecExpectation)] = [
+        (
+            "smfcheck/MidiSmfTest::opaqueSysExAndMetaEventsRoundTrip",
+            "test_midis/smf/valid/opaque_sysex.mid", nil,
+            DecodedCodecExpectation(
+                division: 48, endTicks: [0, 24], eventCounts: [4, 2],
+                events: [
+                    DecodedEventExpectation(
+                        chunk: 0, index: 1,
+                        event: .systemExclusive(status: 0xF0, data: hex("7e7f0903f7"))),
+                    DecodedEventExpectation(
+                        chunk: 0, index: 2,
+                        event: .meta(type: 0x7F, data: hex("deadbeef"))),
+                    DecodedEventExpectation(
+                        chunk: 0, index: 3,
+                        event: .systemExclusive(status: 0xF7, data: hex("4312f7"))),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 0,
+                        event: .channel(status: 0x90, data0: 0x3C, data1: 0x40)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 1,
+                        event: .channel(tick: 24, status: 0x90, data0: 0x3C, data1: 0)),
+                ])),
+        (
+            "smfcheck/MidiSmfTest::vlqRunningStatusResetsAcrossMeta",
+            "test_midis/smf/valid/vlq_running_status.mid", nil,
+            DecodedCodecExpectation(
+                division: 96, endTicks: [0, 24_835], eventCounts: [2, 12],
+                events: [
+                    DecodedEventExpectation(
+                        chunk: 1, index: 4,
+                        event: .channel(tick: 24_611, status: 0xC0, data0: 5)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 6,
+                        event: .meta(tick: 24_611, type: 1, data: [0x58])),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 7,
+                        event: .channel(tick: 24_611, status: 0xC0, data0: 7)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 8,
+                        event: .channel(tick: 24_739, status: 0x90,
+                                        data0: 0x3C, data1: 0x64)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 11,
+                        event: .channel(tick: 24_835, status: 0x80,
+                                        data0: 0x3E, data1: 0)),
+                ])),
+        (
+            "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
+            "test_midis/smf/valid/note_lifecycle.mid",
+            hex(
+                "4d546864000000060001000200184d54726b00000013" +
+                "00ff510307a12000ff58040402180800ff2f00" +
+                "4d54726b0000002d" +
+                "00ff03044e6f746500c00500903c64183c00003c6e18803c00" +
+                "18903e5000803e00189040601880400000ff2f00"),
+            DecodedCodecExpectation(
+                division: 24, endTicks: [0, 120], eventCounts: [2, 10],
+                events: [
+                    DecodedEventExpectation(
+                        chunk: 1, index: 2,
+                        event: .channel(status: 0x90, data0: 0x3C, data1: 0x64)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 3,
+                        event: .channel(tick: 24, status: 0x90, data0: 0x3C, data1: 0)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 4,
+                        event: .channel(tick: 24, status: 0x90, data0: 0x3C, data1: 0x6E)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 6,
+                        event: .channel(tick: 72, status: 0x90, data0: 0x3E, data1: 0x50)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 7,
+                        event: .channel(tick: 72, status: 0x80, data0: 0x3E, data1: 0)),
+                ])),
+        (
+            "smfcheck/MidiSmfTest::duplicateEndOfTrackCanonicalizes",
+            "test_midis/smf/malformed/duplicate_eot.mid",
+            hex("4d546864000000060001000100184d54726b0000000400ff2f00"),
+            DecodedCodecExpectation(division: 24, endTicks: [0], eventCounts: [0])),
+        (
+            "smfcheck/MidiSmfTest::automationBurstPreservesEveryChannelEvent",
+            "test_midis/smf/stress/automation_burst.mid", nil,
+            DecodedCodecExpectation(
+                division: 96, endTicks: [352, 352, 352], eventCounts: [2, 195, 195],
+                events: [
+                    DecodedEventExpectation(
+                        chunk: 1, index: 0,
+                        event: .channel(status: 0xC0, data0: 5)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 193,
+                        event: .channel(tick: 256, status: 0x90,
+                                        data0: 0x3C, data1: 0x50)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 194,
+                        event: .channel(tick: 352, status: 0x80, data0: 0x3C)),
+                    DecodedEventExpectation(
+                        chunk: 2, index: 0,
+                        event: .channel(status: 0xC1, data0: 40)),
+                    DecodedEventExpectation(
+                        chunk: 2, index: 194,
+                        event: .channel(tick: 352, status: 0x81, data0: 0x43)),
+                ])),
     ]
     let projectSongs = [
         "sound/songs/midi/mus_caught.mid",
@@ -96,53 +213,207 @@ func runMidiCodecSuite(_ report: CheckReport) {
     ]
 
     for relativePath in projectSongs {
-        compareFixture(relativePath: relativePath,
-                       cppID: "no-row/core/smf.cpp/normal-project-song/\(relativePath)",
-                       report: report)
+        let cppID = "no-row/core/smf.cpp/normal-project-song/\(relativePath)"
+        if relativePath == "sound/songs/midi/se_fanfare_1trk.mid" {
+            // The source fixture is format 0, so its bytes are not the canonical format-1 output.
+            // Retain the independently decoded routing/order contract instead of transcribing a
+            // long output vector from either implementation.
+            compareFixture(
+                relativePath: relativePath, cppID: cppID, assertCanonicalBytes: false,
+                expectedFormatZero: true,
+                expectedDecoded: DecodedCodecExpectation(
+                    division: 24, wasFormatZero: true, endTicks: [144, 144],
+                    eventCounts: [4, 13],
+                    events: [
+                        DecodedEventExpectation(
+                            chunk: 0, index: 0,
+                            event: .meta(type: 0x03, data: Array("One-track fanfare".utf8))),
+                        DecodedEventExpectation(
+                            chunk: 0, index: 1,
+                            event: .meta(type: 0x51, data: hex("07a120"))),
+                        DecodedEventExpectation(
+                            chunk: 1, index: 0,
+                            event: .meta(type: 0x03, data: Array("One-track fanfare".utf8))),
+                        DecodedEventExpectation(
+                            chunk: 1, index: 1,
+                            event: .channel(status: 0xC0, data0: 0)),
+                        DecodedEventExpectation(
+                            chunk: 1, index: 5,
+                            event: .channel(status: 0x90, data0: 0x48, data1: 0x6C)),
+                        DecodedEventExpectation(
+                            chunk: 1, index: 12,
+                            event: .channel(tick: 108, status: 0x80, data0: 0x54)),
+                    ]),
+                report: report)
+        } else {
+            compareFixture(relativePath: relativePath, cppID: cppID, report: report)
+        }
     }
-    for (cppID, relativePath) in fixtures {
-        compareFixture(relativePath: relativePath, cppID: cppID, report: report)
+    for fixture in fixtures {
+        compareFixture(relativePath: fixture.path, cppID: fixture.cppID,
+                       expectedCanonicalBytes: fixture.canonical,
+                       expectedDecoded: fixture.decoded, report: report)
     }
 
+    let validFormat0 = formatZeroBytes(hex("00903c4010803c4000c07f00ff2f00"))
     compareCodecCase(
         cppID: "smfcheck/MidiSmfTest::validFormat0ParsingAndCoercion",
-        bytes: formatZeroBytes(hex("00903c4010803c4000c07f00ff2f00")), expectedValid: true,
+        bytes: validFormat0, expectedValid: true,
+        expectedCanonicalBytes: hex(
+            "4d546864000000060001000200184d54726b0000000410ff2f00" +
+            "4d54726b0000000f00903c4010803c4000c07f00ff2f00"),
+        expectedFormatZero: true,
+        expectedDecoded: DecodedCodecExpectation(
+            division: 24, wasFormatZero: true, endTicks: [16, 16], eventCounts: [0, 3],
+            events: [
+                DecodedEventExpectation(
+                    chunk: 1, index: 0,
+                    event: .channel(status: 0x90, data0: 0x3C, data1: 0x40)),
+                DecodedEventExpectation(
+                    chunk: 1, index: 1,
+                    event: .channel(tick: 16, status: 0x80, data0: 0x3C, data1: 0x40)),
+                DecodedEventExpectation(
+                    chunk: 1, index: 2,
+                    event: .channel(tick: 16, status: 0xC0, data0: 0x7F)),
+            ]),
         report: report)
     compareCodecCase(
         cppID: "smfcheck/MidiSmfTest::highDataBytesKeepStreamAlignment",
         bytes: formatZeroBytes(hex("00c08000903c4000b00780000a4000ff2f00")),
-        expectedValid: true, report: report)
+        expectedValid: true,
+        expectedCanonicalBytes: hex(
+            "4d546864000000060001000200184d54726b0000000400ff2f00" +
+            "4d54726b0000001200c08000903c4000b00780000a4000ff2f00"),
+        expectedFormatZero: true,
+        expectedDecoded: DecodedCodecExpectation(
+            division: 24, wasFormatZero: true, endTicks: [0, 0], eventCounts: [0, 4],
+            events: [
+                DecodedEventExpectation(
+                    chunk: 1, index: 0, event: .channel(status: 0xC0, data0: 0x80)),
+                DecodedEventExpectation(
+                    chunk: 1, index: 2,
+                    event: .channel(status: 0xB0, data0: 0x07, data1: 0x80)),
+                DecodedEventExpectation(
+                    chunk: 1, index: 3,
+                    event: .channel(status: 0xB0, data0: 0x0A, data1: 0x40)),
+            ]),
+        report: report)
     compareCodecCase(
         cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering/velocity-zero",
         bytes: formatZeroBytes(hex("00903c0000ff2f00")), expectedValid: true,
+        expectedCanonicalBytes: hex(
+            "4d546864000000060001000200184d54726b0000000400ff2f00" +
+            "4d54726b0000000800903c0000ff2f00"),
+        expectedFormatZero: true,
+        expectedDecoded: DecodedCodecExpectation(
+            division: 24, wasFormatZero: true, endTicks: [0, 0], eventCounts: [0, 1],
+            events: [
+                DecodedEventExpectation(
+                    chunk: 1, index: 0,
+                    event: .channel(status: 0x90, data0: 0x3C, data1: 0)),
+            ]),
         report: report)
     compareCodecCase(
         cppID: "smfcheck/MidiSmfTest::opaqueSysExAndMetaEventsRoundTrip/synthetic",
         bytes: midiBytes(format: 1, division: 48,
                          tracks: [hex("00ff7f04deadbeef00f0057e7f0903f700f7034312f700ff2f00")]),
-        expectedValid: true, report: report)
+        expectedValid: true,
+        expectedDecoded: DecodedCodecExpectation(
+            division: 48, endTicks: [0], eventCounts: [3],
+            events: [
+                DecodedEventExpectation(
+                    chunk: 0, index: 0, event: .meta(type: 0x7F, data: hex("deadbeef"))),
+                DecodedEventExpectation(
+                    chunk: 0, index: 1,
+                    event: .systemExclusive(status: 0xF0, data: hex("7e7f0903f7"))),
+                DecodedEventExpectation(
+                    chunk: 0, index: 2,
+                    event: .systemExclusive(status: 0xF7, data: hex("4312f7"))),
+            ]),
+        report: report)
+    let routedFormat0 = formatZeroBytes(hex(
+        "00ff510307a12000ff0304536f6e6700ff20010400ff03044c65616400ff0403477472" +
+        "00913c6400944064009743640cff06015b00ff20010700ff03013a00813c0000844000" +
+        "008743000cff06015d00ff20010900ff0307416d6269656e740cff2f00"))
     compareCodecCase(
         cppID: "editcheck/EditCheckTest::formatZeroCoercion/channel-prefix-routing",
-        bytes: formatZeroBytes(hex(
-            "00ff510307a12000ff0304536f6e6700ff20010400ff03044c65616400ff0403477472" +
-            "00913c6400944064009743640cff06015b00ff20010700ff03013a00813c0000844000" +
-            "008743000cff06015d00ff20010900ff0307416d6269656e740cff2f00")),
-        expectedValid: true, report: report)
+        bytes: routedFormat0, expectedValid: true,
+        expectedCanonicalBytes: hex(
+            "4d546864000000060001000500184d54726b00000027" +
+            "00ff510307a12000ff0304536f6e670cff06015b00ff200107" +
+            "00ff03013a0cff06015d0cff2f00" +
+            "4d54726b0000000c00913c640c813c0018ff2f00" +
+            "4d54726b0000001b00ff03044c65616400ff0403477472009440640c84400018ff2f00" +
+            "4d54726b0000000c009743640c87430018ff2f00" +
+            "4d54726b0000000f18ff0307416d6269656e740cff2f00"),
+        expectedFormatZero: true,
+        expectedDecoded: DecodedCodecExpectation(
+            division: 24, wasFormatZero: true, endTicks: [36, 36, 36, 36, 36],
+            eventCounts: [6, 2, 4, 2, 1],
+            events: [
+                DecodedEventExpectation(
+                    chunk: 0, index: 1,
+                    event: .meta(type: 0x03, data: Array("Song".utf8))),
+                DecodedEventExpectation(
+                    chunk: 0, index: 2, event: .meta(tick: 12, type: 0x06, data: [0x5B])),
+                DecodedEventExpectation(
+                    chunk: 0, index: 3, event: .meta(tick: 12, type: 0x20, data: [7])),
+                DecodedEventExpectation(
+                    chunk: 0, index: 4, event: .meta(tick: 12, type: 0x03, data: [0x3A])),
+                DecodedEventExpectation(
+                    chunk: 2, index: 0,
+                    event: .meta(type: 0x03, data: Array("Lead".utf8))),
+                DecodedEventExpectation(
+                    chunk: 4, index: 0,
+                    event: .meta(tick: 24, type: 0x03, data: Array("Ambient".utf8))),
+            ]),
+        report: report)
     compareCodecCase(
         cppID: "smf.cpp::mapSmfEngineTracks/explicit-no-row/metadata-only-chunk",
         bytes: midiBytes(format: 1, division: 24,
                          tracks: [hex("00ff03044e616d6518ff2f00")]),
-        expectedValid: true, report: report)
+        expectedValid: true,
+        expectedDecoded: DecodedCodecExpectation(
+            division: 24, endTicks: [24], eventCounts: [1],
+            events: [
+                DecodedEventExpectation(
+                    chunk: 0, index: 0, event: .meta(type: 0x03, data: Array("Name".utf8))),
+            ]),
+        report: report)
     compareCodecCase(
         cppID: "smfcheck/MidiSmfTest::duplicateEndOfTrackCanonicalizes/trailing-data",
         bytes: midiBytes(format: 1, division: 24,
                          tracks: [hex("0a903c4014ff2f0000903e40")]),
-        expectedValid: true, report: report)
+        expectedValid: true,
+        expectedCanonicalBytes: hex(
+            "4d546864000000060001000100184d54726b000000080a903c4014ff2f00"),
+        expectedDecoded: DecodedCodecExpectation(
+            division: 24, endTicks: [30], eventCounts: [1],
+            events: [
+                DecodedEventExpectation(
+                    chunk: 0, index: 0,
+                    event: .channel(tick: 10, status: 0x90, data0: 0x3C, data1: 0x40)),
+            ]),
+        report: report)
     compareCodecCase(
         cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering/synthetic",
         bytes: midiBytes(format: 1, division: 24,
                          tracks: [hex("00903c4000803c4000903e0000ff2f00")]),
-        expectedValid: true, report: report)
+        expectedValid: true,
+        expectedDecoded: DecodedCodecExpectation(
+            division: 24, endTicks: [0], eventCounts: [3],
+            events: [
+                DecodedEventExpectation(
+                    chunk: 0, index: 0,
+                    event: .channel(status: 0x90, data0: 0x3C, data1: 0x40)),
+                DecodedEventExpectation(
+                    chunk: 0, index: 1,
+                    event: .channel(status: 0x80, data0: 0x3C, data1: 0x40)),
+                DecodedEventExpectation(
+                    chunk: 0, index: 2,
+                    event: .channel(status: 0x90, data0: 0x3E, data1: 0)),
+            ]),
+        report: report)
 
     var mappingTracks = [hex("00ff510307a12000ff2f00"), hex("00ff03044d65746100ff2f00")]
     for track in 0..<18 {
@@ -153,7 +424,11 @@ func runMidiCodecSuite(_ report: CheckReport) {
     compareCodecCase(
         cppID: "smfcheck/MidiSmfTest::engineTrackMappingAgreesAcrossProjections/SmfEngineTrackMapping",
         bytes: midiBytes(format: 1, division: 24, tracks: mappingTracks),
-        expectedValid: true, report: report)
+        expectedValid: true,
+        expectedDecoded: DecodedCodecExpectation(
+            division: 24, endTicks: [Tick](repeating: 0, count: 20),
+            eventCounts: [Int](repeating: 1, count: 20)),
+        report: report)
 
     compareCodecCase(cppID: "smf.cpp::SmfFile::read/explicit-no-row/truncated-header",
                      bytes: [0x4D, 0x54, 0x68, 0x64, 0, 0], expectedValid: false,
@@ -188,21 +463,46 @@ func runMidiCodecSuite(_ report: CheckReport) {
                      bytes: formatZeroBytes(overlong), expectedValid: false, report: report)
 
     let blankID = "project/SongRegistry::blankSong"
+    let expectedBlank = hex(
+        "4d546864000000060001000200184d54726b00000013" +
+        "00ff510307a12000ff58040402180860ff2f00" +
+        "4d54726b0000000b00c00000b0076460ff2f00")
     do {
         let swiftBlank = try MidiFile.blankSong().encoded()
+        report.expectEqual(expectedBlank, swiftBlank, cppID: blankID,
+                           what: "independent canonical byte vector")
         let oracleSize = oracle_blank_song(nil, 0)
-        guard oracleSize >= 0 else {
+        if oracleSize < 0 {
             report.fail(blankID, "C++ oracle blank-song factory failed")
-            return
+        } else {
+            var oracleBlank = [UInt8](repeating: 0, count: Int(oracleSize))
+            let copied = oracleBlank.withUnsafeMutableBufferPointer {
+                oracle_blank_song($0.baseAddress, $0.count)
+            }
+            report.expectEqual(oracleSize, copied, cppID: blankID,
+                               what: "supplemental oracle sizing/copy")
+            report.expectEqual(oracleBlank, swiftBlank, cppID: blankID,
+                               what: "supplemental C++ canonical bytes")
         }
-        var oracleBlank = [UInt8](repeating: 0, count: Int(oracleSize))
-        let copied = oracleBlank.withUnsafeMutableBufferPointer {
-            oracle_blank_song($0.baseAddress, $0.count)
-        }
-        report.expectEqual(oracleSize, copied, cppID: blankID, what: "oracle sizing/copy")
-        report.expectEqual(oracleBlank, swiftBlank, cppID: blankID, what: "canonical bytes")
-        compareCodecCase(cppID: "project/SongRegistry::blankSong/reparse", bytes: swiftBlank,
-                         expectedValid: true, report: report)
+        compareCodecCase(
+            cppID: "project/SongRegistry::blankSong/reparse", bytes: swiftBlank,
+            expectedValid: true, expectedCanonicalBytes: expectedBlank,
+            expectedDecoded: DecodedCodecExpectation(
+                division: 24, endTicks: [96, 96], eventCounts: [2, 2],
+                events: [
+                    DecodedEventExpectation(
+                        chunk: 0, index: 0,
+                        event: .meta(type: 0x51, data: hex("07a120"))),
+                    DecodedEventExpectation(
+                        chunk: 0, index: 1,
+                        event: .meta(type: 0x58, data: hex("04021808"))),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 0, event: .channel(status: 0xC0, data0: 0)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 1,
+                        event: .channel(status: 0xB0, data0: 7, data1: 100)),
+                ]),
+            report: report)
     } catch {
         report.fail(blankID, "Swift blank-song factory failed: \(error)")
     }
@@ -445,36 +745,106 @@ func runMusicalSemanticsSuite(_ report: CheckReport) {
                        cppID: "swiftcore/oracle-adapter", what: "unknown text operation sentinel")
 }
 
-private func compareFixture(relativePath: String, cppID: String, report: CheckReport) {
+private func compareFixture(relativePath: String, cppID: String,
+                            expectedCanonicalBytes: [UInt8]? = nil,
+                            assertCanonicalBytes: Bool = true,
+                            expectedFormatZero: Bool = false,
+                            expectedDecoded: DecodedCodecExpectation? = nil,
+                            report: CheckReport) {
     guard let path = CheckEnvironment.fixturePath(relativePath) else {
         report.fail(cppID, "missing --swiftcore fixture root")
         return
     }
     do {
-        compareCodecCase(cppID: cppID, bytes: Array(try Data(contentsOf: URL(fileURLWithPath: path))),
-                         expectedValid: true, report: report)
+        let sourceBytes = Array(try Data(contentsOf: URL(fileURLWithPath: path)))
+        compareCodecCase(cppID: cppID, bytes: sourceBytes, expectedValid: true,
+                         expectedCanonicalBytes: expectedCanonicalBytes ?? sourceBytes,
+                         assertCanonicalBytes: assertCanonicalBytes,
+                         expectedFormatZero: expectedFormatZero,
+                         expectedDecoded: expectedDecoded, report: report)
     } catch {
         report.fail(cppID, "missing fixture \(path): \(error)")
     }
 }
 
 private func compareCodecCase(cppID: String, bytes: [UInt8], expectedValid: Bool,
-                              expectedSwiftError: String? = nil, report: CheckReport) {
-    let oracle = oracleCodec(bytes)
+                              expectedSwiftError: String? = nil,
+                              expectedCanonicalBytes: [UInt8]? = nil,
+                              assertCanonicalBytes: Bool = true,
+                              expectedFormatZero: Bool = false,
+                              expectedDecoded: DecodedCodecExpectation? = nil,
+                              report: CheckReport) {
     let swift = swiftCodec(bytes)
-    report.expectEqual(expectedValid, oracle.valid, cppID: cppID,
-                       what: "C++ validity (error=\(oracle.error))")
-    report.expectEqual(oracle.valid, swift.valid, cppID: cppID,
-                       what: "Swift validity (C++ error=\(oracle.error), Swift error=\(swift.error))")
+    report.expectEqual(expectedValid, swift.valid, cppID: cppID,
+                       what: "independent Swift validity (error=\(swift.error))")
     if let expectedSwiftError {
         report.expect(swift.error.contains(expectedSwiftError), cppID: cppID,
                       message: "Swift error expected to contain '\(expectedSwiftError)', actual='\(swift.error)'")
     }
+
+    if expectedValid, let file = swift.decoded {
+        if assertCanonicalBytes {
+            report.expectEqual(expectedCanonicalBytes ?? bytes, swift.encoded, cppID: cppID,
+                               what: "independent canonical byte vector")
+        }
+        report.expectEqual(expectedFormatZero, file.wasFormat0, cppID: cppID,
+                           what: "independent format-0 provenance")
+        expectDecodedStructure(file, expected: expectedDecoded, cppID: cppID, report: report)
+    }
+
+    let oracle = oracleCodec(bytes)
+    report.expectEqual(expectedValid, oracle.valid, cppID: cppID,
+                       what: "C++ validity (error=\(oracle.error))")
+    report.expectEqual(oracle.valid, swift.valid, cppID: cppID,
+                       what: "Swift validity (C++ error=\(oracle.error), Swift error=\(swift.error))")
     guard oracle.valid, swift.valid else { return }
-    report.expectEqual(oracle.encoded, swift.encoded, cppID: cppID, what: "canonical bytes")
-    report.expectEqual(oracle.summary, swift.summary, cppID: cppID, what: "codec summary")
+    report.expectEqual(oracle.encoded, swift.encoded, cppID: cppID,
+                       what: "supplemental C++ canonical bytes")
+    report.expectEqual(oracle.summary, swift.summary, cppID: cppID,
+                       what: "supplemental C++ codec summary")
     report.expectEqual(oracle.wasFormatZero, swift.wasFormatZero, cppID: cppID,
-                       what: "wasFormat0")
+                       what: "supplemental C++ wasFormat0")
+}
+
+private func expectDecodedStructure(_ file: MidiFile, expected: DecodedCodecExpectation?,
+                                    cppID: String, report: CheckReport) {
+    for (chunkIndex, chunk) in file.chunks.enumerated() {
+        if chunk.events.count > 1 {
+            for eventIndex in 1..<chunk.events.count {
+                report.expect(chunk.events[eventIndex - 1].tick <= chunk.events[eventIndex].tick,
+                              cppID: cppID,
+                              message: "independent decoded order chunk=\(chunkIndex) event=\(eventIndex)")
+            }
+        }
+        if let last = chunk.events.last {
+            report.expect(last.tick <= chunk.endTick, cppID: cppID,
+                          message: "independent end tick chunk=\(chunkIndex) last=\(last.tick) end=\(chunk.endTick)")
+        }
+    }
+    guard let expected else { return }
+    report.expectEqual(expected.division, file.division, cppID: cppID,
+                       what: "independent decoded division")
+    report.expectEqual(expected.wasFormatZero, file.wasFormat0, cppID: cppID,
+                       what: "independent decoded format-0 provenance")
+    report.expectEqual(expected.endTicks.count, file.chunks.count, cppID: cppID,
+                       what: "independent decoded chunk count")
+    for index in 0..<min(expected.endTicks.count, file.chunks.count) {
+        report.expectEqual(expected.endTicks[index], file.chunks[index].endTick, cppID: cppID,
+                           what: "independent decoded chunk=\(index) end tick")
+        report.expectEqual(expected.eventCounts[index], file.chunks[index].events.count,
+                           cppID: cppID, what: "independent decoded chunk=\(index) event count")
+    }
+    for item in expected.events {
+        guard item.chunk < file.chunks.count,
+              item.index < file.chunks[item.chunk].events.count
+        else {
+            report.fail(cppID, "independent decoded event missing chunk=\(item.chunk) index=\(item.index)")
+            continue
+        }
+        report.expectEqual(item.event, file.chunks[item.chunk].events[item.index],
+                           cppID: cppID,
+                           what: "independent decoded event chunk=\(item.chunk) index=\(item.index)")
+    }
 }
 
 private func oracleCodec(_ bytes: [UInt8]) -> CodecObservation {
@@ -527,7 +897,8 @@ private func swiftCodec(_ bytes: [UInt8]) -> CodecObservation {
     do {
         let file = try MidiFile.decode(bytes)
         return CodecObservation(valid: true, encoded: try file.encoded(),
-                                wasFormatZero: file.wasFormat0, summary: codecSummary(file))
+                                wasFormatZero: file.wasFormat0, summary: codecSummary(file),
+                                decoded: file)
     } catch {
         return CodecObservation(error: String(describing: error))
     }
@@ -550,19 +921,288 @@ private func codecSummary(_ file: MidiFile) -> String {
     return parts.joined(separator: ";")
 }
 
+private struct ExpectedCCDescriptor {
+    let eventClass: Int64
+    let lane: Int64
+    let name: String
+    let display: String
+}
+
+// This is the retained semantic specification. It is deliberately data-driven:
+// production functions are never called while constructing an expected result.
+private let expectedCCOverrides: [Int: ExpectedCCDescriptor] = [
+    0x01: ExpectedCCDescriptor(eventClass: 2, lane: 0, name: "MOD", display: "Modulation"),
+    0x05: ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "PORTAMENTO",
+                               display: "Portamento"),
+    0x07: ExpectedCCDescriptor(eventClass: 2, lane: 1, name: "VOL", display: "Volume"),
+    0x0A: ExpectedCCDescriptor(eventClass: 2, lane: 2, name: "PAN", display: "Pan"),
+    0x0C: ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "MEMACC",
+                               display: "Memory op"),
+    0x0D: ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "MEMACC op",
+                               display: "Memory op select"),
+    0x0E: ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "MEMACC p1",
+                               display: "Memory op param 1"),
+    0x0F: ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "MEMACC p2",
+                               display: "Memory op param 2"),
+    0x10: ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "MEMACC",
+                               display: "Memory op"),
+    0x11: ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "Label",
+                               display: "Loop label"),
+    0x14: ExpectedCCDescriptor(eventClass: 2, lane: 3, name: "BENDR",
+                               display: "Bend range"),
+    0x15: ExpectedCCDescriptor(eventClass: 2, lane: 4, name: "LFOS",
+                               display: "LFO speed"),
+    0x16: ExpectedCCDescriptor(eventClass: 2, lane: 5, name: "MODT",
+                               display: "LFO type"),
+    0x17: ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "PWMC",
+                               display: "Pulse-width pattern"),
+    0x18: ExpectedCCDescriptor(eventClass: 2, lane: 6, name: "TUNE",
+                               display: "Fine tune"),
+    0x19: ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "PWMS",
+                               display: "Pulse-width speed"),
+    0x1A: ExpectedCCDescriptor(eventClass: 2, lane: 7, name: "LFODL",
+                               display: "LFO delay"),
+    0x1D: ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "XCMD",
+                               display: "Pseudo-echo"),
+    0x1E: ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "XCMD op",
+                               display: "Pseudo-echo select"),
+    0x1F: ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "XCMD",
+                               display: "Pseudo-echo"),
+    0x21: ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "PRIO",
+                               display: "Priority"),
+    0x27: ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "PRIO",
+                               display: "Priority"),
+]
+
+private let expectedExportedCCs: Set<Int> =
+    [0x01, 0x07, 0x0A, 0x0C, 0x10, 0x11, 0x14, 0x15, 0x16, 0x18, 0x1A, 0x21, 0x27]
+private let expectedLaneNames = [
+    "Modulation", "Volume", "Pan", "Bend range", "LFO speed", "LFO type",
+    "Fine tune", "LFO delay", "Pitch bend", "Echo volume", "Echo length", "Tempo",
+]
+private let expectedPitchNames = [
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+]
+private let expectedVoiceNamesByLowBits = [
+    "Sample", "Square 1", "Square 2", "Wave", "Noise", "Sample", "Sample", "Sample",
+]
+private let expectedVelocityNames = [
+    "", "", "", "", "Square 1", "Square 2", "Programmable Wave", "Noise",
+]
+private let expectedTimeSignatureDenominators = [1, 2, 4, 8, 16, 32, 64, 64, 64, 64, 64]
+private let expectedVelocityCeilings = [
+    4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64,
+    68, 72, 76, 80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120, 124, 127,
+]
+private let expectedPSGRepresentatives = [
+    1, 12, 20, 28, 36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 127,
+]
+private let expectedWaveRepresentatives = [1, 32, 64, 96, 127]
+private let expectedPSGRanges: [(first: Int, last: Int)] = [
+    (1, 8), (9, 16), (17, 24), (25, 32), (33, 40), (41, 48), (49, 56), (57, 64),
+    (65, 72), (73, 80), (81, 88), (89, 96), (97, 104), (105, 112), (113, 120),
+    (121, 127),
+]
+private let expectedWaveRanges: [(first: Int, last: Int)] =
+    [(1, 16), (17, 48), (49, 80), (81, 112), (113, 127)]
+private let expectedControllerDefaults: [Int: Int] = [
+    0x01: 0, 0x05: 0, 0x07: 127, 0x0A: 64, 0x14: 2, 0x15: 22,
+    0x16: 0, 0x17: 0, 0x18: 64, 0x19: 0, 0x1A: 0,
+]
+private let expectedDurationTable = [
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+    20, 21, 22, 23, 24, 24, 24, 24, 28, 28, 30, 30, 32, 32, 32, 32,
+    36, 36, 36, 36, 40, 40, 42, 42, 44, 44, 44, 44, 48, 48, 48, 48,
+    52, 52, 54, 54, 56, 56, 56, 56, 60, 60, 60, 60, 64, 64, 66, 66,
+    68, 68, 68, 68, 72, 72, 72, 72, 76, 76, 78, 78, 80, 80, 80, 80,
+    84, 84, 84, 84, 88, 88, 90, 90, 92, 92, 92, 92, 96,
+]
+
+private func expectedCCDescriptor(_ controller: Int) -> ExpectedCCDescriptor {
+    expectedCCOverrides[controller] ??
+        ExpectedCCDescriptor(eventClass: 3, lane: 0, name: "CC", display: "Controller")
+}
+
+private func expectedCCValue(controller: Int, value: Int) -> String {
+    if controller == 0x0A || controller == 0x18 {
+        let offset = value - 64
+        return "c_v\(value >= 64 ? "+" : "")\(offset)"
+    }
+    if controller == 0x16 {
+        let names = ["Vibrato", "Tremolo", "Autopan"]
+        if value < names.count { return names[value] }
+    }
+    return String(value)
+}
+
+private func expectedEffectiveVelocity(_ value: Int) -> Int {
+    if value <= 0 { return 0 }
+    for ceiling in expectedVelocityCeilings where value <= ceiling { return ceiling }
+    return 127
+}
+
+private func expectedClampedVelocity(_ value: Int) -> Int {
+    min(max(value, 1), 127)
+}
+
+private func expectedVelocityRanges(_ kind: Int) -> [(first: Int, last: Int)]? {
+    if kind == 6 { return expectedWaveRanges }
+    if (4...7).contains(kind) { return expectedPSGRanges }
+    return nil
+}
+
+private func expectedVelocityRepresentatives(_ kind: Int) -> [Int]? {
+    if kind == 6 { return expectedWaveRepresentatives }
+    if (4...7).contains(kind) { return expectedPSGRepresentatives }
+    return nil
+}
+
+private func expectedVelocityLevel(kind: Int, velocity: Int) -> Int {
+    guard let ranges = expectedVelocityRanges(kind) else { return -1 }
+    let effective = expectedEffectiveVelocity(expectedClampedVelocity(velocity))
+    return ranges.firstIndex(where: { $0.first <= effective && effective <= $0.last })!
+}
+
+private func expectedDuration(_ duration: Int64, division: Int64,
+                              extended: Bool, exact: Bool) -> Int64 {
+    let clocks: Int64
+    switch (division, extended) {
+    case (0, _), (24, false): clocks = duration
+    case (24, true): clocks = duration * 2
+    case (48, false): clocks = duration / 2
+    case (48, true): clocks = duration
+    case (96, false): clocks = duration / 4
+    case (96, true): clocks = duration / 2
+    case (480, false): clocks = duration / 20
+    case (480, true): clocks = duration / 10
+    default: preconditionFailure("unexpected retained duration division \(division)")
+    }
+    let positive = max(clocks, 1)
+    if exact || positive >= 96 { return positive }
+    return Int64(expectedDurationTable[Int(positive)])
+}
+
+private func independentExpectedValue(_ operation: OracleValueOp,
+                                      _ a: Int64, _ b: Int64,
+                                      _ c: Int64, _ d: Int64) -> Int64 {
+    switch operation {
+    case .ccClass: return expectedCCDescriptor(Int(a)).eventClass
+    case .ccLane: return expectedCCDescriptor(Int(a)).lane
+    case .ccExport: return expectedExportedCCs.contains(Int(a)) ? 0 : 1
+    case .xcmdLane: return a == 9 ? 10 : 9
+    case .effectiveVelocity: return Int64(expectedEffectiveVelocity(Int(a)))
+    case .effectiveDuration:
+        return expectedDuration(a, division: b, extended: c != 0, exact: d != 0)
+    case .velocityIsPSG: return (4...7).contains(Int(a)) ? 1 : 0
+    case .velocityCompatible:
+        return (4...7).contains(Int(a)) && a == b ? 1 : 0
+    case .velocityLevelCount:
+        if a == 6 { return 5 }
+        return (4...7).contains(Int(a)) ? 16 : 0
+    case .velocityLevelRange:
+        if let ranges = expectedVelocityRanges(Int(a)) {
+            let level = min(max(Int(b), 0), ranges.count - 1)
+            return Int64(ranges[level].first << 8 | ranges[level].last)
+        }
+        let velocity = expectedClampedVelocity(Int(b))
+        return Int64(velocity << 8 | velocity)
+    case .velocityLevel:
+        return Int64(expectedVelocityLevel(kind: Int(a), velocity: Int(b)))
+    case .velocityRepresentative:
+        guard let representatives = expectedVelocityRepresentatives(Int(a)) else {
+            return Int64(expectedClampedVelocity(Int(b)))
+        }
+        return Int64(representatives[min(max(Int(b), 0), representatives.count - 1)])
+    case .velocityCanonicalize:
+        guard let representatives = expectedVelocityRepresentatives(Int(a)) else {
+            return Int64(expectedClampedVelocity(Int(b)))
+        }
+        return Int64(representatives[expectedVelocityLevel(kind: Int(a), velocity: Int(b))])
+    case .velocityMoveLevels:
+        let origin = expectedClampedVelocity(Int(b))
+        guard let representatives = expectedVelocityRepresentatives(Int(a)) else {
+            return Int64(expectedClampedVelocity(origin + Int(c)))
+        }
+        let originLevel = expectedVelocityLevel(kind: Int(a), velocity: origin)
+        let target = min(max(originLevel + Int(c), 0), representatives.count - 1)
+        return Int64(target == originLevel ? origin : representatives[target])
+    case .controllerDefault:
+        return Int64(expectedControllerDefaults[Int(a)] ?? -1)
+    case .laneMinimum: return a == 0xFF ? -8192 : 0
+    case .laneMaximum: return a == 0xFF ? 8191 : (a == 0x16 ? 2 : 127)
+    case .laneCentered: return [0x0A, 0x18, 0xFF].contains(a) ? 1 : 0
+    case .laneZoomable:
+        return [0x0A, 0x16, 0x18, 0xFF].contains(a) ? 0 : 1
+    case .hasEngineDefault: return a == 0x07 || a == 0x0A ? 1 : 0
+    case .tempoFromBPM:
+        let bpm = min(max(a, 20), 255)
+        return (60_000_000 + bpm / 2) / bpm
+    case .bpmFromTempo:
+        let value = a == 0 ? 120.0 : 60_000_000.0 / Double(a)
+        return Int64(bitPattern: value.bitPattern)
+    case .clampTempo: return min(max(a, 235_294), 3_000_000)
+    case .shiftTick:
+        if b <= -a { return 0 }
+        let headroom = 4_294_967_294 - a
+        if b >= headroom { return 4_294_967_294 }
+        return a + b
+    case .tickFromDouble:
+        let value = Double(bitPattern: UInt64(bitPattern: a))
+        if !(value > 0) { return 0 }
+        if !(value < 4_294_967_295.0) { return 4_294_967_294 }
+        return Int64(value)
+    case .trackCapacity: return 16
+    case .noteIDAssigned: return a == 0 ? 0 : 1
+    case .noteIDStorage: return 1
+    }
+}
+
+private func independentExpectedText(_ operation: OracleTextOp,
+                                     _ a: Int64, _ b: Int64) -> String {
+    switch operation {
+    case .ccName: return expectedCCDescriptor(Int(a)).name
+    case .ccDisplay: return expectedCCDescriptor(Int(a)).display
+    case .laneName: return expectedLaneNames[Int(a)]
+    case .ccValue: return expectedCCValue(controller: Int(a), value: Int(b))
+    case .advancedCCLabel:
+        let descriptor = expectedCCDescriptor(Int(a))
+        if descriptor.name == "CC" { return "CC \(a) = \(b) (no m4a meaning)" }
+        return "\(descriptor.name) \(expectedCCValue(controller: Int(a), value: Int(b)))"
+    case .bend: return "\(a > 0 ? "+" : "")\(a)"
+    case .voiceType:
+        if a == 0x80 { return "Drumkit" }
+        if a == 0x08 { return "Sample (fixed pitch)" }
+        if a == 0x10 { return "Sample (reverse)" }
+        return expectedVoiceNamesByLowBits[Int(a) & 0x07]
+    case .keyName:
+        let key = Int(a)
+        return "\(expectedPitchNames[key % 12])\(key / 12 - 1)"
+    case .timeSignature:
+        return "\(a)/\(expectedTimeSignatureDenominators[Int(b)])"
+    case .velocityName: return expectedVelocityNames[Int(a)]
+    }
+}
+
 private func expectOracleValue(_ actual: Int64, _ operation: OracleValueOp,
                                _ a: Int64, _ b: Int64 = 0, _ c: Int64 = 0, _ d: Int64 = 0,
                                row: String, cppID: String, report: CheckReport) {
-    let expected = oracle_semantic_value(operation.rawValue, a, b, c, d)
-    report.expectEqual(expected, actual, cppID: cppID, what: "row=\(row)")
+    let independent = independentExpectedValue(operation, a, b, c, d)
+    report.expectEqual(independent, actual, cppID: cppID,
+                       what: "row=\(row) independent expected value")
+    let oracle = oracle_semantic_value(operation.rawValue, a, b, c, d)
+    report.expectEqual(oracle, actual, cppID: cppID,
+                       what: "row=\(row) supplemental C++ parity")
 }
 
 private func expectOracleText(_ actual: String, _ operation: OracleTextOp,
                               _ a: Int64, _ b: Int64 = 0, row: String,
                               cppID: String, report: CheckReport) {
+    let independent = independentExpectedText(operation, a, b)
+    report.expectEqual(independent, actual, cppID: cppID,
+                       what: "row=\(row) independent expected text")
     let count = oracle_semantic_text(operation.rawValue, a, b, nil, 0)
     guard count >= 0 else {
-        report.fail(cppID, "row=\(row) oracle text operation failed")
+        report.fail(cppID, "row=\(row) supplemental oracle text operation failed")
         return
     }
     var bytes = [CChar](repeating: 0, count: Int(count))
@@ -570,11 +1210,12 @@ private func expectOracleText(_ actual: String, _ operation: OracleTextOp,
         oracle_semantic_text(operation.rawValue, a, b, $0.baseAddress, $0.count)
     }
     guard copied == count else {
-        report.fail(cppID, "row=\(row) oracle sizing=\(count) copy=\(copied)")
+        report.fail(cppID, "row=\(row) supplemental oracle sizing=\(count) copy=\(copied)")
         return
     }
-    let expected = String(decoding: bytes.map { UInt8(bitPattern: $0) }, as: UTF8.self)
-    report.expectEqual(expected, actual, cppID: cppID, what: "row=\(row)")
+    let oracle = String(decoding: bytes.map { UInt8(bitPattern: $0) }, as: UTF8.self)
+    report.expectEqual(oracle, actual, cppID: cppID,
+                       what: "row=\(row) supplemental C++ parity")
 }
 
 private func midiBytes(format: UInt16, division: UInt16, tracks: [[UInt8]]) -> [UInt8] {

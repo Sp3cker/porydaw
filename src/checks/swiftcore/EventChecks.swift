@@ -4,6 +4,7 @@ import PorydawCore
 @MainActor
 func runEventEditsSuite(_ report: CheckReport) {
     trackEditing(report)
+    trackNameRoles(report)
     rawTempoAndSignatureEditing(report)
     laneEditing(report)
 }
@@ -114,6 +115,39 @@ private func trackEditing(_ report: CheckReport) {
     report.expect(ceiling.addTrack(voice: 1) == nil,
                   cppID: "editcheck/EditCheckTest::trackCreateDelete",
                   message: "hardware track ceiling rejects a seventeenth track")
+}
+
+@MainActor
+private func trackNameRoles(_ report: CheckReport) {
+    let file = MidiFile(chunks: [MidiChunk(events: [
+        .meta(type: 0x20, data: [2]),
+        .meta(type: 0x01, data: [65]),
+        .meta(type: 0x03, data: Array("Scoped".utf8)),
+        .meta(type: 0x20, data: []),
+        .meta(type: 0x03, data: Array("Bare".utf8)),
+        .meta(type: 0x20, data: [2]),
+        .meta(type: 0x03, data: Array("ScopedAfterBare".utf8)),
+        .channel(status: 0xC2, data0: 4),
+        .meta(type: 0x03, data: Array("BareAfterChannel".utf8)),
+    ])])
+    let document = SongDocument(file: file)
+    report.expectEqual("Bare", document.trackName(0),
+                       cppID: "editcheck/EditCheckTest::markerVersusTrackName",
+                       what: "document query ignores a channel-prefixed name")
+
+    document.renameTrack(0, to: "Lead")
+    let names = document.rawChunks[0].events.compactMap { event -> String? in
+        guard case let .meta(type, data) = event.payload, type == 0x03 else { return nil }
+        return String(bytes: data, encoding: .isoLatin1)
+    }
+    report.expectEqual(["Scoped", "Lead", "ScopedAfterBare"], names,
+                       cppID: "editcheck/EditCheckTest::markerVersusTrackName",
+                       what: "rename changes only bare names after empty-prefix or channel clearing")
+
+    let imported = MidiImport.analyze(file)
+    report.expectEqual("Bare", imported.tracks.first?.name,
+                       cppID: "onboardcheck/OnboardingTest::importAnalysis[default]",
+                       what: "import and document queries select the same bare name")
 }
 
 @MainActor

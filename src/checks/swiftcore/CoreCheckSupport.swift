@@ -122,6 +122,11 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         }
     case 8:
         runMidiImportSuite(report)
+    case 9:
+        let boxedTime = ReportBox(report)
+        MainActor.assumeIsolated {
+            runTimeEditsSuite(boxedTime.report)
+        }
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

@@ -69,15 +69,10 @@ public enum MidiImport {
             let chunk = file.chunks[chunkIndex]
             var info = ImportTrackInfo(chunk: chunkIndex, name: "", noteCount: 0,
                                        programs: [], notesBeforeProgram: false)
-            var prefix: UInt8?
+            var nameScanner = TrackNameScan()
             for event in chunk.events {
-                if case let .meta(type, data) = event.payload, type == 0x20 {
-                    prefix = data.first.map { $0 & 0x0F }
-                } else if event.isChannel {
-                    prefix = nil
-                }
-                if case let .meta(type, data) = event.payload, type == 0x03,
-                   info.name.isEmpty, prefix == nil {
+                let isTrackName = nameScanner.consume(event)
+                if info.name.isEmpty, isTrackName, case let .meta(_, data) = event.payload {
                     info.name = String(bytes: data, encoding: .isoLatin1)?
                         .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                 }

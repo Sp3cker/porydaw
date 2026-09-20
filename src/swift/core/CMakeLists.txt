@@ -7,6 +7,7 @@ add_library(PorydawCore STATIC
     SongHistory.swift
     NoteEditing.swift
     EventEditing.swift
+    TimeEditing.swift
     Xcmd.swift
     MidiImport.swift
 )

@@ -63,6 +63,11 @@ void SwiftCoreTest::midiImport()
     pdc_suite_run(PDC_SUITE_MIDI_IMPORT, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::timeEdits()
+{
+    pdc_suite_run(PDC_SUITE_TIME_EDITS, reportSwiftCheck, this);
+}
+
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);

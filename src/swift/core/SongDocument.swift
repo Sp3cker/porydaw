@@ -238,10 +238,10 @@ public final class SongDocument {
 
     public func trackName(_ track: Int) -> String {
         guard let mapping = mapping(for: track) else { return "" }
-        for event in state.file.chunks[mapping.chunk].events {
-            if case let .meta(type, bytes) = event.payload, type == 0x03 {
-                return String(bytes: bytes.prefix(64), encoding: .isoLatin1) ?? ""
-            }
+        var scanner = TrackNameScan()
+        for event in state.file.chunks[mapping.chunk].events where scanner.consume(event) {
+            guard case let .meta(_, bytes) = event.payload else { continue }
+            return String(bytes: bytes.prefix(64), encoding: .isoLatin1) ?? ""
         }
         return ""
     }
