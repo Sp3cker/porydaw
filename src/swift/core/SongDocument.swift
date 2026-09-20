@@ -63,6 +63,20 @@ public struct TrackRemap: Equatable, Sendable {
         self.newChunkCount = newChunkCount
         self.newEngineTrackCount = newEngineTrackCount
     }
+
+    internal func inverted() -> TrackRemap {
+        var chunks = Array<Int?>(repeating: nil, count: newChunkCount)
+        for (old, new) in chunkMap.enumerated() {
+            if let new, chunks.indices.contains(new) { chunks[new] = old }
+        }
+        var tracks = Array<Int?>(repeating: nil, count: newEngineTrackCount)
+        for (old, new) in engineTrackMap.enumerated() {
+            if let new, tracks.indices.contains(new) { tracks[new] = old }
+        }
+        return TrackRemap(chunkMap: chunks, engineTrackMap: tracks,
+                          newChunkCount: chunkMap.count,
+                          newEngineTrackCount: engineTrackMap.count)
+    }
 }
 
 public struct DocumentChange: Equatable, Sendable {
@@ -106,6 +120,13 @@ public struct LanePoint: Equatable, Sendable {
     public let eventIndex: Int
     public let tick: Tick
     public let value: Int
+
+    public init(chunk: Int, eventIndex: Int, tick: Tick, value: Int) {
+        self.chunk = chunk
+        self.eventIndex = eventIndex
+        self.tick = tick
+        self.value = value
+    }
 }
 
 public struct TimeSignature: Equatable, Sendable {
@@ -162,8 +183,8 @@ public final class SongDocument {
         self.trackBudget = min(max(trackBudget, 0), TrackLimits.hardwareCapacity)
         history = SongHistory()
         mintAllNoteIDs()
-        history.attachRestore { [weak self] restored in
-            self?.restore(restored)
+        history.attachRestore { [weak self] restored, trackRemap in
+            self?.restore(restored, trackRemap: trackRemap)
         }
     }
 
@@ -183,6 +204,23 @@ public final class SongDocument {
 
     public func lanePoints(track: Int, lane: Lane) -> [LanePoint] {
         guard let mapping = mapping(for: track) else { return [] }
+        if case let .controller(controller) = lane,
+           Xcmd.descriptor(forLane: controller) != nil {
+            var traffic: [Xcmd.Event] = []
+            traffic.reserveCapacity(state.file.chunks[mapping.chunk].events.count)
+            for (index, event) in state.file.chunks[mapping.chunk].events.enumerated() {
+                guard case let .channel(status, data0, data1) = event.payload,
+                      status >> 4 == 0xB else { continue }
+                traffic.append(Xcmd.Event(index: UInt64(index), tick: event.tick,
+                                          stream: UInt8(track), controller: data0,
+                                          value: data1, channel: status & 0x0F))
+            }
+            return Xcmd.project(traffic).points.compactMap { point in
+                guard point.lane == controller, point.index <= UInt64(Int.max) else { return nil }
+                return LanePoint(chunk: mapping.chunk, eventIndex: Int(point.index),
+                                 tick: point.tick, value: Int(point.value))
+            }
+        }
         var result: [LanePoint] = []
         for (index, event) in state.file.chunks[mapping.chunk].events.enumerated() {
             guard case let .channel(status, data0, data1) = event.payload,
@@ -216,7 +254,7 @@ public final class SongDocument {
     }
 
     public func captureSave() throws -> SaveSnapshot {
-        var export = state.file
+        var export = canonicalizedForExport()
         if export.chunks.isEmpty { export.chunks.append(MidiChunk()) }
         for point in state.tempo {
             let value = point.microsecondsPerQuarterNote
@@ -240,12 +278,12 @@ public final class SongDocument {
 
     internal func commit(before: SongState, after: SongState, group: HistoryGroup?,
                          operation: HistoryOperation, changed: Bool = true,
-                         returnsToOrigin: Bool = false) {
+                         returnsToOrigin: Bool = false, trackRemap: TrackRemap? = nil) {
         guard changed, after != state else { return }
         state = after
         history.record(before: before, after: after, group: group, operation: operation,
-                       returnsToOrigin: returnsToOrigin)
-        publish()
+                       returnsToOrigin: returnsToOrigin, trackRemap: trackRemap)
+        publish(trackRemap: trackRemap)
     }
 
     internal func origin(for group: HistoryGroup?, operation: HistoryOperation) -> SongState {
@@ -320,9 +358,9 @@ public final class SongDocument {
         nextNoteID = identifier
     }
 
-    private func restore(_ restored: SongState) {
+    private func restore(_ restored: SongState, trackRemap: TrackRemap?) {
         state = restored
-        publish()
+        publish(trackRemap: trackRemap)
     }
 
     private func publish(trackRemap: TrackRemap? = nil) {

@@ -18,6 +18,9 @@ class SwiftCoreTest final : public QObject
     void playback();
     void noteEdits();
     void documentHistory();
+    void eventEdits();
+    void xcmdEdits();
+    void midiImport();
 };
 
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);

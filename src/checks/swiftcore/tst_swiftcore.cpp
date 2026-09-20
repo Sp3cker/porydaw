@@ -48,6 +48,21 @@ void SwiftCoreTest::documentHistory()
     pdc_suite_run(PDC_SUITE_DOCUMENT_HISTORY, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::eventEdits()
+{
+    pdc_suite_run(PDC_SUITE_EVENT_EDITS, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::xcmdEdits()
+{
+    pdc_suite_run(PDC_SUITE_XCMD_EDITS, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::midiImport()
+{
+    pdc_suite_run(PDC_SUITE_MIDI_IMPORT, reportSwiftCheck, this);
+}
+
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);

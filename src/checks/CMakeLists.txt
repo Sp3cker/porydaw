@@ -391,6 +391,7 @@ if(APPLE)
         swiftcore/MidiChecks.swift
         swiftcore/PlaybackChecks.swift
         swiftcore/NoteChecks.swift
+        swiftcore/EventChecks.swift
     )
     set_target_properties(swift_core_check PROPERTIES
         Swift_MODULE_NAME SwiftCoreCheck

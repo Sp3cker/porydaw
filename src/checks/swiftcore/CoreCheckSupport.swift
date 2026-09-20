@@ -110,6 +110,18 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         MainActor.assumeIsolated {
             runDocumentHistorySuite(boxedHistory.report)
         }
+    case 6:
+        let boxedEvents = ReportBox(report)
+        MainActor.assumeIsolated {
+            runEventEditsSuite(boxedEvents.report)
+        }
+    case 7:
+        let boxedXcmd = ReportBox(report)
+        MainActor.assumeIsolated {
+            runXcmdEditsSuite(boxedXcmd.report)
+        }
+    case 8:
+        runMidiImportSuite(report)
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

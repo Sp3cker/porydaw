@@ -266,9 +266,12 @@
       "observableAssertions": "effective resolution, range selection, delete/move collision, replacement and default promotion retain exact points/history",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 headless value-stream checks with tempo/cc and function cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -280,9 +283,12 @@
       "observableAssertions": "effective resolution, range selection, delete/move collision, replacement and default promotion retain exact points/history",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 headless value-stream checks with tempo/cc and function cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -297,9 +303,12 @@
       "observableAssertions": "effective resolution, range selection, delete/move collision, replacement and default promotion retain exact points/history",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 headless value-stream checks with tempo/cc and function cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -311,9 +320,12 @@
       "observableAssertions": "effective resolution, range selection, delete/move collision, replacement and default promotion retain exact points/history",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 headless value-stream checks with tempo/cc and function cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -325,9 +337,12 @@
       "observableAssertions": "effective resolution, range selection, delete/move collision, replacement and default promotion retain exact points/history",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 headless value-stream checks with tempo/cc and function cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -342,9 +357,12 @@
       "observableAssertions": "effective resolution, range selection, delete/move collision, replacement and default promotion retain exact points/history",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 headless value-stream checks with tempo/cc and function cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -401,9 +419,12 @@
       "observableAssertions": "effective resolution, range selection, delete/move collision, replacement and default promotion retain exact points/history",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 headless value-stream checks with tempo/cc and function cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -418,9 +439,12 @@
       "observableAssertions": "effective resolution, range selection, delete/move collision, replacement and default promotion retain exact points/history",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 headless value-stream checks with tempo/cc and function cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -1251,9 +1275,12 @@
       "observableAssertions": "All observable assertions in EditCheckTest::automationLanePoints pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for editcheck/EditCheckTest::automationLanePoints",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -1484,9 +1511,12 @@
       "observableAssertions": "opaque order and exact values survive; canonical projections are last-wins without rewriting live raw data; save snapshot is detached",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 metadata/value-stream checks with exact function cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -1498,9 +1528,12 @@
       "observableAssertions": "opaque order and exact values survive; canonical projections are last-wins without rewriting live raw data; save snapshot is detached",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 metadata/value-stream checks with exact function cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -1512,9 +1545,12 @@
       "observableAssertions": "opaque order and exact values survive; canonical projections are last-wins without rewriting live raw data; save snapshot is detached",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 metadata/value-stream checks with exact function cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -1580,9 +1616,12 @@
       "observableAssertions": "All observable assertions in EditCheckTest::loopCfgUndoRedo pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for editcheck/EditCheckTest::loopCfgUndoRedo",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -1920,9 +1959,12 @@
       "observableAssertions": "All observable assertions in EditCheckTest::rawEventMutate pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for editcheck/EditCheckTest::rawEventMutate",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -1937,9 +1979,12 @@
       "observableAssertions": "All observable assertions in EditCheckTest::rawEventReorder pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for editcheck/EditCheckTest::rawEventReorder",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -1954,9 +1999,12 @@
       "observableAssertions": "All observable assertions in EditCheckTest::songTimeSignature pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for editcheck/EditCheckTest::songTimeSignature",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -2131,9 +2179,12 @@
       "observableAssertions": "All observable assertions in EditCheckTest::trackCreateDelete pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for editcheck/EditCheckTest::trackCreateDelete",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -2148,9 +2199,12 @@
       "observableAssertions": "All observable assertions in EditCheckTest::trackDeleteRescue pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for editcheck/EditCheckTest::trackDeleteRescue",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -2165,9 +2219,12 @@
       "observableAssertions": "All observable assertions in EditCheckTest::trackDuplicate pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for editcheck/EditCheckTest::trackDuplicate",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -2182,9 +2239,12 @@
       "observableAssertions": "All observable assertions in EditCheckTest::trackMarkerName pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for editcheck/EditCheckTest::trackMarkerName",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -2196,9 +2256,12 @@
       "observableAssertions": "All observable assertions in EditCheckTest::trackMove pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for editcheck/EditCheckTest::trackMove",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -2213,9 +2276,12 @@
       "observableAssertions": "All observable assertions in EditCheckTest::trackRename pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for editcheck/EditCheckTest::trackRename",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -2230,9 +2296,12 @@
       "observableAssertions": "All observable assertions in EditCheckTest::voiceLanePoint pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for editcheck/EditCheckTest::voiceLanePoint",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "noRowMarker": true,
@@ -2247,9 +2316,12 @@
       "observableAssertions": "opaque order and exact values survive; canonical projections are last-wins without rewriting live raw data; save snapshot is detached",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 metadata/value-stream checks with exact function cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4306,9 +4378,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::compilesThroughMid2agb pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::compilesThroughMid2agb",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4320,9 +4395,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::compilesThroughMid2agb pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::compilesThroughMid2agb",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4334,9 +4412,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::debugLayouts pass for this case row append",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::debugLayouts[append]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4348,9 +4429,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::debugLayouts pass for this case row before-first",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::debugLayouts[before-first]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4362,9 +4446,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::debugLayouts pass for this case row mid-backfill",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::debugLayouts[mid-backfill]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4376,9 +4463,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::debugLayouts pass for this case row named-form",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::debugLayouts[named-form]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4390,9 +4480,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::debugLayouts pass for this case row se-route",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::debugLayouts[se-route]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4404,9 +4497,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::debugLayouts pass for this case row sole-remove-empty-insert",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::debugLayouts[sole-remove-empty-insert]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4418,9 +4514,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::deleteAction pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::deleteAction",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4432,9 +4531,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::deleteAction pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::deleteAction",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4446,9 +4548,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::importAnalysis pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::importAnalysis",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4460,9 +4565,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::importAnalysis pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::importAnalysis",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4474,9 +4582,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::importAnalysis pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::importAnalysis",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4488,9 +4599,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::importDedup pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::importDedup",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4502,9 +4616,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::importRescale pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::importRescale",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4516,9 +4633,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::importRescaleOverflow pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::importRescaleOverflow",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4530,9 +4650,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::importRoundtrip pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::importRoundtrip",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4544,9 +4667,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::importWizard pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::importWizard",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4558,9 +4684,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::importWizardOverflow pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::importWizardOverflow",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4572,9 +4701,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::newSongRegistration pass for this case row aligned",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::newSongRegistration[aligned]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4586,9 +4718,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::newSongRegistration pass for this case row heal-charmap",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::newSongRegistration[heal-charmap]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4600,9 +4735,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::newSongRegistration pass for this case row heal-songs-h",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::newSongRegistration[heal-songs-h]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4614,9 +4752,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::newSongRegistration pass for this case row normal",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::newSongRegistration[normal]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4628,9 +4769,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::newSongRegistration pass for this case row reregister",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::newSongRegistration[reregister]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4642,9 +4786,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::projectEnumerationAndTrackBudgets pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::projectEnumerationAndTrackBudgets",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4656,9 +4803,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::regionedAliasLayouts pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::regionedAliasLayouts",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4670,9 +4820,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::regionedAliasLayouts pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::regionedAliasLayouts",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4684,9 +4837,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::regionedAliasLayouts pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::regionedAliasLayouts",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4698,9 +4854,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::regionedValueLayouts pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::regionedValueLayouts",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4712,9 +4871,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::regionedValueLayouts pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::regionedValueLayouts",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4726,9 +4888,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::regionedValueLayouts pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::regionedValueLayouts",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4740,9 +4905,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::regionedValueLayouts pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::regionedValueLayouts",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4754,9 +4922,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::registerAction pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::registerAction",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4768,9 +4939,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::registrationAliases pass for this case row complete-alias",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::registrationAliases[complete-alias]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4782,9 +4956,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::registrationAliases pass for this case row drift-heals-first",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::registrationAliases[drift-heals-first]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4796,9 +4973,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::registrationBackfill pass for this case row charmap",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::registrationBackfill[charmap]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4810,9 +4990,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::registrationBackfill pass for this case row songs-h",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::registrationBackfill[songs-h]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4824,9 +5007,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::songDeletion pass for this case row double-delete-six-files",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::songDeletion[double-delete-six-files]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4838,9 +5024,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::songDeletion pass for this case row entry-zero-refused",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::songDeletion[entry-zero-refused]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4852,9 +5041,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::songDeletion pass for this case row mid-delete-and-reuse",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::songDeletion[mid-delete-and-reuse]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4866,9 +5058,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::songDeletion pass for this case row stray-unregistered",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::songDeletion[stray-unregistered]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4880,9 +5075,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::voicegroupDeletion pass for this case row c-reference",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::voicegroupDeletion[c-reference]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4894,9 +5092,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::voicegroupDeletion pass for this case row keysplit-reference",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::voicegroupDeletion[keysplit-reference]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4908,9 +5109,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::voicegroupDeletion pass for this case row shared-user",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::voicegroupDeletion[shared-user]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -4922,9 +5126,12 @@
       "observableAssertions": "All observable assertions in OnboardingTest::voicegroupDeletion pass for this case row sole-user",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 Swift replacement comparison for onboardcheck/OnboardingTest::voicegroupDeletion[sole-user]",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -7516,9 +7723,12 @@
       "observableAssertions": "M2 compiled assembly parity per eligible song row; fixture eligibility and failures remain per-row",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 production Swift import/save comparison preserving songM2Roundtrip:<songLabel> cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -7531,9 +7741,12 @@
       "observableAssertions": "M2 compiled assembly parity per eligible song row; fixture eligibility and failures remain per-row",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 production Swift import/save comparison preserving songM2Roundtrip:<songLabel> cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -7546,9 +7759,12 @@
       "observableAssertions": "M2 compiled assembly parity per eligible song row; fixture eligibility and failures remain per-row",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 production Swift import/save comparison preserving songM2Roundtrip:<songLabel> cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -7561,9 +7777,12 @@
       "observableAssertions": "M2 compiled assembly parity per eligible song row; fixture eligibility and failures remain per-row",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 production Swift import/save comparison preserving songM2Roundtrip:<songLabel> cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -7576,9 +7795,12 @@
       "observableAssertions": "M2 compiled assembly parity per eligible song row; fixture eligibility and failures remain per-row",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 production Swift import/save comparison preserving songM2Roundtrip:<songLabel> cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -7591,9 +7813,12 @@
       "observableAssertions": "M2 compiled assembly parity per eligible song row; fixture eligibility and failures remain per-row",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 production Swift import/save comparison preserving songM2Roundtrip:<songLabel> cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -7606,9 +7831,12 @@
       "observableAssertions": "M2 compiled assembly parity per eligible song row; fixture eligibility and failures remain per-row",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 production Swift import/save comparison preserving songM2Roundtrip:<songLabel> cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -7621,9 +7849,12 @@
       "observableAssertions": "M2 compiled assembly parity per eligible song row; fixture eligibility and failures remain per-row",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 production Swift import/save comparison preserving songM2Roundtrip:<songLabel> cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -7636,9 +7867,12 @@
       "observableAssertions": "M2 compiled assembly parity per eligible song row; fixture eligibility and failures remain per-row",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 production Swift import/save comparison preserving songM2Roundtrip:<songLabel> cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -7651,9 +7885,12 @@
       "observableAssertions": "M2 compiled assembly parity per eligible song row; fixture eligibility and failures remain per-row",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 production Swift import/save comparison preserving songM2Roundtrip:<songLabel> cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -7666,9 +7903,12 @@
       "observableAssertions": "M2 compiled assembly parity per eligible song row; fixture eligibility and failures remain per-row",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 production Swift import/save comparison preserving songM2Roundtrip:<songLabel> cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -7681,9 +7921,12 @@
       "observableAssertions": "M2 compiled assembly parity per eligible song row; fixture eligibility and failures remain per-row",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 production Swift import/save comparison preserving songM2Roundtrip:<songLabel> cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -7696,9 +7939,12 @@
       "observableAssertions": "M2 compiled assembly parity per eligible song row; fixture eligibility and failures remain per-row",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 production Swift import/save comparison preserving songM2Roundtrip:<songLabel> cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -7711,9 +7957,12 @@
       "observableAssertions": "M2 compiled assembly parity per eligible song row; fixture eligibility and failures remain per-row",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 production Swift import/save comparison preserving songM2Roundtrip:<songLabel> cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -7726,9 +7975,12 @@
       "observableAssertions": "xIECV/xIECL emit intended commands; unknown selector payload emits no XCMD op",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD export compile comparison under exact cppId",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison",
       "reconciliationNotes": "Scout classified compiled mid2agb round-trip as Task 1; codec parity is Task 1, but assembly compilation/export ownership is due Task 3."
@@ -9240,9 +9492,12 @@
       "observableAssertions": "counts, labels, support verdicts and warnings remain exact per baseline function",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 MidiImport/XCMD analysis tests with each listed function as failure ID",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -9254,9 +9509,12 @@
       "observableAssertions": "counts, labels, support verdicts and warnings remain exact per baseline function",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 MidiImport/XCMD analysis tests with each listed function as failure ID",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -9268,9 +9526,12 @@
       "observableAssertions": "counts, labels, support verdicts and warnings remain exact per baseline function",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 MidiImport/XCMD analysis tests with each listed function as failure ID",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -9282,9 +9543,12 @@
       "observableAssertions": "counts, labels, support verdicts and warnings remain exact per baseline function",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 MidiImport/XCMD analysis tests with each listed function as failure ID",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -9296,9 +9560,12 @@
       "observableAssertions": "counts, labels, support verdicts and warnings remain exact per baseline function",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 MidiImport/XCMD analysis tests with each listed function as failure ID",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -9310,9 +9577,12 @@
       "observableAssertions": "counts, labels, support verdicts and warnings remain exact per baseline function",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 MidiImport/XCMD analysis tests with each listed function as failure ID",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11707,9 +11977,12 @@
       "observableAssertions": "explicit selector/payload pairs, ordering, clamping, duplicate collapse and rejection match each case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD lane mutation tests retaining every named cppId",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11721,9 +11994,12 @@
       "observableAssertions": "explicit selector/payload pairs, ordering, clamping, duplicate collapse and rejection match each case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD lane mutation tests retaining every named cppId",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11735,9 +12011,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11749,9 +12028,12 @@
       "observableAssertions": "projection, epoch scoping and consumed index set exactly match every named case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD projection tests with named function suffixes",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11763,9 +12045,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11777,9 +12062,12 @@
       "observableAssertions": "projection, epoch scoping and consumed index set exactly match every named case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD projection tests with named function suffixes",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11791,9 +12079,12 @@
       "observableAssertions": "known points canonicalize and opaque traffic remains byte-exact",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 export snapshot tests retaining four cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11805,9 +12096,12 @@
       "observableAssertions": "explicit selector/payload pairs, ordering, clamping, duplicate collapse and rejection match each case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD lane mutation tests retaining every named cppId",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11819,9 +12113,12 @@
       "observableAssertions": "explicit selector/payload pairs, ordering, clamping, duplicate collapse and rejection match each case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD lane mutation tests retaining every named cppId",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11833,9 +12130,12 @@
       "observableAssertions": "known points canonicalize and opaque traffic remains byte-exact",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 export snapshot tests retaining four cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11847,9 +12147,12 @@
       "observableAssertions": "explicit selector/payload pairs, ordering, clamping, duplicate collapse and rejection match each case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD lane mutation tests retaining every named cppId",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11861,9 +12164,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11875,9 +12181,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11889,9 +12198,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11903,9 +12215,12 @@
       "observableAssertions": "explicit selector/payload pairs, ordering, clamping, duplicate collapse and rejection match each case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD lane mutation tests retaining every named cppId",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11917,9 +12232,12 @@
       "observableAssertions": "projection, epoch scoping and consumed index set exactly match every named case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD projection tests with named function suffixes",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11931,9 +12249,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11945,9 +12266,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11959,9 +12283,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11973,9 +12300,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -11987,9 +12317,12 @@
       "observableAssertions": "explicit selector/payload pairs, ordering, clamping, duplicate collapse and rejection match each case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD lane mutation tests retaining every named cppId",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12001,9 +12334,12 @@
       "observableAssertions": "explicit selector/payload pairs, ordering, clamping, duplicate collapse and rejection match each case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD lane mutation tests retaining every named cppId",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12015,9 +12351,12 @@
       "observableAssertions": "known points canonicalize and opaque traffic remains byte-exact",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 export snapshot tests retaining four cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12029,9 +12368,12 @@
       "observableAssertions": "projection, epoch scoping and consumed index set exactly match every named case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD projection tests with named function suffixes",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12043,9 +12385,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12057,9 +12402,12 @@
       "observableAssertions": "projection, epoch scoping and consumed index set exactly match every named case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD projection tests with named function suffixes",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12071,9 +12419,12 @@
       "observableAssertions": "known points canonicalize and opaque traffic remains byte-exact",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 export snapshot tests retaining four cppIds",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12085,9 +12436,12 @@
       "observableAssertions": "explicit selector/payload pairs, ordering, clamping, duplicate collapse and rejection match each case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD lane mutation tests retaining every named cppId",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12099,9 +12453,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12113,9 +12470,12 @@
       "observableAssertions": "projection, epoch scoping and consumed index set exactly match every named case",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 XCMD projection tests with named function suffixes",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12127,9 +12487,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12141,9 +12504,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12155,9 +12521,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12169,9 +12538,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12183,9 +12555,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12197,9 +12572,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     },
@@ -12211,9 +12589,12 @@
       "observableAssertions": "opaque bytes remain exact; partial/conflicting/stale operations reject atomically; known epochs rebuild canonically",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "Task 3 raw XCMD operation tests with per-function failure IDs",
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
+        "status": "controller-run-pending"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 3 Swift comparison"
     }

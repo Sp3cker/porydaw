@@ -50,6 +50,7 @@ public final class SongHistory {
         var afterIdentity: DocumentIdentity
         let group: HistoryGroup?
         let operation: HistoryOperation
+        let trackRemap: TrackRemap?
         var mergeSealed: Bool
     }
 
@@ -64,7 +65,7 @@ public final class SongHistory {
     private var nextIdentity: UInt64 = 2
     private let baseIdentity = DocumentIdentity(rawValue: 1)
     private var savedIdentity = DocumentIdentity(rawValue: 1)
-    private var restore: ((SongState) -> Void)?
+    private var restore: ((SongState, TrackRemap?) -> Void)?
 
     public init() {}
 
@@ -91,7 +92,7 @@ public final class SongHistory {
     public func undoDocument() -> Bool {
         guard index > 0, case let .document(entry) = entries[index - 1] else { return false }
         index -= 1
-        restore?(entry.before)
+        restore?(entry.before, entry.trackRemap?.inverted())
         return true
     }
 
@@ -99,7 +100,7 @@ public final class SongHistory {
     public func redoDocument() -> Bool {
         guard index < entries.count, case let .document(entry) = entries[index] else { return false }
         index += 1
-        restore?(entry.after)
+        restore?(entry.after, entry.trackRemap)
         return true
     }
 
@@ -109,7 +110,7 @@ public final class SongHistory {
         switch entries[index - 1] {
         case let .document(entry):
             index -= 1
-            restore?(entry.before)
+            restore?(entry.before, entry.trackRemap?.inverted())
         case let .bank(entry):
             try await entry.action.apply(direction: .undo)
             index -= 1
@@ -123,7 +124,7 @@ public final class SongHistory {
         switch entries[index] {
         case let .document(entry):
             index += 1
-            restore?(entry.after)
+            restore?(entry.after, entry.trackRemap)
         case let .bank(entry):
             try await entry.action.apply(direction: .redo)
             index += 1
@@ -131,7 +132,7 @@ public final class SongHistory {
         return true
     }
 
-    internal func attachRestore(_ restore: @escaping (SongState) -> Void) {
+    internal func attachRestore(_ restore: @escaping (SongState, TrackRemap?) -> Void) {
         self.restore = restore
     }
 
@@ -145,7 +146,8 @@ public final class SongHistory {
     }
 
     internal func record(before: SongState, after: SongState, group: HistoryGroup?,
-                         operation: HistoryOperation, returnsToOrigin: Bool) {
+                         operation: HistoryOperation, returnsToOrigin: Bool,
+                         trackRemap: TrackRemap?) {
         let mayMerge = group != nil && index == entries.count
         discardRedo()
         if mayMerge, let group, index > 0,
@@ -163,7 +165,7 @@ public final class SongHistory {
         }
         entries.append(.document(DocumentEntry(
             before: before, after: after, afterIdentity: mintIdentity(),
-            group: group, operation: operation, mergeSealed: false)))
+            group: group, operation: operation, trackRemap: trackRemap, mergeSealed: false)))
         index += 1
     }
 
@@ -200,4 +202,24 @@ internal enum HistoryOperation: Hashable {
     case moveNotesToPitches([NoteID])
     case resizeNotes([NoteID], ResizeEdge)
     case setVelocities
+    case addTrack
+    case duplicateTrack
+    case deleteTrack
+    case moveTrack
+    case renameTrack
+    case setTrackEnd
+    case setConfig
+    case insertRawEvent
+    case modifyRawEvent
+    case deleteRawEvents
+    case moveRawEvent
+    case editTempo
+    case editRawAndTempo
+    case setLoop
+    case setTimeSignature
+    case moveTimeSignature
+    case deleteTimeSignature
+    case writeLane
+    case moveLanePoints
+    case deleteLanePoints
 }
