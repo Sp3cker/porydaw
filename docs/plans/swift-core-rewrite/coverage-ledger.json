@@ -5570,8 +5570,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::savedRecipe_dedupOrderSelection",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5584,8 +5588,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5598,8 +5606,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::savedRecipe_selectionFallbacks",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5612,8 +5624,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5626,8 +5642,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5640,8 +5660,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5654,8 +5678,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::songHistory_startsClean",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5668,8 +5696,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5682,8 +5714,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5696,8 +5732,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_rejections[absolute]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5710,8 +5750,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_rejections[empty]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5724,8 +5768,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_rejections[nested-parent]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5738,8 +5786,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_rejections[normalizes-to-root]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5752,8 +5804,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_rejections[parent-file]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5766,8 +5822,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_rejections[parent]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5780,8 +5840,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::voicegroupId_rejections[project-root]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5812,8 +5876,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5826,8 +5894,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::fifoDeliversInSubmissionOrder",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5840,8 +5912,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5854,8 +5930,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5868,8 +5948,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5882,8 +5966,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5896,8 +5984,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5910,8 +6002,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5924,8 +6020,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::creationCollisionRefusesLeavingStray",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5938,8 +6038,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5952,8 +6056,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::failureStages[midi]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5966,8 +6074,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::failureStages[reconcile]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5980,8 +6092,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::failureStages[save]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -5994,8 +6110,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::failureStages[voicegroup]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -6008,8 +6128,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -6022,8 +6146,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::previewCleanupPrivateResult",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -6036,8 +6164,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-mutations/ProjectIoMutationsTest::semanticSaveBareAndWithRecipe",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -6123,8 +6255,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -6137,8 +6273,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[scalar-edit-view-and-receipt]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -6205,8 +6345,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::planEventsForwardKeyed",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -8346,8 +8490,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -8360,8 +8508,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -8374,8 +8526,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId savecheck/ProjectSaveTest::savedMidiCompilesWhenAvailable",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -11636,8 +11792,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/midiSemantics: runMidiSemanticsSuite in src/checks/swiftcore/MidiChecks.swift under cppId velocity-model/VelocityModelTest::resolvesVoiceKinds, rows velocity-kind-*",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Duplicate projectSession row deleted; existing exhaustive Task 1 semantics target awaits fresh controller reconciliation.",
       "reconciliationNotes": "Scout classified the whole case as Task 1; Swift Task 1 covers resolved VoiceKind laws, while native ToneData traversal remains due Task 6.",
@@ -11671,8 +11831,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -11685,8 +11849,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -11699,8 +11867,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -11713,8 +11885,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId vgbankcheck/VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -11727,8 +11903,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -11741,8 +11921,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -11755,8 +11939,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -11769,8 +11957,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -11884,8 +12076,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -11898,8 +12094,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -11912,8 +12112,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -11926,8 +12130,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId vgsavecheck/VoicegroupSaveTest::cleanSaveEmitsNoReceipt",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -11976,8 +12184,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -11990,8 +12202,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId vgsavecheck/VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -12022,8 +12238,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -12036,8 +12256,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -12050,8 +12274,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -12210,8 +12438,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -12260,8 +12492,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -12274,8 +12510,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::undoShortcutRestoresWithoutWrite",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -12288,8 +12528,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -12302,8 +12546,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -12451,8 +12699,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -12465,8 +12717,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
@@ -12479,8 +12735,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
+        "revision": "cb6052f5",
+        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification"
     },
