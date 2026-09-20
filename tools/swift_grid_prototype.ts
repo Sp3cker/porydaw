@@ -2,11 +2,17 @@
 // Builds only src/ui/songview/quick/swift-grid-prototype into
 // build-swift-grid/ — never the production porydaw targets.
 //
-// usage: deno task prototype:swift-grid [--build-only|--smoke]
-//   (default)   configure, build, then launch the app
-//   --build-only  configure and build only
-//   --smoke       configure, build, then run the native gesture smoke
-//                 (PORYDAW_SWIFT_GRID_SMOKE=1); expects SWIFT_GRID_SMOKE PASS
+// usage: deno task prototype:swift-grid [
+//     --build-only|--smoke|--widget-smoke|--widget-preview]
+//   (default)         configure, build, then launch the app
+//   --build-only      configure and build only
+//   --smoke           configure, build, then run the native gesture smoke
+//                     (PORYDAW_SWIFT_GRID_SMOKE=1); expects SWIFT_GRID_SMOKE PASS
+//   --widget-smoke    configure, build, then run the native widget-interop
+//                     smoke (PORYDAW_SWIFT_WIDGET_SMOKE=1); expects
+//                     SWIFT_GRID_WIDGET_SMOKE PASS
+//   --widget-preview  configure, build, then run the same widget automation
+//                     with the app left open (PORYDAW_SWIFT_WIDGET_PREVIEW=1)
 
 import { dirname, join } from "node:path";
 import { localQtPrefix } from "./local_build_environment.ts";
@@ -216,10 +222,13 @@ async function buildEnvironment(
 }
 
 function usage(): string {
-  return `usage: deno task prototype:swift-grid [--build-only|--smoke]
+  return `usage: deno task prototype:swift-grid [
+    --build-only|--smoke|--widget-smoke|--widget-preview]
   build and launch the Swift/QtBridge piano-grid prototype
-  --build-only  configure and build without launching
-  --smoke       build, then run the native gesture smoke check`;
+  --build-only      configure and build without launching
+  --smoke           build, then run the native gesture smoke check
+  --widget-smoke    build, then run the native widget-interop smoke check
+  --widget-preview  build, then run the widget-interop preview (stays open)`;
 }
 
 async function exists(path: string): Promise<boolean> {
@@ -448,17 +457,24 @@ async function runApp(env: Record<string, string>): Promise<number> {
   return (await child.status).code;
 }
 
-async function runSmoke(environment: Record<string, string>): Promise<void> {
+// Runs the app under a bounded smoke environment, captures its output, and
+// requires the exact pass marker before reporting success.
+async function runBoundedSmoke(
+  environment: Record<string, string>,
+  variable: string,
+  marker: string,
+  label: string,
+): Promise<void> {
   const binary = executablePath();
   if (!(await exists(binary))) {
     console.error(`prototype:swift-grid: missing binary ${binary}`);
     Deno.exit(1);
   }
-  console.log("prototype:swift-grid: smoke");
+  console.log(`prototype:swift-grid: ${label}`);
   const child = new Deno.Command(binary, {
     env: {
       ...environment,
-      PORYDAW_SWIFT_GRID_SMOKE: "1",
+      [variable]: "1",
       PORYDAW_AUDIO_BACKEND: "null",
     },
     clearEnv: Deno.build.os === "windows",
@@ -475,22 +491,62 @@ async function runSmoke(environment: Record<string, string>): Promise<void> {
   const combined = decoder.decode(result.stdout) +
     decoder.decode(result.stderr);
   console.log(combined);
-  if (!result.success || !combined.includes("SWIFT_GRID_SMOKE PASS")) {
-    console.error("prototype:swift-grid: smoke failed");
+  if (!result.success || !combined.includes(marker)) {
+    console.error(`prototype:swift-grid: ${label} failed`);
     Deno.exit(1);
   }
-  console.log("prototype:swift-grid: smoke ok");
+  console.log(`prototype:swift-grid: ${label} ok`);
 }
+
+async function runSmoke(environment: Record<string, string>): Promise<void> {
+  await runBoundedSmoke(
+    environment,
+    "PORYDAW_SWIFT_GRID_SMOKE",
+    "SWIFT_GRID_SMOKE PASS",
+    "smoke",
+  );
+}
+
+async function runWidgetSmoke(
+  environment: Record<string, string>,
+): Promise<void> {
+  await runBoundedSmoke(
+    environment,
+    "PORYDAW_SWIFT_WIDGET_SMOKE",
+    "SWIFT_GRID_WIDGET_SMOKE PASS",
+    "widget smoke",
+  );
+}
+
+// The preview runs the same widget automation but keeps the app open with the
+// outcomes visible, so output and input stay attached to the terminal.
+function runWidgetPreview(environment: Record<string, string>): Promise<void> {
+  console.log("prototype:swift-grid: widget preview");
+  return runApp({
+    ...environment,
+    PORYDAW_SWIFT_WIDGET_PREVIEW: "1",
+    PORYDAW_AUDIO_BACKEND: "null",
+  }).then((code) => Deno.exit(code));
+}
+
+const MODE_FLAGS = [
+  "--build-only",
+  "--smoke",
+  "--widget-smoke",
+  "--widget-preview",
+];
 
 const args = Deno.args;
 if (args.includes("--help") || args.includes("-h")) {
   console.log(usage());
   Deno.exit(0);
 }
-const buildOnly = args.includes("--build-only");
-const smoke = args.includes("--smoke");
-const unknown = args.filter((a) => a !== "--build-only" && a !== "--smoke");
-if (unknown.length > 0 || (buildOnly && smoke)) {
+const modes = MODE_FLAGS.filter((flag) => args.includes(flag));
+const unknown = args.filter((arg) => !MODE_FLAGS.includes(arg));
+const mode = modes.at(0);
+// The modes are mutually exclusive; repeating the same flag is harmless.
+const conflicting = modes.some((flag) => flag !== mode);
+if (unknown.length > 0 || conflicting) {
   console.error(usage());
   Deno.exit(2);
 }
@@ -513,10 +569,14 @@ if (Deno.build.os === "windows") {
 }
 await build(environment, swiftc, swiftSdkRoot, ninja);
 await deployWindowsRuntime(environment, qtPrefix, swiftRuntime);
-if (buildOnly) {
+if (mode === "--build-only") {
   console.log("prototype:swift-grid: build ok");
-} else if (smoke) {
+} else if (mode === "--smoke") {
   await runSmoke(environment);
+} else if (mode === "--widget-smoke") {
+  await runWidgetSmoke(environment);
+} else if (mode === "--widget-preview") {
+  await runWidgetPreview(environment);
 } else {
   console.log("prototype:swift-grid: launch");
   Deno.exit(await runApp(environment));

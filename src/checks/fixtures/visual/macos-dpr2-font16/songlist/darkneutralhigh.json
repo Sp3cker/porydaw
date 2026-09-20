@@ -96,18 +96,18 @@
             "y": 84
         },
         {
-            "h": 22,
+            "h": 19,
             "name": "songs.row.unregistered",
             "w": 338,
             "x": 5,
             "y": 210
         },
         {
-            "h": 22,
+            "h": 19,
             "name": "songs.row.partial",
             "w": 338,
             "x": 5,
-            "y": 232
+            "y": 229
         }
     ]
 }

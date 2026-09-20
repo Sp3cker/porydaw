@@ -1,0 +1,92 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 532,
+        "width": 728
+    },
+    "profile": "macos-dpr2-font12",
+    "regions": [
+        {
+            "h": 31,
+            "name": "wizard.voicegroup",
+            "w": 570,
+            "x": 144,
+            "y": 90
+        },
+        {
+            "h": 26,
+            "name": "wizard.volume",
+            "w": 570,
+            "x": 144,
+            "y": 132
+        },
+        {
+            "h": 26,
+            "name": "wizard.reverb",
+            "w": 570,
+            "x": 144,
+            "y": 169
+        },
+        {
+            "h": 26,
+            "name": "wizard.priority",
+            "w": 570,
+            "x": 144,
+            "y": 206
+        },
+        {
+            "h": 28,
+            "name": "wizard.exact-gate",
+            "w": 570,
+            "x": 144,
+            "y": 243
+        },
+        {
+            "h": 28,
+            "name": "wizard.extended-clocks",
+            "w": 570,
+            "x": 144,
+            "y": 282
+        },
+        {
+            "h": 28,
+            "name": "wizard.no-compression",
+            "w": 570,
+            "x": 144,
+            "y": 321
+        },
+        {
+            "h": 28,
+            "name": "wizard.sound-error",
+            "w": 570,
+            "x": 144,
+            "y": 360
+        },
+        {
+            "h": 27,
+            "name": "wizard.back",
+            "w": 98,
+            "x": 14,
+            "y": 491
+        },
+        {
+            "h": 27,
+            "name": "wizard.finish",
+            "w": 98,
+            "x": 14,
+            "y": 491
+        },
+        {
+            "h": 27,
+            "name": "wizard.cancel",
+            "w": 98,
+            "x": 616,
+            "y": 491
+        }
+    ]
+}

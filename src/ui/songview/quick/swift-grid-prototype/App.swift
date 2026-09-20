@@ -16,12 +16,23 @@ struct SwiftGridApp: QApp {
     let qmlFileName: String = "Main"
 
     let songTabs = SongTabsController()
+    let widgetInterop = WidgetInteropController()
+    let newSongWizard: NewSongWizardController
+    let newSongResult: NewSongDemoResult
 
     var initialProperties: [String: QObjectBuildable] {
-        ["songTabs": songTabs]
+        [
+            "songTabs": songTabs, "widgetInterop": widgetInterop,
+            "newSongWizard": newSongWizard, "newSongResult": newSongResult,
+        ]
     }
 
     init() {
+        let result = NewSongDemoResult()
+        newSongResult = result
+        newSongWizard = NewSongWizardController(catalog: newSongDemoCatalog()) {
+            result.record($0)
+        }
         runMathSelftestIfRequested()
         runPolicySelftestIfRequested()
         let initialTabId = songTabs.selectedId

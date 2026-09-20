@@ -1,0 +1,281 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 640,
+        "width": 900
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 23,
+            "name": "sampleAdvancedToggle",
+            "w": 112,
+            "x": 11,
+            "y": 575
+        },
+        {
+            "h": 30,
+            "name": "sampleAuditionKey",
+            "w": 151,
+            "x": 110,
+            "y": 515
+        },
+        {
+            "h": 20,
+            "name": "sampleCrossfade",
+            "w": 222,
+            "x": 21,
+            "y": 387
+        },
+        {
+            "h": 30,
+            "name": "sampleLoopEnd",
+            "w": 134,
+            "x": 365,
+            "y": 351
+        },
+        {
+            "h": 30,
+            "name": "sampleLoopStart",
+            "w": 134,
+            "x": 203,
+            "y": 351
+        },
+        {
+            "h": 18,
+            "name": "sampleNameStatus",
+            "w": 878,
+            "x": 11,
+            "y": 240
+        },
+        {
+            "h": 18,
+            "name": "sampleOutputSummary",
+            "w": 878,
+            "x": 11,
+            "y": 551
+        },
+        {
+            "h": 22,
+            "name": "samplePitchApply",
+            "w": 208,
+            "x": 312,
+            "y": 451
+        },
+        {
+            "h": 22,
+            "name": "sampleRefineLoop",
+            "w": 71,
+            "x": 266,
+            "y": 322
+        },
+        {
+            "h": 196,
+            "name": "sampleSplit",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 24,
+            "name": "sampleSuggestStatus",
+            "w": 10,
+            "x": 343,
+            "y": 321
+        },
+        {
+            "h": 22,
+            "name": "sampleTryLoop",
+            "w": 149,
+            "x": 111,
+            "y": 322
+        },
+        {
+            "h": 190,
+            "name": "sampleWaveform",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 190,
+            "name": "waveform",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 190,
+            "name": "waveform.crop-start",
+            "w": 7,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 190,
+            "name": "waveform.crop-end",
+            "w": 7,
+            "x": 881,
+            "y": 11
+        },
+        {
+            "h": 190,
+            "name": "waveform.loop-start",
+            "w": 7,
+            "x": 151,
+            "y": 11
+        },
+        {
+            "h": 190,
+            "name": "waveform.loop-end",
+            "w": 7,
+            "x": 174,
+            "y": 11
+        },
+        {
+            "h": 56,
+            "name": "waveform.seam",
+            "w": 228,
+            "x": 653,
+            "y": 17
+        },
+        {
+            "h": 196,
+            "name": "splitter",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 22,
+            "name": "button-box",
+            "w": 878,
+            "x": 11,
+            "y": 607
+        },
+        {
+            "h": 27,
+            "name": "sampleNameEdit",
+            "w": 821,
+            "x": 68,
+            "y": 207
+        },
+        {
+            "h": 20,
+            "name": "sampleLoopOn",
+            "w": 878,
+            "x": 11,
+            "y": 264
+        },
+        {
+            "h": 127,
+            "name": "sampleLoopBody",
+            "w": 878,
+            "x": 11,
+            "y": 290
+        },
+        {
+            "h": 24,
+            "name": "sampleSeamBadge",
+            "w": 84,
+            "x": 21,
+            "y": 321
+        },
+        {
+            "h": 30,
+            "name": "sampleBaseKey",
+            "w": 151,
+            "x": 143,
+            "y": 447
+        },
+        {
+            "h": 22,
+            "name": "sampleAuditionPlay",
+            "w": 54,
+            "x": 11,
+            "y": 519
+        },
+        {
+            "h": 26,
+            "name": "sampleRateCombo",
+            "w": 242,
+            "x": 143,
+            "y": 483
+        },
+        {
+            "h": 22,
+            "name": "sampleAddButton",
+            "w": 133,
+            "x": 756,
+            "y": 607
+        },
+        {
+            "h": 27,
+            "name": "row-label.name",
+            "w": 51,
+            "x": 11,
+            "y": 207
+        },
+        {
+            "h": 18,
+            "name": "row-label.source",
+            "w": 59,
+            "x": 11,
+            "y": 423
+        },
+        {
+            "h": 18,
+            "name": "row-field.source",
+            "w": 746,
+            "x": 143,
+            "y": 423
+        },
+        {
+            "h": 30,
+            "name": "row-label.base-key",
+            "w": 74,
+            "x": 11,
+            "y": 447
+        },
+        {
+            "h": 26,
+            "name": "row-label.rate",
+            "w": 126,
+            "x": 11,
+            "y": 483
+        },
+        {
+            "h": 30,
+            "name": "audition.key-label",
+            "w": 33,
+            "x": 71,
+            "y": 515
+        },
+        {
+            "h": 6,
+            "name": "splitter.handle",
+            "w": 878,
+            "x": 11,
+            "y": 201
+        },
+        {
+            "h": 30,
+            "name": "loop.range-label",
+            "w": 176,
+            "x": 21,
+            "y": 351
+        },
+        {
+            "h": 30,
+            "name": "loop.range-to",
+            "w": 16,
+            "x": 343,
+            "y": 351
+        }
+    ]
+}

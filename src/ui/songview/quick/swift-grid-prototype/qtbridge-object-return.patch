@@ -13,6 +13,18 @@ diff --git a/Sources/QtBridgeMacros/Extensions.swift b/Sources/QtBridgeMacros/Ex
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
+@@ -32,10 +32,11 @@
+ find_package(Qt6 6.10 REQUIRED COMPONENTS
+     Core
+     Gui
+     Qml
+     Quick
++    Widgets
+     CorePrivate
+ )
+ 
+ set(CMAKE_AUTOMOC ON)
+ 
 @@ -59,9 +59,13 @@ ExternalProject_Add(QtBridgeMacros_External
      SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Sources/QtBridgeMacros"
      CMAKE_ARGS
@@ -177,3 +189,39 @@ diff --git a/Sources/QtBridge/QVariant.swift b/Sources/QtBridge/QVariant.swift
 +}
 +
  extension Bool: QVariantSettable {
+diff --git a/Sources/QtBridgeCpp/CMakeLists.txt b/Sources/QtBridgeCpp/CMakeLists.txt
+--- a/Sources/QtBridgeCpp/CMakeLists.txt
++++ b/Sources/QtBridgeCpp/CMakeLists.txt
+@@ -20,9 +20,10 @@
+ target_link_libraries(QtBridgeCpp
+     PUBLIC
+         Qt6::Core
+         Qt6::Gui
+         Qt6::Qml
+         Qt6::Quick
++        Qt6::Widgets
+     PRIVATE
+         Qt6::CorePrivate
+ )
+diff --git a/Sources/QtBridgeCpp/qappcpp.cpp b/Sources/QtBridgeCpp/qappcpp.cpp
+--- a/Sources/QtBridgeCpp/qappcpp.cpp
++++ b/Sources/QtBridgeCpp/qappcpp.cpp
+@@ -3,7 +3,7 @@
+ 
+ #include "qappcpp.h"
+ 
+-#include <QtGui/qguiapplication.h>
++#include <QtWidgets/qapplication.h>
+ #include <QtQml/qqmlapplicationengine.h>
+ 
+ QAppCpp::QAppCpp()
+@@ -37,8 +37,8 @@
+ int QAppCpp::run(int argc, char **argv)
+ {
+     qputenv("QT_PLUGIN_PATH", m_pluginsPath.toUtf8());
+ 
+-    QGuiApplication app(argc, argv);
++    QApplication app(argc, argv);
+     QQmlApplicationEngine engine;
+     for (const auto &path: m_importPaths)
+         engine.addImportPath(path);

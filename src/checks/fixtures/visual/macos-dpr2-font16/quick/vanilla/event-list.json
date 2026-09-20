@@ -1,0 +1,36 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 800,
+        "width": 1280
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 25,
+            "name": "event-list.band",
+            "w": 1280,
+            "x": 0,
+            "y": 767
+        },
+        {
+            "h": 24,
+            "name": "event-list.chunk",
+            "w": 177,
+            "x": 286,
+            "y": 30
+        },
+        {
+            "h": 24,
+            "name": "event-list.filter",
+            "w": 103,
+            "x": 469,
+            "y": 30
+        }
+    ]
+}

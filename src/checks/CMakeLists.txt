@@ -360,9 +360,14 @@ qt_add_executable(porydaw_checks
     visual/visualbaseline.h
     visual/visualbaseline.cpp
     visual/chrome.cpp
+    visual/transport.cpp
     visual/browsers.cpp
     visual/dialogs.cpp
+    visual/sampleeditor.cpp
     visual/quick.cpp
+    visual/newsongwizard.cpp
+    visual/windowfixtures.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/songview/quick/swift-grid-prototype/native/widget_window_fixtures.cpp
     ${PROJECT_SOURCE_DIR}/resources/fonts.qrc
 )
 set_target_properties(porydaw_checks PROPERTIES
@@ -455,6 +460,8 @@ target_precompile_headers(porydaw_checks PRIVATE
 # relative to the project root baked in at configure time.
 target_compile_definitions(porydaw_checks PRIVATE
     PORYDAW_CHECK_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+target_include_directories(porydaw_checks PRIVATE
+    "${PROJECT_SOURCE_DIR}/src/ui/songview/quick/swift-grid-prototype/native")
 add_dependencies(porydaw_checks mid2agb)
 
 qt_add_resources(porydaw_checks "checks_app_icon"

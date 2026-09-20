@@ -1,0 +1,141 @@
+{
+    "environment": {
+        "fontPx": 13,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 71,
+        "width": 640
+    },
+    "profile": "macos-dpr2-font13",
+    "regions": [
+        {
+            "h": 33,
+            "name": "transport.go-to-start",
+            "w": 33,
+            "x": 2,
+            "y": 2
+        },
+        {
+            "h": 33,
+            "name": "transport.play",
+            "w": 33,
+            "x": 36,
+            "y": 2
+        },
+        {
+            "h": 33,
+            "name": "transport.pause",
+            "w": 33,
+            "x": 70,
+            "y": 2
+        },
+        {
+            "h": 33,
+            "name": "transport.stop",
+            "w": 33,
+            "x": 104,
+            "y": 2
+        },
+        {
+            "h": 33,
+            "name": "transport.loop",
+            "w": 33,
+            "x": 138,
+            "y": 2
+        },
+        {
+            "h": 33,
+            "name": "transport.follow-playhead",
+            "w": 33,
+            "x": 172,
+            "y": 2
+        },
+        {
+            "h": 33,
+            "name": "transport.resonance",
+            "w": 33,
+            "x": 206,
+            "y": 2
+        },
+        {
+            "h": 33,
+            "name": "transport.time",
+            "w": 181,
+            "x": 240,
+            "y": 2
+        },
+        {
+            "h": 23,
+            "name": "transport.scale-root",
+            "w": 58,
+            "x": 422,
+            "y": 7
+        },
+        {
+            "h": 23,
+            "name": "transport.scale-type",
+            "w": 191,
+            "x": 2,
+            "y": 41
+        },
+        {
+            "h": 33,
+            "name": "transport.scale-highlight",
+            "w": 33,
+            "x": 194,
+            "y": 36
+        },
+        {
+            "h": 24,
+            "name": "transport.scale-fold",
+            "w": 46,
+            "x": 228,
+            "y": 40
+        },
+        {
+            "h": 33,
+            "name": "transport.master-volume-caption",
+            "w": 60,
+            "x": 375,
+            "y": 36
+        },
+        {
+            "h": 26,
+            "name": "transport.master-volume",
+            "w": 96,
+            "x": 436,
+            "y": 39
+        },
+        {
+            "h": 33,
+            "name": "transport.output-volume-caption",
+            "w": 56,
+            "x": 540,
+            "y": 36
+        },
+        {
+            "h": 28,
+            "name": "transport.output-volume",
+            "w": 28,
+            "x": 597,
+            "y": 38
+        },
+        {
+            "h": 71,
+            "name": "transport.surface",
+            "w": 640,
+            "x": 0,
+            "y": 0
+        },
+        {
+            "h": 33,
+            "name": "transport.overflow",
+            "w": 12,
+            "x": 627,
+            "y": 2
+        }
+    ]
+}

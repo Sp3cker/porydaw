@@ -1,0 +1,22 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 99,
+        "width": 235
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 99,
+            "name": "fixture.surface",
+            "w": 235,
+            "x": 0,
+            "y": 0
+        }
+    ]
+}

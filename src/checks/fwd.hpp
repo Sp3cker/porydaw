@@ -208,6 +208,10 @@ int runSelectionKeyLocalInputCheck(const QString &projectRoot, const QString &so
 // runner installs the canonical Fusion/bundled-font presentation itself via
 // checks::visual::prepare and must run in a dedicated process.
 int runVisualChromeCheck(QApplication &application, const QStringList &qtArguments);
+int runVisualTransportCheck(QApplication &application, const QStringList &qtArguments);
 int runVisualBrowsersCheck(QApplication &application, const QStringList &qtArguments);
 int runVisualDialogsCheck(QApplication &application, const QStringList &qtArguments);
+int runVisualSampleEditorCheck(QApplication &application, const QStringList &qtArguments);
 int runVisualQuickCheck(QApplication &application, const QStringList &qtArguments);
+int runVisualNewSongWizardCheck(QApplication &application, const QStringList &qtArguments);
+int runVisualWindowFixturesCheck(QApplication &application, const QStringList &qtArguments);

@@ -3,6 +3,7 @@
 #include "ui/applicationstartup.h"
 #include "ui/theme/themeresolver.h"
 #include "ui/theme/themeruntime.h"
+#include "ui/typography.h"
 
 #include <algorithm>
 #include <tuple>
@@ -453,11 +454,12 @@ bool compareInRoot(const QString &root, const QString &profile, const QString &i
 void prepare(QApplication &app)
 {
     const auto value = qEnvironmentVariable("PORYDAW_VISUAL_FONT_PX", "12");
-    if (value != QStringLiteral("12") && value != QStringLiteral("16")) {
-        qFatal("visual: PORYDAW_VISUAL_FONT_PX must be \"12\" or \"16\", got \"%s\"",
-               qPrintable(value));
+    const bool applicationFont = value == QStringLiteral("application");
+    if (!applicationFont && value != QStringLiteral("12") && value != QStringLiteral("16")) {
+        qFatal(
+            "visual: PORYDAW_VISUAL_FONT_PX must be \"application\", \"12\" or \"16\", got \"%s\"",
+            qPrintable(value));
     }
-    g_fontPx = value.toInt();
     // Optional native-screen pin: PORYDAW_VISUAL_SCREEN_DPR selects a real
     // display whose devicePixelRatio matches, so captures exercise an actual
     // 1x/2x framebuffer instead of QT_SCALE_FACTOR simulation. Absent env
@@ -481,14 +483,16 @@ void prepare(QApplication &app)
         app.installEventFilter(new ScreenPinning(screen, &app));
     }
     QApplication::setStyle(QStringLiteral("fusion"));
-    // The font must be fixed before initializeApplication: typography captures
-    // the application font's pixel size as the layout base, so font-relative
-    // geometry scales off the selected size.
-    auto font = app.font();
-    font.setPixelSize(g_fontPx);
-    app.setFont(font);
+    // Legacy suites pin a font profile. Application-font suites follow the
+    // production startup path without replacing the platform's base size.
+    if (!applicationFont) {
+        auto font = app.font();
+        font.setPixelSize(value.toInt());
+        app.setFont(font);
+    }
     if (!ui::initializeApplication(app))
         qFatal("visual: ui::initializeApplication failed");
+    g_fontPx = *typography::baseFontPx();
     themes::apply(app, themes::vanilla());
 }
 

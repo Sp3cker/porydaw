@@ -75,13 +75,6 @@
             "y": 37
         },
         {
-            "h": 211,
-            "name": "songsDock.position-indicator",
-            "w": 6,
-            "x": 252,
-            "y": 113
-        },
-        {
             "h": 22,
             "name": "songsDock.title",
             "w": 262,

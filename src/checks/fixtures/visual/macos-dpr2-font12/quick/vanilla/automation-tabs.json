@@ -1,0 +1,29 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 800,
+        "width": 1280
+    },
+    "profile": "macos-dpr2-font12",
+    "regions": [
+        {
+            "h": 150,
+            "name": "automation-tabs.band",
+            "w": 1274,
+            "x": 6,
+            "y": 603
+        },
+        {
+            "h": 150,
+            "name": "automation-tabs.strip",
+            "w": 256,
+            "x": 6,
+            "y": 603
+        }
+    ]
+}

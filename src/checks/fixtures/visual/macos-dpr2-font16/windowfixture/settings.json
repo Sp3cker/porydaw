@@ -1,0 +1,29 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 580,
+        "width": 560
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 26,
+            "name": "pcmMixerCombo",
+            "w": 387,
+            "x": 153,
+            "y": 82
+        },
+        {
+            "h": 580,
+            "name": "fixture.surface",
+            "w": 560,
+            "x": 0,
+            "y": 0
+        }
+    ]
+}

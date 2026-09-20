@@ -1,0 +1,22 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 800,
+        "width": 1280
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 157,
+            "name": "popup.form",
+            "w": 167,
+            "x": 557,
+            "y": 321
+        }
+    ]
+}

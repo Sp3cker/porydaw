@@ -1,0 +1,288 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 640,
+        "width": 900
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 188,
+            "name": "sampleAdvancedBody",
+            "w": 864,
+            "x": 11,
+            "y": 413
+        },
+        {
+            "h": 23,
+            "name": "sampleAdvancedToggle",
+            "w": 112,
+            "x": 11,
+            "y": 384
+        },
+        {
+            "h": 30,
+            "name": "sampleAuditionKey",
+            "w": 151,
+            "x": 110,
+            "y": 303
+        },
+        {
+            "h": 30,
+            "name": "sampleCropEnd",
+            "w": 100,
+            "x": 287,
+            "y": 437
+        },
+        {
+            "h": 30,
+            "name": "sampleCropStart",
+            "w": 100,
+            "x": 159,
+            "y": 437
+        },
+        {
+            "h": 2,
+            "name": "sampleCrossfade",
+            "w": 222,
+            "x": 21,
+            "y": 193
+        },
+        {
+            "h": 26,
+            "name": "sampleGainReadout",
+            "w": 92,
+            "x": 436,
+            "y": 509
+        },
+        {
+            "h": 39,
+            "name": "sampleOutputSummary",
+            "w": 864,
+            "x": 11,
+            "y": 339
+        },
+        {
+            "h": 408,
+            "name": "sampleScroll",
+            "w": 14,
+            "x": 875,
+            "y": 193
+        },
+        {
+            "h": 590,
+            "name": "sampleSplit",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 60,
+            "name": "sampleTechDetail",
+            "w": 846,
+            "x": 29,
+            "y": 541
+        },
+        {
+            "h": 176,
+            "name": "sampleWaveform",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 176,
+            "name": "waveform",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 176,
+            "name": "waveform.crop-start",
+            "w": 7,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 176,
+            "name": "waveform.crop-end",
+            "w": 7,
+            "x": 881,
+            "y": 11
+        },
+        {
+            "h": 176,
+            "name": "waveform.loop-start",
+            "w": 7,
+            "x": 121,
+            "y": 11
+        },
+        {
+            "h": 176,
+            "name": "waveform.loop-end",
+            "w": 7,
+            "x": 867,
+            "y": 11
+        },
+        {
+            "h": 56,
+            "name": "waveform.seam",
+            "w": 228,
+            "x": 653,
+            "y": 17
+        },
+        {
+            "h": 590,
+            "name": "splitter",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 22,
+            "name": "button-box",
+            "w": 878,
+            "x": 11,
+            "y": 607
+        },
+        {
+            "h": 12,
+            "name": "sampleLoopBody",
+            "w": 864,
+            "x": 11,
+            "y": 193
+        },
+        {
+            "h": 30,
+            "name": "sampleBaseKey",
+            "w": 151,
+            "x": 143,
+            "y": 235
+        },
+        {
+            "h": 22,
+            "name": "sampleAuditionPlay",
+            "w": 54,
+            "x": 11,
+            "y": 307
+        },
+        {
+            "h": 26,
+            "name": "sampleRateCombo",
+            "w": 268,
+            "x": 143,
+            "y": 271
+        },
+        {
+            "h": 30,
+            "name": "sampleFineTune",
+            "w": 173,
+            "x": 159,
+            "y": 473
+        },
+        {
+            "h": 26,
+            "name": "sampleNormalizeMode",
+            "w": 271,
+            "x": 159,
+            "y": 509
+        },
+        {
+            "h": 22,
+            "name": "sampleAddButton",
+            "w": 133,
+            "x": 756,
+            "y": 607
+        },
+        {
+            "h": 18,
+            "name": "row-label.source",
+            "w": 59,
+            "x": 11,
+            "y": 211
+        },
+        {
+            "h": 18,
+            "name": "row-field.source",
+            "w": 732,
+            "x": 143,
+            "y": 211
+        },
+        {
+            "h": 30,
+            "name": "row-label.base-key",
+            "w": 74,
+            "x": 11,
+            "y": 235
+        },
+        {
+            "h": 26,
+            "name": "row-label.rate",
+            "w": 126,
+            "x": 11,
+            "y": 271
+        },
+        {
+            "h": 30,
+            "name": "audition.key-label",
+            "w": 33,
+            "x": 71,
+            "y": 303
+        },
+        {
+            "h": 6,
+            "name": "splitter.handle",
+            "w": 878,
+            "x": 11,
+            "y": 187
+        },
+        {
+            "h": 18,
+            "name": "advanced.format-label",
+            "w": 61,
+            "x": 29,
+            "y": 413
+        },
+        {
+            "h": 18,
+            "name": "advanced.format",
+            "w": 716,
+            "x": 159,
+            "y": 413
+        },
+        {
+            "h": 30,
+            "name": "advanced.crop-label",
+            "w": 124,
+            "x": 29,
+            "y": 437
+        },
+        {
+            "h": 30,
+            "name": "advanced.tune-label",
+            "w": 78,
+            "x": 29,
+            "y": 473
+        },
+        {
+            "h": 26,
+            "name": "advanced.normalize-label",
+            "w": 85,
+            "x": 29,
+            "y": 509
+        },
+        {
+            "h": 30,
+            "name": "advanced.crop-to",
+            "w": 16,
+            "x": 265,
+            "y": 437
+        }
+    ]
+}

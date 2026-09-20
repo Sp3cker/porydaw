@@ -24,6 +24,36 @@ surfaces. Production implementations and interfaces are designed to stay:
 - Production focus applies to checks too: a check that only passes in the
   sandbox proves nothing about production.
 
+## GUI preservation and Swift+QML vision (2026-09-19)
+
+The conversion changes implementation, not the approved GUI. These constraints
+also apply to prototypes and interoperability experiments:
+
+- **No GUI additions without explicit user approval.** Do not add controls,
+  panels, overlays, status boxes, result histories, or other visible elements
+  merely to demonstrate or verify the conversion. Permission to use any Qt
+  type or library is not permission to change the GUI.
+- **Verification stays outside the GUI.** Report diagnostic state and test
+  outcomes through logs, harness observations, and captured evidence of the
+  existing surface. Do not make new visible UI a prerequisite for a check.
+  The white lower-left widget-interop status/history box is specifically
+  rejected; it is not an accepted design or a baseline to preserve.
+- **Swift+QML remains the application direction.** Retaining an external
+  QWidget dialog, wizard, or menu is an interoperability decision, not a
+  competing application architecture. Such tools must not dictate the main
+  UI, add permanent widget-based chrome, or reverse the planned conversion
+  of application surfaces to Swift+QML.
+- **Keep external widget integration contained.** Adapt ownership, modality,
+  positioning, lifecycle, and result delivery at the host boundary. Preserve
+  the approved appearance and interaction model, including normal modal
+  blocking and return to application input. Do not introduce another state,
+  keymap, focus-memory, or input-dispatch authority.
+- **Coexistence is not an end-state mandate.** A successful QWidget experiment
+  proves compatibility only. It does not authorize new GUI features, exempt
+  converted surfaces from their retirement gates, or make retained external
+  tools permanent C++/QWidget requirements. Existing shell decisions and
+  migration invariants are not changed by an interoperability experiment.
+
 ## Swift implementation policy
 
 - Target Swift 6.4 and use current language and standard-library features

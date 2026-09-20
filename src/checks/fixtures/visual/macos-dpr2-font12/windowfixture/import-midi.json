@@ -1,0 +1,29 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 528,
+        "width": 720
+    },
+    "profile": "macos-dpr2-font12",
+    "regions": [
+        {
+            "h": 18,
+            "name": "__qt__passive_wizardbutton1",
+            "w": 57,
+            "x": 588,
+            "y": 499
+        },
+        {
+            "h": 528,
+            "name": "fixture.surface",
+            "w": 720,
+            "x": 0,
+            "y": 0
+        }
+    ]
+}

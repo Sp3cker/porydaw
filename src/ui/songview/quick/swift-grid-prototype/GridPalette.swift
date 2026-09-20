@@ -135,6 +135,8 @@ public final class GridPalette {
     public var tabBackground: String = "#E1DBD6"
     public var tabHoverBackground: String = "#ECE7E1"
     public var tabSelectedBackground: String = "#B9E8EE"
+    // Line-edit / combo / spin field surface (theme input_background).
+    public var inputBackground: String = "#F3F0ED"
     // QPushButton/QToolButton surfaces: the tab strip's overflow controls are
     // ordinary tool buttons, so they take the button roles, not the tab faces.
     public var buttonBackground: String = "#E1DBD6"

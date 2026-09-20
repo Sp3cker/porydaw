@@ -47,11 +47,10 @@ struct Region {
     QRect bounds;
 };
 
-/// Installs the canonical visual-check presentation: Fusion style, bundled
-/// application font at the PORYDAW_VISUAL_FONT_PX pixel size (strictly "12"
-/// or "16", default "12"), font-relative layout geometry, and the vanilla
-/// theme. Scenarios may apply another theme afterwards but must not reset
-/// font or style. Fatal on an unsupported PORYDAW_VISUAL_FONT_PX value.
+/// Installs Fusion style, bundled fonts, font-relative layout geometry and the
+/// vanilla theme. PORYDAW_VISUAL_FONT_PX="application" uses production's base
+/// font; legacy profiles accept "12" (default) or "16". The profile records the
+/// actual base size. Scenarios may change theme but must not reset font/style.
 void prepare(QApplication &app);
 
 /// Compares `image` against the frozen baseline <profile>/<id>: exact image
@@ -88,10 +87,13 @@ bool selfTest(QString *error);
 
 } // namespace checks::visual
 
-// Suite runners (src/checks/visual/{chrome,browsers,dialogs,quick}.cpp).
+// Suite runners (src/checks/visual/{chrome,transport,browsers,dialogs,
+// sampleeditor,quick}.cpp).
 // Each owns application startup via checks::visual::prepare and runs one
 // qExec; registered in the catalog as HandlerOwned.
 int runVisualChromeCheck(QApplication &application, const QStringList &qtArguments);
+int runVisualTransportCheck(QApplication &application, const QStringList &qtArguments);
 int runVisualBrowsersCheck(QApplication &application, const QStringList &qtArguments);
 int runVisualDialogsCheck(QApplication &application, const QStringList &qtArguments);
+int runVisualSampleEditorCheck(QApplication &application, const QStringList &qtArguments);
 int runVisualQuickCheck(QApplication &application, const QStringList &qtArguments);

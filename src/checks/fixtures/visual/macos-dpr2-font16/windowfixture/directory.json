@@ -1,0 +1,155 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 419,
+        "width": 651
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 25,
+            "name": "backButton",
+            "w": 25,
+            "x": 460,
+            "y": 11
+        },
+        {
+            "h": 59,
+            "name": "buttonBox",
+            "w": 80,
+            "x": 560,
+            "y": 349
+        },
+        {
+            "h": 25,
+            "name": "detailModeButton",
+            "w": 25,
+            "x": 615,
+            "y": 11
+        },
+        {
+            "h": 27,
+            "name": "fileNameEdit",
+            "w": 436,
+            "x": 118,
+            "y": 349
+        },
+        {
+            "h": 27,
+            "name": "fileNameLabel",
+            "w": 101,
+            "x": 11,
+            "y": 349
+        },
+        {
+            "h": 26,
+            "name": "fileTypeCombo",
+            "w": 436,
+            "x": 118,
+            "y": 382
+        },
+        {
+            "h": 18,
+            "name": "fileTypeLabel",
+            "w": 101,
+            "x": 11,
+            "y": 386
+        },
+        {
+            "h": 25,
+            "name": "forwardButton",
+            "w": 25,
+            "x": 491,
+            "y": 11
+        },
+        {
+            "h": 300,
+            "name": "frame",
+            "w": 529,
+            "x": 111,
+            "y": 43
+        },
+        {
+            "h": 25,
+            "name": "listModeButton",
+            "w": 25,
+            "x": 584,
+            "y": 11
+        },
+        {
+            "h": 26,
+            "name": "lookInCombo",
+            "w": 336,
+            "x": 118,
+            "y": 11
+        },
+        {
+            "h": 26,
+            "name": "lookInLabel",
+            "w": 101,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 25,
+            "name": "newFolderButton",
+            "w": 25,
+            "x": 553,
+            "y": 11
+        },
+        {
+            "h": 300,
+            "name": "page_2",
+            "w": 529,
+            "x": 111,
+            "y": 43
+        },
+        {
+            "h": 300,
+            "name": "sidebar",
+            "w": 94,
+            "x": 11,
+            "y": 43
+        },
+        {
+            "h": 300,
+            "name": "splitter",
+            "w": 629,
+            "x": 11,
+            "y": 43
+        },
+        {
+            "h": 300,
+            "name": "stackedWidget",
+            "w": 529,
+            "x": 111,
+            "y": 43
+        },
+        {
+            "h": 25,
+            "name": "toParentButton",
+            "w": 25,
+            "x": 522,
+            "y": 11
+        },
+        {
+            "h": 300,
+            "name": "treeView",
+            "w": 529,
+            "x": 111,
+            "y": 43
+        },
+        {
+            "h": 419,
+            "name": "fixture.surface",
+            "w": 651,
+            "x": 0,
+            "y": 0
+        }
+    ]
+}

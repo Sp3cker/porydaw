@@ -14,9 +14,11 @@
 #include <QQuickWindow>
 #include <QRect>
 #include <QString>
+#include <QStyleHints>
 #include <QtTest>
 
 #include <cstring>
+#include <functional>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -27,14 +29,19 @@
 #include "checks/support/timelinequickcheck.h"
 #include "core/smf.h"
 #include "core/songdocument.h"
+#include "core/timedefaults.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
 #include "project/voicegroupsource.h"
+#include "ui/editordrawer/automationcanvas.h"
+#include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/editordrawer.h"
 #include "ui/editorviewstate.h"
 #include "ui/pitchprojection.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
+#include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -109,6 +116,15 @@ class VisualQuickTest : public QObject
     void editorDrawerBaseline();
     void drumKeyboardBaseline();
     void pitchBendPopupBaseline();
+    void velocityPromptBaseline();
+    void insertTimePromptBaseline();
+    void timeSignaturePromptBaseline();
+    void noteMenuBaseline();
+    void quickMenuPanelBaseline();
+    void ccDeleteConfirmBaseline();
+    void voicePickerBaseline();
+    void eventListBaseline();
+    void automationTabsBaseline();
 
   private:
     bool createFixture(QString &error);
@@ -121,6 +137,14 @@ class VisualQuickTest : public QObject
     checks::visual::Region bandRegion(const QString &name, songview::TimelineBand band) const;
     void expectBaseline(const QString &id, const QList<checks::visual::Region> &regions);
     bool openPitchBendPopup();
+    // Waits for the shared QuickPopupSession to open a form and returns its
+    // content item; null when the command never produced a popup.
+    QQuickItem *awaitPopupForm();
+    // Menus push QuickMenuPanel levels onto the session overlay rather than a
+    // single content item; returns the root panel once the session is open.
+    QQuickItem *awaitMenuPanel();
+    void expectPopupBaseline(const QString &id, QQuickItem *form,
+                             const QString &steadyFocusObjectName = QString());
 
     LoadedVoiceGroup m_bank{};
     std::unique_ptr<SongTab> m_tab;
@@ -524,6 +548,211 @@ void VisualQuickTest::pitchBendPopupBaseline()
                                        qRound(graph->width()), qRound(graph->height())}));
     }
     expectBaseline(QStringLiteral("quick/vanilla/pitch-bend-popup"), regions);
+}
+
+QQuickItem *VisualQuickTest::awaitPopupForm()
+{
+    if (!QTest::qWaitFor([this] {
+            songview::QuickPopupSession *session = quick_popup::popupSession(m_tab->view());
+            return session && session->isOpen() && session->contentItem() != nullptr;
+        }))
+        return nullptr;
+    return quick_popup::popupSession(m_tab->view())->contentItem();
+}
+
+// Shared popup-form capture: the session's content item is the whole dialog,
+// so its scene rect is the single semantic region. A focused text field
+// blinks its caret, which would race the capture; callers pass the accept
+// button's objectName so focus lands on a steady (non-blinking) control.
+void VisualQuickTest::expectPopupBaseline(const QString &id, QQuickItem *form,
+                                          const QString &steadyFocusObjectName)
+{
+    QVERIFY(form);
+    if (!steadyFocusObjectName.isEmpty()) {
+        if (QQuickItem *const steady = form->findChild<QQuickItem *>(steadyFocusObjectName))
+            steady->setFocus(true);
+    }
+    checks::support::pumpQuick();
+    const QPointF scene = form->mapToScene(QPointF{});
+    expectBaseline(id, {region(QStringLiteral("popup.form"),
+                               QRect{qRound(scene.x()), qRound(scene.y()), qRound(form->width()),
+                                     qRound(form->height())})});
+}
+
+void VisualQuickTest::velocityPromptBaseline()
+{
+    QVERIFY(m_hasNote);
+    m_tab->view().selectionModel().setNoteSelection({m_note.noteId});
+    QVERIFY2(m_tab->view().editCommandAvailable(SongView::EditCommand::SetVelocity),
+             "Set Velocity must be available with a note selected");
+    m_tab->view().executeEditCommand(SongView::EditCommand::SetVelocity);
+    expectPopupBaseline(QStringLiteral("quick/vanilla/velocity-prompt"), awaitPopupForm(),
+                        QStringLiteral("noteVelocityAccept"));
+}
+
+void VisualQuickTest::insertTimePromptBaseline()
+{
+    QVERIFY2(m_tab->view().editCommandAvailable(SongView::EditCommand::InsertTime),
+             "Insert Time must be available on a loaded timeline");
+    m_tab->view().executeEditCommand(SongView::EditCommand::InsertTime);
+    expectPopupBaseline(QStringLiteral("quick/vanilla/insert-time-prompt"), awaitPopupForm(),
+                        QStringLiteral("insertTimeAccept"));
+}
+
+void VisualQuickTest::timeSignaturePromptBaseline()
+{
+    QVERIFY2(m_tab->view().editCommandAvailable(SongView::EditCommand::EditTimeSignature),
+             "Edit Time Signature must be available on a loaded timeline");
+    m_tab->view().executeEditCommand(SongView::EditCommand::EditTimeSignature);
+    expectPopupBaseline(QStringLiteral("quick/vanilla/time-signature-prompt"), awaitPopupForm(),
+                        QStringLiteral("timeSignatureAccept"));
+}
+
+void VisualQuickTest::noteMenuBaseline()
+{
+    QVERIFY(m_hasNote);
+    SongView &songView = m_tab->view();
+    // Project the fixture note's center into the roll plot's local space:
+    // contentX is tick * pxPerTick - scrollX, and rowRect gives the pitch row.
+    const double noteX = songView.camera().contentX(m_note.tick + m_note.duration / 2.0);
+    const int row = songView.pitchProjection().rowForPitch(m_note.key);
+    QVERIFY2(row >= 0, "fixture note must be on a visible pitch row");
+    const QRectF rowRect = songView.pitchProjection().rowRect(
+        row, 0, 0, songView.camera().keyHeight(), songView.camera().scrollY(),
+        m_rollInput->devicePixelRatio());
+    const QPointF local{noteX, (rowRect.top() + rowRect.bottom()) / 2.0};
+    const QPoint windowPos = m_rollInput->mapToScene(local).toPoint();
+    QTest::mouseClick(m_window, Qt::RightButton, Qt::NoModifier, windowPos);
+    expectPopupBaseline(QStringLiteral("quick/vanilla/note-menu"), awaitMenuPanel());
+}
+
+void VisualQuickTest::quickMenuPanelBaseline()
+{
+    // The event-list filter button opens a QuickMenuPanel through the shared
+    // session; clicking it exercises the same menu surface as the note menu.
+    m_tab->view().setEventListVisible(true);
+    checks::support::pumpQuick();
+    QQuickItem *const filter = m_root->findChild<QQuickItem *>(QStringLiteral("eventListFilter"));
+    QVERIFY2(filter, "event list filter button is unavailable");
+    QVERIFY2(QTest::qWaitFor([filter] { return filter->isEnabled() && filter->isVisible(); }),
+             "event list filter button did not become enabled");
+    const QPoint windowPos =
+        filter->mapToScene(QPointF{filter->width() / 2.0, filter->height() / 2.0}).toPoint();
+    QTest::mouseClick(m_window, Qt::LeftButton, Qt::NoModifier, windowPos);
+    expectPopupBaseline(QStringLiteral("quick/vanilla/quick-menu-panel"), awaitMenuPanel());
+}
+
+void VisualQuickTest::ccDeleteConfirmBaseline()
+{
+    SongView &songView = m_tab->view();
+    // The confirm only opens for a lane carrying document-written events, so
+    // write one Volume point before arming the lane menu.
+    songView.document().addLanePoint(0, CoreTimeDefaults::kCcVolume, 24, 96);
+    songView.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+    songView.setDrawerActivePage(EditorDrawerPage::Automations);
+    checks::support::pumpQuick();
+
+    AutomationCanvas *const canvas =
+        songView.editorDrawer() ? songView.editorDrawer()->automationPage()->canvas() : nullptr;
+    QVERIFY2(canvas, "automation canvas is unavailable");
+    // Parameter 0 is Volume in the supported-controller order; open its lane
+    // menu at a fixed scene point.
+    canvas->openParameterMenu(0, 200.0, 200.0);
+    QQuickItem *const panel = awaitMenuPanel();
+    QVERIFY2(panel, "lane menu did not open");
+
+    // Locate the destructive row by its model text, then click it. Row y is
+    // the running sum of row/separator heights above it.
+    auto *const model =
+        qobject_cast<songview::QuickMenuModel *>(panel->property("menuModel").value<QObject *>());
+    QVERIFY2(model, "lane menu model is unavailable");
+    const qreal rowHeight = panel->property("rowHeight").toDouble();
+    const qreal separatorHeight = panel->property("separatorHeight").toDouble();
+    qreal rowY = 0.0;
+    int targetRow = -1;
+    for (int i = 0; i < model->count(); ++i) {
+        const songview::QuickMenuItem *item = model->itemAt(i);
+        if (!item)
+            continue;
+        if (item->separator) {
+            rowY += separatorHeight;
+            continue;
+        }
+        if (item->text == QStringLiteral("Delete automation events")) {
+            targetRow = i;
+            break;
+        }
+        rowY += rowHeight;
+    }
+    QVERIFY2(targetRow >= 0, "lane menu lacks a Delete automation events row");
+    // Rows live in the ListView inside quickMenuFrame (offset by menuOrigin
+    // plus the frame border), so map the row center through the frame.
+    QQuickItem *const frame = panel->findChild<QQuickItem *>(QStringLiteral("quickMenuFrame"));
+    QVERIFY2(frame, "lane menu frame is unavailable");
+    const qreal frameBorder =
+        frame->property("border").value<QObject *>()
+            ? frame->property("border").value<QObject *>()->property("width").toDouble()
+            : 1.0;
+    const QPoint windowPos =
+        frame->mapToScene(QPointF{frame->width() / 2.0, frameBorder + rowY + rowHeight / 2.0})
+            .toPoint();
+    QTest::mouseClick(m_window, Qt::LeftButton, Qt::NoModifier, windowPos);
+    expectPopupBaseline(QStringLiteral("quick/vanilla/cc-delete-confirm"), awaitPopupForm());
+}
+
+QQuickItem *VisualQuickTest::awaitMenuPanel()
+{
+    if (!QTest::qWaitFor([this] {
+            songview::QuickPopupSession *session = quick_popup::popupSession(m_tab->view());
+            return session && session->isOpen();
+        }))
+        return nullptr;
+    songview::QuickPopupSession *session = quick_popup::popupSession(m_tab->view());
+    QQuickItem *const overlay = session ? session->overlayRoot() : nullptr;
+    if (!overlay)
+        return nullptr;
+    // Panels are item-children of the overlay but QObject-children of the menu
+    // host, so findChild cannot reach them; scan the visual children.
+    for (QQuickItem *child : overlay->childItems()) {
+        if (child->objectName() == QStringLiteral("quickMenuPanelRoot"))
+            return child;
+    }
+    return nullptr;
+}
+
+void VisualQuickTest::voicePickerBaseline()
+{
+    // The picker is a request-driven form, not an EditCommand; open it the way
+    // a track header does, over the roll band.
+    m_tab->view().requestVoicePicker(
+        QStringLiteral("Track 1 instrument"), 0, m_tab->view().quickView(), [](int) {},
+        songview::TimelineBand::Roll);
+    expectPopupBaseline(QStringLiteral("quick/vanilla/voice-picker"), awaitPopupForm(),
+                        QStringLiteral("voicePickerAccept"));
+}
+
+void VisualQuickTest::eventListBaseline()
+{
+    m_tab->view().setEventListVisible(true);
+    checks::support::pumpQuick();
+    expectBaseline(
+        QStringLiteral("quick/vanilla/event-list"),
+        {bandRegion(QStringLiteral("event-list.band"), songview::TimelineBand::OtherEvents),
+         itemRegion(QStringLiteral("event-list.chunk"), QStringLiteral("eventListChunk")),
+         itemRegion(QStringLiteral("event-list.filter"), QStringLiteral("eventListFilter"))});
+}
+
+void VisualQuickTest::automationTabsBaseline()
+{
+    SongView &songView = m_tab->view();
+    songView.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+    songView.setDrawerActivePage(EditorDrawerPage::Automations);
+    checks::support::pumpQuick();
+    expectBaseline(
+        QStringLiteral("quick/vanilla/automation-tabs"),
+        {bandRegion(QStringLiteral("automation-tabs.band"), songview::TimelineBand::Automation),
+         itemRegion(QStringLiteral("automation-tabs.strip"),
+                    QStringLiteral("automationParameterTabs"))});
 }
 
 int runVisualQuickCheck(QApplication &, const QStringList &qtArguments)

@@ -1,8 +1,8 @@
 // Visual baselines for the modal dialog family: SettingsDialog (engine and
-// song tabs), ThemeDialog, SampleEditorDialog (waveform, handles, seam
-// region, splitter), Sf2ZonePicker (grouped rows), and NewSongWizard
-// (new-song and MIDI-import pages). Every scenario shows the real dialog in
-// the canonical check environment and compares the actual render against
+// song tabs), ThemeDialog, Sf2ZonePicker (grouped rows), and NewSongWizard
+// (new-song and MIDI-import pages). The Sample Editor's state matrix lives
+// in sampleeditor.cpp. Every scenario shows the real dialog in the
+// canonical check environment and compares the actual render against
 // frozen geometry + PNG baselines recorded from the unmodified UI
 // (PORYDAW_RECORD_VISUAL_BASELINES=1). Nothing here exec()s a modal loop,
 // opens a file dialog, or touches audio playback.
@@ -18,7 +18,6 @@
 #include <QPushButton>
 #include <QSet>
 #include <QSettings>
-#include <QSplitter>
 #include <QTabBar>
 #include <QTabWidget>
 #include <QTemporaryDir>
@@ -27,19 +26,15 @@
 #include <QWizardPage>
 #include <QtTest>
 
-#include "audio/sampleimport.h"
 #include "audio/sf2reader.h"
-#include "checks/samplecheck/samplecheck.h"
 #include "core/smf.h"
 #include "ui/newsongwizard.h"
-#include "ui/sampleeditordialog.h"
 #include "ui/settingsdialog.h"
 #include "ui/sf2zonepicker.h"
 #include "ui/theme/themecontroller.h"
 #include "ui/theme/themedialog.h"
 #include "ui/theme/themeresolver.h"
 #include "ui/theme/themeruntime.h"
-#include "ui/waveformview.h"
 
 namespace {
 
@@ -333,53 +328,6 @@ bool settingsRegions(QDialog &dialog, QList<checks::visual::Region> &regions)
                              QStringLiteral("Disable compression (-N)"));
 }
 
-// Semantic subregions inside the sample editor: the waveform surface, its
-// painted handle glyphs, the seam inset, the splitter, and the named control
-// rows. Geometry mirrors WaveformView::paintEvent: each handle is a 7x8 grip
-// (top edge for crop, bottom edge for loop) plus a 1px full-height marker
-// line, and the seam overlay is the fixed 228x56 inset at the top-right.
-bool sampleEditorRegions(SampleEditorDialog &dialog, QList<checks::visual::Region> &regions)
-{
-    WaveformView *wave = dialog.waveform();
-    if (!wave)
-        return false;
-    if (!appendRequiredRegion(regions, QStringLiteral("waveform"), dialog, wave))
-        return false;
-    const QRect waveBounds = childRegion(QStringLiteral("waveform"), dialog, *wave).bounds;
-    const auto handle = [&dialog, wave, waveBounds](const QString &name, WaveformView::Handle h) {
-        const int hx = wave->mapTo(&dialog, wave->handlePoint(h)).x();
-        const int waveTop = waveBounds.top();
-        const int waveH = wave->height();
-        const bool loop = h == WaveformView::LoopStartHandle || h == WaveformView::LoopEndHandle;
-        const bool leftGrip =
-            h == WaveformView::CropStartHandle || h == WaveformView::LoopStartHandle;
-        const int gy = loop ? waveTop + waveH - 8 : waveTop;
-        const QRect grip(leftGrip ? hx : hx - 6, gy, 7, 8);
-        const QRect marker(hx, waveTop, 1, waveH);
-        return checks::visual::Region{name, (grip | marker) & waveBounds};
-    };
-    regions.append(handle(QStringLiteral("waveform.crop-start"), WaveformView::CropStartHandle));
-    regions.append(handle(QStringLiteral("waveform.crop-end"), WaveformView::CropEndHandle));
-    regions.append(handle(QStringLiteral("waveform.loop-start"), WaveformView::LoopStartHandle));
-    regions.append(handle(QStringLiteral("waveform.loop-end"), WaveformView::LoopEndHandle));
-    regions.append({QStringLiteral("waveform.seam"),
-                    QRect(waveBounds.topLeft() + QPoint(wave->width() - 236, 6), QSize(228, 56)) &
-                        waveBounds});
-
-    if (!appendRequiredRegion(regions, QStringLiteral("splitter"), dialog,
-                              dialog.findChild<QSplitter *>(QStringLiteral("sampleSplit"))) ||
-        !appendRequiredRegion(regions, QStringLiteral("button-box"), dialog,
-                              dialog.findChild<QDialogButtonBox *>()))
-        return false;
-    for (const char *name : {"sampleNameEdit", "sampleLoopOn", "sampleLoopBody", "sampleSeamBadge",
-                             "sampleBaseKey", "sampleAuditionPlay", "sampleRateCombo",
-                             "sampleFineTune", "sampleNormalizeMode", "sampleAddButton"})
-        if (!appendNamedRegion(regions, QString::fromLatin1(name), dialog,
-                               QString::fromLatin1(name)))
-            return false;
-    return true;
-}
-
 bool zonePickerRegions(QDialog &dialog, QList<checks::visual::Region> &regions)
 {
     if (!appendNamedRegion(regions, QStringLiteral("search"), dialog,
@@ -445,8 +393,6 @@ class VisualDialogsTest final : public QObject
     void settingsDialogVanilla();
     void settingsDialogDark();
     void themeDialog();
-    void sampleEditorVanilla();
-    void sampleEditorDark();
     void sf2ZonePicker();
     void newSongWizardPages();
     void midiImportWizardPages();
@@ -550,44 +496,6 @@ void VisualDialogsTest::themeDialog()
                                    QString::fromLatin1(entry.second)),
                  entry.second);
     compareShown(QStringLiteral("theme/dialog-vanilla"), dialog, regions);
-}
-
-void VisualDialogsTest::sampleEditorVanilla()
-{
-    themes::apply(*app(), themes::vanilla());
-    ImportedSample prepared;
-    QString error;
-    QVERIFY2(importAudioBytes(samplecheck::preparedSampleWav(),
-                              QStringLiteral("fix/prepared_tone.wav"), &prepared, &error),
-             qPrintable(error));
-    SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
-    auto *loopOn = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
-    QVERIFY(loopOn);
-    loopOn->setChecked(true); // deterministic loop chrome + seam badge
-    dialog.setFixedSize(900, 640);
-    showSettled(dialog);
-    QList<checks::visual::Region> regions;
-    QVERIFY2(sampleEditorRegions(dialog, regions), "sample editor widgets not found");
-    compareShown(QStringLiteral("sample-editor/dialog-vanilla"), dialog, regions);
-}
-
-void VisualDialogsTest::sampleEditorDark()
-{
-    themes::apply(*app(), themes::darkNeutralHigh());
-    ImportedSample prepared;
-    QString error;
-    QVERIFY2(importAudioBytes(samplecheck::preparedSampleWav(),
-                              QStringLiteral("fix/prepared_tone.wav"), &prepared, &error),
-             qPrintable(error));
-    SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
-    auto *loopOn = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
-    QVERIFY(loopOn);
-    loopOn->setChecked(true);
-    dialog.setFixedSize(900, 640);
-    showSettled(dialog);
-    QList<checks::visual::Region> regions;
-    QVERIFY2(sampleEditorRegions(dialog, regions), "sample editor widgets not found");
-    compareShown(QStringLiteral("sample-editor/dialog-darkneutralhigh"), dialog, regions);
 }
 
 void VisualDialogsTest::sf2ZonePicker()

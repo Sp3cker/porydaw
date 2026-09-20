@@ -1,0 +1,162 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 578,
+        "width": 662
+    },
+    "profile": "macos-dpr2-font12",
+    "regions": [
+        {
+            "h": 18,
+            "name": "sampleAddButton",
+            "w": 104,
+            "x": 547,
+            "y": 549
+        },
+        {
+            "h": 25,
+            "name": "sampleAuditionKey",
+            "w": 122,
+            "x": 91,
+            "y": 495
+        },
+        {
+            "h": 18,
+            "name": "sampleAuditionPlay",
+            "w": 42,
+            "x": 11,
+            "y": 498
+        },
+        {
+            "h": 25,
+            "name": "sampleBaseKey",
+            "w": 122,
+            "x": 115,
+            "y": 436
+        },
+        {
+            "h": 16,
+            "name": "sampleCrossfade",
+            "w": 174,
+            "x": 21,
+            "y": 384
+        },
+        {
+            "h": 109,
+            "name": "sampleLoopBody",
+            "w": 626,
+            "x": 11,
+            "y": 301
+        },
+        {
+            "h": 25,
+            "name": "sampleLoopEnd",
+            "w": 100,
+            "x": 289,
+            "y": 353
+        },
+        {
+            "h": 16,
+            "name": "sampleLoopOn",
+            "w": 626,
+            "x": 11,
+            "y": 279
+        },
+        {
+            "h": 25,
+            "name": "sampleLoopStart",
+            "w": 100,
+            "x": 164,
+            "y": 353
+        },
+        {
+            "h": 22,
+            "name": "sampleNameEdit",
+            "w": 580,
+            "x": 57,
+            "y": 231
+        },
+        {
+            "h": 14,
+            "name": "sampleNameStatus",
+            "w": 626,
+            "x": 11,
+            "y": 259
+        },
+        {
+            "h": 14,
+            "name": "sampleOutputSummary",
+            "w": 626,
+            "x": 11,
+            "y": 526
+        },
+        {
+            "h": 22,
+            "name": "sampleRateCombo",
+            "w": 188,
+            "x": 115,
+            "y": 467
+        },
+        {
+            "h": 18,
+            "name": "sampleRefineLoop",
+            "w": 56,
+            "x": 225,
+            "y": 328
+        },
+        {
+            "h": 312,
+            "name": "sampleScroll",
+            "w": 14,
+            "x": 637,
+            "y": 231
+        },
+        {
+            "h": 20,
+            "name": "sampleSeamBadge",
+            "w": 75,
+            "x": 21,
+            "y": 327
+        },
+        {
+            "h": 532,
+            "name": "sampleSplit",
+            "w": 640,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 20,
+            "name": "sampleSuggestStatus",
+            "w": 8,
+            "x": 287,
+            "y": 327
+        },
+        {
+            "h": 18,
+            "name": "sampleTryLoop",
+            "w": 117,
+            "x": 102,
+            "y": 328
+        },
+        {
+            "h": 214,
+            "name": "sampleWaveform",
+            "w": 640,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 578,
+            "name": "fixture.surface",
+            "w": 662,
+            "x": 0,
+            "y": 0
+        }
+    ]
+}

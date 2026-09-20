@@ -1,0 +1,148 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 280,
+        "width": 900
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 18,
+            "name": "sampleNameStatus",
+            "w": 864,
+            "x": 11,
+            "y": 170
+        },
+        {
+            "h": 104,
+            "name": "sampleScroll",
+            "w": 14,
+            "x": 875,
+            "y": 137
+        },
+        {
+            "h": 230,
+            "name": "sampleSplit",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 120,
+            "name": "sampleWaveform",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 120,
+            "name": "waveform",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 120,
+            "name": "waveform.crop-start",
+            "w": 7,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 120,
+            "name": "waveform.crop-end",
+            "w": 7,
+            "x": 881,
+            "y": 11
+        },
+        {
+            "h": 120,
+            "name": "waveform.loop-start",
+            "w": 7,
+            "x": 121,
+            "y": 11
+        },
+        {
+            "h": 120,
+            "name": "waveform.loop-end",
+            "w": 7,
+            "x": 867,
+            "y": 11
+        },
+        {
+            "h": 56,
+            "name": "waveform.seam",
+            "w": 228,
+            "x": 653,
+            "y": 17
+        },
+        {
+            "h": 230,
+            "name": "splitter",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 22,
+            "name": "button-box",
+            "w": 878,
+            "x": 11,
+            "y": 247
+        },
+        {
+            "h": 27,
+            "name": "sampleNameEdit",
+            "w": 807,
+            "x": 68,
+            "y": 137
+        },
+        {
+            "h": 20,
+            "name": "sampleLoopOn",
+            "w": 864,
+            "x": 11,
+            "y": 194
+        },
+        {
+            "h": 21,
+            "name": "sampleLoopBody",
+            "w": 864,
+            "x": 11,
+            "y": 220
+        },
+        {
+            "h": 22,
+            "name": "sampleAddButton",
+            "w": 133,
+            "x": 756,
+            "y": 247
+        },
+        {
+            "h": 27,
+            "name": "row-label.name",
+            "w": 51,
+            "x": 11,
+            "y": 137
+        },
+        {
+            "h": 6,
+            "name": "splitter.handle",
+            "w": 878,
+            "x": 11,
+            "y": 131
+        },
+        {
+            "h": 104,
+            "name": "scrolled.scrollbar",
+            "w": 14,
+            "x": 875,
+            "y": 137
+        }
+    ]
+}

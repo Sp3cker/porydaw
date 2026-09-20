@@ -1,0 +1,43 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 480,
+        "width": 720
+    },
+    "profile": "macos-dpr2-font12",
+    "regions": [
+        {
+            "h": 18,
+            "name": "sf2ButtonBox",
+            "w": 698,
+            "x": 11,
+            "y": 451
+        },
+        {
+            "h": 22,
+            "name": "sf2SearchEdit",
+            "w": 698,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 406,
+            "name": "sf2ZoneTree",
+            "w": 698,
+            "x": 11,
+            "y": 39
+        },
+        {
+            "h": 480,
+            "name": "fixture.surface",
+            "w": 720,
+            "x": 0,
+            "y": 0
+        }
+    ]
+}

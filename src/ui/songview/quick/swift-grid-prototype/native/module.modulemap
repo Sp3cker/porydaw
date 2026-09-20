@@ -16,3 +16,8 @@ module NativeGridWindowCancel {
     header "window_cancel.h"
     export *
 }
+
+module NativeWidgetInterop {
+    header "widget_interop.h"
+    export *
+}

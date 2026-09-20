@@ -1,0 +1,29 @@
+{
+    "environment": {
+        "fontPx": 13,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 270,
+        "width": 142
+    },
+    "profile": "macos-dpr2-font13",
+    "regions": [
+        {
+            "h": 270,
+            "name": "transport.popup",
+            "w": 142,
+            "x": 0,
+            "y": 0
+        },
+        {
+            "h": 22,
+            "name": "transport.popup.current-row",
+            "w": 141,
+            "x": 1,
+            "y": 1
+        }
+    ]
+}

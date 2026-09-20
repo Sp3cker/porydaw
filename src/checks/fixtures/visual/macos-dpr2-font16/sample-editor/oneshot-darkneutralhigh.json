@@ -1,0 +1,204 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 640,
+        "width": 900
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 23,
+            "name": "sampleAdvancedToggle",
+            "w": 112,
+            "x": 11,
+            "y": 557
+        },
+        {
+            "h": 30,
+            "name": "sampleAuditionKey",
+            "w": 151,
+            "x": 110,
+            "y": 476
+        },
+        {
+            "h": 18,
+            "name": "sampleNameStatus",
+            "w": 878,
+            "x": 11,
+            "y": 334
+        },
+        {
+            "h": 39,
+            "name": "sampleOutputSummary",
+            "w": 878,
+            "x": 11,
+            "y": 512
+        },
+        {
+            "h": 290,
+            "name": "sampleSplit",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 284,
+            "name": "sampleWaveform",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 284,
+            "name": "waveform",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 284,
+            "name": "waveform.crop-start",
+            "w": 7,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 284,
+            "name": "waveform.crop-end",
+            "w": 7,
+            "x": 881,
+            "y": 11
+        },
+        {
+            "h": 284,
+            "name": "waveform.loop-start",
+            "w": 7,
+            "x": 121,
+            "y": 11
+        },
+        {
+            "h": 284,
+            "name": "waveform.loop-end",
+            "w": 7,
+            "x": 867,
+            "y": 11
+        },
+        {
+            "h": 56,
+            "name": "waveform.seam",
+            "w": 228,
+            "x": 653,
+            "y": 17
+        },
+        {
+            "h": 290,
+            "name": "splitter",
+            "w": 878,
+            "x": 11,
+            "y": 11
+        },
+        {
+            "h": 22,
+            "name": "button-box",
+            "w": 878,
+            "x": 11,
+            "y": 607
+        },
+        {
+            "h": 27,
+            "name": "sampleNameEdit",
+            "w": 821,
+            "x": 68,
+            "y": 301
+        },
+        {
+            "h": 20,
+            "name": "sampleLoopOn",
+            "w": 878,
+            "x": 11,
+            "y": 358
+        },
+        {
+            "h": 30,
+            "name": "sampleBaseKey",
+            "w": 151,
+            "x": 143,
+            "y": 408
+        },
+        {
+            "h": 22,
+            "name": "sampleAuditionPlay",
+            "w": 54,
+            "x": 11,
+            "y": 480
+        },
+        {
+            "h": 26,
+            "name": "sampleRateCombo",
+            "w": 268,
+            "x": 143,
+            "y": 444
+        },
+        {
+            "h": 22,
+            "name": "sampleAddButton",
+            "w": 133,
+            "x": 756,
+            "y": 607
+        },
+        {
+            "h": 27,
+            "name": "row-label.name",
+            "w": 51,
+            "x": 11,
+            "y": 301
+        },
+        {
+            "h": 18,
+            "name": "row-label.source",
+            "w": 59,
+            "x": 11,
+            "y": 384
+        },
+        {
+            "h": 18,
+            "name": "row-field.source",
+            "w": 746,
+            "x": 143,
+            "y": 384
+        },
+        {
+            "h": 30,
+            "name": "row-label.base-key",
+            "w": 74,
+            "x": 11,
+            "y": 408
+        },
+        {
+            "h": 26,
+            "name": "row-label.rate",
+            "w": 126,
+            "x": 11,
+            "y": 444
+        },
+        {
+            "h": 30,
+            "name": "audition.key-label",
+            "w": 33,
+            "x": 71,
+            "y": 476
+        },
+        {
+            "h": 6,
+            "name": "splitter.handle",
+            "w": 878,
+            "x": 11,
+            "y": 295
+        }
+    ]
+}
