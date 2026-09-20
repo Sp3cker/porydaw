@@ -1745,7 +1745,8 @@
         "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
       },
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 2 Swift comparison"
+      "pendingGap": "Awaiting Task 2 Swift comparison",
+      "reconciliationNotes": "Swift scenario 2 is the explicit representative sample of the frozen C++ five-scenario by two-order matrix."
     },
     {
       "cppId": "editcheck/EditCheckTest::noteMoveMerge",

@@ -47,29 +47,9 @@ public struct SongState: Equatable, Sendable {
         self.tempo = tempo
         self.config = config
     }
-
-    internal func isIdentical(to other: SongState) -> Bool {
-        guard file.division == other.file.division,
-              file.wasFormat0 == other.file.wasFormat0,
-              file.chunks.count == other.file.chunks.count,
-              tempo == other.tempo, config == other.config else { return false }
-        for chunkIndex in file.chunks.indices {
-            let left = file.chunks[chunkIndex]
-            let right = other.file.chunks[chunkIndex]
-            guard left.endTick == right.endTick, left.events.count == right.events.count else {
-                return false
-            }
-            for eventIndex in left.events.indices {
-                let lhs = left.events[eventIndex]
-                let rhs = right.events[eventIndex]
-                guard lhs.tick == rhs.tick, lhs.payload == rhs.payload,
-                      lhs.noteID == rhs.noteID else { return false }
-            }
-        }
-        return true
-    }
 }
 
+/// Track-edit operations in Task 3 are the producer for this Task 2 interface value.
 public struct TrackRemap: Equatable, Sendable {
     public var chunkMap: [Int?]
     public var engineTrackMap: [Int?]
@@ -189,32 +169,8 @@ public final class SongDocument {
 
     public func notes(in track: Int) -> [Note] {
         guard let mapping = mapping(for: track) else { return [] }
-        let events = state.file.chunks[mapping.chunk].events
-        return withUnsafeTemporaryAllocation(of: Int.self, capacity: 16 * 256) { nextEnd in
-            nextEnd.initialize(repeating: -1)
-            var result: [Note] = []
-            result.reserveCapacity(events.count / 2)
-            for index in events.indices.reversed() {
-                let event = events[index]
-                guard case let .channel(status, pitch, velocity) = event.payload else { continue }
-                let channel = Int(status & 0x0F)
-                let slot = channel * 256 + Int(pitch)
-                let type = status >> 4
-                let isEnd = type == 0x8 || (type == 0x9 && velocity == 0)
-                if isEnd {
-                    nextEnd[slot] = index
-                } else if type == 0x9, velocity != 0, UInt8(channel) == mapping.channel {
-                    let endIndex = nextEnd[slot] >= 0 ? nextEnd[slot] : nil
-                    let duration = endIndex.map { events[$0].tick - event.tick } ?? 0
-                    result.append(Note(id: event.noteID ?? NoteID(), track: track,
-                                       chunk: mapping.chunk, onIndex: index, endIndex: endIndex,
-                                       tick: event.tick, duration: duration, pitch: pitch,
-                                       velocity: velocity, channel: UInt8(channel)))
-                }
-            }
-            result.reverse()
-            return result
-        }
+        return Self.pair(events: state.file.chunks[mapping.chunk].events,
+                         channel: mapping.channel, chunk: mapping.chunk, track: track)
     }
 
     public func note(_ id: NoteID) -> Note? {
@@ -283,10 +239,12 @@ public final class SongDocument {
     }
 
     internal func commit(before: SongState, after: SongState, group: HistoryGroup?,
-                         operation: HistoryOperation) {
-        guard !after.isIdentical(to: state) else { return }
+                         operation: HistoryOperation, changed: Bool = true,
+                         returnsToOrigin: Bool = false) {
+        guard changed, after != state else { return }
         state = after
-        history.record(before: before, after: after, group: group, operation: operation)
+        history.record(before: before, after: after, group: group, operation: operation,
+                       returnsToOrigin: returnsToOrigin)
         publish()
     }
 
@@ -319,6 +277,33 @@ public final class SongDocument {
         }
         chunk.events.insert(event, at: index)
         chunk.endTick = max(chunk.endTick, event.tick)
+    }
+    internal static func pair(events: [MidiEvent], channel: UInt8, chunk: Int,
+                              track: Int) -> [Note] {
+        withUnsafeTemporaryAllocation(of: Int.self, capacity: 16 * 256) { nextEnd in
+            nextEnd.initialize(repeating: -1)
+            var result: [Note] = []
+            result.reserveCapacity(events.count / 2)
+            for index in events.indices.reversed() {
+                let event = events[index]
+                guard case let .channel(status, pitch, velocity) = event.payload else { continue }
+                let eventChannel = Int(status & 0x0F)
+                let slot = eventChannel * 256 + Int(pitch)
+                let type = status >> 4
+                if type == 0x8 || (type == 0x9 && velocity == 0) {
+                    nextEnd[slot] = index
+                } else if type == 0x9, velocity != 0, UInt8(eventChannel) == channel {
+                    let endIndex = nextEnd[slot] >= 0 ? nextEnd[slot] : nil
+                    result.append(Note(
+                        id: event.noteID ?? NoteID(), track: track, chunk: chunk,
+                        onIndex: index, endIndex: endIndex, tick: event.tick,
+                        duration: endIndex.map { events[$0].tick - event.tick } ?? 0,
+                        pitch: pitch, velocity: velocity, channel: UInt8(eventChannel)))
+                }
+            }
+            result.reverse()
+            return result
+        }
     }
 
     private func mintAllNoteIDs() {

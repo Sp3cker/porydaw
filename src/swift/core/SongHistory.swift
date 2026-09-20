@@ -145,13 +145,13 @@ public final class SongHistory {
     }
 
     internal func record(before: SongState, after: SongState, group: HistoryGroup?,
-                         operation: HistoryOperation) {
+                         operation: HistoryOperation, returnsToOrigin: Bool) {
         let mayMerge = group != nil && index == entries.count
         discardRedo()
         if mayMerge, let group, index > 0,
            case var .document(previous) = entries[index - 1],
            previous.group == group, previous.operation == operation, !previous.mergeSealed {
-            if after.isIdentical(to: previous.before) {
+            if returnsToOrigin {
                 entries.removeLast()
                 index -= 1
             } else {

@@ -1,10 +1,5 @@
 import Foundation
 
-
-@inlinable
-internal func clampVelocity(_ velocity: UInt8) -> UInt8 {
-    velocity > 127 ? 127 : velocity
-}
 public struct NewNote: Equatable, Sendable {
     public var track: Int
     public var tick: Tick
@@ -67,7 +62,7 @@ extension SongDocument {
         guard participantsAreCompatible(spans, allowExactDuplicates: true) else {
             throw NoteEditError.conflictingEditedNotes
         }
-        applyEditedWins(spans: spans, editedIDs: [], to: &candidate)
+        applyEditedWins(spans: spans, editedIDs: Set(), to: &candidate)
         var insertedIDs: [NoteID] = []
         insertedIDs.reserveCapacity(notes.count)
         for note in notes {
@@ -78,7 +73,8 @@ extension SongDocument {
             let id = mintNoteID()
             insertedIDs.append(id)
             Self.insert(.channel(tick: note.tick, status: 0x90 | mapping.channel,
-                                 data0: note.pitch, data1: clampVelocity(note.velocity), noteID: id),
+                                 data0: note.pitch,
+                                 data1: clampVelocity(Int(note.velocity)), noteID: id),
                         into: &candidate.file.chunks[mapping.chunk])
             Self.insert(.channel(tick: note.tick + duration, status: 0x90 | mapping.channel,
                                  data0: note.pitch, data1: 0),
@@ -110,16 +106,22 @@ extension SongDocument {
             destinations.append((shiftedTick(note.tick, by: tickDelta),
                                  shiftedPitch(note.pitch, by: keyDelta)))
         }
-        move(ids, destinations: destinations, group: group, operation: operation)
+        move(ids, original: original, destinations: destinations, base: base,
+             group: group, operation: operation)
     }
 
     public func moveNotes(_ ids: [NoteID], toPitches pitches: [UInt8],
                           group: HistoryGroup? = nil) {
-        guard !ids.isEmpty, ids.count == pitches.count, pitches.allSatisfy({ $0 <= 127 }),
-              let current = resolve(ids, in: state) else { return }
-        let destinations = zip(current, pitches).map { ($0.tick, $1) }
-        move(ids, destinations: destinations, group: group,
-             operation: .moveNotesToPitches(ids))
+        guard !ids.isEmpty, ids.count == pitches.count, pitches.allSatisfy({ $0 <= 127 }) else {
+            return
+        }
+        let operation = HistoryOperation.moveNotesToPitches(
+            ids.sorted { $0.rawValue < $1.rawValue })
+        let base = origin(for: group, operation: operation)
+        guard let original = resolve(ids, in: base) else { return }
+        let destinations = zip(original, pitches).map { ($0.tick, $1) }
+        move(ids, original: original, destinations: destinations, base: base,
+             group: group, operation: operation)
     }
 
     public func resizeNotes(_ ids: [NoteID], edge: ResizeEdge, byTicks delta: Int64,
@@ -147,133 +149,152 @@ extension SongDocument {
                 targets.append((note.tick, UInt64(proposed)))
             }
         }
-        var active: [Int] = []
-        active.reserveCapacity(original.count)
-        var spans: [PlannedNote] = []
+        var relocations: [RelocatedNote] = []
+        relocations.reserveCapacity(original.count)
         for (index, note) in original.enumerated() {
             let target = targets[index]
-            if target.tick == note.tick && target.end == note.endTick { continue }
-            active.append(index)
-            if let end = target.end {
-                spans.append(PlannedNote(track: note.track, chunk: note.chunk, pitch: note.pitch,
-                                         tick: target.tick, endTick: end))
-            }
+            relocations.append(RelocatedNote(
+                original: note, tick: target.tick, pitch: note.pitch, endTick: target.end))
         }
-        guard participantsAreCompatible(spans, allowExactDuplicates: false) else { return }
-        var candidate = base
-        let activeIDs = active.map { ids[$0] }
-        applyEditedWins(spans: spans, editedIDs: activeIDs, to: &candidate, reference: base)
-        if let selectedInCandidate = resolve(activeIDs, in: candidate) {
-            remove(selectedInCandidate, from: &candidate)
-        } else if !activeIDs.isEmpty {
-            return
-        }
-        for index in active {
-            let note = original[index]
-            let target = targets[index]
-            insertMoved(note, tick: target.tick, pitch: note.pitch, endTick: target.end,
-                        into: &candidate)
-        }
-        commit(before: base, after: candidate, group: group, operation: operation)
+        relocate(ids, base: base, group: group, operation: operation,
+                 relocations: relocations)
     }
 
     public func setVelocities(_ velocities: [NoteVelocity],
                               expectedRevision: UInt64) -> UInt64? {
         guard expectedRevision == revision else { return nil }
-        var resolved: [(Note, Int)] = []
-        resolved.reserveCapacity(velocities.count)
+        let notesByID = projectedNoteMap(in: state)
+        var valuesByID: [NoteID: Int] = [:]
+        var orderedIDs: [NoteID] = []
+        orderedIDs.reserveCapacity(velocities.count)
         for change in velocities {
-            guard let found = note(change.noteID) else { return nil }
-            if let index = resolved.firstIndex(where: { $0.0.id == found.id }) {
-                resolved[index].1 = change.velocity
-            } else {
-                resolved.append((found, change.velocity))
+            guard change.noteID.isAssigned, notesByID[change.noteID] != nil else { return nil }
+            if valuesByID.updateValue(change.velocity, forKey: change.noteID) == nil {
+                orderedIDs.append(change.noteID)
             }
         }
+        applyVelocities(orderedIDs, valuesByID: valuesByID, notesByID: notesByID)
+        return revision
+    }
+
+    public func nudgeVelocities(_ ids: [NoteID], by delta: Int) {
+        guard delta != 0 else { return }
+        let notesByID = projectedNoteMap(in: state)
+        guard let notes = resolve(ids, using: notesByID) else { return }
+        var valuesByID: [NoteID: Int] = [:]
+        valuesByID.reserveCapacity(notes.count)
+        for note in notes {
+            valuesByID[note.id] = Int(note.velocity) + delta
+        }
+        applyVelocities(ids, valuesByID: valuesByID, notesByID: notesByID)
+    }
+
+    private func applyVelocities(_ orderedIDs: [NoteID], valuesByID: [NoteID: Int],
+                                 notesByID: [NoteID: Note]) {
         var candidate = state
-        for (note, velocity) in resolved {
-            let target = UInt8(min(max(velocity, 1), 127))
+        var changed = false
+        for id in orderedIDs {
+            guard let note = notesByID[id], let velocity = valuesByID[id] else { continue }
+            let target = clampVelocity(velocity)
             guard target != note.velocity,
                   case let .channel(status, pitch, _) =
                     candidate.file.chunks[note.chunk].events[note.onIndex].payload else { continue }
             candidate.file.chunks[note.chunk].events[note.onIndex].payload =
                 .channel(status: status, data0: pitch, data1: target)
+            changed = true
         }
-        let beforeRevision = revision
-        commit(before: state, after: candidate, group: nil, operation: .setVelocities)
-        return beforeRevision == revision ? expectedRevision : revision
+        commit(before: state, after: candidate, group: nil, operation: .setVelocities,
+               changed: changed)
     }
 
-    public func nudgeVelocities(_ ids: [NoteID], by delta: Int) {
-        guard delta != 0, let notes = resolve(ids, in: state) else { return }
-        let changes = notes.map {
-            NoteVelocity(noteID: $0.id, velocity: Int($0.velocity) + delta)
-        }
-        _ = setVelocities(changes, expectedRevision: revision)
-    }
-
-    private func move(_ ids: [NoteID], destinations: [(Tick, UInt8)], group: HistoryGroup?,
-                      operation: HistoryOperation) {
-        let base = origin(for: group, operation: operation)
-        guard let original = resolve(ids, in: base), original.count == destinations.count else {
-            return
-        }
-        var active: [Int] = []
-        active.reserveCapacity(original.count)
-        var spans: [PlannedNote] = []
-        spans.reserveCapacity(original.count)
+    private func move(_ ids: [NoteID], original: [Note], destinations: [(Tick, UInt8)],
+                      base: SongState, group: HistoryGroup?, operation: HistoryOperation) {
+        guard original.count == destinations.count else { return }
+        var relocations: [RelocatedNote] = []
+        relocations.reserveCapacity(original.count)
         for (index, note) in original.enumerated() {
             let destination = destinations[index]
-            if destination.0 == note.tick && destination.1 == note.pitch { continue }
+            let end = note.endTick.map {
+                UInt64(destination.0) + ($0 - UInt64(note.tick))
+            }
+            if let end, end > UInt64(TimeDefaults.maxTick) { return }
+            relocations.append(RelocatedNote(
+                original: note, tick: destination.0, pitch: destination.1, endTick: end))
+        }
+        relocate(ids, base: base, group: group, operation: operation,
+                 relocations: relocations)
+    }
+
+    private func relocate(_ ids: [NoteID], base: SongState, group: HistoryGroup?,
+                          operation: HistoryOperation, relocations: [RelocatedNote]) {
+        guard ids.count == relocations.count else { return }
+        var active: [Int] = []
+        active.reserveCapacity(relocations.count)
+        var spans: [PlannedNote] = []
+        spans.reserveCapacity(relocations.count)
+        for (index, relocation) in relocations.enumerated() {
+            let note = relocation.original
+            if relocation.tick == note.tick, relocation.pitch == note.pitch,
+               relocation.endTick == note.endTick {
+                continue
+            }
             active.append(index)
-            guard let end = note.endTick else { continue }
-            let movedEnd = UInt64(destination.0) + (end - UInt64(note.tick))
-            guard movedEnd <= UInt64(TimeDefaults.maxTick) else { return }
-            spans.append(PlannedNote(track: note.track, chunk: note.chunk,
-                                     pitch: destination.1, tick: destination.0,
-                                     endTick: movedEnd))
+            if let end = relocation.endTick {
+                spans.append(PlannedNote(track: note.track, chunk: note.chunk,
+                                         pitch: relocation.pitch, tick: relocation.tick,
+                                         endTick: end))
+            }
         }
         guard participantsAreCompatible(spans, allowExactDuplicates: false) else { return }
         var candidate = base
         let activeIDs = active.map { ids[$0] }
-        applyEditedWins(spans: spans, editedIDs: activeIDs, to: &candidate, reference: base)
+        applyEditedWins(spans: spans, editedIDs: Set(activeIDs),
+                        to: &candidate, reference: base)
         if let selectedInCandidate = resolve(activeIDs, in: candidate) {
             remove(selectedInCandidate, from: &candidate)
         } else if !activeIDs.isEmpty {
             return
         }
         for index in active {
-            let note = original[index]
-            let destination = destinations[index]
-            let end = note.endTick.map {
-                UInt64(destination.0) + ($0 - UInt64(note.tick))
-            }
-            insertMoved(note, tick: destination.0, pitch: destination.1, endTick: end,
-                        into: &candidate)
+            let relocation = relocations[index]
+            insertMoved(relocation.original, tick: relocation.tick, pitch: relocation.pitch,
+                        endTick: relocation.endTick, into: &candidate)
         }
-        commit(before: base, after: candidate, group: group, operation: operation)
+        commit(before: base, after: candidate, group: group, operation: operation,
+               changed: !active.isEmpty || group != nil,
+               returnsToOrigin: active.isEmpty)
     }
 
     private func resolve(_ ids: [NoteID], in songState: SongState) -> [Note]? {
+        resolve(ids, using: projectedNoteMap(in: songState))
+    }
+
+    private func resolve(_ ids: [NoteID], using notesByID: [NoteID: Note]) -> [Note]? {
+        var seen: Set<NoteID> = []
         var result: [Note] = []
         result.reserveCapacity(ids.count)
         for id in ids {
-            guard id.isAssigned, !result.contains(where: { $0.id == id }),
-                  let found = projectedNote(id, in: songState) else { return nil }
+            guard id.isAssigned, seen.insert(id).inserted, let found = notesByID[id] else {
+                return nil
+            }
             result.append(found)
         }
         return result
     }
 
-    private func projectedNote(_ id: NoteID, in songState: SongState) -> Note? {
+    private func projectedNoteMap(in songState: SongState) -> [NoteID: Note] {
         let map = songState.file.engineTracks()
+        var notesByID: [NoteID: Note] = [:]
         for track in 0..<map.usedTrackCount {
-            if let note = projectedNotes(track: track, in: songState)
-                .first(where: { $0.id == id }) {
-                return note
+            guard let chunk = map.tracks[track].midiChunk else { continue }
+            let notes = Self.pair(events: songState.file.chunks[chunk].events,
+                                  channel: map.tracks[track].channel,
+                                  chunk: chunk, track: track)
+            for note in notes where note.id.isAssigned {
+                notesByID[note.id] = note
             }
         }
-        return nil
+        return notesByID
     }
 
     private func remove(_ notes: [Note], from candidate: inout SongState) {
@@ -285,7 +306,7 @@ extension SongDocument {
         applyRemovals(removals, to: &candidate)
     }
 
-    private func applyEditedWins(spans: [PlannedNote], editedIDs: [NoteID],
+    private func applyEditedWins(spans: [PlannedNote], editedIDs: Set<NoteID>,
                                  to candidate: inout SongState, reference: SongState? = nil) {
         guard !spans.isEmpty else { return }
         let source = reference ?? candidate
@@ -352,32 +373,8 @@ extension SongDocument {
         let map = songState.file.engineTracks()
         guard track >= 0, track < map.usedTrackCount,
               let chunk = map.tracks[track].midiChunk else { return [] }
-        let events = songState.file.chunks[chunk].events
-        return withUnsafeTemporaryAllocation(of: Int.self, capacity: 16 * 256) { nextEnd in
-            nextEnd.initialize(repeating: -1)
-            var result: [Note] = []
-            result.reserveCapacity(events.count / 2)
-            for index in events.indices.reversed() {
-                let event = events[index]
-                guard case let .channel(status, pitch, velocity) = event.payload else { continue }
-                let channel = Int(status & 0x0F)
-                let slot = channel * 256 + Int(pitch)
-                let type = status >> 4
-                if type == 0x8 || (type == 0x9 && velocity == 0) {
-                    nextEnd[slot] = index
-                } else if type == 0x9, velocity != 0,
-                          UInt8(channel) == map.tracks[track].channel {
-                    let endIndex = nextEnd[slot] >= 0 ? nextEnd[slot] : nil
-                    result.append(Note(
-                        id: event.noteID ?? NoteID(), track: track, chunk: chunk,
-                        onIndex: index, endIndex: endIndex, tick: event.tick,
-                        duration: endIndex.map { events[$0].tick - event.tick } ?? 0,
-                        pitch: pitch, velocity: velocity, channel: UInt8(channel)))
-                }
-            }
-            result.reverse()
-            return result
-        }
+        return Self.pair(events: songState.file.chunks[chunk].events,
+                         channel: map.tracks[track].channel, chunk: chunk, track: track)
     }
 
     private func applyRemovals(_ removals: [[Int]], to candidate: inout SongState) {
@@ -405,6 +402,13 @@ extension SongDocument {
             Self.insert(end, into: &candidate.file.chunks[note.chunk])
         }
     }
+}
+
+private struct RelocatedNote {
+    let original: Note
+    let tick: Tick
+    let pitch: UInt8
+    let endTick: UInt64?
 }
 
 private struct PlannedNote {

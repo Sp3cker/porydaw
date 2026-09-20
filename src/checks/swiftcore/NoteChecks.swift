@@ -188,7 +188,11 @@ private func velocityEditing(_ report: CheckReport) {
     guard let ids = try? document.addNotes([
         NewNote(track: 0, tick: 0, pitch: 60, duration: 8, velocity: 100),
         NewNote(track: 0, tick: 12, pitch: 62, duration: 8, velocity: 90),
+        NewNote(track: 0, tick: 24, pitch: 64, duration: 8, velocity: 0),
     ]) else { return }
+    report.expectEqual(UInt8(1), document.note(ids[2])?.velocity,
+                       cppID: "editcheck/EditCheckTest::documentVelocityAtomic",
+                       what: "inserted velocity zero shares the domain floor")
     let revision = document.revision
     let changed = document.setVelocities([
         NoteVelocity(noteID: ids[0], velocity: 0),
@@ -202,7 +206,7 @@ private func velocityEditing(_ report: CheckReport) {
     let beforeStale = document.state
     report.expect(document.setVelocities([NoteVelocity(noteID: ids[0], velocity: 20)],
                                          expectedRevision: revision) == nil &&
-        document.state.isMusicallyEqual(to: beforeStale),
+        document.state == beforeStale,
         cppID: "editcheck/EditCheckTest::documentVelocityRejects",
         message: "stale velocity revision rejects without mutation")
     let beforeNudge = document.revision
@@ -316,26 +320,50 @@ private func saveIdentity(_ report: CheckReport) {
 private func confirmedBankOrdering(_ report: CheckReport) {
     let document = SongDocument(file: baseFile(events: []))
     let identity = document.history.currentIdentity
-    let first = ProbeBankAction(value: 1)
-    let second = ProbeBankAction(value: 2)
-    document.history.recordConfirmedBank(first)
-    document.history.recordConfirmedBank(second)
+    let counter = ProbeMergeCounter()
+    document.history.recordConfirmedBank(ProbeBankAction(value: 1, counter: counter))
+    document.history.recordConfirmedBank(ProbeBankAction(value: 2, counter: counter))
+    report.expectEqual(1, counter.count,
+                       cppID: "editcheck/EditCheckTest::documentSavedIdentity",
+                       what: "two confirmed bank records merge into one undo entry")
     report.expect(document.history.canUndo && document.history.currentIdentity == identity,
                   cppID: "editcheck/EditCheckTest::documentSavedIdentity",
                   message: "confirmed bank entries preserve document identity")
+
+    if let snapshot = try? document.captureSave() {
+        document.didSave(snapshot)
+    }
+    document.history.recordConfirmedBank(ProbeBankAction(value: 3, counter: counter))
+    report.expectEqual(1, counter.count,
+                       cppID: "editcheck/EditCheckTest::documentSavedIdentity",
+                       what: "save seals the preceding bank merge run")
+    document.history.recordConfirmedBank(ProbeBankAction(value: 4, counter: counter))
+    report.expectEqual(2, counter.count,
+                       cppID: "editcheck/EditCheckTest::documentSavedIdentity",
+                       what: "post-save bank records begin a new merge run")
+}
+
+@MainActor
+private final class ProbeMergeCounter {
+    var count = 0
 }
 
 @MainActor
 private final class ProbeBankAction: BankHistoryAction {
     let value: Int
+    let counter: ProbeMergeCounter
 
-    init(value: Int) { self.value = value }
+    init(value: Int, counter: ProbeMergeCounter) {
+        self.value = value
+        self.counter = counter
+    }
 
     func apply(direction _: BankHistoryDirection) async throws {}
 
     func merged(with newer: any BankHistoryAction) -> (any BankHistoryAction)? {
         guard let newer = newer as? ProbeBankAction else { return nil }
-        return ProbeBankAction(value: newer.value)
+        counter.count += 1
+        return ProbeBankAction(value: value + newer.value, counter: counter)
     }
 }
 
@@ -379,10 +407,4 @@ private func baseFile(events: [MidiEvent]) -> MidiFile {
         MidiChunk(events: [.channel(tick: 0, status: 0xC0, data0: 0)] + events,
                   endTick: 128),
     ])
-}
-
-private extension SongState {
-    func isMusicallyEqual(to other: SongState) -> Bool {
-        file == other.file && tempo == other.tempo && config == other.config
-    }
 }
