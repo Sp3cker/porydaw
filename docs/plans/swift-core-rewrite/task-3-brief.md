@@ -10,7 +10,8 @@ See [plan.md](plan.md#global-constraints) and [spec.md](spec.md#editing-behavior
 
 Create `src/swift/core/EventEditing.swift`, `src/swift/core/Xcmd.swift`,
 `src/swift/core/MidiImport.swift`, `src/checks/swiftcore/EventChecks.swift`.
-Modify `src/swift/core/CMakeLists.txt`, `src/checks/CMakeLists.txt`,
+Modify `src/swift/core/{CMakeLists.txt,MidiFile.swift,SongDocument.swift}`,
+`src/checks/CMakeLists.txt`,
 `src/checks/swiftcore/{core_check.h,tst_swiftcore.h,tst_swiftcore.cpp}`.
 Read-only oracle: `src/core/{songdocument.cpp,songdocument_tempo.cpp,songdocument_xcmd.cpp,xcmd.h,xcmd.cpp,lanemoveplan.h,lanemoveplan.cpp,midiimport.h,midiimport.cpp}`;
 `src/checks/editcheck/`, `src/checks/playback/{tst_xcmd.h,projection.cpp,rewrites.cpp}`,
@@ -34,10 +35,25 @@ reduction, including XCMD verdicts. Export canonicalization remains detached
 from live state. `editRawAndTempo` handles raw deletion/tempo replacement and
 tempo-to-raw replacement in one history transaction.
 
+`MidiFile.swift` owns an internal `TrackNameScan` value with
+`mutating func consume(_ event: borrowing MidiEvent) -> Bool`. A fresh scanner
+starts outside a channel-prefix span. A `0x20` meta event activates that span
+when its payload is nonempty and clears it when empty; a channel event clears
+it. Only `0x03` meta events outside the span return true. Other events preserve
+the prefix state. This is the sole name-role rule, not a generic metadata engine.
+`SongDocument.trackName`, `classifyEvents(in:)`, and `MidiImport.analyze` consume
+it instead of maintaining separate prefix/name-selection logic. Preserve their
+existing display length, import whitespace/empty-name handling, event order,
+first-name versus subsequent-marker treatment, and rename marker rejection.
+Correct the document query's prefixed-name selection; do not change opaque
+payloads or unrelated conductor/loop classification.
+
 ## Implementation steps
 
 1. Implement track creation/duplication/deletion/reorder/name and EOT operations,
    preserving chunk-zero globals, loop-marker rescue and unused-channel seeding.
+   Centralize the name-role rule above and migrate all three consumers. Retain
+   raw chunk/event addressing and the existing commit/history mechanism.
 2. Implement raw events, intra-tick ordering/bounds, tempo, signatures and loops
    through the existing transaction helper. No independent tempo undo stack.
 3. Implement XCMD epoch projection/rewrite/reconciliation, known-lane operations,
@@ -52,6 +68,16 @@ tempo-to-raw replacement in one history transaction.
 
 Track/event/value edits and import transforms match existing outcomes, save to
 valid equivalent MIDI, preserve opaque traffic, and undo as single operations.
+`eventEdits` and `midiImport` additionally exercise a prefixed name before a
+global name, prefix reset by a channel event and by empty prefix payload,
+multiple global names, and marker-looking names. Assert document/import name
+selection under their existing formatting rules, rename targeting the global
+name, preserved prefixed/opaque events, undo restoration, and save/decode
+preservation. No duplicated scanner in the tests; use explicit expected values.
+The first command below executes these new Swift regressions; the second
+guards unrelated legacy metadata/marker behavior, not the corrected query.
+Record the prefixed-name query correction explicitly in the task evidence;
+do not label a differing legacy query result as unchanged parity.
 Controller commands:
 
 ```sh

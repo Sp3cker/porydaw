@@ -146,6 +146,10 @@ checked through its service**, not deferred or filled with dummy entries.
 - Engine-track order remains channel-bearing chunk order with the existing
   16-track ceiling and project budget. Track deletion/reorder preserves conductor
   globals and winning loop markers; rename respects channel-prefix/marker rules.
+  Document name queries, rename classification and import share the same
+  channel-prefix-aware track-name role rule specified in task 3. Prefixed names
+  remain opaque channel metadata, not rename targets or global track labels.
+  Existing display/import formatting differences remain intentional.
 - Canonical inserted-event order and raw same-tick reorder bounds stay intact.
   Raw editing retains its existing ability to store non-musical/opaque events.
 - XCMD recognizes selector/payload epochs, not isolated CC bytes. Known echo
@@ -163,6 +167,11 @@ returns immutable contiguous playback data plus tick/sample conversion data.
 Accumulate unrounded tempo-map origins and round final sample positions once.
 Project document and playback tracks with the same map; keep loop marker,
 exact-gate, extended-clock, and mid2agb duration/velocity behavior.
+Task 6 adds `PlaybackTimeline.build(state: borrowing SongState, sampleRate: Double)`
+for document consumers. This is the only mapping from canonical `SongState`
+tempo/config to playback inputs; sessions and presenters do not reconstruct it.
+The file-based builder remains for standalone MIDI callers. See task 6 for
+the authoritative-tempo and gate/clock acceptance scenarios.
 
 `Sequencer` owns preallocated fixed-capacity key/gate/pending-release state.
 Its methods are `reset`, `seek`, `replaceTimeline`, `chase`, `primeVoices`,

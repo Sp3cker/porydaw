@@ -61,6 +61,16 @@ Unknown selectors or no executed selected cases must fail, not return green.
 `oracle_check.{h,cpp}` exposes only temporary calls to the old C++ implementation;
 `module.modulemap` imports that check-only interface into Swift. Swift compares
 its production results with the oracle and with retained expected values.
+For every required codec/semantic outcome, keep an oracle-independent expected
+result in Swift in addition to the live comparison: explicit canonical byte
+vectors and decoded event/order expectations for codec cases; specified
+classification/default/quantization/velocity values and boundary invariants for
+musical cases. Existing checked-in fixtures and compact expected-value tables
+are preferred. Do not derive expected results by calling another production
+Swift path or copying the C++ algorithm into a test helper. Preserve every
+meaningful case/row; this is not permission to replace exhaustive reference
+coverage with a few examples. Annotate the ledger's assertion mapping to
+distinguish independent expectations from supplemental differential assertions.
 Remove obsolete `pdc_codec_roundtrip`, `pdc_blank_song`, `pdc_semantic_value`
 and `pdc_semantic_text` test exports and their C++ callers when these checks
 migrate. Do not replace them with another per-operation Swift ABI.
@@ -105,6 +115,11 @@ Acceptance also requires independent inventory-completeness review and zero
 unresolved task-1 rows in coverage-ledger.json. Codec and pure musical/velocity
 semantics are due here; importer/XCMD and native voice-kind resolution retain
 their explicit later owners. The broad Swift slot names are not a coverage map.
+The first command must execute independent expectations as well as parity
+comparisons. Acceptance rejects an outcome whose only expectation comes from
+`oracle_codec_roundtrip`, `oracle_semantic_value`, `oracle_semantic_text`, or
+`oracle_blank_song`. Task 7 removes those calls and reruns the same retained
+expectations without a fallback, test mode, or skipped rows.
 
 Qualify the reporting envelope with a disposable deliberately failing assertion
 in a selected Swift case: the first command must exit nonzero and identify that

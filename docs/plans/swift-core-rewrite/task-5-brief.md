@@ -135,6 +135,17 @@ The reference checks remain C++ at this stage. `swiftcore:playback` must exercis
 production Swift render against the real engine, including a loop crossing and
 replacement at the current playback position. Device/AudioEngine handoff and WAV
 client migration are task 7's explicit remaining integration proof.
+`PlaybackChecks.runLoopRows` must execute each historical row independently
+with a fresh engine/sequencer and explicit keyed-on key expectations. At the
+existing 48 kHz fixture timing, cover 200,000; 298,000; 310,000; 392,000; and
+584,000 frames with looping enabled, plus 298,000 with looping disabled.
+Assert the respective sorted key multisets `[67]`, `[60,65,67]`, `[60,67]`,
+`[67,67]`, `[67,67,67]`, and `[64,65,67]`, preserving duplicate tied voices.
+Report the original row identity for each execution. A combined PCM comparison
+or identity string naming unexecuted rows is insufficient. The first command
+executes these Swift assertions; `loopcheck` supplies pre-retirement reference
+evidence. Preserve the current repaired rows and record fresh results rather
+than treating source inspection as execution proof.
 
 Acceptance also requires the plan's 6.4 qualification and the recorded storage/
 export decision. If a candidate is rejected, name the concrete API, deployment,

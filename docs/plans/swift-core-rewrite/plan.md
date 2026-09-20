@@ -92,6 +92,26 @@ playback. Unconverted editors are absent, not misleadingly read-only.
   for its bounded runner/oracle integration; shared edits remain serialized.
   This is not permission for new C++ domain scenarios.
 
+## Architecture review amendment
+
+Apply these requirements to in-flight work before the affected task's acceptance;
+do not restart completed implementation or infer acceptance from this amendment.
+An already accepted task receives a bounded repair and re-review before its next
+dependent handoff. Preserve recorded evidence; new assertions need new execution.
+
+| Finding | Owner and binding acceptance |
+| --- | --- |
+| Track-name selection differs between document queries, rename classification and import | Task 3 centralizes name-role selection and adds prefixed-name/rename/import regressions under its amended brief. Its write set now includes `MidiFile.swift` and `SongDocument.swift`. Close before task 4 consumes the event interfaces. |
+| Codec/semantic expected results still depend on C++ oracle calls | Task 1 supplies independent expectations alongside parity comparisons. Later domain tasks apply the same spec requirement; task 7 proves they survive actual oracle removal. |
+| Earlier loop comparison did not execute every named row | Task 5 preserves six separately executed semantic rows. The reviewed source now contains them; source inspection is not acceptance or fresh execution evidence. |
+| Permanent native fixture services share the temporary oracle files | Task 7 extracts engine/fixture-root support into its explicitly permitted `native_check` files before deleting the oracle and migrates every caller/import/build entry without aliases. |
+| Session callers could reconstruct tempo/config projection rules | Task 6 adds the single state-to-playback factory specified in the spec, with edited-tempo/config and undo/reopen checks. Tasks 7–8 consume that result, not a parallel mapping. |
+| Both runtime implementations still exist | Task 7 retains its atomic production cutover and source/link-closure gate. Passing standalone Swift checks is not application-wide retirement evidence. |
+
+Preserve the existing semantic edit/commit/history interfaces while applying
+these repairs. No generic command framework, file split solely for line counts,
+or token-reduction quota is authorized.
+
 ## Swift 6.4 qualification
 
 Swift 6.4 is installed (user-reported), but installation is not project

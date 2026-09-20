@@ -30,8 +30,10 @@ Modify:
 - `src/checks/{CMakeLists.txt,checkcatalog.cpp,fwd.hpp}` and existing driver/assertion
   files in the closed directories `src/checks/{swiftcore,editcheck,midi,playback,clipboard,project,voicegroup,voicegroupsave,audio,keyboard,support}`,
   plus `src/checks/automation/domain/`: only retained core/service cases and their
-  necessary support. No new files in those directories other than task-owned
-  Swift check files already introduced by tasks 1–6.
+  necessary support. The only additional native check files permitted are
+  `src/checks/swiftcore/native_check.h` and `native_check.cpp` for the retained
+  engine/fixture-root services below. Other new check files remain limited to
+  task-owned Swift checks already introduced by tasks 1–6.
 - This plan's evidence/deferred-check ledger in `plan.md` and `spec.md`.
 
 Delete every old `src/core` file named in spec.md only after the
@@ -105,6 +107,24 @@ service/Qt/ABI contracts only. Delete oracle-only adapters, obsolete per-operati
 Swift test exports and superseded C++ domain bodies/registrations after the
 coverage gate; do not repoint those bodies through a reverse test facade.
 
+Before deleting `oracle_check.{h,cpp}`, move the complete `PdcPlaybackEngine`
+fixture owner and `pdc_playback_engine_create`, `pdc_playback_engine_destroy`,
+and `pdc_playback_engine_pointer` definitions/declarations into
+`native_check.{h,cpp}`. Preserve real engine/bank setup, lifetimes, signatures
+and test observability; do not move `SmfFile`, `SongDocument`, semantic opcode
+dispatch, or any legacy domain evaluation with them. Move fixture-root storage
+there as well, renaming its accessors to `pdc_check_set_fixture_root` and
+`pdc_check_fixture_root`. Migrate the runner and `CheckEnvironment` callers,
+module-map imports and `src/checks/CMakeLists.txt` membership together; remove
+the old accessors without aliases. `core_check.h` remains suite reporting only.
+The check-native module imports the permanent header after oracle retirement.
+
+Keep independent Swift expected-result assertions when removing differential
+calls, including `NoteChecks.expectOracleParity` and the codec/semantic oracle
+clients. Retire only comparisons whose independent behavioral expectations and
+row mappings have been accepted; do not delete whole cases merely because one
+assertion used the oracle. No oracle-off mode, fallback or alternate driver.
+
 ## Implementation steps
 
 1. Repoint AudioEngine, handoff, WAV export and render CLI to the accepted Swift
@@ -163,6 +183,14 @@ case partition before accepting the core milestone.
 Acceptance requires both pre-deletion reconciliation and post-cutover executed
 case reconciliation against coverage-ledger.json, including data rows and
 assertion mappings. A removed/renamed registration cannot erase its obligation.
+The post-deletion `swiftcore` run must link without `oracle_check.cpp` or any old
+core source, exercise the retained native fixture services, and execute every
+required independent assertion. Inspect remaining check imports and linked
+symbols for obsolete oracle dependencies, not just source filenames.
+Record the final source/link closure for both `porydaw` and the render CLI:
+AudioEngine uses the accepted Swift sequencer, and no native `TimelinePlayer`
+implementation or alternate codec remains. Keep the retained DSP/fixture/runner
+cost separate from deleted oracle code in the reduction evidence.
 The native client smoke must exercise the accepted export mechanism through
 AudioEngine and the render CLI. Compilation of an isolated Swift declaration
 does not establish native symbol linkage, publication lifetime or PCM behavior.

@@ -16,6 +16,8 @@ Create `src/swift/app/ProjectService.swift`,
 `src/swift/app/module.modulemap`, `src/checks/swiftcore/SessionChecks.swift`.
 Modify `CMakeLists.txt`, `src/checks/CMakeLists.txt`,
 `src/checks/swiftcore/{core_check.h,tst_swiftcore.h,tst_swiftcore.cpp}`.
+Also modify `src/swift/core/PlaybackTimeline.swift` solely for the state-based
+projection factory below; preserve task 5's timing/storage and native ABI.
 Read-only dependencies: `src/project/{decompproject.h,voicegroupsource.h,songregistry.h,projectio.cpp}`,
 `src/core/songhistory.cpp`, `src/checks/project/save.cpp`,
 `src/checks/voicegroup/tst_voicegroupbank.cpp`, `src/checks/voicegroupsave/savecore.cpp`.
@@ -63,6 +65,17 @@ Provide `save() async throws`, `undo() async throws`, `redo() async throws`, and
 remain immediate. Close releases the native worker only after its outstanding
 work/owned results have finished, following the existing service lifetime policy.
 
+Add `PlaybackTimeline.build(state: borrowing SongState, sampleRate: Double)
+-> PlaybackTimeline` as the sole document-state projection factory. It delegates
+to the accepted file-based builder with `state.file`, authoritative `state.tempo`,
+and `PlaybackSettings` derived from `state.config.exactGate` and
+`state.config.extendedClocks`. Document adoption strips tempo metas from the
+file: the factory must never fall back to that file's tempo extraction.
+`DocumentSession` uses this factory for initial projection and all edit/history
+rebuilds; no presenter or native adapter repeats the mapping. Preserve the
+file-based builder for standalone MIDI loading/rendering. The factory neither
+mutates the document nor encodes/decodes MIDI or creates another settings owner.
+
 ## Implementation steps
 
 1. Implement the narrow native worker adapter over existing project APIs.
@@ -95,6 +108,13 @@ deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --
 The new slots exercise the real service. The reference suites guard current
 bank/save behavior but do not prove the Swift path themselves. Native bank
 loading and normal file errors are covered; no bank-editor GUI is introduced.
+`projectSession` also constructs a document with nondefault tempo and gate/clock
+settings, edits its authoritative tempo stream, and checks expected sample
+positions and settings-sensitive scheduling through the state-based factory.
+Use the existing gate/clock fixtures rather than asserting mere field copies.
+Undo/redo and save/reopen must reproduce the expected timing; prove adoption's
+tempo-meta removal cannot silently restore default tempo. The first command
+covers this construction path before task 7 consumes its publications.
 Before task 7, the cumulative core gate also runs:
 
 ```sh
