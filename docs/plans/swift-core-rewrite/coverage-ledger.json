@@ -496,8 +496,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::xcmdTimeTraffic (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -510,8 +514,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::xcmdTimeTraffic (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -524,8 +532,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::xcmdTimeTraffic (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -538,8 +550,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::xcmdTimeTraffic (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -552,8 +568,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::xcmdTimeTraffic (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -566,8 +586,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::xcmdTimeTraffic (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -580,8 +604,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::xcmdTimeTraffic (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -1891,8 +1919,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::rangeEditing (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison",
       "noRowMarker": true,
@@ -1908,8 +1940,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::rangeEditing (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -1922,8 +1958,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::rangeMovement (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison",
       "noRowMarker": true,
@@ -1939,8 +1979,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::rangeEditing (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison",
       "noRowMarker": true,
@@ -1956,8 +2000,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::rangeMovement (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison",
       "noRowMarker": true,
@@ -2036,8 +2084,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::removalAndSeams (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison",
       "noRowMarker": true,
@@ -2053,8 +2105,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::removalAndSeams and duplicationAndGlobals (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -2067,8 +2123,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::duplicationAndGlobals (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -2081,8 +2141,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::insertionAndBoundaries (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -2095,8 +2159,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::insertionAndBoundaries (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -2109,8 +2177,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::insertionAndBoundaries (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -2123,8 +2195,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::removalAndSeams (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison",
       "noRowMarker": true,
@@ -2140,8 +2216,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::removalAndSeams (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -2154,8 +2234,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::duplicationAndGlobals (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -2168,8 +2252,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::duplicationAndGlobals (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },
@@ -2182,8 +2270,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 4,
       "swiftTargets": "src/checks/swiftcore/TimeChecks.swift::removalAndSeams and duplicationAndGlobals (literal cppId assertions); controller-run pending",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose --qt timeEdits; deno task verify --filter editcheck --filter clipcheck --verbose",
+        "revision": "65d7a37f+proof-legs",
+        "result": "PASS; CoreT4SpecReview PASS/PASS (proof-debt legs added) + CoreT4ThermoReview advisory-only; architecture amendment applied"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 4 Swift comparison"
     },

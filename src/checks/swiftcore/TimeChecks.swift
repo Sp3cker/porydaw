@@ -57,8 +57,8 @@ private func rangeEditing(_ report: CheckReport) {
     report.expect(document.state.tempo.contains {
         $0.tick == 61 && $0.microsecondsPerQuarterNote == 400_000
     }, cppID: "editcheck/EditCheckTest::rangeEdit", message: "tempo replacement is atomic")
-    expectTimeOracleParity(document, cppID: "editcheck/EditCheckTest::rangeEdit",
-                           row: "post-transform frozen observation", report: report)
+    expectNoteTempoOracleParity(document, cppID: "editcheck/EditCheckTest::rangeEdit",
+                                row: "post-transform frozen observation", report: report)
     _ = document.history.undoDocument()
     report.expectEqual(before, bytes(document),
                        cppID: "editcheck/EditCheckTest::rangeEdit",
@@ -126,6 +126,36 @@ private func rangeMovement(_ report: CheckReport) {
         $0.tick == 17 && $0.blob == [0x7D, 4, 5, 0xF7]
     }, cppID: "editcheck/EditCheckTest::rangeMove",
     message: "opaque relocation preserves exact payload bytes")
+
+    let headTrim = timeDocument()
+    guard let headIDs = try? headTrim.addNotes([
+        NewNote(track: 0, tick: 50, pitch: 60, duration: 20, velocity: 80),
+        NewNote(track: 0, tick: 110, pitch: 60, duration: 30, velocity: 90),
+    ]), let headMover = headTrim.note(headIDs[0]) else {
+        report.fail("editcheck/EditCheckTest::rangeMove", "head-trim fixture insertion failed")
+        return
+    }
+    report.expect(headTrim.moveRange(notes: [headMover], points: [], by: 50),
+                  cppID: "editcheck/EditCheckTest::rangeMove",
+                  message: "moving range trims a stationary note head")
+    report.expectEqual(["100:60:20", "120:60:20"], headTrim.notes(in: 0).map(noteShape),
+                       cppID: "editcheck/EditCheckTest::rangeMove",
+                       what: "stationary note starts at the moved note end")
+
+    let fullCover = timeDocument()
+    guard let coverIDs = try? fullCover.addNotes([
+        NewNote(track: 0, tick: 50, pitch: 61, duration: 50, velocity: 80),
+        NewNote(track: 0, tick: 110, pitch: 61, duration: 20, velocity: 90),
+    ]), let coverMover = fullCover.note(coverIDs[0]) else {
+        report.fail("editcheck/EditCheckTest::rangeMove", "full-cover fixture insertion failed")
+        return
+    }
+    report.expect(fullCover.moveRange(notes: [coverMover], points: [], by: 50),
+                  cppID: "editcheck/EditCheckTest::rangeMove",
+                  message: "moving range fully covers a stationary note")
+    report.expectEqual(["100:61:50"], fullCover.notes(in: 0).map(noteShape),
+                       cppID: "editcheck/EditCheckTest::rangeMove",
+                       what: "fully covered stationary note is removed")
 }
 
 @MainActor
@@ -164,6 +194,7 @@ private func removalAndSeams(_ report: CheckReport) {
     whole.editTempo(TempoEdit(add: [TempoPoint(tick: 63, microsecondsPerQuarterNote: 333_333)]))
     whole.insertRawEvent(chunk: 0, event: .meta(tick: 64, type: 0x06, data: [0x5B]))
     let oldEnd = whole.rawChunks.map(\.endTick)
+    let wholeBefore = bytes(whole)
     report.expect(whole.removeTime(TimeRange(startTick: 61, endTick: 65),
                                   scope: TimeScope(wholeSong: true)),
                   cppID: "editcheck/EditCheckTest::songWholeSongRemove",
@@ -181,6 +212,13 @@ private func removalAndSeams(_ report: CheckReport) {
     report.expect(closedEnds,
         cppID: "editcheck/EditCheckTest::songWholeSongRemove",
         message: "whole-song removal closes every stored end tick")
+    _ = whole.history.undoDocument()
+    report.expectEqual(oldEnd, whole.rawChunks.map(\.endTick),
+                       cppID: "editcheck/EditCheckTest::songWholeSongRemove",
+                       what: "one undo restores every stored end tick")
+    report.expectEqual(wholeBefore, bytes(whole),
+                       cppID: "editcheck/EditCheckTest::timeRangeWholeSong",
+                       what: "one undo restores globals, events, and end-of-track state")
 }
 
 @MainActor
@@ -252,6 +290,7 @@ private func duplicationAndGlobals(_ report: CheckReport) {
     document.writeLane(track: 0, lane: .controller(7), from: 580, through: 610,
                        points: [LaneWrite(tick: 580, value: 33), LaneWrite(tick: 610, value: 44)])
     let originalIDs = Set(document.notes(in: 0).map(\.id))
+    let before = bytes(document)
     report.expect(document.duplicateTime(TimeRange(startTick: 600, endTick: 620),
                                          scope: TimeScope(tracks: [0])),
                   cppID: "editcheck/EditCheckTest::timeRangeDuplicateClippingAndOrder",
@@ -264,6 +303,10 @@ private func duplicationAndGlobals(_ report: CheckReport) {
         $0.tick == 620 && $0.value == 33
     }, cppID: "editcheck/EditCheckTest::timeRangeAutomationSeamsAndDefaults",
     message: "duplicate seeds the effective value at its destination seam")
+    _ = document.history.undoDocument()
+    report.expectEqual(before, bytes(document),
+                       cppID: "editcheck/EditCheckTest::timeRangeDuplicateClippingAndOrder",
+                       what: "one undo restores the duplicated range transaction")
 
     let unterminated = SongDocument(file: MidiFile(chunks: [MidiChunk(events: [
         .channel(status: 0xC0, data0: 0),
@@ -455,8 +498,8 @@ private func hasChannel(_ events: [MidiEvent], tick: Tick, type: UInt8, key: UIn
 }
 
 @MainActor
-private func expectTimeOracleParity(_ document: SongDocument, cppID: String, row: String,
-                                    report: CheckReport) {
+private func expectNoteTempoOracleParity(_ document: SongDocument, cppID: String, row: String,
+                                         report: CheckReport) {
     guard let snapshot = try? document.captureSave() else {
         report.fail(cppID, "\(row): Swift save capture failed")
         return
