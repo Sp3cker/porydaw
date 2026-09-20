@@ -17,18 +17,24 @@ Create:
 - `src/swift/core/MidiFile.swift`
 - `src/swift/core/MidiSemantics.swift`
 - `src/swift/core/CMakeLists.txt`
-- `src/checks/swiftcore/core_check.h`
+- `src/checks/support/corecheck/core_check.h`
 - `src/checks/swiftcore/MidiChecks.swift`
-- `src/checks/swiftcore/tst_swiftcore.h`
-- `src/checks/swiftcore/tst_swiftcore.cpp`
+- `src/checks/support/corecheck/tst_swiftcore.h`
+- `src/checks/support/corecheck/tst_swiftcore.cpp`
 - `docs/plans/swift-core-rewrite/coverage-ledger.json`
 - `src/checks/swiftcore/CoreCheckSupport.swift`
-- `src/checks/swiftcore/oracle_check.h`
-- `src/checks/swiftcore/oracle_check.cpp`
-- `src/checks/swiftcore/module.modulemap`
+- `src/checks/support/corecheck/oracle_check.h`
+- `src/checks/support/corecheck/oracle_check.cpp`
+- `src/checks/support/corecheck/module.modulemap`
 
 Modify only build/registration integration in `CMakeLists.txt`,
 `src/checks/CMakeLists.txt`, `src/checks/checkcatalog.cpp`, `src/checks/fwd.hpp`.
+For the [layout correction](plan.md#check-language-layout), move the existing
+six native/header/module-map files to these destinations rather than recreating
+them. Their old paths are removal-only. Update the existing CMake integration
+and includes within the moved support files; preserve declarations, exported
+symbols and behavior. An additional consumer outside this closed write set
+requires an evidenced write-set amendment before editing.
 Read-only oracle: `src/core/{smf,timedefaults,tempo,tracklimits,noteid,m4asemantics,mid2agbtables,velocitymodel}*`,
 `src/checks/midi/tst_midismf.{h,cpp}`, `src/checks/keyboard/tst_velocitymodel.cpp`.
 For the baseline inventory only, also read `src/checks/checkcatalog.cpp` and
@@ -139,6 +145,13 @@ used by these cases. No production access widening, C-shaped result projection,
 forced conformance or weakened Swift ownership is acceptable to pass it. If the
 envelope cannot host the real design, report the specific test-integration change
 needed outside the write set; Core is not the fallback repair location.
+After relocating native support, the controller runs
+`deno task verify --filter swiftcore --verbose` to cover every currently
+registered Swift suite, not only task 1's selectors. Reuse the failing-assertion
+and unknown-selector probes above to prove Deno still collects row diagnostics
+and nonzero failures. Inspect build inputs and directory contents: `swiftcore/`
+has only Swift sources; native support resolves from `support/corecheck/`;
+there are no forwarding headers, duplicate old paths or skipped existing rows.
 
 ## Task-specific constraints
 

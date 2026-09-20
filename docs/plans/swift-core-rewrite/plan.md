@@ -92,6 +92,32 @@ playback. Unconverted editors are absent, not misleadingly read-only.
   for its bounded runner/oracle integration; shared edits remain serialized.
   This is not permission for new C++ domain scenarios.
 
+### Check language layout
+
+Deno remains the build/check orchestration and output-collection interface;
+it does not require QtTest as the Swift test framework. The existing native
+launcher may remain as bounded infrastructure, not as a Core requirement.
+`src/checks/swiftcore/` contains Swift sources only. Native launch/reporting,
+engine fixtures, C headers and their module map belong in
+`src/checks/support/corecheck/`, whose name describes infrastructure rather
+than an implementation language.
+
+Task 1 owns this immediate, serialized test-integration correction before the
+next affected acceptance; do not defer directory separation to task 7.
+Relocate `tst_swiftcore.cpp`, `tst_swiftcore.h`, `core_check.h`,
+`oracle_check.cpp`, `oracle_check.h`, and `module.modulemap` from `swiftcore/`
+to `support/corecheck/`, preserving basenames and exported symbols.
+The oracle remains temporary at that destination and is deleted in task 7.
+Migrate source/include paths, module-map/compiler arguments and actual header
+consumers together; no forwarding headers, duplicate files or old-path aliases.
+Keep Swift scenarios and `CoreCheckSupport.swift` in `swiftcore/`.
+
+This relocation supersedes native-file locations in the original briefs:
+every task's permitted `swiftcore/` native/header/module-map write path maps
+to the same basename under `support/corecheck/`. Only Swift source paths stay
+unchanged. Task 7's new `native_check.{h,cpp}` also belongs there. This is a
+path/ownership correction, not authorization for a new runner or test framework.
+
 ## Architecture review amendment
 
 Apply these requirements to in-flight work before the affected task's acceptance;

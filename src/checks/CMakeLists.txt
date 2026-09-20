@@ -403,17 +403,17 @@ if(APPLE)
         AUTORCC OFF
     )
     target_compile_options(swift_core_check PRIVATE
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/swiftcore/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/swiftcore>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
     )
     target_link_libraries(swift_core_check PRIVATE PorydawCore PorydawPlayback)
     target_link_libraries(porydaw_checks PRIVATE swift_core_check)
     target_sources(porydaw_checks PRIVATE
-        swiftcore/tst_swiftcore.cpp
-        swiftcore/tst_swiftcore.h
-        swiftcore/core_check.h
-        swiftcore/oracle_check.cpp
-        swiftcore/oracle_check.h
+        support/corecheck/tst_swiftcore.cpp
+        support/corecheck/tst_swiftcore.h
+        support/corecheck/core_check.h
+        support/corecheck/oracle_check.cpp
+        support/corecheck/oracle_check.h
     )
     qt_add_library(swift_doc_feed_check STATIC
         swiftdocfeed/DocumentFeedCheck.swift

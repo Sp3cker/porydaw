@@ -31,7 +31,7 @@ Modify:
   files in the closed directories `src/checks/{swiftcore,editcheck,midi,playback,clipboard,project,voicegroup,voicegroupsave,audio,keyboard,support}`,
   plus `src/checks/automation/domain/`: only retained core/service cases and their
   necessary support. The only additional native check files permitted are
-  `src/checks/swiftcore/native_check.h` and `native_check.cpp` for the retained
+  `src/checks/support/corecheck/native_check.h` and `native_check.cpp` for the retained
   engine/fixture-root services below. Other new check files remain limited to
   task-owned Swift checks already introduced by tasks 1–6.
 - This plan's evidence/deferred-check ledger in `plan.md` and `spec.md`.
@@ -110,7 +110,7 @@ coverage gate; do not repoint those bodies through a reverse test facade.
 Before deleting `oracle_check.{h,cpp}`, move the complete `PdcPlaybackEngine`
 fixture owner and `pdc_playback_engine_create`, `pdc_playback_engine_destroy`,
 and `pdc_playback_engine_pointer` definitions/declarations into
-`native_check.{h,cpp}`. Preserve real engine/bank setup, lifetimes, signatures
+`src/checks/support/corecheck/native_check.{h,cpp}`. Preserve real engine/bank setup, lifetimes, signatures
 and test observability; do not move `SmfFile`, `SongDocument`, semantic opcode
 dispatch, or any legacy domain evaluation with them. Move fixture-root storage
 there as well, renaming its accessors to `pdc_check_set_fixture_root` and
