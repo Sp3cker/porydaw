@@ -63,3 +63,12 @@ time-ruler menus or automation interaction surface.
 Do not recreate `TimeEditor` as a second command engine. Do not implement a
 separate algorithm for each lane kind when ordered-stream transformation plus
 existing lane/XCMD rules expresses the behavior. No new time-editing UI.
+
+## History representation amendment (2026-09-19)
+
+Document undo/redo uses typed, reversible change sets per spec.md
+§Document and history (History decision); whole-song before/after snapshots
+in history are superseded. Migrate every history-producing operation in this
+task to the change-set representation — one engine, no snapshot fallback.
+Compatibility findings H1-H7 and the acceptance gates in
+undo-redo-compatibility-report.md apply where they name this task surface.

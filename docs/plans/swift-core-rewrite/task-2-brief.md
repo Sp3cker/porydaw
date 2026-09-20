@@ -77,3 +77,12 @@ Do not carry forward feed IDs, save-state-token/revision/identity triples merely
 because the C seam had them: keep the identity/revision needed by actual save
 completion and consumer behavior. Preserve that behavior with the smallest state.
 Do not implement a second history for the session or grid.
+
+## History representation amendment (2026-09-19)
+
+Document undo/redo uses typed, reversible change sets per spec.md
+§Document and history (History decision); whole-song before/after snapshots
+in history are superseded. Migrate every history-producing operation in this
+task to the change-set representation — one engine, no snapshot fallback.
+Compatibility findings H1-H7 and the acceptance gates in
+undo-redo-compatibility-report.md apply where they name this task surface.

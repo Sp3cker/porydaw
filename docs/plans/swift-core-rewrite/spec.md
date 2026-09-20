@@ -111,17 +111,32 @@ Payloads carry the same musical facts as their current C++ counterparts, not
 an isomorphic list of compatibility overloads. Positions into raw event vectors
 are short-lived references for one edit; note selections use `NoteID`.
 
-**History decision:** use Swift COW before/after `SongState` values, not a port of
-`EditOp` and many command subclasses. A private transaction helper constructs a
-candidate, applies the semantic operation, and installs it with one history
-entry. Only changed chunk buffers detach; immutable payload storage is shared.
-No whole-file encode/decode on each edit. Preview gestures remain presenter
-state until commit. A `HistoryGroup` is an opaque caller-minted token per gesture
-run; the history entry retains the origin `SongState`, never the presenter.
-Repeated keyboard edits use that origin so crossing a neighbor then moving back
-restores it. Groups never merge across save, a different command/selection, or key release. An edit
-returning to its group origin removes that entry while still publishing the
-restored state. Undo/redo restore note identities; the allocator never rewinds.
+**History decision (superseded by the typed change-set amendment,
+2026-09-19):** document undo/redo uses typed, reversible change sets — not
+retained whole-song before/after snapshots. One linear history serves
+document changes and confirmed bank edits. Records are a small set of Swift
+value types, not a class per command or a general command framework.
+Transactions capture the actual changes made — exact event
+insertions/removals/replacements preserving MIDI payloads, ordering, and
+note identities; chunk insertion/deletion/reordering; tempo and
+configuration changes; and every affected collision victim, not only the
+selected notes. Capture happens during mutation, never by diffing the
+entire song afterward. Undo applies recorded changes backward; redo applies
+them forward; neither reruns the semantic edit algorithm, and inverse
+intentions are insufficient. Naturally coarse records are correct where the
+operation warrants them (a deleted track retains its chunk); unrelated song
+state and arbitrary snapshot fallbacks are not retained. Short-lived
+candidate state for atomic validation is acceptable; whole-song snapshots
+retained in history are not. A `HistoryGroup` is an opaque caller-minted
+token per gesture run; gesture merging preserves the earliest original and
+the latest result of all affected data, including trimmed or deleted
+neighbors. Repeated keyboard edits rebuild from the group origin so
+crossing a neighbor then moving back restores it; an edit returning to its
+origin removes the redundant entry while still publishing. Rejected and
+no-op edits preserve any existing redo branch. Groups never merge across
+save, a different command/selection, or key release. Undo/redo restore
+note identities; the allocator never rewinds. Compatibility findings and
+acceptance gates: [undo-redo-compatibility-report.md](undo-redo-compatibility-report.md).
 
 `SongHistory` supplies `undo()`, `redo()`, `canUndo`, `canRedo`, `currentIdentity`,
 `markSaved(_:)`, and `recordConfirmedBank(_:)`. It has one entry sequence, not a

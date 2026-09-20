@@ -5793,11 +5793,15 @@
       "observableAssertions": "All observable assertions in ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-io-flow/ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case observes workspace catalog preemption and callback requeue scheduling, which ProjectService and DocumentSession do not expose."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case observes workspace catalog preemption and callback requeue scheduling, which ProjectService and DocumentSession do not expose."
     },
     {
       "cppId": "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
@@ -6064,11 +6068,15 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure[duplicate-voicegroup-is-unkeyed-failure]",
@@ -6078,11 +6086,15 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure pass for this case row duplicate-voicegroup-is-unkeyed-failure",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure[duplicate-voicegroup-is-unkeyed-failure]",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure[refresh-replaces-catalog]",
@@ -6092,11 +6104,15 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure pass for this case row refresh-replaces-catalog",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure[refresh-replaces-catalog]",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
@@ -6134,11 +6150,15 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure pass for this case row unknown-voicegroup-hard-failure",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[unknown-voicegroup-hard-failure]",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::missingSavedNameReconcileFailure",
@@ -6148,11 +6168,15 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::missingSavedNameReconcileFailure pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::missingSavedNameReconcileFailure",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten",
@@ -6162,11 +6186,15 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::planEventsForwardKeyed",
@@ -6190,11 +6218,15 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::reloadStagesMidiViewBound pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::reloadStagesMidiViewBound",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication",
@@ -6204,11 +6236,15 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder",
@@ -6218,11 +6254,15 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot",
@@ -6232,11 +6272,15 @@
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId projectworkspacecheck/ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
     },
     {
       "cppId": "rendering-playhead-native/catalog-suite[case-names-pending]",
@@ -11591,11 +11635,11 @@
       "observableAssertions": "PSG classification and names exactly match C++; compatibility requires identical PSG kind",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId velocity-model/VelocityModelTest::resolvesVoiceKinds",
+      "swiftTargets": "swiftcore/midiSemantics: runMidiSemanticsSuite in src/checks/swiftcore/MidiChecks.swift under cppId velocity-model/VelocityModelTest::resolvesVoiceKinds, rows velocity-kind-*",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification",
+      "pendingGap": "Duplicate projectSession row deleted; existing exhaustive Task 1 semantics target awaits fresh controller reconciliation.",
       "reconciliationNotes": "Scout classified the whole case as Task 1; Swift Task 1 covers resolved VoiceKind laws, while native ToneData traversal remains due Task 6.",
       "partialRunEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
@@ -11753,11 +11797,15 @@
       "observableAssertions": "All observable assertions in VoicegroupLoadBenchTest::songLoadBenchmark pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgloadbench/VoicegroupLoadBenchTest::songLoadBenchmark",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case is a native loader benchmark, not a replacement-domain correctness contract."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case is a native loader benchmark, not a replacement-domain correctness contract."
     },
     {
       "cppId": "vgloadcheck/VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets",
@@ -11767,11 +11815,15 @@
       "observableAssertions": "All observable assertions in VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgloadcheck/VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case observes native loader target pointers, warm-cache reads, and sample-set ownership with no ProjectService API counterpart."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case observes native loader target pointers, warm-cache reads, and sample-set ownership with no ProjectService API counterpart."
     },
     {
       "cppId": "vgloadcheck/VoicegroupLoaderTest::failedTransportReleasesPartialBatchAndContextHeals",
@@ -11781,11 +11833,15 @@
       "observableAssertions": "All observable assertions in VoicegroupLoaderTest::failedTransportReleasesPartialBatchAndContextHeals pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgloadcheck/VoicegroupLoaderTest::failedTransportReleasesPartialBatchAndContextHeals",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case observes native transport batch teardown and loader context healing with no ProjectService API counterpart."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case observes native transport batch teardown and loader context healing with no ProjectService API counterpart."
     },
     {
       "cppId": "vgloadcheck/VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnership",
@@ -11795,11 +11851,15 @@
       "observableAssertions": "All observable assertions in VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnership pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgloadcheck/VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnership",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case compares native serial and parallel batch adapters, which are below the Swift service boundary."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case compares native serial and parallel batch adapters, which are below the Swift service boundary."
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::adsrFieldSpaceTogglesTransport",
@@ -11879,11 +11939,15 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::dockMinimumWidthIsFamilyInvariant pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::dockMinimumWidthIsFamilyInvariant",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case asserts Qt dock geometry, an absent UI concern."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case asserts Qt dock geometry, an absent UI concern."
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
@@ -11893,11 +11957,15 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case asserts workspace selector and widget binding retention, which has no DocumentSession API counterpart."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case asserts workspace selector and widget binding retention, which has no DocumentSession API counterpart."
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably",
@@ -11935,11 +12003,15 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case asserts Qt header mouse interaction during widget rebuild, an absent UI concern."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case asserts Qt header mouse interaction during widget rebuild, an absent UI concern."
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
@@ -12047,11 +12119,15 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case asserts voicegroup browser presentation of track programs and used marks, an absent UI concern."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case asserts voicegroup browser presentation of track programs and used marks, an absent UI concern."
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::samplePickerAuditionsAndCommits",
@@ -12061,11 +12137,15 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::samplePickerAuditionsAndCommits pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::samplePickerAuditionsAndCommits",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case asserts sample-picker widget audition and commit behavior, an absent UI concern."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case asserts sample-picker widget audition and commit behavior, an absent UI concern."
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::samplePickerKeysplitAuditions",
@@ -12075,11 +12155,15 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::samplePickerKeysplitAuditions pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::samplePickerKeysplitAuditions",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case asserts keysplit picker audition behavior, an absent UI/audio-routing concern."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case asserts keysplit picker audition behavior, an absent UI/audio-routing concern."
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits",
@@ -12089,11 +12173,15 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case asserts wave-mode picker UI audition and commit behavior, an absent UI concern."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case asserts wave-mode picker UI audition and commit behavior, an absent UI concern."
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit",
@@ -12103,11 +12191,15 @@
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case asserts voicegroup selector widget interaction; ProjectService exposes neither selector state nor that workspace command."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case asserts voicegroup selector widget interaction; ProjectService exposes neither selector state nor that workspace command."
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
@@ -12131,11 +12223,15 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case observes editor-only synth-definition staging, which is not carried by the ProjectService save contract."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case observes editor-only synth-definition staging, which is not carried by the ProjectService save contract."
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily",
@@ -12145,11 +12241,15 @@
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::typeColumnMapsEveryFamily pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily",
+      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "exclusionReview": {
+        "approved": false,
+        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
+        "rationale": "The case asserts browser type-column icons and labels, an absent UI concern."
+      },
+      "pendingGap": "Case-level exclusion is unapproved: The case asserts browser type-column icons and labels, an absent UI concern."
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",

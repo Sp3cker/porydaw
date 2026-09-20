@@ -135,3 +135,12 @@ Do not retain `ProjectWorkspace` as a second application/session owner inside
 Swift. Reuse lower-level project services, not its tab/catalog orchestration.
 Do not widen `sgd_`, `sgc_` or `sgs_`. The existing native `blankSong` definition
 is removed with its remaining old callers in task 7; the new service never uses it.
+
+## History representation amendment (2026-09-19)
+
+Document undo/redo uses typed, reversible change sets per spec.md
+§Document and history (History decision); whole-song before/after snapshots
+in history are superseded. Migrate every history-producing operation in this
+task to the change-set representation — one engine, no snapshot fallback.
+Compatibility findings H1-H7 and the acceptance gates in
+undo-redo-compatibility-report.md apply where they name this task surface.

@@ -96,3 +96,12 @@ Do not mint permanent lane/row identities solely to replace valid short-lived ra
 event positions. Do not normalize unknown traffic or move save normalization into
 live editing. A failed user operation leaves the prior state intact through the
 transaction mechanism, not per-field rollback code.
+
+## History representation amendment (2026-09-19)
+
+Document undo/redo uses typed, reversible change sets per spec.md
+§Document and history (History decision); whole-song before/after snapshots
+in history are superseded. Migrate every history-producing operation in this
+task to the change-set representation — one engine, no snapshot fallback.
+Compatibility findings H1-H7 and the acceptance gates in
+undo-redo-compatibility-report.md apply where they name this task surface.
