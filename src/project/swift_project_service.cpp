@@ -24,6 +24,7 @@
 #include <deque>
 #include <functional>
 #include <mutex>
+#include <optional>
 #include <thread>
 #include <unordered_map>
 #include <utility>
@@ -60,8 +61,10 @@ SongCfg makeCfg(const PdSongCfg &in)
     return cfg;
 }
 
-VgVoice makeVoice(const PdVoiceValue &in)
+std::optional<VgVoice> makeVoice(const PdVoiceValue &in)
 {
+    if (in.macro < int32_t(VgMacro::DirectSound) || in.macro > int32_t(VgMacro::KeysplitAll))
+        return std::nullopt;
     VgVoice voice;
     voice.macro = static_cast<VgMacro>(in.macro);
     voice.key = int(in.key);
@@ -132,10 +135,17 @@ void fillSlotViews(const LoadedBankView &view, SongResult &result)
     result.slotViews.clear();
     result.slotTexts.clear();
     result.slotViews.reserve(view.slotViews.size());
-    // Two borrowed strings per voice slot (symbol, keysplit table).
     result.slotTexts.reserve(view.slotViews.size() * 2);
     for (const VoicegroupSlotView &slot : view.slotViews) {
-        PdBankSlotView out{};
+        if (!slot.voice)
+            continue;
+        result.slotTexts.append(slot.voice->symbol.toUtf8());
+        result.slotTexts.append(slot.voice->keysplitTable.toUtf8());
+    }
+
+    qsizetype textIndex = 0;
+    for (const VoicegroupSlotView &slot : view.slotViews) {
+        PdBankSlotView out = {};
         out.kind = int32_t(slot.kind);
         out.hasVoice = slot.voice.has_value();
         if (slot.voice.has_value()) {
@@ -143,10 +153,8 @@ void fillSlotViews(const LoadedBankView &view, SongResult &result)
             out.voice.macro = int32_t(voice.macro);
             out.voice.key = int32_t(voice.key);
             out.voice.pan = int32_t(voice.pan);
-            result.slotTexts.append(voice.symbol.toUtf8());
-            out.voice.symbol = result.slotTexts.constLast().constData();
-            result.slotTexts.append(voice.keysplitTable.toUtf8());
-            out.voice.keysplitTable = result.slotTexts.constLast().constData();
+            out.voice.symbol = result.slotTexts[textIndex++].constData();
+            out.voice.keysplitTable = result.slotTexts[textIndex++].constData();
             out.voice.sweep = int32_t(voice.sweep);
             out.voice.duty = int32_t(voice.duty);
             out.voice.period = int32_t(voice.period);
@@ -161,7 +169,7 @@ void fillSlotViews(const LoadedBankView &view, SongResult &result)
 
 PdSongMeta metaFor(const SongResult &result)
 {
-    PdSongMeta meta{};
+    PdSongMeta meta = {};
     meta.label = result.label.constData();
     meta.midiPath = result.midiPath.constData();
     meta.constant = result.constant.constData();
@@ -185,7 +193,7 @@ PdSongMeta metaFor(const SongResult &result)
 
 PdBankView bankFor(const SongResult &result)
 {
-    PdBankView bank{};
+    PdBankView bank = {};
     bank.slotViews = result.slotViews.constData();
     bank.slotCount = size_t(result.slotViews.size());
     bank.loadName = result.loadName.constData();
@@ -425,6 +433,12 @@ void pd_service_save(PdProjectService *service, const PdSaveRequest *request, vo
                 return;
             }
             flagsWritten = true;
+            const std::optional<SongName> savedName = SongName::create(label);
+            if (savedName.has_value()) {
+                const std::optional<SongInfo> savedSong = service->project.playableSong(*savedName);
+                if (savedSong.has_value())
+                    service->project.setSongCfg(savedSong->id, cfg);
+            }
         }
         if (lease) {
             PdBankView bank = bankFor(refreshed);
@@ -449,7 +463,7 @@ void deliverBankEdit(PdProjectService *service, VoicegroupId id,
         completion(context, PD_BANK_EDIT_FAILED, nullptr, nullptr, 0, bytes.constData());
         return;
     }
-    if (std::holds_alternative<VoicegroupEditConflictResult>(*edited)) {
+    if (std::get_if<VoicegroupEditConflictResult>(&*edited)) {
         const QByteArray bytes =
             QStringLiteral("Bank edit conflicts with the current voicegroup.").toUtf8();
         completion(context, PD_BANK_EDIT_CONFLICT, nullptr, nullptr, 0, bytes.constData());
@@ -467,8 +481,8 @@ void deliverBankEdit(PdProjectService *service, VoicegroupId id,
     result.sourcePath = applied.view.id.sourceRelativePath().toUtf8();
     result.sectionLabel = applied.view.id.sectionLabel().toUtf8();
     result.bankDirty = applied.view.dirty;
-    auto *lease =
-        new PdBankLease{applied.view.id, std::move(applied.view.bank), applied.view.loadName};
+    PdBankLease leaseValue = {applied.view.id, std::move(applied.view.bank), applied.view.loadName};
+    auto *lease = new PdBankLease(std::move(leaseValue));
     PdBankView bank = bankFor(result);
     completion(context, PD_BANK_EDIT_APPLIED, &bank, lease, token, nullptr);
 }
@@ -481,11 +495,21 @@ void pd_service_bank_apply(PdProjectService *service, PdBankLease *lease, const 
     if (!service || !lease || !edit || !completion)
         return;
     const VoicegroupId id = lease->id;
+    const std::optional<VgVoice> value = makeVoice(edit->value);
+    const std::optional<VgVoice> expected =
+        edit->hasExpected ? makeVoice(edit->expected) : std::optional<VgVoice>{};
+    if (!value || (edit->hasExpected && !expected)) {
+        service->post([context, completion] {
+            const QByteArray error = QByteArrayLiteral("Voice macro ordinal is out of range.");
+            completion(context, PD_BANK_EDIT_FAILED, nullptr, nullptr, 0, error.constData());
+        });
+        return;
+    }
     SetVoicegroupSlot set;
     set.slot = int(edit->slot);
-    set.value = makeVoice(edit->value);
-    if (edit->hasExpected)
-        set.expected = makeVoice(edit->expected);
+    set.value = *value;
+    if (expected)
+        set.expected = *expected;
     service->post([service, id, set, context, completion] {
         deliverBankEdit(service, id, VoicegroupEditOperation{set}, context, completion);
     });
@@ -506,7 +530,7 @@ void pd_service_bank_revert(PdProjectService *service, PdBankLease *lease,
             completion(context, PD_BANK_EDIT_CONFLICT, nullptr, nullptr, 0, bytes.constData());
             return;
         }
-        RevertBlankSlot revert{found->second};
+        RevertBlankSlot revert = {found->second};
         service->tokens.erase(found);
         deliverBankEdit(service, id, VoicegroupEditOperation{revert}, context, completion);
     });

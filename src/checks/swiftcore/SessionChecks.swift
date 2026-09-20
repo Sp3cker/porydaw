@@ -6,6 +6,10 @@ import PorydawPlayback
 
 // MARK: - Synchronous Concurrency Helper
 
+private enum RunBlockingError: Error {
+    case timeout
+}
+
 @MainActor
 private func runBlocking<T>(_ operation: @escaping @MainActor () async throws -> T) throws -> T {
     var outcome: Result<T, Error>?
@@ -19,12 +23,38 @@ private func runBlocking<T>(_ operation: @escaping @MainActor () async throws ->
     let deadline = Date().addingTimeInterval(25.0)
     while outcome == nil {
         if Date() > deadline {
-            fatalError("runBlocking timed out waiting for async task after 25s")
+            throw RunBlockingError.timeout
         }
         RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
     }
     return try outcome!.get()
 }
+
+private func operationFailureMessage(_ error: Error) -> String? {
+    guard let serviceError = error as? ProjectServiceError,
+          case let .operationFailed(message) = serviceError else {
+        return nil
+    }
+    return message
+}
+
+private func noteOffSample(_ timeline: PlaybackTimeline, key: UInt8) -> UInt64? {
+    timeline.events.first { $0.type == 0x8 && $0.data0 == key }?.sample
+}
+
+private func bytes(at path: String) -> Data? {
+    try? Data(contentsOf: URL(fileURLWithPath: path))
+}
+
+private let rejectedVoicegroupCases: [(name: String, label: String, argument: String?)] = [
+    ("absolute", "mus_vgid_absolute", "/abs/perc.vg"),
+    ("empty", "mus_vgid_empty", nil),
+    ("nested-parent", "mus_vgid_nested_parent", "drums/../../escape.vg"),
+    ("normalizes-to-root", "mus_vgid_normalizes_root", "drums/.."),
+    ("parent-file", "mus_vgid_parent_file", "../escape.vg"),
+    ("parent", "mus_vgid_parent", ".."),
+    ("project-root", "mus_vgid_project_root", "."),
+]
 
 // MARK: - Synthetic Fixture Helpers
 
@@ -45,9 +75,9 @@ private func makeMidiFixture(division: UInt16 = 24, bpmMicroseconds: UInt32 = 50
     }
     let noteTrack = MidiChunk(events: [
         .channel(tick: 0, status: 0x90, data0: 60, data1: 100),
-        .channel(tick: 24, status: 0x80, data0: 60),
+        .channel(tick: 25, status: 0x80, data0: 60),
         .channel(tick: 48, status: 0x90, data0: 64, data1: 100),
-        .channel(tick: 96, status: 0x80, data0: 64),
+        .channel(tick: 61, status: 0x80, data0: 64),
         .channel(tick: 96, status: 0x90, data0: 67, data1: 100),
         .channel(tick: 144, status: 0x80, data0: 67),
     ], endTick: 192)
@@ -70,19 +100,28 @@ private func stageTestProject(in rootDirectory: String, projectName: String) -> 
     try! fm.createDirectory(atPath: vgDir, withIntermediateDirectories: true)
     try! fm.createDirectory(atPath: incDir, withIntermediateDirectories: true)
 
+    let rejectedSongRows = rejectedVoicegroupCases.map {
+        "    song \($0.label), MUSIC_PLAYER_BGM, 0"
+    }.joined(separator: "\n")
     let songTable = """
     .equiv MUSIC_PLAYER_BGM, 0
     .align 2
     gSongTable::
         song mus_session_test, MUSIC_PLAYER_BGM, 0
         song mus_session_test2, MUSIC_PLAYER_BGM, 0
+    \(rejectedSongRows)
     """
     try! songTable.write(toFile: URL(fileURLWithPath: soundDir).appendingPathComponent("song_table.inc").path,
                          atomically: true, encoding: .utf8)
 
+    let rejectedCfgRows = rejectedVoicegroupCases.map {
+        let voicegroupFlag = $0.argument.map { "-G\($0) " } ?? ""
+        return "\($0.label).mid: -R50 \(voicegroupFlag)-V100"
+    }.joined(separator: "\n")
     let midiCfg = """
-    mus_session_test.mid: -E -R50 -G_test_vg -V100
-    mus_session_test2.mid: -E -R50 -G_test_vg -V100
+    mus_session_test.mid: -R50 -G_test_vg -V100
+    mus_session_test2.mid: -R50 -G_test_vg -V100
+    \(rejectedCfgRows)
     """
     try! midiCfg.write(toFile: URL(fileURLWithPath: songsDir).appendingPathComponent("midi.cfg").path,
                        atomically: true, encoding: .utf8)
@@ -97,9 +136,20 @@ private func stageTestProject(in rootDirectory: String, projectName: String) -> 
     try! voicegroup.write(toFile: URL(fileURLWithPath: vgDir).appendingPathComponent("test_vg.inc").path,
                           atomically: true, encoding: .utf8)
 
+    let voicegroupHub = """
+    .include "sound/voicegroups/test_vg.inc"
+    """
+    try! voicegroupHub.write(
+        toFile: URL(fileURLWithPath: soundDir).appendingPathComponent("voice_groups.inc").path,
+        atomically: true, encoding: .utf8)
+
+    let rejectedDefines = rejectedVoicegroupCases.enumerated().map {
+        "#define \($0.element.label.uppercased()) \($0.offset + 3)"
+    }.joined(separator: "\n")
     let songsH = """
     #define MUS_SESSION_TEST 1
     #define MUS_SESSION_TEST2 2
+    \(rejectedDefines)
     """
     try! songsH.write(toFile: URL(fileURLWithPath: incDir).appendingPathComponent("songs.h").path,
                       atomically: true, encoding: .utf8)
@@ -107,6 +157,10 @@ private func stageTestProject(in rootDirectory: String, projectName: String) -> 
     let midi1 = makeMidiFixture()
     let midi1Bytes = try! midi1.encoded()
     try! Data(midi1Bytes).write(to: URL(fileURLWithPath: songsDir).appendingPathComponent("mus_session_test.mid"))
+    for fixture in rejectedVoicegroupCases {
+        try! Data(midi1Bytes).write(
+            to: URL(fileURLWithPath: songsDir).appendingPathComponent("\(fixture.label).mid"))
+    }
 
     let midi2 = makeMidiFixture(division: 24, bpmMicroseconds: 600_000)
     let midi2Bytes = try! midi2.encoded()
@@ -135,19 +189,27 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
 
     // 1. Service open and error recovery
     let service = ProjectService()
+    let songTablePath = projectDir + "/sound/song_table.inc"
     do {
         try runBlocking {
             try await service.open(root: projectDir)
         }
-        report.expect(true, cppID: "project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
-                      message: "open succeeds and loads project detached")
+        let tableBytes = try Data(contentsOf: URL(fileURLWithPath: songTablePath))
+        try Data(".align 2\n".utf8).write(to: URL(fileURLWithPath: songTablePath))
+        defer { try? tableBytes.write(to: URL(fileURLWithPath: songTablePath)) }
+        let detached = try runBlocking {
+            try await service.openSong(label: "mus_session_test")
+        }
+        report.expectEqual("mus_session_test", detached.source.label,
+                           cppID: "project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
+                           what: "published project snapshot survives source registry replacement")
     } catch {
         report.fail("project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
-                    "failed to open test project: \(error)")
+                    "failed detached snapshot check: \(error)")
         return
     }
 
-    // Failed open keeps worker project intact
+    // Failed open keeps worker project intact.
     do {
         try runBlocking {
             try await service.open(root: projectDir + "/nonexistent_subfolder")
@@ -155,11 +217,21 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
         report.fail("project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
                     "failed open was expected to throw")
     } catch {
-        report.expect(true, cppID: "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
-                      message: "invalid open fails cleanly while retaining worker project")
+        do {
+            let retained = try runBlocking {
+                try await service.openSong(label: "mus_session_test")
+            }
+            report.expectEqual("mus_session_test", retained.source.label,
+                               cppID: "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
+                               what: "failed replacement open retains the worker's prior project")
+        } catch {
+            report.fail("project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
+                        "prior worker project was lost after failed open: \(error)")
+            return
+        }
     }
 
-    // Unknown song resolution
+    // Only labels published as playable resolve.
     do {
         _ = try runBlocking {
             try await service.openSong(label: "mus_unknown_label")
@@ -167,8 +239,9 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
         report.fail("vgbankcheck/VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels",
                     "opening unknown label should fail")
     } catch {
-        report.expect(true, cppID: "vgbankcheck/VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels",
-                      message: "playableSong rejects unknown labels")
+        report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
+                      cppID: "vgbankcheck/VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels",
+                      message: "unknown label reaches the native playable-song rejection")
     }
 
     // 2. Open song into DocumentSession
@@ -177,9 +250,9 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
         session = try runBlocking {
             try await DocumentSession.open(service: service, label: "mus_session_test", sampleRate: 48_000)
         }
-        report.expect(session != nil,
-                      cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
-                      message: "song opened and composed into DocumentSession")
+        report.expectEqual("mus_session_test", session.document.source.label,
+                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
+                           what: "DocumentSession adopts the requested song source")
     } catch {
         report.fail("project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
                     "failed to compose DocumentSession: \(error)")
@@ -243,28 +316,40 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
                        cppID: "project-io-flow/ProjectIoFlowTest::fifoDeliversInSubmissionOrder",
                        what: "state factory projection computes exact 19200 samples for edited tempo")
 
-    // Verify settings-sensitive scheduling: extendedClocks
+    // Build from the same canonical state under the two mid2agb clock/gate modes.
+    let defaultGate60 = noteOffSample(session.timeline, key: 60)
+    let defaultClock64 = noteOffSample(session.timeline, key: 64)
+    var extendedState = session.document.state
+    extendedState.config.extendedClocks = true
+    extendedState.config.exactGate = false
+    let extendedTimeline = PlaybackTimeline.build(state: extendedState, sampleRate: 48_000)
+    report.expectEqual(UInt64(48_000), noteOffSample(extendedTimeline, key: 64),
+                       cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                       what: "48-clock conversion quantizes the 13-tick gate to 12 ticks")
+    report.expect(defaultClock64 != noteOffSample(extendedTimeline, key: 64),
+                  cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                  message: "extended clocks change an observable note-release sample")
+
     var updatedCfg = session.document.state.config
     updatedCfg.extendedClocks = true
     updatedCfg.exactGate = true
     session.document.setConfig(updatedCfg)
-
-    report.expectEqual(true, session.timeline.settings.extendedClocks,
-                       cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
-                       what: "state factory derived extendedClocks setting from state config")
-    report.expectEqual(true, session.timeline.settings.exactGate,
+    let configuredGate60 = noteOffSample(session.timeline, key: 60)
+    report.expectEqual(UInt64(20_000), configuredGate60,
                        cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
-                       what: "state factory derived exactGate setting from state config")
+                       what: "exact gate preserves the 25-tick release instead of LUT bucket 24")
+    report.expect(defaultGate60 != configuredGate60,
+                  cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                  message: "exact gate changes an observable note-release sample")
 
-    // Undo / Redo reproducibility of timing
+    // Undo and redo must reproduce both tempo and settings-sensitive event timing.
     do {
         _ = try runBlocking {
             try await session.undo()
         }
-        // Undoing setConfig leaves tempo at 150 BPM
-        report.expectEqual(false, session.timeline.settings.extendedClocks,
+        report.expectEqual(defaultGate60, noteOffSample(session.timeline, key: 60),
                            cppID: "project-identity/ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter",
-                           what: "undo config restores original extendedClocks setting")
+                           what: "undo config restores default gate release scheduling")
         report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
                            cppID: "project-identity/ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry",
                            what: "timeline remains at 150 BPM prior to tempo undo")
@@ -272,18 +357,22 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
         _ = try runBlocking {
             try await session.undo()
         }
-        // Undoing tempo edit restores 120 BPM (24000 samples)
         report.expectEqual(UInt64(24_000), session.timeline.sample(for: 24),
                            cppID: "project-identity/ProjectIdentityTest::savedRecipe_selectionFallbacks",
-                           what: "undo tempo restores initial 120 BPM timing (24000 samples)")
+                           what: "undo tempo restores initial 120 BPM timing")
 
         _ = try runBlocking {
             try await session.redo()
         }
-        // Redo tempo edit restores 150 BPM (19200 samples)
         report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
                            cppID: "project-identity/ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty",
-                           what: "redo tempo restores 150 BPM timing (19200 samples)")
+                           what: "redo tempo restores 150 BPM timing")
+        _ = try runBlocking {
+            try await session.redo()
+        }
+        report.expectEqual(configuredGate60, noteOffSample(session.timeline, key: 60),
+                           cppID: "project-identity/ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter",
+                           what: "redo config reproduces exact-gate event timing")
     } catch {
         report.fail("project-identity/ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter",
                     "undo/redo cycle threw: \(error)")
@@ -300,7 +389,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
                        what: "session-only camera/track/mute/solo mutations never dirty document")
 
     // Selection reconciliation
-    let note1 = session.document.notes(in: 0).first?.id ?? NoteID(0)
+    let note1 = session.document.notes(in: 0).last?.id ?? NoteID(0)
     if note1.isAssigned {
         session.selectedNotes.insert(note1)
         session.document.deleteNotes([note1])
@@ -308,6 +397,12 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
                            cppID: "project-identity/ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge",
                            what: "selection reconciler prunes dead note IDs when notes are deleted")
     }
+
+    let preSaveFile = session.document.state.file
+    let preSaveConfig = session.document.state.config
+    let preSaveLoopStart = session.timeline.loopStartTick
+    let preSaveLoopEnd = session.timeline.loopEndTick
+    let preSaveGate60 = noteOffSample(session.timeline, key: 60)
 
     // 5. Ordered Save and Persistence
     do {
@@ -329,25 +424,59 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
                   cppID: "project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload",
                   message: "save leaves legacy sidecar JSON untouched")
 
-    // Reopen confirms tempo persistence and tempo-strip cannot restore default
+    // Reopen preserves the canonical note/loop/config streams and cannot fall
+    // back to default tempo or gate settings after tempo-meta adoption.
     do {
         let reopened = try runBlocking {
-            try await DocumentSession.open(service: service, label: "mus_session_test", sampleRate: 48_000)
+            try await DocumentSession.open(service: service, label: "mus_session_test",
+                                           sampleRate: 48_000)
         }
         report.expectEqual(UInt64(19_200), reopened.timeline.sample(for: 24),
                            cppID: "project-io-mutations/ProjectIoMutationsTest::previewCleanupPrivateResult",
-                           what: "reopened session reproduces 150 BPM timing from saved state")
-        var reopenedHasMeta = false
-        for chunk in reopened.document.state.file.chunks {
-            for event in chunk.events {
-                if case let .meta(type, _) = event.payload, type == 0x51 {
-                    reopenedHasMeta = true
-                }
+                           what: "reopen reproduces saved authoritative 150 BPM timing")
+        report.expectEqual(preSaveGate60, noteOffSample(reopened.timeline, key: 60),
+                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                           what: "reopen reproduces settings-sensitive note-release timing")
+        report.expectEqual(preSaveFile, reopened.document.state.file,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "note and non-tempo metadata streams survive save/reopen")
+        report.expectEqual(preSaveLoopStart, reopened.timeline.loopStartTick,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "loop-start marker survives save/reopen")
+        report.expectEqual(preSaveLoopEnd, reopened.timeline.loopEndTick,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "loop-end marker survives save/reopen")
+        let reopenedConfig = reopened.document.state.config
+        report.expectEqual(preSaveConfig.rawFlags, reopenedConfig.rawFlags,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "raw config flags survive save/reopen")
+        report.expectEqual(preSaveConfig.voicegroupArgument, reopenedConfig.voicegroupArgument,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "voicegroup argument survives save/reopen")
+        report.expectEqual(preSaveConfig.masterVolume, reopenedConfig.masterVolume,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "master volume survives save/reopen")
+        report.expectEqual(preSaveConfig.reverb, reopenedConfig.reverb,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "reverb survives save/reopen")
+        report.expectEqual(preSaveConfig.priority, reopenedConfig.priority,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "priority survives save/reopen")
+        report.expectEqual(preSaveConfig.exactGate, reopenedConfig.exactGate,
+                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                           what: "exact-gate setting survives save/reopen")
+        report.expectEqual(preSaveConfig.extendedClocks, reopenedConfig.extendedClocks,
+                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                           what: "extended-clock setting survives save/reopen")
+        let reopenedHasTempoMeta = reopened.document.state.file.chunks.contains { chunk in
+            chunk.events.contains {
+                if case let .meta(type, _) = $0.payload { return type == 0x51 }
+                return false
             }
         }
-        report.expectEqual(false, reopenedHasMeta,
+        report.expectEqual(false, reopenedHasTempoMeta,
                            cppID: "project-io-mutations/ProjectIoMutationsTest::creationCollisionRefusesLeavingStray",
-                           what: "reopened file chunks have tempo meta stripped; state.tempo is authoritative")
+                           what: "tempo metas remain stripped while authoritative timing persists")
     } catch {
         report.fail("project-io-mutations/ProjectIoMutationsTest::previewCleanupPrivateResult",
                     "failed to reopen saved session: \(error)")
@@ -386,29 +515,153 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
                     "lease reuse check failed: \(error)")
     }
 
-    // 7. Failed Stage: Invalid save destination
+    // 7. Stage failures retain file bytes and both dirty records.
+    guard var dirtyVoice = session.bankSlots[0].voice else {
+        report.fail("project-io-mutations/ProjectIoMutationsTest::failureStages[voicegroup]",
+                    "fixture has no editable bank voice")
+        return
+    }
+    dirtyVoice.release = dirtyVoice.release == 255 ? 254 : dirtyVoice.release + 1
     do {
-        let corruptDestination = SongSource(label: "mus_session_test",
-                                            midiPath: "/dev/null/unwritable/nonexistent.mid",
-                                            hasConfig: true)
-        let corruptSnapshot = SaveSnapshot(bytes: [0x4D, 0x54, 0x68, 0x64],
-                                           config: session.document.state.config,
-                                           flagsNeeded: false, destination: corruptDestination,
-                                           revision: session.document.revision,
-                                           identity: session.document.history.currentIdentity)
+        _ = try runBlocking {
+            try await session.applyBankEdit(slot: 0, value: dirtyVoice,
+                                            expected: session.bankSlots[0].voice)
+        }
+    } catch {
+        report.fail("project-io-mutations/ProjectIoMutationsTest::failureStages[voicegroup]",
+                    "could not prepare dirty bank record: \(error)")
+        return
+    }
+    let midiPath = session.document.source.midiPath
+    let bankPath = projectDir + "/" + session.bankLease.sourcePath
+    let midiBeforeFailures = bytes(at: midiPath)
+    let bankBeforeFailures = bytes(at: bankPath)
+    let assertFailureIntegrity: (String) -> Void = { cppID in
+        report.expectEqual(midiBeforeFailures, bytes(at: midiPath), cppID: cppID,
+                           what: "failed stage preserves MIDI file bytes")
+        report.expectEqual(bankBeforeFailures, bytes(at: bankPath), cppID: cppID,
+                           what: "failed stage preserves voicegroup file bytes")
+        report.expectEqual(true, session.document.isDirty, cppID: cppID,
+                           what: "failed stage leaves document dirty")
+        report.expectEqual(true, session.bankDirty, cppID: cppID,
+                           what: "failed stage leaves bank dirty")
+    }
+
+    let reconcileID = "project-io-mutations/ProjectIoMutationsTest::failureStages[reconcile]"
+    do {
+        _ = try runBlocking {
+            try await service.openSong(label: "mus_reconcile_missing")
+        }
+        report.fail(reconcileID, "reconcile stage should reject an unknown playable label")
+    } catch {
+        report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
+                      cppID: reconcileID,
+                      message: "reconcile stage reports the native playable-song failure")
+        assertFailureIntegrity(reconcileID)
+    }
+
+    let midiID = "project-io-mutations/ProjectIoMutationsTest::failureStages[midi]"
+    let hiddenMidiPath = midiPath + ".swiftcore-hidden"
+    do {
+        try? FileManager.default.removeItem(atPath: hiddenMidiPath)
+        try FileManager.default.moveItem(atPath: midiPath, toPath: hiddenMidiPath)
+        defer { try? FileManager.default.moveItem(atPath: hiddenMidiPath, toPath: midiPath) }
+        do {
+            _ = try runBlocking {
+                try await service.openSong(label: "mus_session_test")
+            }
+            report.fail(midiID, "missing MIDI source should fail the MIDI stage")
+        } catch {
+            report.expect(operationFailureMessage(error)?.contains("Cannot read") == true,
+                          cppID: midiID,
+                          message: "MIDI stage reports its missing source file")
+        }
+    } catch {
+        report.fail(midiID, "could not hide MIDI fixture: \(error)")
+    }
+    assertFailureIntegrity(midiID)
+
+    let voicegroupID = "project-io-mutations/ProjectIoMutationsTest::failureStages[voicegroup]"
+    let hiddenBankPath = bankPath + ".swiftcore-hidden"
+    do {
+        try? FileManager.default.removeItem(atPath: hiddenBankPath)
+        try FileManager.default.moveItem(atPath: bankPath, toPath: hiddenBankPath)
+        defer { try? FileManager.default.moveItem(atPath: hiddenBankPath, toPath: bankPath) }
+        do {
+            _ = try runBlocking {
+                try await service.openSong(label: "mus_session_test")
+            }
+            report.fail(voicegroupID, "missing voicegroup source should fail the bank stage")
+        } catch {
+            report.expect(operationFailureMessage(error)?.contains("voicegroup") == true,
+                          cppID: voicegroupID,
+                          message: "voicegroup stage reports its missing source file")
+        }
+    } catch {
+        report.fail(voicegroupID, "could not hide voicegroup fixture: \(error)")
+    }
+    assertFailureIntegrity(voicegroupID)
+
+    let saveID = "project-io-mutations/ProjectIoMutationsTest::failureStages[save]"
+    do {
+        let corruptDestination = SongSource(
+            label: "mus_session_test", midiPath: "/dev/null/unwritable/nonexistent.mid",
+            hasConfig: true)
+        let corruptSnapshot = SaveSnapshot(
+            bytes: [0x4D, 0x54, 0x68, 0x64], config: session.document.state.config,
+            flagsNeeded: false, destination: corruptDestination,
+            revision: session.document.revision,
+            identity: session.document.history.currentIdentity)
         _ = try runBlocking {
             try await service.save(corruptSnapshot, bank: nil)
         }
-        report.fail("project-io-mutations/ProjectIoMutationsTest::failureStages[midi]",
-                    "unwritable save should fail")
+        report.fail(saveID, "unwritable save destination should fail")
     } catch {
-        report.expect(true, cppID: "project-io-mutations/ProjectIoMutationsTest::failureStages[midi]",
-                      message: "failed MIDI stage refuses save without corrupting state")
+        report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
+                      cppID: saveID,
+                      message: "save stage reports the unwritable destination")
+        assertFailureIntegrity(saveID)
     }
 
-    // 8. Close Lifecycle
-    try? runBlocking {
-        await session.close()
+    // Native open/label paths reject all legacy invalid identity spellings.
+    for fixture in rejectedVoicegroupCases {
+        let cppID =
+            "project-identity/ProjectIdentityTest::voicegroupId_rejections[\(fixture.name)]"
+        do {
+            _ = try runBlocking {
+                try await service.openSong(label: fixture.label)
+            }
+            report.fail(cppID, "invalid voicegroup identity unexpectedly resolved")
+        } catch {
+            report.expect(
+                operationFailureMessage(error)?.lowercased().contains("voicegroup") == true,
+                cppID: cppID,
+                message: "playable label reaches native voicegroup resolution and is rejected")
+        }
+    }
+    do {
+        let normalized = try runBlocking {
+            try await service.openSong(label: "mus_session_test")
+        }
+        report.expectEqual("sound/voicegroups/test_vg.inc", normalized.bank.sourcePath,
+                           cppID: "project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
+                           what: "native service publishes a project-relative normalized bank identity")
+        report.expectEqual("mus_session_test", normalized.source.label,
+                           cppID: "project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash",
+                           what: "native service round-trips the accepted playable song label")
+    } catch {
+        report.fail("project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
+                    "valid identity no longer resolved after rejection cases: \(error)")
+    }
+
+    // 8. Close lifecycle.
+    do {
+        try runBlocking {
+            await session.close()
+        }
+    } catch {
+        report.fail("project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
+                    "session close timed out: \(error)")
     }
     report.expectEqual(true, session.isClosed,
                        cppID: "project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
@@ -419,40 +672,14 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
         }
         report.fail("project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
                     "operation on closed session must throw")
+    } catch let error as ProjectServiceError {
+        report.expectEqual(ProjectServiceError.serviceClosed, error,
+                           cppID: "project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
+                           what: "closed session reports the typed serviceClosed error")
     } catch {
-        report.expect(true,
-                      cppID: "project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
-                      message: "closed session refuses further operations")
+        report.fail("project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
+                    "closed operation returned unexpected error: \(error)")
     }
-
-    // Auxiliary identity and flow validations
-    report.expect(projectDir.count > 0,
-                  cppID: "project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash",
-                  message: "song name valid")
-    report.expect(projectDir.count > 0,
-                  cppID: "project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
-                  message: "voicegroup normalization valid")
-    report.expect(true, cppID: "project-identity/ProjectIdentityTest::voicegroupId_rejections[absolute]", message: "rejection verified")
-    report.expect(true, cppID: "project-identity/ProjectIdentityTest::voicegroupId_rejections[empty]", message: "rejection verified")
-    report.expect(true, cppID: "project-identity/ProjectIdentityTest::voicegroupId_rejections[nested-parent]", message: "rejection verified")
-    report.expect(true, cppID: "project-identity/ProjectIdentityTest::voicegroupId_rejections[normalizes-to-root]", message: "rejection verified")
-    report.expect(true, cppID: "project-identity/ProjectIdentityTest::voicegroupId_rejections[parent-file]", message: "rejection verified")
-    report.expect(true, cppID: "project-identity/ProjectIdentityTest::voicegroupId_rejections[parent]", message: "rejection verified")
-    report.expect(true, cppID: "project-identity/ProjectIdentityTest::voicegroupId_rejections[project-root]", message: "rejection verified")
-    report.expect(true, cppID: "project-io-flow/ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete", message: "flow verified")
-    report.expect(true, cppID: "project-io-mutations/ProjectIoMutationsTest::failureStages[reconcile]", message: "failure stage verified")
-    report.expect(true, cppID: "project-io-mutations/ProjectIoMutationsTest::failureStages[save]", message: "failure stage verified")
-    report.expect(true, cppID: "project-io-mutations/ProjectIoMutationsTest::failureStages[voicegroup]", message: "failure stage verified")
-    report.expect(true, cppID: "projectworkspacecheck/ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals", message: "workspace verified")
-    report.expect(true, cppID: "projectworkspacecheck/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure[duplicate-voicegroup-is-unkeyed-failure]", message: "catalog verified")
-    report.expect(true, cppID: "projectworkspacecheck/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure[refresh-replaces-catalog]", message: "catalog verified")
-    report.expect(true, cppID: "projectworkspacecheck/ProjectWorkspaceTest::missingSavedNameReconcileFailure", message: "name reconcile verified")
-    report.expect(true, cppID: "projectworkspacecheck/ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten", message: "open refused verified")
-    report.expect(true, cppID: "projectworkspacecheck/ProjectWorkspaceTest::reloadStagesMidiViewBound", message: "stages bound verified")
-    report.expect(true, cppID: "projectworkspacecheck/ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication", message: "fifo advanced verified")
-    report.expect(true, cppID: "projectworkspacecheck/ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder", message: "startup sequence verified")
-    report.expect(true, cppID: "projectworkspacecheck/ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot", message: "snapshot retention verified")
-    report.expect(true, cppID: "velocity-model/VelocityModelTest::resolvesVoiceKinds", message: "voice kinds resolved")
 }
 
 // MARK: - Bank History Suite
@@ -679,28 +906,256 @@ internal func runBankHistorySuite(_ report: CheckReport) {
                     "unified save threw: \(error)")
     }
 
-    // Auxiliary checks for ledger completeness
-    report.expect(true, cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty", message: "bank refresh verified")
-    report.expect(true, cppID: "vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError", message: "identity verified")
-    report.expect(true, cppID: "vgloadbench/VoicegroupLoadBenchTest::songLoadBenchmark", message: "benchmark verified")
-    report.expect(true, cppID: "vgloadcheck/VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets", message: "warm reuse verified")
-    report.expect(true, cppID: "vgloadcheck/VoicegroupLoaderTest::failedTransportReleasesPartialBatchAndContextHeals", message: "transport heal verified")
-    report.expect(true, cppID: "vgloadcheck/VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnership", message: "batch adapter verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid", message: "catalog outage verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::dockMinimumWidthIsFamilyInvariant", message: "dock width verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding", message: "binding retention verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild", message: "header press verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]", message: "lower bound verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]", message: "upper bound verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks", message: "programs revealed verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::samplePickerAuditionsAndCommits", message: "picker auditions verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::samplePickerKeysplitAuditions", message: "keysplit auditions verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits", message: "wave auditions verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit", message: "selector switch verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit", message: "switch carries edit verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave", message: "synth definitions verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily", message: "type column verified")
-    report.expect(true, cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes", message: "undo save round trip verified")
-    report.expect(true, cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates", message: "transitions verified")
-    report.expect(true, cppID: "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[unknown-voicegroup-hard-failure]", message: "unknown voicegroup hard failure verified")
+    // Case-level UI/benchmark rows are ledger exclusions; retain only
+    // service/session facts that this suite can observe directly.
+    do {
+        let documentWasDirty = session.document.isDirty
+        var lower = session.bankSlots[0].voice!
+        lower.release = 0
+        _ = try runBlocking {
+            try await session.applyBankEdit(slot: 0, value: lower,
+                                            expected: session.bankSlots[0].voice)
+        }
+        report.expectEqual(Int32(0), session.bankSlots[0].voice?.release,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
+                           what: "lower release bound reaches the production bank view")
+        report.expectEqual(true, session.bankDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
+                           what: "lower-bound bank edit dirties the bank")
+        report.expectEqual(documentWasDirty, session.document.isDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
+                           what: "lower-bound bank edit does not dirty the document")
+
+        var upper = lower
+        upper.release = 255
+        _ = try runBlocking {
+            try await session.applyBankEdit(slot: 0, value: upper, expected: lower)
+        }
+        report.expectEqual(Int32(255), session.bankSlots[0].voice?.release,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
+                           what: "upper release bound reaches the production bank view")
+        report.expectEqual(true, session.bankDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
+                           what: "upper-bound bank edit dirties the bank")
+        report.expectEqual(documentWasDirty, session.document.isDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
+                           what: "upper-bound bank edit does not dirty the document")
+
+        let switched = try runBlocking {
+            try await service.openSong(label: "mus_session_test2")
+        }
+        report.expectEqual(session.bankLease.bankToken, switched.bank.bankToken,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
+                           what: "song switch reuses the unsaved shared-bank record")
+        report.expectEqual(Int32(255), switched.bankSlots[0].voice?.release,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
+                           what: "song switch publishes the unsaved bank edit")
+        report.expectEqual(true, switched.bankDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
+                           what: "song switch preserves bank dirty state")
+    } catch {
+        let message = "release-bound or shared-bank switch check failed: \(error)"
+        report.fail("vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
+                    message)
+        report.fail("vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
+                    message)
+        report.fail("vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit", message)
+    }
+
+    let retainedToken = session.bankLease.bankToken
+    let retainedSlots = session.bankSlots
+    let retainedDirty = session.bankDirty
+    let soundPath = projectDir + "/sound"
+    let hiddenSoundPath = projectDir + "/sound.swiftcore-unavailable"
+    do {
+        try? FileManager.default.removeItem(atPath: hiddenSoundPath)
+        try FileManager.default.moveItem(atPath: soundPath, toPath: hiddenSoundPath)
+        defer { try? FileManager.default.moveItem(atPath: hiddenSoundPath, toPath: soundPath) }
+        do {
+            _ = try runBlocking {
+                try await service.openSong(label: "mus_session_test")
+            }
+            report.fail("vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                        "hidden sound catalog should fail a fresh load")
+        } catch {
+            report.expect(operationFailureMessage(error) != nil,
+                          cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                          message: "catalog outage reaches the native service error boundary")
+        }
+    } catch {
+        report.fail("vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                    "could not hide fixture sound directory: \(error)")
+    }
+    report.expectEqual(retainedToken, session.bankLease.bankToken,
+                       cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                       what: "catalog outage retains the last valid bank lease")
+    report.expectEqual(retainedSlots, session.bankSlots,
+                       cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                       what: "catalog outage retains the last valid bank slots")
+    report.expectEqual(retainedDirty, session.bankDirty,
+                       cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                       what: "catalog outage retains bank dirty state")
+
+    // Isolate save/undo byte round-trip and failed-save retention from the
+    // earlier history merge cases.
+    let roundtripDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-bank-roundtrip")
+    let roundtripService = ProjectService()
+    var roundtripSession: DocumentSession!
+    do {
+        try runBlocking {
+            try await roundtripService.open(root: roundtripDir)
+        }
+        roundtripSession = try runBlocking {
+            try await DocumentSession.open(service: roundtripService, label: "mus_session_test")
+        }
+        let roundtripBankPath = roundtripDir + "/" + roundtripSession.bankLease.sourcePath
+        let originalBytes = bytes(at: roundtripBankPath)
+        let original = roundtripSession.bankSlots[0].voice!
+        var edited = original
+        edited.key = edited.key == 127 ? 126 : edited.key + 1
+        _ = try runBlocking {
+            try await roundtripSession.applyBankEdit(slot: 0, value: edited, expected: original)
+        }
+        let preSaveToken = roundtripSession.bankLease.bankToken
+        try runBlocking {
+            try await roundtripSession.save()
+        }
+        report.expect(roundtripSession.bankLease.bankToken != preSaveToken,
+                      cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                      message: "successful bank save publishes a refreshed native bank")
+        report.expectEqual(false, roundtripSession.bankDirty,
+                           cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                           what: "successful bank save publishes a clean record")
+        report.expect(bytes(at: roundtripBankPath) != originalBytes,
+                      cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                      message: "successful bank save changes persisted bank bytes")
+
+        _ = try runBlocking {
+            try await roundtripSession.undo()
+        }
+        report.expectEqual(original, roundtripSession.bankSlots[0].voice,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "undo after save restores the original bank voice")
+        try runBlocking {
+            try await roundtripSession.save()
+        }
+        report.expectEqual(originalBytes, bytes(at: roundtripBankPath),
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "saving the undo restores original voicegroup bytes")
+
+        var failedEdit = original
+        failedEdit.duty = failedEdit.duty == 3 ? 2 : 3
+        _ = try runBlocking {
+            try await roundtripSession.applyBankEdit(
+                slot: 0, value: failedEdit, expected: roundtripSession.bankSlots[0].voice)
+        }
+        var dirtyConfig = roundtripSession.document.state.config
+        dirtyConfig.priority += 1
+        roundtripSession.document.setConfig(dirtyConfig)
+        let backupPath = roundtripBankPath + ".swiftcore-backup"
+        try? FileManager.default.removeItem(atPath: backupPath)
+        try FileManager.default.moveItem(atPath: roundtripBankPath, toPath: backupPath)
+        defer {
+            try? FileManager.default.removeItem(atPath: roundtripBankPath)
+            try? FileManager.default.moveItem(atPath: backupPath, toPath: roundtripBankPath)
+        }
+        try FileManager.default.createDirectory(atPath: roundtripBankPath,
+                                                withIntermediateDirectories: false)
+        do {
+            try runBlocking {
+                try await roundtripSession.save()
+            }
+            report.fail("vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                        "unwritable bank destination should fail")
+        } catch {
+            report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
+                          cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                          message: "failed bank save reports its unwritable source")
+            report.expectEqual(true, roundtripSession.bankDirty,
+                               cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                               what: "failed bank save retains the dirty bank record")
+            report.expectEqual(true, roundtripSession.document.isDirty,
+                               cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                               what: "failed ordered save retains the dirty document record")
+        }
+    } catch {
+        let message = "isolated bank save/undo scenario failed: \(error)"
+        report.fail("vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                    message)
+        report.fail("vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes", message)
+    }
+
+    // A stale lease becomes an unknown identity after the worker adopts a
+    // different project; this must be a hard native error, not a conflict.
+    if let roundtripSession {
+        let staleLease = roundtripSession.bankLease
+        let otherDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-bank-other")
+        do {
+            try runBlocking {
+                try await roundtripService.open(root: otherDir)
+            }
+            _ = try runBlocking {
+                try await roundtripService.bankApply(
+                    lease: staleLease, slot: 0, value: BankVoice(),
+                    expected: roundtripSession.bankSlots[0].voice)
+            }
+            report.fail("vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
+                        "stale bank identity should fail")
+        } catch {
+            report.expect(operationFailureMessage(error)?.contains("not loaded") == true,
+                          cppID: "vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
+                          message: "unknown identity is reported as a hard native error")
+        }
+    } else {
+        report.fail("vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
+                    "unknown-identity fixture did not open")
+    }
+
+    // Concurrent session transitions share one serial service gate: the first
+    // applies and the second, carrying the same stale expectation, conflicts.
+    let coordinatorDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-coordinator")
+    let coordinatorService = ProjectService()
+    do {
+        try runBlocking {
+            try await coordinatorService.open(root: coordinatorDir)
+        }
+        let coordinatorSession = try runBlocking {
+            try await DocumentSession.open(service: coordinatorService, label: "mus_session_test")
+        }
+        let original = coordinatorSession.bankSlots[0].voice!
+        var firstVoice = original
+        firstVoice.pan += 1
+        var secondVoice = original
+        secondVoice.pan += 2
+        let result = try runBlocking { () async throws -> (AppliedBankEdit, ProjectServiceError?) in
+            let first = Task { @MainActor in
+                try await coordinatorSession.applyBankEdit(
+                    slot: 0, value: firstVoice, expected: original)
+            }
+            try await Task.sleep(nanoseconds: 1_000_000)
+            let second = Task { @MainActor in
+                try await coordinatorSession.applyBankEdit(
+                    slot: 0, value: secondVoice, expected: original)
+            }
+            let applied = try await first.value
+            do {
+                _ = try await second.value
+                return (applied, nil)
+            } catch let error as ProjectServiceError {
+                return (applied, error)
+            }
+        }
+        report.expectEqual(ProjectServiceError.bankConflict, result.1,
+                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+                           what: "serial transition gate rejects the stale concurrent edit")
+        report.expectEqual(firstVoice, coordinatorSession.bankSlots[0].voice,
+                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+                           what: "coordinator publishes only the applied transition")
+        report.expectEqual(result.0.lease.bankToken, coordinatorSession.bankLease.bankToken,
+                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+                           what: "coordinator adopts the applied transition lease")
+    } catch {
+        report.fail("voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+                    "coordinator serialization scenario failed: \(error)")
+    }
 }

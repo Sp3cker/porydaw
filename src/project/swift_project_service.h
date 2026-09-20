@@ -128,6 +128,12 @@ PdProjectService *pd_service_create(void);
 // completion; owned leases outlive the service.
 void pd_service_destroy(PdProjectService *service);
 
+// Preconditions for asynchronous pd_service_* operations below: `service`
+// and `completion` are non-null; request/edit/lease pointers named by the
+// operation are non-null; and pointer/count pairs contain readable storage for
+// the duration of the call. Invalid arguments are programmer errors: the
+// operation returns without enqueueing work and does not invoke its completion.
+
 void pd_service_open(PdProjectService *service, const char *projectRoot, void *context,
                      PdOpenCompletion completion);
 void pd_service_open_song(PdProjectService *service, const char *label, void *context,

@@ -348,22 +348,41 @@ private func buildTimeline(file: borrowing MidiFile, authoritativeTempo: [TempoP
         mutableTracks[engineTrack].name = trackNames[chunkIndex]
     }
 
-    var musicalEvents: [PlaybackEvent] = []
-    musicalEvents.reserveCapacity(rawEvents.count)
+    var activeNoteTicks = Array<Tick?>(repeating: nil,
+                                       count: TrackLimits.hardwareCapacity * 128)
+    var scheduledEvents: [(event: PlaybackEvent, order: Int)] = []
+    scheduledEvents.reserveCapacity(rawEvents.count)
     for raw in rawEvents {
         let engineTrack = chunkToEngine[raw.midiChunk]
         guard engineTrack >= 0 else { continue }
+        let key = engineTrack * 128 + Int(raw.data0 & 0x7F)
+        var sample = sampleFromTempoMap(for: UInt64(raw.tick), tempoMap: tempoMap,
+                                        ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
+        if raw.type == 0x9 {
+            activeNoteTicks[key] = raw.tick
+        } else if raw.type == 0x8, let noteOnTick = activeNoteTicks[key],
+                  raw.tick >= noteOnTick {
+            activeNoteTicks[key] = nil
+            sample = gateEndSample(
+                noteOnTick: noteOnTick, noteOffTick: raw.tick, tempoMap: tempoMap,
+                ticksPerBeat: ticksPerBeat, sampleRate: sampleRate, settings: settings)
+        }
         let event = PlaybackEvent(
-            sample: sampleFromTempoMap(for: UInt64(raw.tick), tempoMap: tempoMap,
-                                       ticksPerBeat: ticksPerBeat, sampleRate: sampleRate),
-            tick: raw.tick, type: raw.type, track: UInt8(engineTrack),
+            sample: sample, tick: raw.tick, type: raw.type, track: UInt8(engineTrack),
             data0: raw.data0, data1: raw.data1, noteID: raw.noteID)
-        musicalEvents.append(event)
+        scheduledEvents.append((event, raw.order))
         if event.type == 0x9 { mutableTracks[engineTrack].noteCount += 1 }
         if event.type == 0xC && mutableTracks[engineTrack].firstProgram < 0 {
             mutableTracks[engineTrack].firstProgram = Int(event.data0)
         }
     }
+    scheduledEvents.sort { lhs, rhs in
+        if lhs.event.sample != rhs.event.sample { return lhs.event.sample < rhs.event.sample }
+        if lhs.event.type == 0x8 && rhs.event.type != 0x8 { return true }
+        if rhs.event.type == 0x8 && lhs.event.type != 0x8 { return false }
+        return lhs.order < rhs.order
+    }
+    let musicalEvents = scheduledEvents.map(\.event)
 
     var tempoEvents: [PlaybackEvent] = []
     tempoEvents.reserveCapacity(tempoMap.count)
@@ -463,6 +482,29 @@ private func buildTempoMap(_ points: [OrderedTempo], ticksPerBeat: UInt32,
             microsecondsPerQuarterNote: point.microsecondsPerQuarterNote))
     }
     return result
+}
+
+/// Projects mid2agb's quantized note gate back through the authoritative tempo
+/// map. Source ticks stay untouched: only the hardware gate's release sample
+/// moves, so editing/storage identity and loop-note classification remain raw.
+private func gateEndSample(noteOnTick: Tick, noteOffTick: Tick,
+                           tempoMap: [PlaybackTempoPoint], ticksPerBeat: UInt32,
+                           sampleRate: Double, settings: PlaybackSettings) -> UInt64 {
+    let clocksPerBeat: UInt32 = settings.extendedClocks ? 48 : 24
+    let clocks = mid2agbEffectiveDuration(
+        Int64(noteOffTick) - Int64(noteOnTick), division: ticksPerBeat,
+        extendedClocks: settings.extendedClocks, exactGate: settings.exactGate)
+    let endTick = Double(noteOnTick) +
+        Double(clocks) * Double(ticksPerBeat) / Double(clocksPerBeat)
+    var point = tempoMap[0]
+    for candidate in tempoMap {
+        if Double(candidate.tick) > endTick { break }
+        point = candidate
+    }
+    let segment = (endTick - Double(point.tick)) *
+        Double(point.microsecondsPerQuarterNote) / Double(ticksPerBeat) /
+        1_000_000.0 * sampleRate
+    return UInt64(point.sampleOrigin + segment + 0.5)
 }
 
 private func sampleFromTempoMap(for tick: UInt64, tempoMap: [PlaybackTempoPoint],
