@@ -4,6 +4,7 @@ set(SWIFT_GRID_NATIVE_DIR "${SWIFT_GRID_DIR}/native")
 add_library(PorydawApp STATIC
     ProjectService.swift
     DocumentSession.swift
+    EditorCamera.swift
     NativeAudio.swift
     ApplicationSession.swift
     Clipboard.swift

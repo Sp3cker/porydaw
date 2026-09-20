@@ -102,6 +102,7 @@ if(APPLE)
         swiftcore/NoteChecks.swift
         swiftcore/EventChecks.swift
         swiftcore/TimeChecks.swift
+        swiftcore/EditorCameraChecks.swift
         swiftcore/SessionChecks.swift
     )
     set_target_properties(swift_core_check PROPERTIES
