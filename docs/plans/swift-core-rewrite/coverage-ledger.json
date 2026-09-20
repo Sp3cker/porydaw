@@ -1269,11 +1269,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift gestureAndIdentityHistory documentCrossingIdentities assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1287,11 +1287,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift insertionAndCollision and gestureAndIdentityHistory identity assertions",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1305,11 +1305,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift gestureAndIdentityHistory document ownership assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1323,11 +1323,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift adoptionAndPairing typed-tempo/global-metadata assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1341,11 +1341,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift gestureAndIdentityHistory publication assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1359,11 +1359,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift gestureAndIdentityHistory merged-overlap assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1377,11 +1377,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift insertionAndCollision and gestureAndIdentityHistory no-op assertions",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1395,11 +1395,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift gestureAndIdentityHistory remap assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1413,11 +1413,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift saveIdentity and confirmedBankOrdering identity assertions",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1431,11 +1431,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift saveIdentity empty-tempo assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1449,11 +1449,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift velocityEditing atomic batch assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1467,11 +1467,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift velocityEditing stale/invalid rejection assertions",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1527,10 +1527,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift saveIdentity canonical format-one snapshot assertion; Task 1 codec parity retained",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "task1Partial": "Swift midiCodec owns the channel-prefix-routing synthetic case and compares canonical bytes plus mapping summary with the frozen C++ oracle."
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Task 1 channel-prefix routing comparison is implemented but controller-run-pending; Task 2 document projection assertions remain pending."
@@ -1544,11 +1545,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift adoptionAndPairing typed-tempo projection assertion; playback remains Task 5",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1562,11 +1563,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift saveIdentity canonical snapshot/undo assertion; playback remains Task 5",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1597,11 +1598,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift saveIdentity marker-name projection assertion; playback remains Task 5",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1615,11 +1616,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift insertionAndCollision whole-batch rejection assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -1633,11 +1634,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift insertionAndCollision oracle parity/abutment assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
@@ -1654,11 +1655,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize basic move/resize assertions",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
@@ -1675,11 +1676,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift insertionAndCollision batch identity assertions",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
@@ -1696,11 +1697,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize undo/redo batch assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
@@ -1717,11 +1718,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize trim/full-overlap and oracle assertions",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
@@ -1738,11 +1739,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize whole-operation collision rejection assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
@@ -1757,11 +1758,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize grouped redo assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
@@ -1778,11 +1779,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize stationary-tail assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
@@ -1799,11 +1800,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize no-op rejection assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
@@ -1820,11 +1821,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize leading/minimum-duration assertions",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -4237,11 +4238,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift adoptionAndPairing foreign-ID remint assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -4274,11 +4275,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift adoptionAndPairing unassigned decoded-ID assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -9165,11 +9166,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift adoptionAndPairing exact first-following pairing assertions",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
@@ -9324,11 +9325,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift adoptionAndPairing note lifecycle/status assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Controller verification of the Task 2 Swift document pairing assertion is pending.",
@@ -9429,11 +9430,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift adoptionAndPairing and movementAndResize unterminated-note assertions",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
@@ -10788,11 +10789,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift velocityEditing invalid-participant atomicity assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -10806,11 +10807,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift velocityEditing clamped relative-delta assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -10824,11 +10825,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift velocityEditing one-revision completion assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
@@ -10842,11 +10843,11 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift velocityEditing undo/redo lifecycle assertion",
-      "status": "pending",
+      "status": "verified",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
+        "revision": "86f7a3c9",
+        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
       },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
