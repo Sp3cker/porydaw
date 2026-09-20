@@ -82,10 +82,21 @@ int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);
     pdc_check_set_fixture_root(encodedRoot.constData());
+
+    QStringList selectedArguments = qtArguments;
+    const QString compilerPrefix = QStringLiteral("--pdc-mid2agb=");
+    if (!selectedArguments.isEmpty() && selectedArguments.front().startsWith(compilerPrefix)) {
+        const QByteArray encodedCompiler =
+            QFile::encodeName(selectedArguments.takeFirst().mid(compilerPrefix.size()));
+        pdc_check_set_mid2agb_path(encodedCompiler.constData());
+    } else {
+        pdc_check_set_mid2agb_path(nullptr);
+    }
+
     SwiftCoreTest test;
     // qExec treats arguments[0] as the program name; without it the first
     // payload token is consumed and function selection silently stops.
     QStringList arguments{QStringLiteral("swiftcore")};
-    arguments.append(qtArguments);
+    arguments.append(selectedArguments);
     return QTest::qExec(&test, arguments);
 }

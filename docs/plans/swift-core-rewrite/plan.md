@@ -1,5 +1,12 @@
 # Swift core rewrite → piano grid
 
+**Current execution boundary:** finish the bounded T7 acceptance checkpoint and
+push, then stop before any further T8 work. The user must first amend T8 test
+ownership: Swift assertions own application semantics; QML tests exercise QML
+interactions through real Swift presenters; C++ checks protect genuine native
+boundaries. Preserve existing regression protection until equivalent replacement
+assertions execute. This checkpoint is not global core/oracle retirement approval.
+
 Status: implementation underway. The coverage reconciliation, Swift 6.4 and
 test-language amendments apply before acceptance of affected work; none
 requires restarting the implementation. This replaces the M1/M2 sequence in
@@ -299,3 +306,260 @@ roundtrip --filter loopcheck --filter primecheck --filter trackactivitycheck
 + history-transition rows promoted with fresh-run evidence. 7B (oracle/core
 deletion) blocked until T8's 43 core rows pass headless, per the case-by-case
 retirement gate.
+
+## Reticle visual regression evidence (controller, 2026-09-20)
+
+`RewriteWindow::applyGridPalette` now preserves the original absolute
+selection-fill alpha of 30/255 while retaining the active theme RGB.
+The previous direct theme-role transfer made the selection rectangle opaque.
+
+`SwiftRollGatedTest::selectionReticleRasterTranslucency` drives a real right-drag
+through the shown native production window and compares captured framebuffer
+pixels with an independent source-over expectation. It covers two contrasting
+underlays, a note face beneath the rectangle, and visible dashed edges.
+Before the fix it failed: background `#b4aca6`, expected `#b5b3ae`, actual
+opaque `#b9e8ee`. After the fix, `deno task verify --filter swiftrollgated
+--verbose` passed. Independent bounded spec/quality review passed.
+
+`deno task verify --verbose` then passed all 18 declared harnesses.
+This is not T8 coverage acceptance: the native suite aliases still share a
+shallow host scenario, and this raster case runs only under `swiftrollgated`.
+The sibling worktree's reticle smoke checked dashed edges and cancellation,
+but did not check fill transparency. No historical ledger rows are promoted
+by this bounded repair, and no full visual parity or DPR/font-matrix coverage
+is claimed.
+
+## Expanded retained-grid raster gate (controller, 2026-09-20)
+
+The sibling visual audit found a second role-transfer regression:
+`selectionRing` used `song_view_edit_preview_outline` instead of the original
+`item_selected_background`. The new note raster check failed before correction
+at physical pixel `(314,785)`: expected `#b9e8ee`, actual `#302c29`.
+The mapping is corrected without changing the rendering algorithms.
+
+`deno task verify --verbose` passed all 18 declared harnesses after the fixes
+and expanded checks (build 25.79s, checks 2.78s). The three raster slots run
+under `swiftrollgated` in the shown native `RewriteWindow`/`QQuickView`:
+
+| Slot | Exercised visual contract |
+| --- | --- |
+| `selectionReticleRasterTranslucency` | Absolute-alpha30 source-over on two distinct backgrounds and a note face; dashed edges; three untouched outside pixels establish containment. |
+| `noteRasterParity` | Original track/velocity/theme note-face color; unselected black frame; selected theme-role ring, inset black frame and unchanged face; fitted tiny-note border thinning/preservation. |
+| `chromeRasterParity` | Natural/accidental row and key colors; aligned C separators; bar/beat source-over colors; real wheel scroll and hover-chip alignment. |
+
+Chrome color checks do not claim temporal grid-line placement. The fixture
+contains another 4/4 event at tick 12; assuming every bar starts at a multiple
+of 96 was an invalid test oracle. The checks use independent role/compositing
+expectations, not the rewritten palette's published values.
+
+Ghost raster is not claimed: both the current `PianoGrid.refreshFromSession`
+and sibling production-bound `swift-grid-prototype/PianoGrid.loadDocument`
+filter to the active track and construct `ghost:false`. Sibling ghost examples
+belong to its standalone demo. No ghost projection or test-only document
+adapter was added to make a coverage label green.
+
+Still unverified: the DPR/font matrix, fractional-scroll/zoom matrix, note
+text/clipping cases, custom-theme note-color variants, and whole-image baseline
+comparisons. Ruler, time-selection band, drawer/automation lanes, tabs, track
+headers and popup baselines are not mounted on this retained surface. These
+results do not promote historical ledger rows or close T7/T8 acceptance.
+
+Independent bounded spec/quality review passed; GUI coverage review accepted
+the delta with the limitations above. Two redundant row-color reassertions
+identified in review were removed. The final post-review
+`deno task verify --verbose` passed 18/18 on the current consolidated rewrite
+catalog (build 24.72s, checks 2.70s), including all three native raster slots.
+The other three grid catalog aliases explicitly skip those raster slots.
+
+## Native render comparison (controller, 2026-09-20)
+
+The current `build/porydaw_render_cli` rendered the checked-in rich-bank
+`mus_route101.mid` loop and `mus_route102.mid` tail fixtures for 12 seconds at
+48 kHz, with `fixture_rich`, song volume 100 and reverb 50. The tail command
+also supplied `--no-loop`. Both outputs are stereo 16-bit PCM, 576,000 frames.
+The loop's final second contains 77,801 nonzero samples; the tail's final second
+is silent. Both complete WAV files are byte-identical to fresh runs of the
+existing main-checkout C++ renderer with identical inputs and arguments.
+
+| Artifact | SHA-256 |
+| --- | --- |
+| Current Swift-backed renderer | `240aa7b05a93a4906fbec818265b378e6074c266bcf36bdf8160bd9398f035a7` |
+| Existing C++ reference renderer | `86418c38914f0b041dd5562ab0d97a05e8b8406b991ca80021ae41b0c66ee1ad` |
+| Loop WAV, both renderers | `b196149e44a049ab229e3a18ce5a418fb910a6b9cc8785d313a56530e7da42d7` |
+| Tail WAV, both renderers | `531f352e5749f63819296f3a7ecd8ab7c28d87f39c2c61c5d6239b8225b52052` |
+
+The reference executable was
+`/Users/spencer/dev/cProjects/porydaw/build/porydaw_render_cli`;
+`nm -C` confirmed its `MidiTimeline`, `TimelinePlayer` and `SmfFile` symbols.
+Its exact source/build revision has not been established. This is fresh
+native-versus-Swift PCM evidence, not a claim that the executable is the pinned
+Task 5 reference or that the pre-retirement coverage gate has passed.
+
+Coverage-binding inspection also found that prior blanket playback evidence
+did not prove native export, transport, activity or MIDI-engine bounds rows.
+Their real native predicates are being restored before ledger acceptance.
+Straight-line Swift seek/replace assertions do not replace callback publication,
+ownership, latency, tail or suppressor assertions.
+
+## Pinned native reference (controller, 2026-09-20)
+
+The earlier renderer provenance gap is now resolved by an isolated reference
+checkout at `0c1d3cd583cf98a81c8bb048eee47815c5e4db1a`, with its recorded
+`poryaaaa` revision `f040bafc00bb2e0f5fd9239d68cd74cdc52f4923`.
+The controller-owned scratch checkout is
+`build/t7-reference-0c1d3cd5-l14_xuyc`; neither the main checkout nor the sibling
+worktree was changed. No reference target was added to the production build.
+
+In that checkout, `deno task build:checks` passed, followed by
+`deno task verify --filter loopcheck --filter primecheck --verbose`
+(`2/107` harnesses passed, `105` unselected). These are the original native
+loop/prime suites, not the current generic registration aliases.
+
+A temporary `reference-render.deno.json` task invokes the existing current
+`tools/cli.ts build:render` dispatcher against the reference checkout's own
+configured build and unchanged CMake target. Its
+`deno task --config reference-render.deno.json reference:render` run passed.
+The resulting pinned C++ renderer SHA-256 is
+`4f8b9bf937f3d05cdd81271e8b3a60e79c1feb5fa764c3ebc5f925d81f526663`.
+Running the same 12-second loop/tail inputs and arguments recorded above
+produced `pinned-loop.wav` and `pinned-tail.wav`; their SHA-256 values exactly
+match the corresponding Swift WAV hashes in the table above.
+
+This establishes source-grounded native playback reference evidence. It does
+not approve the remaining converter/save coverage gaps, qualify a grid
+performance comparison, or authorize legacy-source retirement.
+
+## Avoid useless check loops (user direction, 2026-09-20)
+
+Keep corrective verification focused on meaningful, user-reachable behavior.
+Do not repeatedly repair artificial assertions merely to make a check pass.
+The user explicitly clarified that this is not a request to audit the whole
+application or rewrite unrelated tests. Apply it locally to the active
+gesture/clipboard check corrections, then continue the existing T7/T8 work.
+
+### Settled input and native app evidence — 2026-09-20
+
+- `deno task verify --filter selectionkey --verbose`: PASS (1/25 selected).
+  Removing the redundant pre-drag click stopped the test from invoking the
+  real double-click delete command. No production workaround was added.
+- Bounded re-reviews accepted clipboard semantics and input/lifetime quality.
+  GUI review closed mandatory F1/F2/F3/F5; its remaining Open Song availability
+  issue was corrected using the existing `projectOpen` property.
+- `deno task build:app` and `deno task build:render`: PASS. The host-only
+  Open Song correction was followed by another successful app build.
+- Actual native app: Open Song disabled without a project, enabled with the
+  staged project; the loaded grid was captured and inspected. From canvas focus,
+  Select All / Right / Save changed MIDI. Keyboard Undo / Save restored the
+  previous bytes exactly; keyboard Redo / Save restored the edited bytes.
+  Undo/Redo availability followed those history transitions.
+- A further edit caused the real unsaved-changes close prompt. Escape preserved
+  the window; Save followed by native window close exited 0 with no runtime log.
+- Automation limits: the native project picker exposed no usable accessibility
+  children, so startup arguments were used for the loaded-project smoke.
+  An accessibility menu Undo attempt did not execute; its byte comparison was
+  not counted as a pass. Keyboard Undo/Redo supplied the successful proof.
+- Immutable bounded review packages are `local://t7-input-lifetime-r0.diff` and
+  `local://t7-input-lifetime-r1.diff`, both against `322bcd40`. These approvals
+  do not close converter/save coverage reconciliation, retirement, the
+  comparable benchmark, or the complete T8 surface matrix.
+
+## Bounded T7 acceptance checkpoint
+
+The latest user direction supersedes automatic continuation into T8 or the editor
+consumer follow-on. Finish the identified verification/review decisions and push
+this checkpoint; do not start another whole-app audit or amend/execute T8 here.
+
+### Executed repairs and native protection
+
+- Queued unified save: the original `DocumentSession.save` body reproduced
+  `pending save rejected the newer note`. Separating native-bank persistence
+  ownership from the history transition preserves newer document edits while
+  a captured snapshot is saving. The regression then passed, including exact
+  stale/newer MIDI bytes, dirty identity, retry, and bank-preserving note undo.
+  `QueuedSaveGate` approved the bounded fix.
+- Real saved MIDI: `DocumentSession` edits and saves `mus_route101`, closes its
+  native service, and the actual `mid2agb` compiles the persisted MIDI using
+  reloaded registry flags. `SavedMidiAcceptance` approved this exact case.
+  Its initial lifetime finding was retracted: `DocumentSession.close()` already
+  awaits `ProjectService.close()` and native worker destruction.
+- Converter coverage: the fourteen original songs and the XCMD fixture execute
+  the real converter boundary. `ConverterCoverageGate` approved the mapping;
+  a generic compile-nonempty probe is not the replacement.
+- Native bank protection: the eight original `VoicegroupBankTest` cases remain
+  executable unchanged. Current and pinned-reference runs each passed ten Qt
+  slots including initialization/cleanup. `NativeBankGate` approved the partition.
+- Native theme/font/layout/palette protection: six original native runners pass,
+  with original retained bodies, data generators, and initialization ordering.
+  `NativeThemeAcceptance` approved the partition. Missing includes found by the
+  first build were corrected; the subsequent build and checks passed. Absent
+  editor/widget cases remain source-only and explicitly unverified.
+
+Final scoped command after removing the weak save aliases:
+
+```sh
+deno task verify --filter swiftcore --filter vgbankcheck --filter exportcheck --filter themecheck --filter fontcheck --filter darkbasecheck --filter editor-layout --verbose
+deno task build:app
+```
+
+Both passed: **10/24 selected harnesses**, fourteen unselected, followed by a
+successful app build. This is not a new whole-manifest or complete T8 claim.
+The earlier uncapped Swift run passed **13 Qt slots, zero failed/skipped**:
+
+```sh
+deno task verify --filter swiftcore --verbose --qt -maxwarnings 0 -o build/t7-core-final-identities.log,txt
+```
+
+Its log SHA-256 is
+`560f5ba11afa50248b821872d1ffb31cd72e827ddb1a9cbd372957b2ff102ae4`.
+The exact saved-MIDI and queued-save assertions occur beyond the log's first
+4 MB; a truncated grep is not evidence that they did not execute.
+Existing compiler warnings remain; no warning suppression was introduced.
+
+Frozen original comparisons at `0c1d3cd583cf98a81c8bb048eee47815c5e4db1a`
+also passed: converter roundtrip 17 Qt slots, save 5, native bank 10,
+clipboard 12, MIME codec 25, selected history 5, and selected bank-save 8.
+These counts include initialization/cleanup. Logs are the corresponding
+`build/t7-reference-{roundtrip,save,bank,clipboard,clipmime,history,bank-save}.log`
+files. They are reference evidence, not substitutes for current-path execution.
+
+### Coverage decision, not blanket acceptance
+
+- `HeadlessCoverageDecision` reviewed the known 36 headless candidates.
+  Thirty-two complete equivalents are now verified. Two missing routes remain
+  pending: view-key paste and a foreign clipboard without custom MIME.
+  Two further MIME cases have executed decoder/rescaler assertions but not
+  complete native transport/failure-routing proof; the controller conservatively
+  leaves their complete legacy cases pending as well.
+- The ten already identified automation/bank-editor interaction rows remain
+  pending for future ownership planning, not newly excluded.
+- `SaveCoverageDecision` approved correcting six stale `verified` claims to
+  pending: `blankTokenRebasesAcrossSourceReplacement`, `cleanSaveEmitsNoReceipt`,
+  `newVoicegroupCreatesAndAssignsUndoably`, `switchCarriesUnsavedBankEdit`,
+  `undoShortcutRestoresWithoutWrite`, and
+  `valueCommandSurvivesSourceReplacement`. Source-rebind Core facets are not
+  simply relabeled UI. Historical evidence and original source are preserved.
+- Eleven reviewed save/bank cases have actual executed Swift service/session
+  assertions; absent widget presentation/interaction is not claimed.
+- Twenty native theme/font/layout/palette ledger rows are verified. The nine
+  absent-surface rows remain pending and retain their original assertion bodies.
+- Inventory remains **845 cases**: 453 verified, 303 pending, 59 deferred-ui,
+  30 excluded. These are bookkeeping totals, not new approval of untouched
+  exclusions, deferred rows, or the complete inventory.
+
+The generic `savecheck`/`vgsavecheck` unchanged-input re-save probes and their
+unused runner were removed only after the stronger real Swift save assertions
+executed and the bounded removal was independently approved. Original project/
+voicegroup-save suites are preserved. `exportcheck-loop` and `exportcheck-tail`
+now directly invoke the genuine native export runner and both pass.
+Earlier duplicate clipboard and weak roundtrip/loop/prime aliases likewise do
+not stand in for the accepted Swift assertions.
+
+The old band-key, command-feed, document-feed, and bridge-probe check sources
+are preserved at this checkpoint rather than retired. They are not reintroduced
+as aliases or compiled fallbacks. The frozen original remains the executable
+reference; source-only preservation is not counted as current-path coverage.
+
+**No global core/oracle retirement or full core-milestone approval is claimed.**
+Unproved cases keep that gate open. Existing integrated grid work is checkpointed
+without claiming full T8 acceptance, its benchmark, or its remaining surface
+matrix. Stop here for the user-owned T8 test-ownership planning boundary.

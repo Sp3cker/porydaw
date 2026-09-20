@@ -1,4 +1,5 @@
 import Foundation
+import PorydawCore
 
 func fontPx(_ base: Double, _ multiplier: Double) -> Double {
     multiplier == 0.0 ? 0.0 : max(1.0, (base * multiplier).rounded())
@@ -39,6 +40,8 @@ struct GridMetrics {
     var detailMinPxPerBeat: Double = 11
     var gridLineStroke: Double = 2
     var autoGridMinCell: Double = 17
+    var snapScale: Int = 0
+    var tripletGrid = false
 
     var rulerMinFontPx: Double = 11
     var rulerLetterSpacing: Double = -0.54
@@ -131,11 +134,14 @@ struct GridMetrics {
     }
 
     func maxRulerBar(gridWidth: Double) -> Int {
-        let end = tickFromDouble(contentEndTick(gridWidth: gridWidth))
+        let end = TimeDefaults.tick(from: contentEndTick(gridWidth: gridWidth))
         var bar = 1
         let segment = timeAxis.segmentAt(end)
         let beat = segment.start + (end - segment.start) / segment.beatTicks * segment.beatTicks
-        timeAxis.forEachGridLine(from: beat, to: end < kMaxTick ? end + 1 : kNoTick) {
+        timeAxis.forEachGridLine(
+            from: beat,
+            to: end < TimeDefaults.maxTick ? end + 1 : TimeDefaults.noTick
+        ) {
             _, _, number, _ in bar = number
         }
         return bar + 1
@@ -194,11 +200,21 @@ struct GridMetrics {
     var snapTicks: Int {
         let beat = Int(timeAxis.segmentAt(0).beatTicks)
         let step = gridLadderStep(beatTicks: beat)
-        let vis = max(1, beat / Self.gridLadder[step])
-        guard step > 0 else { return vis }
-        let fine = max(1, beat / Self.gridLadder[step - 1])
+        let visible = max(1, beat / Self.gridLadder[step])
+        let fine = step > 0 ? max(1, beat / Self.gridLadder[step - 1]) : visible
         func gcd(_ a: Int, _ b: Int) -> Int { b == 0 ? a : gcd(b, a % b) }
-        return max(1, gcd(vis, fine))
+        var result = max(1, gcd(visible, fine))
+        if snapScale < 0 {
+            for _ in snapScale..<0 { result = max(1, result / 2) }
+        } else if snapScale > 0 {
+            for _ in 0..<snapScale {
+                result = min(Int(TimeDefaults.maxTick), result * 2)
+            }
+        }
+        if tripletGrid {
+            result = max(1, result * 2 / 3)
+        }
+        return result
     }
 
     private func latticeFloor(_ tick: Double) -> Int {

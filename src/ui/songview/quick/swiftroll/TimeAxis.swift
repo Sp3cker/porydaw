@@ -1,3 +1,4 @@
+import PorydawCore
 // TimeAxis.swift — Swift port of the songview musical time axis
 // (src/ui/songview/timeaxis.h/.cpp, the production oracle) over a copied
 // TimeMap: no MidiTimeline borrow, no isBound — spec §§1–2. Pure Swift value
@@ -17,15 +18,15 @@ struct TimeSigPoint: Equatable {
 struct TimeMap: Equatable {
     var ticksPerBeat: UInt32 = 24
     var lengthTicks: Tick = 0
-    var loopStartTick: Tick = kNoTick
-    var loopEndTick: Tick = kNoTick
+    var loopStartTick: Tick = TimeDefaults.noTick
+    var loopEndTick: Tick = TimeDefaults.noTick
     var timeSigs: [TimeSigPoint] = []
 }
 
 /// Time-signature segment governing a tick; mirrors `TimeAxis::GridSegment`.
 struct GridSegment: Equatable {
     var start: Tick = 0                 // governing signature's tick
-    var next: Tick = kNoTick            // next signature's tick
+    var next: Tick = TimeDefaults.noTick
     var beatTicks: UInt32 = 24          // denominator-scaled beat length
     var beatsPerBar: UInt32 = 4
 }

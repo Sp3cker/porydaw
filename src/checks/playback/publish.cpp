@@ -7,7 +7,6 @@
 #include "audio/timeline_handoff.h"
 #include "checks/playback/transportfixture.h"
 #include "checks/playback/tst_transport.h"
-#include "core/miditimeline.h"
 #include "project/voicegroupsource.h"
 
 namespace checks {
@@ -18,26 +17,31 @@ namespace checks {
 void TransportTest::timelineHandoffOwnership()
 {
     TimelineHandoff handoff;
-    auto first = std::make_shared<MidiTimeline>();
+    auto first = loadedSong(buildSilentSong(), "first ownership timeline built wrong");
+    QVERIFY2(first, "first ownership timeline built wrong");
     handoff.reset(first);
-    auto active = std::make_shared<MidiTimeline>();
-    std::weak_ptr<const MidiTimeline> activeLifetime = active;
+    auto active = loadedSong(buildSilentSong(), "active ownership timeline built wrong");
+    QVERIFY2(active, "active ownership timeline built wrong");
+    std::weak_ptr<const PdPlaybackData> activeLifetime = active;
     handoff.publish(active);
     handoff.acquirePending();
     active.reset();
 
-    auto superseded = std::make_shared<MidiTimeline>();
-    std::weak_ptr<const MidiTimeline> supersededLifetime = superseded;
+    auto superseded = loadedSong(buildSilentSong(), "superseded ownership timeline built wrong");
+    QVERIFY2(superseded, "superseded ownership timeline built wrong");
+    std::weak_ptr<const PdPlaybackData> supersededLifetime = superseded;
     handoff.publish(superseded);
     superseded.reset();
-    auto latest = std::make_shared<MidiTimeline>();
+    auto latest = loadedSong(buildSilentSong(), "latest ownership timeline built wrong");
+    QVERIFY2(latest, "latest ownership timeline built wrong");
     handoff.publish(latest);
     QVERIFY2(!activeLifetime.expired(),
              "rapid timeline publications released the audio thread's active snapshot");
     QVERIFY2(supersededLifetime.expired(), "superseded pending timeline remained retained");
 
     handoff.acquirePending();
-    auto replacement = std::make_shared<MidiTimeline>();
+    auto replacement = loadedSong(buildSilentSong(), "replacement ownership timeline built wrong");
+    QVERIFY2(replacement, "replacement ownership timeline built wrong");
     handoff.publish(replacement);
     QVERIFY2(activeLifetime.expired(), "replaced active timeline remained retained");
 }

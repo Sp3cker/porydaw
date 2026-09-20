@@ -171,53 +171,16 @@ if(APPLE)
     add_subdirectory(src/swift/playback)
     include(cmake/QtBridge.cmake)
     add_subdirectory(src/swift/app)
-
-    set(SWIFT_GRID_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swiftroll")
-    set(SWIFT_GRID_NATIVE_DIR "${SWIFT_GRID_DIR}/native")
-    set(SWIFT_GRID_FEED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swiftgrid")
-    qt_add_library(swiftgrid STATIC
-        "${SWIFT_GRID_DIR}/EditCommands.swift"
-        "${SWIFT_GRID_DIR}/EditKeyArbiter.swift"
-        "${SWIFT_GRID_DIR}/GridGeometry.swift"
-        "${SWIFT_GRID_DIR}/GridGesture.swift"
-        "${SWIFT_GRID_DIR}/GridPalette.swift"
-        "${SWIFT_GRID_DIR}/GridScene.swift"
-        "${SWIFT_GRID_DIR}/GridTypography.swift"
-        "${SWIFT_GRID_DIR}/PianoGrid.swift"
-        "${SWIFT_GRID_DIR}/SgcCommands.swift"
-        "${SWIFT_GRID_DIR}/SgcKeys.swift"
-        "${SWIFT_GRID_DIR}/SgdDocument.swift"
-        "${SWIFT_GRID_DIR}/Tick.swift"
-        "${SWIFT_GRID_DIR}/TimeAxis.swift"
-        "${SWIFT_GRID_DIR}/SwiftGridHost.swift"
-        "${SWIFT_GRID_DIR}/TrackHeaders.swift"
-    )
-    set_target_properties(swiftgrid PROPERTIES
-        Swift_MODULE_NAME SwiftGrid
-        Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swiftgrid"
-        Swift_LANGUAGE_VERSION 6
-        AUTOMOC OFF
-        AUTOUIC OFF
-        NO_SYSTEM_FROM_IMPORTED ON
-    )
-    target_include_directories(swiftgrid INTERFACE
-        "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:swiftgrid,Swift_MODULE_DIRECTORY>>"
-    )
-    target_compile_options(swiftgrid PUBLIC
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_NATIVE_DIR}/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_FEED_DIR}/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_NATIVE_DIR}>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_FEED_DIR}>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/src>"
-    )
-    target_link_libraries(swiftgrid PUBLIC QtBridge)
 endif()
+
 
 # ---- porydaw application ----
 qt_add_library(porydaw_app STATIC
     src/app/RewriteWindow.cpp
     src/app/RewriteWindow.h
     src/app/native_host.h
+    src/ui/songview/quick/swiftroll/native/font_metrics.cpp
+    src/ui/songview/quick/swiftroll/native/font_metrics.h
     src/audio/audioengine.cpp
     src/audio/audioengine.h
     src/audio/auditionslots.cpp
@@ -272,6 +235,15 @@ qt_add_library(porydaw_app STATIC
     src/ui/theme/themeruntime.h
 )
 
+qt_add_resources(porydaw_app "swift_roll_qml"
+    PREFIX "/porydaw/swiftroll"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swiftroll"
+    FILES
+        src/ui/songview/quick/swiftroll/PianoRollCanvas.qml
+        src/ui/songview/quick/swiftroll/SwiftRollOverlay.qml
+        src/ui/songview/quick/swiftroll/TimelineQuickItem.qml
+)
+
 target_include_directories(porydaw_app PUBLIC
     src
 )
@@ -293,7 +265,7 @@ target_compile_definitions(porydaw_app PUBLIC
     "$<$<NOT:$<COMPILE_LANGUAGE:Swift>>:PORYDAW_VERSION=\"${PROJECT_VERSION}\">")
 target_link_libraries(porydaw_app PUBLIC Qt6::Widgets poryaaaa_engine PorydawApp
     PorydawPlayback)
-target_link_libraries(porydaw_app PRIVATE Qt6::Qml QtBridge)
+target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick QtBridge)
 if(APPLE)
     # Keep framework headers ahead of stale non-framework Qt installs such
     # as /usr/local/include/Qt*. Treating imported frameworks as system

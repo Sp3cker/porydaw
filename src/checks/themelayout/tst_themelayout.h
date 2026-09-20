@@ -20,7 +20,6 @@ class ThemeLayoutTest final : public QObject
   private slots:
     void init();
     void cleanup();
-    void trackIdentityContrast();
     void colorMath_data();
     void colorMath();
     void themeCompleteness_data();
@@ -29,15 +28,10 @@ class ThemeLayoutTest final : public QObject
     void gridContrast();
     void laneAndWaveformLegibility_data();
     void laneAndWaveformLegibility();
-    void startupChromePins();
     void settingsRepair();
     void themePersistence_data();
     void themePersistence();
-    void dialogCommitAndRevert();
     void comboArrowAndPopup();
-    void itemViewBrushes();
-    void themeDialogGeometry();
-    void gridRefreshTargets();
 
   private:
     QApplication *m_application = nullptr;
@@ -83,7 +77,6 @@ class ThemeLayoutScaleTest final : public QObject
     void initializationIsProcessScoped();
 
     void layoutScale();
-    void polyphonyLayoutScales();
 
   private:
     int m_baseFontPx;

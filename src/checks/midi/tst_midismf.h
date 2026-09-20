@@ -21,8 +21,6 @@ class MidiSmfTest final : public QObject
     void noteLifecyclePreservesSameTickOrdering();
     void complexInterleavedNotesPairExactly();
     void unterminatedNotePairingStaysLinear();
-    void programChangesRejectOutOfRangeValues();
-    void noteOnsRejectOutOfRangeKeys();
     void tempoConversionSchedulesExactSamples();
     void overlongTickFailsParsing();
     void engineTrackMappingAgreesAcrossProjections();

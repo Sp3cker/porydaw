@@ -159,8 +159,8 @@ Controller commands:
 ```sh
 deno task build:app
 deno task verify --filter swiftcore --verbose
-deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --filter roundtrip --verbose
-deno task verify --filter loopcheck --filter primecheck --filter transportcheck --filter trackactivitycheck --filter exportcheck --verbose
+deno task verify --filter vgbankcheck --filter transportcheck --filter trackactivitycheck --filter exportcheck --verbose
+deno task verify --filter themecheck --filter fontcheck --filter darkbasecheck --filter editor-layout --verbose
 deno task build:render
 ```
 

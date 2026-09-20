@@ -7,6 +7,7 @@ func runEventEditsSuite(_ report: CheckReport) {
     trackNameRoles(report)
     rawTempoAndSignatureEditing(report)
     laneEditing(report)
+    automationGestureCoreSeams(report)
 }
 
 @MainActor
@@ -311,6 +312,58 @@ private func laneEditing(_ report: CheckReport) {
                        cppID: "automation-domain/laneDeleteForeignChunk",
                        what: "foreign-chunk XCMD point cannot delete a local event")
 }
+@MainActor
+private func automationGestureCoreSeams(_ report: CheckReport) {
+    let replacement = SongDocument(file: MidiFile(chunks: [MidiChunk(events: [
+        .channel(status: 0xC0, data0: 1),
+        .channel(tick: 0, status: 0xB0, data0: 7, data1: 20),
+        .channel(tick: 24, status: 0xB0, data0: 7, data1: 60),
+        .channel(tick: 72, status: 0xB0, data0: 7, data1: 90),
+    ])]))
+    replacement.writeLane(track: 0, lane: .controller(7), from: 24, through: 48,
+                          points: [
+                              LaneWrite(tick: 24, value: 80),
+                              LaneWrite(tick: 48, value: 60),
+                          ])
+    report.expectEqual(
+        ["0:20", "24:80", "48:60", "72:90"],
+        replacement.lanePoints(track: 0, lane: .controller(7))
+            .map { "\($0.tick):\($0.value)" },
+        cppID: "automation-domain/AutomationDomainTest::pointRangeAndPencilReplacements",
+        what: "core held-span replacement including the trailing held-value seam")
+
+    let emptyLane = SongDocument(file: MidiFile(chunks: [
+        MidiChunk(events: [.channel(status: 0xC0, data0: 1)]),
+    ]))
+    emptyLane.writeLane(track: 0, lane: .controller(7), from: 24, through: 48,
+                        points: [
+                            LaneWrite(tick: 24, value: 80),
+                            LaneWrite(tick: 48, value: 20),
+                        ])
+    report.expectEqual(
+        ["24:80", "48:20"],
+        emptyLane.lanePoints(track: 0, lane: .controller(7))
+            .map { "\($0.tick):\($0.value)" },
+        cppID: "automation-domain/AutomationDomainTest::pointRangeAndPencilReplacements",
+        what: "core empty-lane replacement stores the pencil value and restored tail")
+
+    let trailingHold = SongDocument(file: MidiFile(chunks: [MidiChunk(events: [
+        .channel(status: 0xC0, data0: 1),
+        .channel(tick: 0, status: 0xB0, data0: 7, data1: 85),
+    ])]))
+    trailingHold.writeLane(track: 0, lane: .controller(7), from: 48, through: 168,
+                           points: [
+                               LaneWrite(tick: 144, value: 25),
+                               LaneWrite(tick: 168, value: 85),
+                           ])
+    report.expectEqual(
+        ["0:85", "144:25", "168:85"],
+        trailingHold.lanePoints(track: 0, lane: .controller(7))
+            .map { "\($0.tick):\($0.value)" },
+        cppID: "automation-domain/AutomationDomainTest::sweepFinishRestoresTrailingHeldValue",
+        what: "core lane write retains the explicit post-sweep held-value seam")
+}
+
 
 private func xcmdProjection(_ report: CheckReport) {
     let events = [

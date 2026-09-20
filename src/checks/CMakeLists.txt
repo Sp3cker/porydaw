@@ -37,8 +37,56 @@ qt_add_executable(porydaw_checks
     fixturecatalog.cpp
     fixturecatalog.hpp
     fwd.hpp
-    retained/tst_nativeboundaries.cpp
-    retained/tst_nativeboundaries.h
+    audio/tst_audiobackend.cpp
+    audio/tst_audiobackend.h
+    audio/tst_audiotelemetry.cpp
+    audio/tst_audiotelemetry.h
+    audio/clickrig.cpp
+    audio/clickrig.h
+    audio/tst_clicktransport.cpp
+    audio/tst_clicktransport.h
+    audio/resonancefixture.cpp
+    audio/resonancefixture.h
+    audio/tst_resonancelaw.cpp
+    audio/tst_resonancelaw.h
+    audio/tst_resonancetiming.cpp
+    audio/tst_resonancetiming.h
+    editcheck/tst_scale.cpp
+    editcheck/tst_scale.h
+    audio/tst_trackactivity.cpp
+    audio/tst_trackactivity.h
+    ${PROJECT_SOURCE_DIR}/src/porydaw_scale.cpp
+    ${PROJECT_SOURCE_DIR}/src/porydaw_scale.h
+    ${PROJECT_SOURCE_DIR}/src/ui/activity/trackactivity.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/activity/trackactivity.h
+    support/songfixture.cpp
+    support/songfixture.h
+    voicegroup/tst_voicegroupbank.cpp
+    voicegroup/voicegrouptestfixture.cpp
+    voicegroup/voicegrouptestfixture.h
+    midi/tst_midiexport.cpp
+    midi/tst_midiexport.h
+    midi/tst_midiengine.cpp
+    midi/tst_midiengine.h
+    playback/tst_transport.cpp
+    playback/transportfixture.cpp
+    playback/transportfixture.h
+    playback/publish.cpp
+    playback/cgb.cpp
+    playback/tails.cpp
+    playback/settle.cpp
+    swiftrollgated/tst_swiftrollgated.cpp
+    swiftrollgated/gesturechecks.cpp
+    swiftrollgated/clipboardchecks.cpp
+    swiftrollgated/chromevisuals.cpp
+    swiftrollgated/notevisuals.cpp
+    swiftrollgated/tst_swiftrollgated.h
+    themelayout/tst_themelayout.h
+    themelayout/themelayoutcheck.cpp
+    themelayout/tst_themelayout_color.cpp
+    themelayout/tst_themelayout_font.cpp
+    themelayout/tst_themelayout_scale.cpp
+    themelayout/tst_themelayout_chrome.cpp
     ${PROJECT_SOURCE_DIR}/resources/fonts.qrc
 )
 set_target_properties(porydaw_checks PROPERTIES

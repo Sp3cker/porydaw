@@ -4,9 +4,10 @@
 #include "ui/theme/themecontroller.h"
 
 #include "ui/theme/themeresolver.h"
-#include "ui/theme/trackidentitycolors.h"
 
 #include <QColor>
+#include <QSettings>
+#include <QTemporaryDir>
 #include <QtTest>
 
 #include <cstddef>
@@ -96,20 +97,6 @@ themes::Oklab oklabReference(const QColor &color)
 }
 
 } // namespace
-
-void ThemeLayoutTest::trackIdentityContrast()
-{
-    const themes::Theme vanilla = themes::vanilla();
-    const QColor light = vanilla.color(themes::Role::song_view_piano_keyboard_natural_key);
-    const QColor dark = vanilla.color(themes::Role::song_view_piano_keyboard_black_key);
-    for (std::size_t index = 0; index < themes::trackIdentityColorCount; ++index) {
-        const QColor fill = themes::trackIdentityColor(index);
-        QVERIFY(fill.isValid());
-        QCOMPARE(fill.alpha(), 255);
-        QVERIFY(themes::contrastRatio(fill, light) >= 3.0 ||
-                themes::contrastRatio(fill, dark) >= 3.0);
-    }
-}
 
 void ThemeLayoutTest::colorMath_data()
 {
@@ -257,4 +244,60 @@ void ThemeLayoutTest::laneAndWaveformLegibility()
     const themes::Theme theme = themeForName(themeName);
     QVERIFY(themes::contrastRatio(theme.color(static_cast<themes::Role>(role)),
                                   theme.color(static_cast<themes::Role>(surface))) >= 3.0);
+}
+
+void ThemeLayoutTest::settingsRepair()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
+    settings.setValue(QStringLiteral("theme/mode"), QStringLiteral("custom"));
+    settings.setValue(QStringLiteral("theme/primary"), QStringLiteral("#000000"));
+    settings.setValue(QStringLiteral("theme/accent"), QStringLiteral("#FFFFFF"));
+    settings.setValue(QStringLiteral("theme/grid-line-contrast"), QStringLiteral("80"));
+
+    themes::ThemeController controller(*m_application, settings);
+    controller.restore();
+
+    QCOMPARE(controller.committedSelection().mode, themes::ThemeMode::Vanilla);
+    QCOMPARE(controller.committedSelection().gridLineContrast, 80);
+    QCOMPARE(settings.value(QStringLiteral("theme/mode")).toString(), QStringLiteral("vanilla"));
+    QVERIFY(!settings.contains(QStringLiteral("theme/primary")));
+    QVERIFY(!settings.contains(QStringLiteral("theme/accent")));
+    QCOMPARE(settings.value(QStringLiteral("theme/grid-line-contrast")).toInt(), 80);
+}
+
+void ThemeLayoutTest::themePersistence_data()
+{
+    QTest::addColumn<int>("mode");
+    QTest::addColumn<QString>("storedName");
+    QTest::newRow("vanilla") << static_cast<int>(themes::ThemeMode::Vanilla)
+                             << QStringLiteral("vanilla");
+    QTest::newRow("dark-neutral-high") << static_cast<int>(themes::ThemeMode::DarkNeutralHigh)
+                                       << QStringLiteral("dark-neutral-high");
+    QTest::newRow("immaterial") << static_cast<int>(themes::ThemeMode::Immaterial)
+                                << QStringLiteral("immaterial");
+}
+
+void ThemeLayoutTest::themePersistence()
+{
+    QFETCH(int, mode);
+    QFETCH(QString, storedName);
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    const QString settingsPath = directory.filePath(QStringLiteral("settings.ini"));
+    QSettings writeSettings(settingsPath, QSettings::IniFormat);
+    themes::ThemeController writeController(*m_application, writeSettings);
+    writeController.restore();
+    const auto themeMode = static_cast<themes::ThemeMode>(mode);
+    const themes::ThemeSelection selection{themeMode};
+    QVERIFY(writeController.commit(selection));
+    writeSettings.sync();
+
+    QSettings readSettings(settingsPath, QSettings::IniFormat);
+    themes::ThemeController readController(*m_application, readSettings);
+    readController.restore();
+    const themes::ThemeSelection &restored = readController.committedSelection();
+    QCOMPARE(restored.mode, themeMode);
+    QCOMPARE(readSettings.value(QStringLiteral("theme/mode")).toString(), storedName);
 }

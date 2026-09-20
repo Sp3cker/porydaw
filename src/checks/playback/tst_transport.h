@@ -7,13 +7,13 @@
 #include <QObject>
 
 class AudioEngine;
-class MidiTimeline;
-struct SmfFile;
+struct PdPlaybackData;
 
 enum class Transport : int;
 
 namespace checks {
 struct AuditionVoicegroup;
+struct TransportMidiFile;
 
 // Transport contracts migrated from the legacy --transportcheck runner.
 //
@@ -80,9 +80,11 @@ class TransportTest final : public QObject
   private:
     AudioEngine &engine() noexcept;
 
-    // Builds smf at the engine's rate; null on synthesis failure. Callers
-    // QVERIFY2 the result with `what` before dereferencing or loading it.
-    std::shared_ptr<const MidiTimeline> loadedSong(SmfFile smf, const char *what);
+    // Encodes the fixture as MIDI bytes and loads it through the production
+    // Swift playback ABI at the engine's sample rate. Callers QVERIFY2 the
+    // result with `what` before dereferencing or loading it.
+    std::shared_ptr<const PdPlaybackData> loadedSong(const TransportMidiFile &midi,
+                                                     const char *what);
 
     // Control expectations for the tail-cut slots: the timed preview sounds
     // within 2 s and its slow release still rings 400 ms after the note-off.

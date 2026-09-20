@@ -5,9 +5,9 @@
 // snapshot, and the resolver returns the routing decision — decline,
 // consume, or execute. Decision order is the contract: the gates run in
 // handleEditKey statement order, and each rule cites its source line.
-// The prototype does not wire this into live key delivery (keyboard
-// cutover, spec §8); PolicySelftest.swift exercises it through the
-// policy-dimensions matrix (spec §6.3).
+// RewriteWindow resolves canonical keymap bindings, then ApplicationSession
+// delegates each matched editor command here before the host consumes or
+// executes it (spec §8).
 
 /// Mirrors `SongView::EditKeyOrigin` (src/ui/songview.h): which editor
 /// surface physically received the key.
@@ -114,18 +114,5 @@ public enum EditKeyArbiter {
             }
             return .execute  // editkeyrouting.cpp:483 → :489
         }
-    }
-
-    /// The `liveRowEnabled` analog (editactions.cpp:42-47): Copy alone is
-    /// enabled for focused text — Solo still requires its song target even
-    /// though text focus owns its execution. `rowAvailable` is the host's
-    /// availability answer for the row's command.
-    public static func windowActionEnabled(
-        command: EditCommand, textFocused: Bool, rowAvailable: Bool
-    ) -> Bool {
-        if textFocused && editCommandPolicy(command).focusedTextOwnership == .copy {
-            return true  // editactions.cpp:44-45
-        }
-        return rowAvailable  // editactions.cpp:46
     }
 }

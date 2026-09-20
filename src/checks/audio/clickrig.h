@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "core/smf.h"
+#include "checks/playback/transportfixture.h"
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -20,7 +20,7 @@ namespace checks {
 
 // One sustained note, no note-off: while playing, the channel holds at full
 // level until the transport transition cuts it.
-SmfFile buildSustainSong();
+TransportMidiFile buildSustainSong();
 
 // In-memory voicegroup: one looped PCM voice. `square` produces the square
 // wave (per-sample waveform edges — the natural step floor of the signal);

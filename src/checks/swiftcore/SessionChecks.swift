@@ -46,6 +46,24 @@ private func bytes(at path: String) -> Data? {
     try? Data(contentsOf: URL(fileURLWithPath: path))
 }
 
+private func configLineBytes(at path: String, label: String) -> Data? {
+    guard let contents = bytes(at: path) else { return nil }
+    let prefix = Data("\(label).mid:".utf8)
+    var lineStart = contents.startIndex
+
+    while lineStart != contents.endIndex {
+        let lineEnd = contents[lineStart...].firstIndex(of: 0x0A) ?? contents.endIndex
+        let line = contents[lineStart..<lineEnd]
+        if line.starts(with: prefix) {
+            return Data(line)
+        }
+        guard lineEnd != contents.endIndex else { return nil }
+        lineStart = contents.index(after: lineEnd)
+    }
+
+    return nil
+}
+
 private let rejectedVoicegroupCases: [(name: String, label: String, argument: String?)] = [
     ("absolute", "mus_vgid_absolute", "/abs/perc.vg"),
     ("empty", "mus_vgid_empty", nil),
@@ -175,6 +193,100 @@ private func stageTestProject(in rootDirectory: String, projectName: String) -> 
     return projectDir
 }
 
+@MainActor
+private func savedMidiCompilesAfterDocumentSave(_ report: CheckReport, fixtureRoot: String) {
+    let cppID = "savecheck/ProjectSaveTest::savedMidiCompilesWhenAvailable"
+    let songLabel = "mus_route101"
+    let fileManager = FileManager.default
+    let sourceRoot = URL(fileURLWithPath: fixtureRoot, isDirectory: true)
+    let privateRoot = sourceRoot.deletingLastPathComponent().appendingPathComponent(
+        "\(sourceRoot.lastPathComponent)-saved-midi-\(UUID().uuidString)",
+        isDirectory: true)
+
+    do {
+        try fileManager.copyItem(at: sourceRoot, to: privateRoot)
+    } catch {
+        report.fail(cppID, "could not copy the staged project to a private sibling: \(error)")
+        return
+    }
+    defer { try? fileManager.removeItem(at: privateRoot) }
+
+    let service = ProjectService()
+    do {
+        try runBlocking {
+            var openedSession: DocumentSession?
+            do {
+                try await service.open(root: privateRoot.path)
+                let session = try await DocumentSession.open(
+                    service: service, label: songLabel, sampleRate: 48_000)
+                openedSession = session
+
+                let document = session.document
+                guard let track = (0..<document.engineTracks.usedTrackCount).first(where: {
+                    !document.notes(in: $0).isEmpty
+                }) else {
+                    throw NSError(
+                        domain: "SwiftCoreCheck", code: 1,
+                        userInfo: [NSLocalizedDescriptionKey:
+                            "original fixture song has no nonempty engine track"])
+                }
+                guard let lastEnd = document.state.file.chunks.map(\.endTick).max(),
+                      lastEnd <= TimeDefaults.maxTick - 624 else {
+                    throw NSError(
+                        domain: "SwiftCoreCheck", code: 2,
+                        userInfo: [NSLocalizedDescriptionKey:
+                            "original fixture has no collision-free [base, base + 528) tail"])
+                }
+
+                let base = lastEnd + 96
+                _ = try document.addNotes([
+                    NewNote(track: track, tick: base, pitch: 72, duration: 24, velocity: 93),
+                ])
+                let oldLoopStart = session.timeline.loopStartTick
+                guard oldLoopStart == TimeDefaults.noTick ||
+                      oldLoopStart <= TimeDefaults.maxTick - 24 else {
+                    throw NSError(
+                        domain: "SwiftCoreCheck", code: 3,
+                        userInfo: [NSLocalizedDescriptionKey:
+                            "original fixture loop start cannot be advanced by 24 ticks"])
+                }
+                let savedLoopStart: Tick =
+                    oldLoopStart == TimeDefaults.noTick ? 0 : oldLoopStart + 24
+                document.setLoop(end: false, tick: Int64(savedLoopStart))
+                var config = document.state.config
+                config.masterVolume = 111
+                document.setConfig(config)
+                try await session.save()
+
+                guard await session.close() else {
+                    await service.close()
+                    throw NSError(
+                        domain: "SwiftCoreCheck", code: 4,
+                        userInfo: [NSLocalizedDescriptionKey:
+                            "saved document session did not close cleanly"])
+                }
+            } catch {
+                if let openedSession {
+                    _ = await openedSession.close()
+                }
+                await service.close()
+                throw error
+            }
+        }
+    } catch {
+        report.fail(cppID, "edited DocumentSession save failed: \(error)")
+        return
+    }
+
+    let compileResult = privateRoot.path.withCString { projectRoot in
+        songLabel.withCString { label in
+            pdc_check_compile_saved_midi(projectRoot, label)
+        }
+    }
+    report.expectEqual(Int32(1), compileResult, cppID: cppID,
+                       what: "actual mid2agb exit result for the persisted edited MIDI and flags")
+}
+
 // MARK: - Project Session Suite
 
 @MainActor
@@ -184,6 +296,8 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
                     "missing --swiftcore fixture root")
         return
     }
+
+    savedMidiCompilesAfterDocumentSave(report, fixtureRoot: fixtureRoot)
 
     let projectDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-session-test")
 
@@ -267,7 +381,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     // Verify initial timeline matches canonical state factory projection
     let initialExpectedTimeline = PlaybackTimeline.build(state: session.document.state, sampleRate: 48_000)
     report.expectEqual(initialExpectedTimeline.sample(for: 24), session.timeline.sample(for: 24),
-                       cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                       cppID: "swiftcore/DocumentSession::initialPlaybackProjection",
                        what: "initial timeline matches canonical state factory projection")
 
     // Verify adoption stripped tempo metas from file chunks
@@ -283,7 +397,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
                   cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                   message: "adoption stripped tempo meta events from file chunks into authoritative state.tempo")
     report.expectEqual(1, session.document.state.tempo.count,
-                       cppID: "savecheck/ProjectSaveTest::savedMidiCompilesWhenAvailable",
+                       cppID: "swiftcore/DocumentSession::authoritativeTempoAdoption",
                        what: "authoritative tempo point count in state")
 
     // At 120 BPM (500_000 us/quarter note) and division 24, 24 ticks = 0.5s -> 24000 samples at 48kHz
@@ -398,11 +512,23 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
                            what: "selection reconciler prunes dead note IDs when notes are deleted")
     }
 
+    // Exercise persistence of an actual loop edit alongside the deleted note.
+    session.document.setLoop(end: false, tick: 72)
+    let midiCfgPath = projectDir + "/sound/songs/midi/midi.cfg"
+    let otherSongCfgBefore = configLineBytes(at: midiCfgPath, label: "mus_session_test2")
+    report.expect(otherSongCfgBefore != nil,
+                  cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                  message: "fixture exposes the other song's midi.cfg line")
+
+
     let preSaveFile = session.document.state.file
     let preSaveConfig = session.document.state.config
     let preSaveLoopStart = session.timeline.loopStartTick
     let preSaveLoopEnd = session.timeline.loopEndTick
     let preSaveGate60 = noteOffSample(session.timeline, key: 60)
+    report.expectEqual(Tick(72), preSaveLoopStart,
+                       cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                       what: "the loop-start edit is present before save")
 
     // 5. Ordered Save and Persistence
     do {
@@ -410,12 +536,17 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
             try await session.save()
         }
         report.expectEqual(false, session.document.isDirty,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::cleanSaveEmitsNoReceipt",
-                           what: "session save confirms clean state")
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "edited song save confirms clean state")
     } catch {
-        report.fail("vgsavecheck/VoicegroupSaveTest::cleanSaveEmitsNoReceipt",
+        report.fail("savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                     "save failed: \(error)")
     }
+    report.expectEqual(
+        otherSongCfgBefore, configLineBytes(at: midiCfgPath, label: "mus_session_test2"),
+        cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+        what: "save preserves the other song's complete midi.cfg line bytes")
+
 
     // Legacy JSON untouched
     let legacyJsonPath = URL(fileURLWithPath: projectDir).appendingPathComponent("sound/songs/midi/mus_session_test.mid.json").path
@@ -423,6 +554,34 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     report.expect(legacyContent?.contains("\"protected\": true") == true,
                   cppID: "project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload",
                   message: "save leaves legacy sidecar JSON untouched")
+
+    // The saved history position remains the clean point across a normal
+    // edit/undo/redo cycle.
+    do {
+        let identityTick = session.document.state.file.chunks.map(\.endTick).max()! + 96
+        _ = try session.document.addNotes([
+            NewNote(track: 0, tick: identityTick, pitch: 74, duration: 24, velocity: 90),
+        ])
+        report.expectEqual(true, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "edit after save is dirty")
+        _ = try runBlocking { try await session.undo() }
+        report.expectEqual(false, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "undo to the saved state is clean")
+        _ = try runBlocking { try await session.redo() }
+        report.expectEqual(true, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "redo away from the saved state is dirty")
+        _ = try runBlocking { try await session.undo() }
+        report.expectEqual(false, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "cleanup undo returns to the saved state")
+    } catch {
+        report.fail("savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                    "saved-state undo/redo cycle threw: \(error)")
+    }
+
 
     // Reopen preserves the canonical note/loop/config streams and cannot fall
     // back to default tempo or gate settings after tempo-meta adoption.
@@ -482,17 +641,30 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
                     "failed to reopen saved session: \(error)")
     }
 
-    // Stale-save refusal
+    // A completion for an older snapshot cannot clean a newer edit.
     do {
+        var staleConfig = session.document.state.config
+        staleConfig.priority += 1
+        session.document.setConfig(staleConfig)
         let snapshot = try session.document.captureSave()
-        // Mutate document after snapshot capture
-        session.document.editTempo(TempoEdit(remove: [], add: [TempoPoint(tick: 96, microsecondsPerQuarterNote: 300_000)]))
+        let newerTick = session.document.state.file.chunks.map(\.endTick).max()! + 96
+        _ = try session.document.addNotes([
+            NewNote(track: 0, tick: newerTick, pitch: 76, duration: 24, velocity: 89),
+        ])
         session.document.didSave(snapshot)
         report.expectEqual(true, session.document.isDirty,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit",
-                           what: "stale snapshot refusal prevents marking document clean")
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "stale snapshot completion leaves the newer document dirty")
+        _ = try runBlocking { try await session.undo() }
+        report.expectEqual(true, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "undoing only the newer edit remains dirty")
+        _ = try runBlocking { try await session.undo() }
+        report.expectEqual(false, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "undoing both post-save edits returns to the saved state")
     } catch {
-        report.fail("vgsavecheck/VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit",
+        report.fail("savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                     "stale save check threw: \(error)")
     }
 
@@ -521,6 +693,9 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
                     "fixture has no editable bank voice")
         return
     }
+    var failureConfig = session.document.state.config
+    failureConfig.priority += 1
+    session.document.setConfig(failureConfig)
     dirtyVoice.release = dirtyVoice.release == 255 ? 254 : dirtyVoice.release + 1
     do {
         _ = try runBlocking {
@@ -692,6 +867,7 @@ internal func runBankHistorySuite(_ report: CheckReport) {
                     "missing --swiftcore fixture root")
         return
     }
+    releaseEditorBankHistorySemantics(report, fixtureRoot: fixtureRoot)
 
     let projectDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-bank-test")
     let service = ProjectService()
@@ -718,7 +894,7 @@ internal func runBankHistorySuite(_ report: CheckReport) {
 
     // Verify initial slots from test_vg.inc
     report.expect(session.bankSlots.count >= 4,
-                  cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                  cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                   message: "published bank has slot views")
     report.expectEqual(BankSlotKind.editable, session.bankSlots[0].kind,
                        cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
@@ -735,17 +911,21 @@ internal func runBankHistorySuite(_ report: CheckReport) {
     var editedVoice = originalVoice
     editedVoice.key = 72
     editedVoice.pan = 15
+    let originalSlots = session.bankSlots
+    var scalarEditedSlots = originalSlots
+    scalarEditedSlots[0].voice = editedVoice
+
 
     do {
         let result = try runBlocking {
             try await session.applyBankEdit(slot: 0, value: editedVoice, expected: originalVoice)
         }
         report.expectEqual(true, session.bankDirty,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "bank edit dirties bank")
-        report.expectEqual(Int32(72), session.bankSlots[0].voice?.key,
-                           cppID: "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[scalar-edit-view-and-receipt]",
-                           what: "slot 0 updated with edited key")
+        report.expectEqual(scalarEditedSlots, session.bankSlots,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "scalar edit changes the requested voice and preserves every other slot")
         report.expect(result.lease.bankToken != oldToken,
                       cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                       message: "applied bank edit mints a fresh lease")
@@ -757,24 +937,71 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         _ = try runBlocking {
             try await session.undo()
         }
-        report.expectEqual(Int32(60), session.bankSlots[0].voice?.key,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::undoShortcutRestoresWithoutWrite",
-                           what: "undo restores slot 0 to original key")
+        report.expectEqual(originalSlots, session.bankSlots,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "undo restores the complete original bank view")
 
         // Redo scalar edit
         _ = try runBlocking {
             try await session.redo()
         }
-        report.expectEqual(Int32(72), session.bankSlots[0].voice?.key,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
-                           what: "redo reapplies slot 0 edited key")
+        report.expectEqual(scalarEditedSlots, session.bankSlots,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "redo restores the scalar edit without changing other slots")
     } catch {
         report.fail("vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                     "scalar edit or undo/redo threw: \(error)")
     }
 
+    // A real preview-directory failure must reject the candidate without
+    // replacing the visible bank or modifying its source file.
+    let previewSlots = session.bankSlots
+    let previewDirty = session.bankDirty
+    let previewSourcePath = projectDir + "/" + session.bankLease.sourcePath
+    let previewSourceBytes = bytes(at: previewSourcePath)
+    let previewRoot = projectDir + "/.porydaw"
+    let previewPath = previewRoot + "/vgpreview"
+    do {
+        try FileManager.default.createDirectory(atPath: previewRoot,
+                                                withIntermediateDirectories: true)
+        try? FileManager.default.removeItem(atPath: previewPath)
+        try Data([0]).write(to: URL(fileURLWithPath: previewPath))
+        defer { try? FileManager.default.removeItem(atPath: previewPath) }
+        var rejected = session.bankSlots[0].voice!
+        rejected.key = rejected.key == 127 ? 126 : rejected.key + 1
+        do {
+            _ = try runBlocking {
+                try await session.applyBankEdit(
+                    slot: 0, value: rejected, expected: session.bankSlots[0].voice)
+            }
+            report.fail("vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                        "blocked preview directory should reject the bank edit")
+        } catch {
+            report.expect(operationFailureMessage(error) != nil,
+                          cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                          message: "preview filesystem failure reaches the public service error type")
+        }
+    } catch {
+        report.fail("vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                    "could not block the preview directory: \(error)")
+    }
+    report.expectEqual(previewSlots, session.bankSlots,
+                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                       what: "preview failure preserves every visible bank slot")
+    report.expectEqual(previewDirty, session.bankDirty,
+                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                       what: "preview failure preserves visible dirty state")
+    report.expectEqual(previewSourceBytes, bytes(at: previewSourcePath),
+                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                       what: "preview failure leaves source file bytes unchanged")
+
+
     // 2. Blank-slot materialization & revert via token
     let newVoice = BankVoice(macro: BankVoiceMacro.square1, key: 65, pan: 5, sweep: 0, duty: 2)
+    let beforeMaterializationSlots = session.bankSlots
+    var materializedSlots = beforeMaterializationSlots
+    materializedSlots[3] = BankSlotView(kind: BankSlotKind.editable, voice: newVoice)
+
     do {
         let materialized = try runBlocking {
             try await session.applyBankEdit(slot: 3, value: newVoice, expected: nil)
@@ -782,25 +1009,25 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         report.expect(materialized.materializationToken != nil,
                       cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                       message: "blank slot materialization issues a single-shot token")
-        report.expectEqual(BankSlotKind.editable, session.bankSlots[3].kind,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably",
-                           what: "slot 3 materialized as editable")
+        report.expectEqual(materializedSlots, session.bankSlots,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                           what: "blank materialization publishes the requested voice and preserves other slots")
 
         // Undo materialization reverts the slot
         _ = try runBlocking {
             try await session.undo()
         }
-        report.expectEqual(BankSlotKind.none, session.bankSlots[3].kind,
+        report.expectEqual(beforeMaterializationSlots, session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
-                           what: "undo reverts materialized blank slot to none")
+                           what: "undo restores the complete pre-materialization bank view")
 
         // Redo materialization re-creates the voice
         _ = try runBlocking {
             try await session.redo()
         }
-        report.expectEqual(BankSlotKind.editable, session.bankSlots[3].kind,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::blankTokenRebasesAcrossSourceReplacement",
-                           what: "redo rematerializes the slot as editable")
+        report.expectEqual(materializedSlots, session.bankSlots,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                           what: "redo rematerializes the voice without changing other slots")
     } catch {
         report.fail("vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
                     "blank materialization cycle threw: \(error)")
@@ -917,23 +1144,160 @@ internal func runBankHistorySuite(_ report: CheckReport) {
     }
 
 
-    // Save persists both document and bank
+    // Save one real document edit and the current bank edits in the same
+    // ordered request, then reopen through a fresh service to prove both.
     do {
+        let unifiedTick = session.document.state.file.chunks.map(\.endTick).max()! + 96
+        _ = try session.document.addNotes([
+            NewNote(track: 0, tick: unifiedTick, pitch: 72, duration: 24, velocity: 93),
+        ])
+        let expectedUnifiedFile = session.document.state.file
+        let expectedUnifiedSlots = session.bankSlots
+        let unifiedMidiPath = session.document.source.midiPath
+        let unifiedBankPath = projectDir + "/" + session.bankLease.sourcePath
+        let midiBeforeUnifiedSave = bytes(at: unifiedMidiPath)
+        let bankBeforeUnifiedSave = bytes(at: unifiedBankPath)
         try runBlocking {
             try await session.save()
         }
+        report.expectEqual(false, session.document.isDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                           what: "unified save marks the song clean")
         report.expectEqual(false, session.bankDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                           what: "unified save marks bank clean")
+                           what: "unified save marks the bank clean")
+        report.expect(bytes(at: unifiedMidiPath) != midiBeforeUnifiedSave,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                      message: "unified save changes persisted MIDI bytes")
+        report.expect(bytes(at: unifiedBankPath) != bankBeforeUnifiedSave,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                      message: "unified save changes persisted bank bytes")
+
+        let reopenedService = ProjectService()
+        try runBlocking {
+            try await reopenedService.open(root: projectDir)
+        }
+        let reopened = try runBlocking {
+            try await DocumentSession.open(service: reopenedService, label: "mus_session_test")
+        }
+        report.expectEqual(expectedUnifiedFile, reopened.document.state.file,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                           what: "fresh reopen reads the unified song edit from disk")
+        report.expectEqual(expectedUnifiedSlots, reopened.bankSlots,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                           what: "fresh reopen reads the unified bank edits and preserved slots from disk")
     } catch {
         report.fail("vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                    "unified save threw: \(error)")
+                    "unified save or fresh reopen threw: \(error)")
+    }
+
+    let queuedSaveID = "vgsavecheck/VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit"
+    do {
+        try runBlocking {
+            let bankPath = projectDir + "/" + session.bankLease.sourcePath
+            var savedVoice = session.bankSlots[0].voice!
+            savedVoice.release = savedVoice.release == 255 ? 254 : savedVoice.release + 1
+            _ = try await session.applyBankEdit(
+                slot: 0, value: savedVoice, expected: session.bankSlots[0].voice)
+
+            let baseTick = session.document.state.file.chunks.map(\.endTick).max()!
+            guard let staleNote = try session.document.addNotes([
+                NewNote(track: 0, tick: baseTick + 96, pitch: 74,
+                        duration: 24, velocity: 91),
+            ]).first else {
+                report.fail(queuedSaveID, "could not create the stale-snapshot note")
+                return
+            }
+            let staleSnapshot = try session.document.captureSave()
+
+            // Swift 6.4 Task.immediate runs this main-actor child synchronously
+            // until it suspends entering ProjectService's worker-backed save.
+            let pendingSave = Task.immediate { @MainActor in
+                try await session.save()
+            }
+            guard let newerNote = try session.document.addNotes([
+                NewNote(track: 0, tick: baseTick + 192, pitch: 76,
+                        duration: 24, velocity: 89),
+            ]).first else {
+                report.fail(queuedSaveID, "pending save rejected the newer note")
+                _ = try await pendingSave.value
+                return
+            }
+            let newerSnapshot = try session.document.captureSave()
+            let newerIdentity = session.document.history.currentIdentity
+            try await pendingSave.value
+
+            report.expectEqual(Optional(Data(staleSnapshot.bytes)),
+                               bytes(at: session.document.source.midiPath),
+                               cppID: queuedSaveID,
+                               what: "queued save writes the captured stale MIDI snapshot")
+            report.expectEqual(newerIdentity, session.document.history.currentIdentity,
+                               cppID: queuedSaveID,
+                               what: "save completion preserves the newer document identity")
+            report.expectEqual(true, session.document.isDirty, cppID: queuedSaveID,
+                               what: "stale save completion cannot clean the newer edit")
+            report.expectEqual(false, session.bankDirty, cppID: queuedSaveID,
+                               what: "queued native bank write publishes its clean receipt")
+            report.expectEqual(savedVoice, session.bankSlots[0].voice,
+                               cppID: queuedSaveID,
+                               what: "queued bank save preserves the edited bank voice")
+            guard let savedBankBytes = bytes(at: bankPath) else {
+                report.fail(queuedSaveID, "queued save did not leave readable bank bytes")
+                return
+            }
+
+            try await session.save()
+            report.expectEqual(Optional(Data(newerSnapshot.bytes)),
+                               bytes(at: session.document.source.midiPath),
+                               cppID: queuedSaveID,
+                               what: "retry writes the newer MIDI snapshot")
+            report.expectEqual(false, session.document.isDirty, cppID: queuedSaveID,
+                               what: "newer-state retry marks the document clean")
+
+            let undidNewer = try await session.undo()
+            report.expect(undidNewer && session.document.note(newerNote) == nil
+                && session.document.note(staleNote) != nil,
+                cppID: queuedSaveID,
+                message: "first undo removes only the newer note")
+            let undidStale = try await session.undo()
+            report.expect(undidStale && session.document.note(staleNote) == nil,
+                          cppID: queuedSaveID,
+                          message: "second undo removes the stale note")
+            report.expectEqual(true, session.document.isDirty, cppID: queuedSaveID,
+                               what: "undoing past the retry save point is dirty")
+            report.expectEqual(false, session.bankDirty, cppID: queuedSaveID,
+                               what: "note undos leave the saved bank clean")
+            report.expectEqual(savedVoice, session.bankSlots[0].voice,
+                               cppID: queuedSaveID,
+                               what: "note undos leave the saved bank edit applied")
+            report.expectEqual(savedBankBytes, bytes(at: bankPath), cppID: queuedSaveID,
+                               what: "note undos leave saved bank bytes intact")
+        }
+    } catch {
+        report.fail(queuedSaveID, "queued unified-save scenario threw: \(error)")
     }
 
     // Case-level UI/benchmark rows are ledger exclusions; retain only
     // service/session facts that this suite can observe directly.
     do {
         let documentWasDirty = session.document.isDirty
+        let adjacentOriginal = session.bankSlots[0].voice!
+        var adjacent = adjacentOriginal
+        adjacent.release = adjacent.release == 255 ? 254 : adjacent.release + 1
+        _ = try runBlocking {
+            try await session.applyBankEdit(slot: 0, value: adjacent,
+                                            expected: adjacentOriginal)
+        }
+        report.expectEqual(adjacent.release, session.bankSlots[0].voice?.release,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
+                           what: "adjacent release edit reaches the production bank view")
+        report.expectEqual(true, session.bankDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
+                           what: "adjacent release edit dirties the bank")
+        report.expectEqual(documentWasDirty, session.document.isDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
+                           what: "adjacent release edit does not dirty the document")
+
         var lower = session.bankSlots[0].voice!
         lower.release = 0
         _ = try runBlocking {
@@ -969,21 +1333,22 @@ internal func runBankHistorySuite(_ report: CheckReport) {
             try await service.openSong(label: "mus_session_test2")
         }
         report.expectEqual(session.bankLease.bankToken, switched.bank.bankToken,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
-                           what: "song switch reuses the unsaved shared-bank record")
+                           cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
+                           what: "opening another song reuses the unsaved shared-bank record")
         report.expectEqual(Int32(255), switched.bankSlots[0].voice?.release,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
-                           what: "song switch publishes the unsaved bank edit")
+                           cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
+                           what: "another song publishes the unsaved shared-bank edit")
         report.expectEqual(true, switched.bankDirty,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
-                           what: "song switch preserves bank dirty state")
+                           cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
+                           what: "another song preserves shared-bank dirty state")
     } catch {
-        let message = "release-bound or shared-bank switch check failed: \(error)"
+        let message = "release-bound or shared-bank open check failed: \(error)"
+        report.fail("vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
+                    message)
         report.fail("vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
                     message)
         report.fail("vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
                     message)
-        report.fail("vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit", message)
     }
 
     let retainedToken = session.bankLease.bankToken
@@ -1035,37 +1400,67 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         let roundtripBankPath = roundtripDir + "/" + roundtripSession.bankLease.sourcePath
         let originalBytes = bytes(at: roundtripBankPath)
         let original = roundtripSession.bankSlots[0].voice!
+        let originalSlots = roundtripSession.bankSlots
         var edited = original
         edited.key = edited.key == 127 ? 126 : edited.key + 1
+        var editedSlots = originalSlots
+        editedSlots[0].voice = edited
         _ = try runBlocking {
             try await roundtripSession.applyBankEdit(slot: 0, value: edited, expected: original)
         }
+        report.expectEqual(editedSlots, roundtripSession.bankSlots,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "round-trip scalar edit preserves every other bank slot")
         let preSaveToken = roundtripSession.bankLease.bankToken
         try runBlocking {
             try await roundtripSession.save()
         }
+        let editedBytes = bytes(at: roundtripBankPath)
         report.expect(roundtripSession.bankLease.bankToken != preSaveToken,
                       cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
                       message: "successful bank save publishes a refreshed native bank")
         report.expectEqual(false, roundtripSession.bankDirty,
                            cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
                            what: "successful bank save publishes a clean record")
-        report.expect(bytes(at: roundtripBankPath) != originalBytes,
+        report.expect(editedBytes != originalBytes,
                       cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
                       message: "successful bank save changes persisted bank bytes")
 
         _ = try runBlocking {
             try await roundtripSession.undo()
         }
-        report.expectEqual(original, roundtripSession.bankSlots[0].voice,
+        report.expectEqual(originalSlots, roundtripSession.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
-                           what: "undo after save restores the original bank voice")
+                           what: "undo after save restores the complete original bank")
         try runBlocking {
             try await roundtripSession.save()
         }
         report.expectEqual(originalBytes, bytes(at: roundtripBankPath),
                            cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
                            what: "saving the undo restores original voicegroup bytes")
+
+        _ = try runBlocking {
+            try await roundtripSession.redo()
+        }
+        report.expectEqual(editedSlots, roundtripSession.bankSlots,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "redo after saving the undo restores the edited bank and other slots")
+        try runBlocking {
+            try await roundtripSession.save()
+        }
+        report.expectEqual(editedBytes, bytes(at: roundtripBankPath),
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "saving the redo reproduces edited voicegroup bytes")
+
+        _ = try runBlocking {
+            try await roundtripSession.undo()
+        }
+        try runBlocking {
+            try await roundtripSession.save()
+        }
+        report.expectEqual(originalBytes, bytes(at: roundtripBankPath),
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "final undo/save restores original voicegroup bytes")
 
         var failedEdit = original
         failedEdit.duty = failedEdit.duty == 3 ? 2 : 3
@@ -1089,17 +1484,17 @@ internal func runBankHistorySuite(_ report: CheckReport) {
             try runBlocking {
                 try await roundtripSession.save()
             }
-            report.fail("vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+            report.fail("swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
                         "unwritable bank destination should fail")
         } catch {
             report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
-                          cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                          cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
                           message: "failed bank save reports its unwritable source")
             report.expectEqual(true, roundtripSession.bankDirty,
-                               cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                               cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
                                what: "failed bank save retains the dirty bank record")
             report.expectEqual(true, roundtripSession.document.isDirty,
-                               cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                               cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
                                what: "failed ordered save retains the dirty document record")
         }
     } catch {
@@ -1183,6 +1578,71 @@ internal func runBankHistorySuite(_ report: CheckReport) {
     } catch {
         report.fail("voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
                     "coordinator serialization scenario failed: \(error)")
+    }
+}
+
+@MainActor
+private func releaseEditorBankHistorySemantics(_ report: CheckReport, fixtureRoot: String) {
+    let rows: [(name: String, pixelsUp: Int, target: Int32)] = [
+        ("set-value", 0, -1),
+        ("drag-up", 12, 106),
+        ("drag-down", -12, 94),
+        ("precision-drag", 20, 104),
+    ]
+    for row in rows {
+        let cppID = "vgsavecheck/VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline[\(row.name)]"
+        let projectDir = stageTestProject(
+            in: fixtureRoot, projectName: "swiftcore-release-editor-\(row.name)")
+        let service = ProjectService()
+        do {
+            try runBlocking {
+                try await service.open(root: projectDir)
+            }
+            let session = try runBlocking {
+                try await DocumentSession.open(service: service, label: "mus_session_test")
+            }
+            guard let original = session.bankSlots[0].voice else {
+                report.fail(cppID, "fixture slot 0 has no editable voice")
+                continue
+            }
+            let target = row.target < 0
+                ? (original.release < 255 ? original.release + 1 : original.release - 1)
+                : row.target
+            if row.pixelsUp != 0 {
+                let baseline: BankVoice = {
+                    var voice = original
+                    voice.release = 100
+                    return voice
+                }()
+                _ = try runBlocking { [baseline] in
+                    try await session.applyBankEdit(slot: 0, value: baseline, expected: original)
+                }
+            }
+            guard let beforeTarget = session.bankSlots[0].voice else {
+                report.fail(cppID, "bank edit lost the selected voice")
+                continue
+            }
+            let edited: BankVoice = {
+                var voice = beforeTarget
+                voice.release = target
+                return voice
+            }()
+            _ = try runBlocking { [edited] in
+                try await session.applyBankEdit(slot: 0, value: edited, expected: beforeTarget)
+            }
+            let appliedThroughBankPipeline = session.bankSlots[0].voice?.release == target
+                && session.bankDirty && !session.document.isDirty
+            let undone = try runBlocking {
+                try await session.undo()
+            }
+            report.expect(appliedThroughBankPipeline && undone
+                && session.bankSlots[0].voice?.release == original.release
+                && !session.document.isDirty,
+                cppID: cppID,
+                message: "the production bank pipeline publishes release \(target) and one undo restores the original without dirtying the song")
+        } catch {
+            report.fail(cppID, "production release edit or bank undo failed: \(error)")
+        }
     }
 }
 
@@ -1375,7 +1835,7 @@ private func historyTransitionRegressions(_ report: CheckReport) {
     cancelling.history.recordConfirmedBank(MergingHistoryBankAction(before: 20, after: 10))
     _ = cancelling.history.undoDocument()
     report.expect(cancelling.state.config.priority == 0,
-        cppID: "project-identity/ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry",
+        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
         message: "self-cancelling bank merge is removed so undo reaches the preceding document edit")
 }
 

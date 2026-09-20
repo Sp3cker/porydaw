@@ -103,7 +103,7 @@ void TransportTest::songStartEntersAtUnityGain()
         return;
     }
     QVERIFY2(engine().m_cutFadeGain >= 0.999f, "initial play began below full output gain");
-    QVERIFY2(engine().m_player.position() == 0,
+    QVERIFY2(pd_player_position(engine().m_player) == 0,
              "initial play advanced before reaching full output gain");
 
     const auto playingAudio = renderParked(engine(), uint32_t(3.0 * engine().sampleRate()));
@@ -231,7 +231,7 @@ void TransportTest::secondSongStartDoesNotReuseResumeFade()
     }
     QVERIFY2(engine().m_cutFadeGain >= 0.999f,
              "second song-start play began below full output gain");
-    QVERIFY2(engine().m_player.position() == 0,
+    QVERIFY2(pd_player_position(engine().m_player) == 0,
              "second song-start play advanced before reaching full output gain");
 }
 
@@ -255,9 +255,10 @@ void TransportTest::resumeParksSequencerThroughSettle()
     }
     QVERIFY2(engine().m_appliedTransport == Transport::Paused && !engine().m_cutFadeActive,
              "pause did not settle before the resume regression");
-    QVERIFY2(engine().m_player.position() != 0, "resume regression needs a nonzero cursor");
+    QVERIFY2(pd_player_position(engine().m_player) != 0,
+             "resume regression needs a nonzero cursor");
 
-    const auto resumeCursorPosition = engine().m_player.position();
+    const auto resumeCursorPosition = pd_player_position(engine().m_player);
     engine().play();
     auto resumeSettleFrames = uint32_t{0};
     auto advancedDuringSettle = false;
@@ -265,16 +266,16 @@ void TransportTest::resumeParksSequencerThroughSettle()
            resumeSettleFrames < uint32_t(engine().sampleRate())) {
         renderParked(engine(), 1);
         ++resumeSettleFrames;
-        advancedDuringSettle |= engine().m_player.position() != resumeCursorPosition;
+        advancedDuringSettle |= pd_player_position(engine().m_player) != resumeCursorPosition;
     }
     QVERIFY2(engine().m_appliedTransport == Transport::Playing,
              "resume was not applied for the resume regression");
     QVERIFY2(!advancedDuringSettle, "resume advanced the player during the zero-gain settle");
     QVERIFY2(engine().m_cutFadeGain >= 0.999f, "resume entered Playing below unity cut-fade gain");
-    QVERIFY2(engine().m_player.position() == resumeCursorPosition,
+    QVERIFY2(pd_player_position(engine().m_player) == resumeCursorPosition,
              "resume consumed timeline audio before full output gain");
     renderParked(engine(), 1);
-    QVERIFY2(engine().m_player.position() > resumeCursorPosition,
+    QVERIFY2(pd_player_position(engine().m_player) > resumeCursorPosition,
              "timeline did not advance after the resumed start");
 }
 

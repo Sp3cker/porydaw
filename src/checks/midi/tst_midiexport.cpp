@@ -1,35 +1,85 @@
 #include "checks/midi/tst_midiexport.h"
 
+#include <QByteArray>
 #include <QFile>
 #include <QFileInfo>
+#include <QSemaphore>
 #include <QTemporaryDir>
 #include <QtTest>
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
 #include <utility>
 
+#include "audio/swift_playback.h"
 #include "audio/wavexport.h"
-#include "checks/support/songfixture.h"
-#include "core/songdocument.h"
-#include "project/decompproject.h"
-#include "project/voicegroupsource.h"
-
-extern "C" {
-#include "voicegroup_loader.h"
-}
+#include "project/swift_project_service.h"
 
 namespace {
 
+struct ProjectServiceDeleter {
+    void operator()(PdProjectService *service) const { pd_service_destroy(service); }
+};
+
+struct BankLeaseDeleter {
+    void operator()(PdBankLease *lease) const { pd_bank_lease_release(lease); }
+};
+
+struct OpenWait {
+    QSemaphore done;
+    bool ok = false;
+    QString error;
+};
+
+struct SongWait {
+    QSemaphore done;
+    bool ok = false;
+    QString error;
+    QString midiPath;
+    int masterVolume = 127;
+    int reverb = 0;
+    PdBankLease *lease = nullptr;
+};
+
 struct ExportFixture {
-    std::unique_ptr<checks::LoadedSong> song;
-    VoicegroupLease voicegroup;
-    std::unique_ptr<MidiTimeline> timeline;
+    std::unique_ptr<PdProjectService, ProjectServiceDeleter> service;
+    std::unique_ptr<PdBankLease, BankLeaseDeleter> bank;
+    std::shared_ptr<const PdPlaybackData> timeline;
     SongSettings settings;
     WavExportOptions options;
 };
+
+void openCompletion(void *context, bool ok, const char *error)
+{
+    auto &wait = *static_cast<OpenWait *>(context);
+    wait.ok = ok;
+    wait.error = error ? QString::fromUtf8(error) : QString{};
+    wait.done.release();
+}
+
+void songCompletion(void *context, bool ok, const uint8_t *, size_t, const PdSongMeta *meta,
+                    const PdBankView *bank, PdBankLease *lease, const char *error)
+{
+    auto &wait = *static_cast<SongWait *>(context);
+    wait.ok = ok && meta && bank && lease;
+    wait.error = error ? QString::fromUtf8(error) : QString{};
+    if (wait.ok) {
+        wait.midiPath = QString::fromUtf8(meta->midiPath);
+        wait.masterVolume = meta->cfg.masterVolume;
+        wait.reverb = meta->cfg.reverb;
+        wait.lease = lease;
+    } else {
+        if (lease)
+            pd_bank_lease_release(lease);
+        if (wait.error.isEmpty())
+            wait.error = QStringLiteral("project service returned an incomplete song");
+    }
+    wait.done.release();
+}
 
 uint32_t littleEndianU32(const QByteArray &bytes, qsizetype offset)
 {
@@ -63,45 +113,69 @@ std::unique_ptr<ExportFixture> loadExportFixture(const QString &projectRoot,
                                                  const QString &songLabel, QString &error)
 {
     auto fixture = std::make_unique<ExportFixture>();
-    fixture->song = checks::LoadedSong::load(projectRoot, songLabel, error);
-    if (!fixture->song)
-        return nullptr;
-
-    const SongInfo song = fixture->song->songInfo();
-    const QByteArray rootUtf8 = projectRoot.toLocal8Bit();
-    auto *rawVoicegroup = static_cast<LoadedVoiceGroup *>(nullptr);
-    for (const QString &candidate : DecompProject::voicegroupCandidates(song)) {
-        const QByteArray candidateUtf8 = candidate.toLocal8Bit();
-        rawVoicegroup = voicegroup_load(rootUtf8.constData(), candidateUtf8.constData(), nullptr);
-        if (rawVoicegroup)
-            break;
-    }
-    if (!rawVoicegroup) {
-        error = QStringLiteral("voicegroup not found for %1").arg(songLabel);
+    fixture->service.reset(pd_service_create());
+    if (!fixture->service) {
+        error = QStringLiteral("cannot allocate project service");
         return nullptr;
     }
-    fixture->voicegroup = wrapVoicegroupLease(rawVoicegroup);
 
-    SongDocument &document = fixture->song->document();
-    fixture->settings.songVolume = static_cast<uint8_t>(document.cfg().masterVolume);
-    fixture->settings.reverb =
-        static_cast<uint8_t>(document.cfg().reverb > 0 ? document.cfg().reverb : 0);
+    OpenWait opened;
+    const QByteArray root = projectRoot.toUtf8();
+    pd_service_open(fixture->service.get(), root.constData(), &opened, openCompletion);
+    opened.done.acquire();
+    if (!opened.ok) {
+        error = opened.error;
+        return nullptr;
+    }
+
+    SongWait song;
+    const QByteArray label = songLabel.toUtf8();
+    pd_service_open_song(fixture->service.get(), label.constData(), &song, songCompletion);
+    song.done.acquire();
+    if (!song.ok) {
+        error = song.error;
+        return nullptr;
+    }
+    fixture->bank.reset(song.lease);
+
+    fixture->settings.songVolume = static_cast<uint8_t>(song.masterVolume);
+    fixture->settings.reverb = static_cast<uint8_t>(song.reverb > 0 ? song.reverb : 0);
     fixture->options.sampleRate = 44100;
     fixture->options.loopCount = 1;
     fixture->options.fadeoutSeconds = 1.0;
     fixture->options.tailSeconds = 1.0;
-    fixture->timeline = document.buildTimeline(double(fixture->options.sampleRate));
-    if (!fixture->timeline) {
-        error = QStringLiteral("could not build MIDI timeline for %1").arg(songLabel);
+
+    PdPlaybackData *publication = nullptr;
+    std::array<char, 1024> diagnostic{};
+    const QByteArray midiPath = song.midiPath.toUtf8();
+    if (!pd_playback_data_load_file(midiPath.constData(), double(fixture->options.sampleRate),
+                                    &publication, diagnostic.data(), diagnostic.size())) {
+        if (publication)
+            pd_playback_data_release(publication);
+        error = QString::fromUtf8(diagnostic.data());
+        if (error.isEmpty())
+            error = QStringLiteral("could not load Swift playback timeline for %1").arg(songLabel);
         return nullptr;
     }
+    if (!publication) {
+        error = QStringLiteral("Swift playback loader returned no timeline for %1").arg(songLabel);
+        return nullptr;
+    }
+    fixture->timeline =
+        std::shared_ptr<const PdPlaybackData>{publication, pd_playback_data_release};
     error.clear();
     return fixture;
 }
 
-uint64_t expectedTotalSamples(const MidiTimeline &timeline, const WavExportOptions &options)
+bool hasLoop(const PdPlaybackData &timeline)
 {
-    if (timeline.hasLoop()) {
+    return timeline.loopStartSample != UINT64_MAX && timeline.loopEndSample != UINT64_MAX &&
+           timeline.loopEndSample > timeline.loopStartSample;
+}
+
+uint64_t expectedTotalSamples(const PdPlaybackData &timeline, const WavExportOptions &options)
+{
+    if (hasLoop(timeline)) {
         const uint64_t loopDuration = timeline.loopEndSample - timeline.loopStartSample;
         return timeline.loopStartSample + loopDuration + uint64_t(options.sampleRate);
     }
@@ -148,7 +222,8 @@ void MidiExportTest::offlineExportProducesValidRiffPcm()
     double lastFraction = -1.0;
     bool strictlyMonotonic = true;
     QVERIFY2(exportWav(
-                 path, *fixture->timeline, fixture->voicegroup, fixture->settings, fixture->options,
+                 path, *fixture->timeline, pd_bank_lease_native(fixture->bank.get()),
+                 fixture->settings, fixture->options,
                  [&](double fraction) {
                      strictlyMonotonic = strictlyMonotonic && fraction > lastFraction;
                      lastFraction = fraction;
@@ -180,7 +255,7 @@ void MidiExportTest::offlineExportProducesValidRiffPcm()
         peak = std::max(peak, std::abs(int(sampleAt(wav, sampleIndex))));
     QVERIFY2(peak >= 256, "offline WAV render is nearly silent");
 
-    if (fixture->timeline->hasLoop()) {
+    if (hasLoop(*fixture->timeline)) {
         QVERIFY2(totals.totalSamples >= 16, "looping export is too short for tail verification");
         int tailPeak = 0;
         for (uint64_t sampleIndex = (totals.totalSamples - 16) * 2;
@@ -201,14 +276,15 @@ void MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames()
     QVERIFY2(scratch.isValid(), "could not create resonance-export scratch directory");
     const QString baselinePath = scratch.filePath(QStringLiteral("baseline.wav"));
     const QString suppressedPath = scratch.filePath(QStringLiteral("suppressed.wav"));
-    QVERIFY2(exportWav(baselinePath, *fixture->timeline, fixture->voicegroup, fixture->settings,
-                       fixture->options, {}, &error),
+    QVERIFY2(exportWav(baselinePath, *fixture->timeline, pd_bank_lease_native(fixture->bank.get()),
+                       fixture->settings, fixture->options, {}, &error),
              qPrintable(error));
     auto baseline = QByteArray{};
     QVERIFY2(readFile(baselinePath, baseline, error), qPrintable(error));
 
     fixture->options.resonanceSuppression = true;
-    QVERIFY2(exportWav(suppressedPath, *fixture->timeline, fixture->voicegroup, fixture->settings,
+    QVERIFY2(exportWav(suppressedPath, *fixture->timeline,
+                       pd_bank_lease_native(fixture->bank.get()), fixture->settings,
                        fixture->options, {}, &error),
              qPrintable(error));
     auto suppressed = QByteArray{};
@@ -228,8 +304,8 @@ void MidiExportTest::cancelledExportRemovesPartialFile()
     const QString path = scratch.filePath(QStringLiteral("cancelled.wav"));
     fixture->options.resonanceSuppression = true;
     QVERIFY(!exportWav(
-        path, *fixture->timeline, fixture->voicegroup, fixture->settings, fixture->options,
-        [](double) { return false; }, &error));
+        path, *fixture->timeline, pd_bank_lease_native(fixture->bank.get()), fixture->settings,
+        fixture->options, [](double) { return false; }, &error));
     QVERIFY2(error.isEmpty(), qPrintable(error));
     QVERIFY2(!QFile::exists(path), "cancelled WAV export left a partial file");
 }

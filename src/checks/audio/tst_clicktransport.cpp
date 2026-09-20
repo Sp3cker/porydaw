@@ -1,6 +1,8 @@
 #include "checks/audio/tst_clicktransport.h"
 #include "checks/fwd.hpp"
 
+#include <QFile>
+#include <QTemporaryFile>
 #include <QtTest>
 
 #include <algorithm>
@@ -70,12 +72,35 @@ bool ClickTest::startRig(Rig &rig)
 
 bool ClickTest::loadSustainSong(Rig &rig)
 {
-    const SmfFile smf = buildSustainSong();
-    rig.timeline = MidiTimeline::build(smf, rig.engine.sampleRate());
-    if (!rig.timeline) {
-        QTest::qFail("synthesized song failed to build", __FILE__, __LINE__);
+    const QByteArray bytes = buildSustainSong().encode();
+    if (bytes.isEmpty()) {
+        QTest::qFail("synthesized sustain MIDI failed to encode", __FILE__, __LINE__);
         return false;
     }
+
+    QTemporaryFile file;
+    if (!file.open() || file.write(bytes) != bytes.size() || !file.flush()) {
+        QTest::qFail("could not write synthesized sustain MIDI", __FILE__, __LINE__);
+        return false;
+    }
+
+    PdPlaybackData *publication = nullptr;
+    std::array<char, 1024> diagnostic{};
+    const QByteArray path = QFile::encodeName(file.fileName());
+    if (!pd_playback_data_load_file(path.constData(), rig.engine.sampleRate(), &publication,
+                                    diagnostic.data(), diagnostic.size())) {
+        if (publication)
+            pd_playback_data_release(publication);
+        QTest::qFail(qUtf8Printable(QStringLiteral("Swift playback loader failed: %1")
+                                        .arg(QString::fromUtf8(diagnostic.data()))),
+                     __FILE__, __LINE__);
+        return false;
+    }
+    if (!publication) {
+        QTest::qFail("Swift playback loader returned no publication", __FILE__, __LINE__);
+        return false;
+    }
+    rig.timeline = std::shared_ptr<const PdPlaybackData>{publication, pd_playback_data_release};
     rig.engine.loadSong(rig.timeline, borrowVoicegroupLease(&rig.voicegroup.vg), SongSettings{});
     rig.engine.setLoopEnabled(false);
     return true;
@@ -288,7 +313,7 @@ void ClickTest::songStartReachesFullGain()
     QVERIFY2(spinUntilApplied(rig.engine, Transport::Playing, capture, &onset),
              "Playing was not applied within one second");
     QVERIFY2(rig.engine.m_cutFadeGain >= 0.999f, "song start applied below full output gain");
-    QCOMPARE(rig.engine.m_player.position(), uint64_t(0));
+    QCOMPARE(pd_player_position(rig.engine.m_player), uint64_t(0));
 
     render(rig.engine, std::size_t(rig.engine.m_cutFadeSettleSamples) + 2 * kRenderChunk64,
            capture);
@@ -378,7 +403,7 @@ void ClickTest::reloadAfterInterruptedFadeStartsLoud()
     QVERIFY2(spinUntilApplied(rig.engine, Transport::Playing, capture, &onset),
              "Playing was not applied within one second after reload");
     QVERIFY2(rig.engine.m_cutFadeGain >= 0.9f, "load after interrupted fade reused stale cut gain");
-    QCOMPARE(rig.engine.m_player.position(), uint64_t(0));
+    QCOMPARE(pd_player_position(rig.engine.m_player), uint64_t(0));
 
     render(rig.engine, std::size_t(rig.engine.m_cutFadeSettleSamples) + 2 * kRenderChunk64,
            capture);

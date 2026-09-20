@@ -5,49 +5,28 @@
 #include <cstring>
 
 namespace checks {
-namespace {
 
-constexpr uint32_t kDivision = 24;
-
-SmfEvent channelEvent(Tick tick, uint8_t status, uint8_t data0, uint8_t data1)
+TransportMidiFile buildSustainSong()
 {
-    SmfEvent ev;
-    ev.tick = tick;
-    ev.status = status;
-    ev.data0 = data0;
-    ev.data1 = data1;
-    return ev;
-}
+    TransportMidiFile midi;
+    midi.division = 24;
+    midi.tracks.resize(2);
 
-SmfEvent metaEvent(Tick tick, uint8_t metaType, const QByteArray &blob)
-{
-    SmfEvent ev;
-    ev.tick = tick;
-    ev.status = 0xFF;
-    ev.metaType = metaType;
-    ev.blob = blob;
-    return ev;
-}
-
-} // namespace
-
-SmfFile buildSustainSong()
-{
-    SmfFile smf;
-    smf.format = 1;
-    smf.division = kDivision;
-    smf.tracks.resize(2);
-
-    SmfTrack &conductor = smf.tracks[0];
-    conductor.events.push_back(metaEvent(0, 0x51, QByteArray("\x07\xA1\x20", 3))); // 120 BPM
+    TransportMidiTrack &conductor = midi.tracks[0];
+    conductor.events.push_back({
+        .tick = 0,
+        .status = 0xFF,
+        .data0 = 0x51,
+        .payload = QByteArray("\x07\xA1\x20", 3),
+    }); // 120 BPM
     conductor.endTick = 96;
 
-    SmfTrack &notes = smf.tracks[1];
+    TransportMidiTrack &notes = midi.tracks[1];
     notes.events.push_back(channelEvent(0, 0xC0, 0, 0));    // program 0
     notes.events.push_back(channelEvent(0, 0x90, 60, 100)); // sustain, no off
     notes.endTick = 96;
 
-    return smf;
+    return midi;
 }
 
 ClickVoicegroup::ClickVoicegroup(bool square)

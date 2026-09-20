@@ -1,4 +1,5 @@
 import Foundation
+import PorydawCore
 import QtBridge
 
 @MainActor
@@ -83,7 +84,7 @@ struct GridSceneInput {
     var displayedNote: (GridNote) -> (tick: Int, end: Int, pitch: Int) = {
         ($0.tick, $0.tick + $0.duration, $0.pitch)
     }
-    var isSelected: (Int) -> Bool = { _ in false }
+    var isSelected: (NoteID) -> Bool = { _ in false }
     var drawPreview: (tick: Int, duration: Int, pitch: Int)?
     var lastVelocity: Int = 100
     var hoverKey: Int = -1
@@ -249,8 +250,9 @@ public final class GridScene {
         // walking or allocating marks for the rest of a long document.
         let left = max(0, input.viewportScrollX - m.viewportWidth)
         let right = min(input.gridWidth, input.viewportScrollX + 2 * m.viewportWidth)
-        let begin = tickFromDouble(m.tickAtContentX(left))
-        let end = UInt32(min(Double(kNoTick), max(0, ceil(m.contentEndTick(gridWidth: right)))))
+        let begin = TimeDefaults.tick(from: m.tickAtContentX(left))
+        let end = UInt32(min(Double(TimeDefaults.noTick),
+                             max(0, ceil(m.contentEndTick(gridWidth: right)))))
         return (begin, end)
     }
 
@@ -489,7 +491,8 @@ public final class GridScene {
             // TimeAxis retains the original exponent for timing interpretation.
             let label = "\(signature.numerator)/\(1 << min(signature.denomPow2, 6))"
             let width = t.signatureAdvance(label)
-            if next != kNoTick && sigX + 2 * m.spaceHalf + width > m.displayX(Double(next)) {
+            if next != TimeDefaults.noTick
+                && sigX + 2 * m.spaceHalf + width > m.displayX(Double(next)) {
                 return
             }
             let y = (markerHeight - t.boldHeight) / 2
@@ -499,12 +502,13 @@ public final class GridScene {
         }
         let signatures = m.timeAxis.explicitTimeSignatures
         if m.timeAxis.hasImplicitOpeningSignature {
-            appendSignature(at: 0, next: signatures.first?.tick ?? kNoTick)
+            appendSignature(at: 0, next: signatures.first?.tick ?? TimeDefaults.noTick)
         }
         for index in signatures.indices {
             let tick = signatures[index].tick
             if tick >= range.end { break }
-            let next = index + 1 < signatures.count ? signatures[index + 1].tick : kNoTick
+            let next = index + 1 < signatures.count
+                ? signatures[index + 1].tick : TimeDefaults.noTick
             if next == tick { continue }
             appendSignature(at: tick, next: next)
         }
@@ -547,7 +551,7 @@ public final class GridScene {
                 let box = m.noteBox(
                     x0: m.displayX(Double(tick)),
                     x1: m.displayX(Double(end)), pitch: pitch)
-                let name = "gridNote_\(note.noteId)"
+                let name = "gridNote_\(note.noteId.rawValue)"
                 fills.append(
                     SceneRect(
                         x: box.x, y: box.y, width: box.w, height: box.h,

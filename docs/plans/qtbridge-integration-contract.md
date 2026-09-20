@@ -68,20 +68,31 @@ Required invariants:
 - QML visibility is not treated as destruction, and proxy destruction is not assumed to release every Swift reference immediately.
 - Initial binding, detachment and teardown have an explicit ordered protocol. Identify when new actions stop, pending delivery is invalidated, observers disconnect, and references release. Test the actual protocol rather than assuming a universal deletion order.
 
-Recorded ownership table (2026-09-19, from pinned-source inspection; the
-scenario ledger below verifies the load-bearing rows at runtime):
+Task 8 terminal ownership table (source-inspected; controller runtime evidence
+remains required by the scenario ledger below):
 
 | Object | Creator | Lifecycle owner | Other retaining refs | Isolation | Invalidation/release | Teardown order |
 | --- | --- | --- | --- | --- | --- | --- |
-| `MainWindow`/`WorkspaceUi` | `main.cpp` | C++ app stack | — | Qt GUI thread | App exit | App teardown |
-| `SongTab` (per open song) | `WorkspaceUi::requestSongOpen` | `WorkspaceUi` tab container | — | Qt GUI thread | Tab close | Document closed before tab widget destroyed |
-| `SongDocument` + `SongHistory`/`QUndoStack` | `SongTab` | `SongTab` | `SwiftGridIntentExecutor` (borrows for submits) | Qt GUI thread | Tab close / document replace (`adoptSmf`) | Feeds unregistered in `SwiftRollMount::unmount` before document dies |
-| `SwiftRollMount` (flag-gated) | `SongView` | `SongView` member | — | Qt GUI thread | Tab close/unmount | `unmount()`: drop track connections → reset executor → session feed → document feed → delete overlay item (`swift_roll_mount.cpp:239-263`) |
-| `PianoGrid` (Swift, QML-instantiated) | `QQmlComponent` via `registerQmlElement` | QML scene graph; QtBridge holds `Unmanaged.passRetained` +1 (`QMetaObjectBuilder.swift:368-390`) | `QObjectProxyImpl` `Ownership::Qml` + deleter releasing the +1 | Qt GUI thread / Swift `@MainActor` | Overlay item destroyed → `~QObjectProxyImpl` → deleter `release()` | Overlay deleted last in `unmount()` |
-| `GridScene` + `QListModel`s (Swift-created) | `PianoGrid` | Swift ARC via `PianoGrid.scene`; `QObjectHolder` keeps C++ proxy alive (`QObjectHolder.swift:58`) | `QObjectHolder.proxy` `shared_ptr<Impl>`, `Ownership::Cpp`; C++ side holds **unretained** Swift pointer; holder holds `weak` owner | Same as owner | Last Swift ref drops → `objectHolder` deinit → `shared_ptr` → `delete m_object` | Children of `PianoGrid`; released with it |
-| Row elements (`SceneRect`/`SceneText` values) | `GridScene` rebuilds | `QListModel.storage` array | QML reads copies via delegates (no QML retain of Swift objects) | Same | Removed from storage → ARC releases immediately; `reset(to:)` replaces whole array | With owning model |
-| `sgd_`/`sgs_` deliveries | `SwiftGridDocumentFeed`/`SwiftGridSessionFeed` register single-slot callbacks | C++ feed objects own registration | Swift holds function pointers only while bound | Qt GUI thread (synchronous push) | `unmount()` resets feeds → slots cleared | Before overlay deletion |
-| `documentChanged` observers | `SongTab` (timeline rebuild) + `SwiftGridDocumentFeed` (snapshot push) | Qt signal wiring | — | Qt GUI thread | Sender destroyed → auto-disconnect | Qt parent ordering |
+| `RewriteWindow` | `main.cpp` | C++ app stack | — | Qt GUI thread | App exit | Detaches the Quick scene before deleting `ApplicationSession` |
+| `ApplicationSession` | `RewriteWindow` through `QQmlComponent` | `RewriteWindow` (`CppOwnership` and QObject parent) | QML context borrows its proxy | Qt GUI thread / Swift `@MainActor` | Window teardown | Quick scene is deleted before the session proxy |
+| `DocumentSession` + `SongDocument` | `ApplicationSession::replaceSong` | `ApplicationSession` | `PianoGrid` has a required direct session reference | Swift `@MainActor` | Song replacement/close | Register detach continuation → emit `aboutToReleaseGrid` → native host deletes Quick scene and acknowledges → detach/release presenter → close/release session |
+| `PianoGrid` | `ApplicationSession` | `ApplicationSession.grid` | QML `gridModel` holds the returned proxy while the scene lives | Swift `@MainActor` on the Qt GUI thread | Song replacement/close | Remains retained until `acknowledgeGridDetached`; signal emission alone does not complete teardown |
+| `GridScene` + `QListModel`s | `PianoGrid` | Swift ARC via `PianoGrid.scene` | QtBridge object holders keep their proxies alive while QML reads them | Same as presenter | Presenter release | Released with `PianoGrid`, after the Quick scene |
+| Row elements (`SceneRect`/`SceneText`) | `GridScene` rebuilds | `QListModel.storage` | QML delegates read copied roles | Same as presenter | Model replacement/removal | Subscript replacement/reset emits the model notification; no contained-object mutation is relied on |
+| Document change callback | `ApplicationSession::replaceSong` | `DocumentSession.onChange` | Weak presenter and weak session/application captures | Swift `@MainActor` | `DocumentSession.close` clears callbacks | Presenter is detached before session close |
+| Clipboard byte loan | `RewriteWindow::pd_clipboard_read` | `QClipboard`/local `QByteArray` for the synchronous call | Swift copies into `Data` during the callback | Qt GUI thread | Callback return | No pointer survives the native call |
+
+The pinned QtBridge emitter queues signal activation
+(`swiftmetaobjectbuilder.cpp`, `Qt::QueuedConnection`). The host therefore
+acknowledges teardown only after deleting the window container, which owns the
+`QQuickView`. `songOpenChanged` mounts a new scene; it is not a second teardown
+path. Replacement tasks serialize, and host closure prevents a pending
+replacement from publishing another scene. Controller verification:
+`deno task verify --filter selectionkey --filter swiftqtml --verbose` exercised
+replacement and close with `TypeError`/`ReferenceError` warnings treated as
+failures; `swiftqtml` passed, and the subsequent focused `selectionkey` run passed
+after removing a redundant click from its unrelated keyboard-gesture setup.
+The bounded lifetime/input quality re-review approved this protocol.
 
 Open lifetime facts the probe must observe rather than assume: delegate
 retention of removed rows (QML may cache items), pending-notification

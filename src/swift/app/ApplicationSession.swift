@@ -1,22 +1,28 @@
 import Foundation
 import PorydawCore
+import PorydawProjectService
 import QtBridge
 
 @MainActor
 @QtBridgeable
 public final class ApplicationSession: QmlInstantiableStatus {
-    @QtTracked public private(set) var saveInProgress = false
-    @QtTracked public private(set) var lastSaveError = ""
-    @QtTracked public private(set) var documentDirty = false
-    @QtTracked public private(set) var projectOpen = false
-    @QtTracked public private(set) var songOpen = false
+    @QtTracked public var saveInProgress = false
+    @QtTracked public var lastSaveError = ""
+    @QtTracked public var documentDirty = false
+    @QtTracked public var projectOpen = false
+    @QtTracked public var songOpen = false
+    @QtTracked public var canUndo = false
+    @QtTracked public var canRedo = false
 
     private var projectRoot = ""
     private var labels: [String] = []
     private var catalogService: ProjectService?
     private var documentSession: DocumentSession?
     private var audio: NativeAudio?
-
+    private var grid: PianoGrid?
+    private var detachContinuation: CheckedContinuation<Void, Never>?
+    private var isDisposed = false
+    private var activeReplacementTask: Task<Void, Never>?
     public required init() {
         do {
             audio = try NativeAudio()
@@ -34,23 +40,80 @@ public final class ApplicationSession: QmlInstantiableStatus {
         labels.indices.contains(index) ? labels[index] : ""
     }
 
+    public func gridPresenter() -> PianoGrid {
+        guard let grid else { preconditionFailure("Grid requested without an open song") }
+        return grid
+    }
+
+    public func gridCommandAvailable(command: Int) -> Bool {
+        grid?.commandAvailable(command: command) ?? false
+    }
+
+    public func performGridCommand(command: Int) {
+        grid?.performCommand(command: command)
+    }
+
+    public func routeGridKey(command: Int, autoRepeat: Bool) -> Int {
+        grid?.routeKey(command: command, autoRepeat: autoRepeat)
+            ?? EditKeyDecision.decline.rawValue
+    }
+
+    public func handleGridEscape() -> Bool {
+        grid?.handleEscape() ?? false
+    }
+
+    public func cancelGridInput(reason: Int) {
+        grid?.inputCancelled(reason: reason)
+    }
+
+    @QtSignal public func aboutToReleaseGrid()
+    public func requestGridContextMenu(x: Double, y: Double) {
+        gridContextMenuRequested(x: x, y: y)
+    }
+
+    @QtSignal public func gridContextMenuRequested(x: Double, y: Double)
+    @QtSignal public func gridCommandAvailabilityChanged()
+    @QtSignal public func openFailed(message: String)
+    @QtSignal public func operationFailed(message: String)
+
+    public func acknowledgeGridDetached() {
+        let continuation = detachContinuation
+        detachContinuation = nil
+        continuation?.resume()
+    }
+
+    public func hostClosing() {
+        isDisposed = true
+        activeReplacementTask?.cancel()
+    }
+
     /// Starts project replacement without exposing async/throws through Qt.
     /// The native host must pass discardChanges only after its Save/Discard/
     /// Cancel gate has selected Discard.
     public func openProject(path: String, discardChanges: Bool) {
         guard !documentDirty || discardChanges else {
-            lastSaveError = "Save or discard the current document before opening another project."
+            let message = "Save or discard the current document before opening another project."
+            lastSaveError = message
+            openFailed(message: message)
             return
         }
-        Task { await replaceProject(path: path) }
+        let priorTask = activeReplacementTask
+        activeReplacementTask = Task {
+            _ = await priorTask?.value
+            _ = await replaceProject(path: path)
+        }
     }
 
     public func openProjectAndSong(path: String, label: String) {
         guard !documentDirty else {
-            lastSaveError = "Save or discard the current document before opening another project."
+            let message = "Save or discard the current document before opening another project."
+            lastSaveError = message
+            openFailed(message: message)
             return
         }
-        Task {
+        let priorTask = activeReplacementTask
+        activeReplacementTask = Task {
+            _ = await priorTask?.value
             guard await replaceProject(path: path) else { return }
             await replaceSong(label: label)
         }
@@ -58,10 +121,16 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     public func openSong(label: String, discardChanges: Bool) {
         guard !documentDirty || discardChanges else {
-            lastSaveError = "Save or discard the current document before opening another song."
+            let message = "Save or discard the current document before opening another song."
+            lastSaveError = message
+            openFailed(message: message)
             return
         }
-        Task { await replaceSong(label: label) }
+        let priorTask = activeReplacementTask
+        activeReplacementTask = Task {
+            _ = await priorTask?.value
+            await replaceSong(label: label)
+        }
     }
 
     public func requestSave() {
@@ -72,6 +141,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
             do {
                 try await documentSession.save()
                 documentDirty = documentSession.document.isDirty || documentSession.bankDirty
+                canUndo = documentSession.document.history.canUndo
+                canRedo = documentSession.document.history.canRedo
             } catch {
                 lastSaveError = String(describing: error)
             }
@@ -81,24 +152,42 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     public func requestUndo() {
         guard let documentSession else { return }
+        canUndo = false
+        canRedo = false
+        lastSaveError = ""
         Task {
             do {
                 _ = try await documentSession.undo()
                 documentDirty = documentSession.document.isDirty || documentSession.bankDirty
+                canUndo = documentSession.document.history.canUndo
+                canRedo = documentSession.document.history.canRedo
             } catch {
-                lastSaveError = String(describing: error)
+                let message = String(describing: error)
+                lastSaveError = message
+                operationFailed(message: message)
+                canUndo = documentSession.document.history.canUndo
+                canRedo = documentSession.document.history.canRedo
             }
         }
     }
 
     public func requestRedo() {
         guard let documentSession else { return }
+        canUndo = false
+        canRedo = false
+        lastSaveError = ""
         Task {
             do {
                 _ = try await documentSession.redo()
                 documentDirty = documentSession.document.isDirty || documentSession.bankDirty
+                canUndo = documentSession.document.history.canUndo
+                canRedo = documentSession.document.history.canRedo
             } catch {
-                lastSaveError = String(describing: error)
+                let message = String(describing: error)
+                lastSaveError = message
+                operationFailed(message: message)
+                canUndo = documentSession.document.history.canUndo
+                canRedo = documentSession.document.history.canRedo
             }
         }
     }
@@ -121,7 +210,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
             try await service.open(root: path)
             let newLabels = try await service.songLabels()
             await retireCurrentDocument()
-            if let catalogService { await catalogService.close() }
+            guard !isDisposed, !Task.isCancelled else {
+                await service.close()
+                return false
+            }
             catalogService = service
             projectRoot = path
             labels = newLabels
@@ -129,14 +221,18 @@ public final class ApplicationSession: QmlInstantiableStatus {
             return true
         } catch {
             await service.close()
-            lastSaveError = String(describing: error)
+            let message = String(describing: error)
+            lastSaveError = message
+            openFailed(message: message)
             return false
         }
     }
 
     private func replaceSong(label: String) async {
         guard !projectRoot.isEmpty else {
-            lastSaveError = "Open a project before opening a song."
+            let message = "Open a project before opening a song."
+            lastSaveError = message
+            openFailed(message: message)
             return
         }
         lastSaveError = ""
@@ -151,6 +247,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
             }
             try audio.bind(timeline: replacement.timeline, bank: replacement.bankLease,
                            config: replacement.document.state.config)
+            let presenter = PianoGrid(session: replacement)
+            presenter.onAudition = { [weak audio] track, key, velocity in
+                guard let audio, (0...15).contains(track), (0...127).contains(key),
+                      (0...127).contains(velocity) else { return }
+                audio.previewNote(track: UInt8(track), key: UInt8(key), velocity: UInt8(velocity))
+            }
+            presenter.onCommandAvailabilityChanged = { [weak self] in
+                self?.gridCommandAvailabilityChanged()
+            }
             replacement.onPlayback = { [weak self] timeline in
                 do {
                     try self?.audio?.publish(timeline)
@@ -158,29 +263,51 @@ public final class ApplicationSession: QmlInstantiableStatus {
                     self?.lastSaveError = String(describing: error)
                 }
             }
-            replacement.onChange = { [weak self, weak replacement] _ in
+            replacement.onChange = { [weak self, weak replacement, weak presenter] _ in
                 guard let self, let replacement else { return }
+                presenter?.refreshFromSession()
                 self.documentDirty = replacement.document.isDirty || replacement.bankDirty
+                self.canUndo = replacement.document.history.canUndo
+                self.canRedo = replacement.document.history.canRedo
             }
             await retireCurrentDocument(unloadAudio: false)
-            if let catalogService { await catalogService.close() }
+            guard !isDisposed, !Task.isCancelled else {
+                _ = await replacement.close()
+                await service.close()
+                return
+            }
             catalogService = nil
             documentSession = replacement
+            grid = presenter
             documentDirty = replacement.document.isDirty || replacement.bankDirty
+            canUndo = replacement.document.history.canUndo
+            canRedo = replacement.document.history.canRedo
             songOpen = true
         } catch {
             await service.close()
-            lastSaveError = String(describing: error)
+            let message = String(describing: error)
+            lastSaveError = message
+            openFailed(message: message)
         }
     }
 
     private func retireCurrentDocument(unloadAudio: Bool = true) async {
+        if grid != nil {
+            await withCheckedContinuation { continuation in
+                detachContinuation = continuation
+                aboutToReleaseGrid()
+            }
+            grid?.detach()
+            self.grid = nil
+        }
         if unloadAudio { audio?.unload() }
         if let documentSession {
             _ = await documentSession.close()
             self.documentSession = nil
         }
         documentDirty = false
+        canUndo = false
+        canRedo = false
         songOpen = false
     }
 }

@@ -1,6 +1,10 @@
 #include "checks/playback/tst_transport.h"
 
+#include <QDebug>
+#include <QFile>
+#include <QTemporaryFile>
 #include <QTest>
+#include <array>
 
 #include "audio/audioengine.h"
 #include "checks/playback/transportfixture.h"
@@ -41,11 +45,36 @@ AudioEngine &TransportTest::engine() noexcept
     return *m_engine;
 }
 
-std::shared_ptr<const MidiTimeline> TransportTest::loadedSong(SmfFile smf, const char * /*what*/)
+std::shared_ptr<const PdPlaybackData> TransportTest::loadedSong(const TransportMidiFile &midi,
+                                                                const char *what)
 {
-    // Pure builder: null when synthesis broke. Callers QVERIFY2 the result
-    // (with `what`) before any dereference or engine load.
-    return std::shared_ptr<const MidiTimeline>(MidiTimeline::build(smf, engine().sampleRate()));
+    const QByteArray bytes = midi.encode();
+    if (bytes.isEmpty()) {
+        qWarning("%s: fixture MIDI encoding failed", what);
+        return {};
+    }
+
+    QTemporaryFile file;
+    if (!file.open() || file.write(bytes) != bytes.size() || !file.flush()) {
+        qWarning("%s: could not write fixture MIDI bytes", what);
+        return {};
+    }
+
+    PdPlaybackData *publication = nullptr;
+    std::array<char, 1024> diagnostic{};
+    const QByteArray path = QFile::encodeName(file.fileName());
+    if (!pd_playback_data_load_file(path.constData(), engine().sampleRate(), &publication,
+                                    diagnostic.data(), diagnostic.size())) {
+        if (publication)
+            pd_playback_data_release(publication);
+        qWarning("%s: Swift playback loader failed: %s", what, diagnostic.data());
+        return {};
+    }
+    if (!publication) {
+        qWarning("%s: Swift playback loader returned no publication", what);
+        return {};
+    }
+    return std::shared_ptr<const PdPlaybackData>{publication, pd_playback_data_release};
 }
 
 bool TransportTest::ringingTail(AudioEngine &engine, uint8_t track)

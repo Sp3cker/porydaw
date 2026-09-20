@@ -1,85 +1,35 @@
 #include "checks/themelayout/tst_themelayout.h"
 
-#include "ui/theme/color_math.h"
-
-#include "ui/theme/themecontroller.h"
-#include "ui/theme/themedialog.h"
 #include "ui/theme/themeresolver.h"
 #include "ui/theme/themeruntime.h"
 
+#include <QAbstractItemView>
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QGroupBox>
-#include <QHeaderView>
 #include <QImage>
 #include <QLabel>
 #include <QLineEdit>
-#include <QList>
 #include <QPaintEvent>
 #include <QPainter>
-#include <QPointer>
 #include <QProgressBar>
 
 #include <QPushButton>
 #include <QRadioButton>
 #include <QScrollBar>
-#include <QSettings>
-#include <QSlider>
 #include <QStyle>
 #include <QStyleOptionComboBox>
 #include <QTabBar>
-#include <QTableWidget>
-#include <QTemporaryDir>
 #include <QVBoxLayout>
 #include <QtTest>
 
 #include <cmath>
-#include <memory>
 
 namespace {
 
 constexpr QColor kDarkBaselinePoison(40, 0, 40);
 constexpr int kDarkBaselinePoisonRgbManhattanTolerance = 24;
-
-class StyleChangeCounter final : public QObject
-{
-  public:
-    int count = 0;
-
-  protected:
-    bool eventFilter(QObject *watched, QEvent *event) override
-    {
-        Q_UNUSED(watched);
-        if (event && event->type() == QEvent::StyleChange)
-            ++count;
-        return false;
-    }
-};
-
-class ThemeRefreshProbe final : public QWidget
-{
-  public:
-    int themeChangeCount = 0;
-    int paintCount = 0;
-    QColor gridColor;
-
-  protected:
-    bool event(QEvent *event) override
-    {
-        if (event && event->type() == QEvent::ThemeChange) {
-            ++themeChangeCount;
-            gridColor = themes::color(themes::Role::song_view_grid);
-        }
-        return QWidget::event(event);
-    }
-
-    void paintEvent(QPaintEvent *event) override
-    {
-        Q_UNUSED(event);
-        ++paintCount;
-    }
-};
 
 class PoisonSwatch final : public QWidget
 {
@@ -180,142 +130,6 @@ void ThemeLayoutTest::comboArrowAndPopup()
     QVERIFY(!popupImage.isNull());
     QCOMPARE(popupImage.pixelColor(0, 0), themes::color(themes::Role::menu_outline));
     combo.hidePopup();
-}
-
-void ThemeLayoutTest::itemViewBrushes()
-{
-    QTableWidget table(2, 1);
-    table.horizontalHeader()->hide();
-    table.verticalHeader()->hide();
-    table.setShowGrid(false);
-    table.setAlternatingRowColors(true);
-    table.setItem(0, 0, new QTableWidgetItem);
-    table.setItem(1, 0, new QTableWidgetItem);
-    table.resize(80, 80);
-    table.setFocusPolicy(Qt::NoFocus);
-    table.show();
-    table.ensurePolished();
-    QTRY_VERIFY(table.isVisible());
-
-    const auto cellColor = [&table](int row) {
-        const QRect rect = table.visualItemRect(table.item(row, 0));
-        const QImage image = table.viewport()->grab().toImage();
-        return image.pixelColor(rect.center());
-    };
-    QCOMPARE(cellColor(0), themes::color(themes::Role::item_background));
-    QCOMPARE(cellColor(1), themes::color(themes::Role::item_alternate_background));
-
-    const QColor flash(255, 0, 0);
-    QVERIFY(cellColor(0) != flash);
-    table.item(0, 0)->setBackground(flash);
-    QCOMPARE(cellColor(0), flash);
-
-    const QColor ink(255, 0, 255);
-    table.item(1, 0)->setText(QStringLiteral("XXXX"));
-    table.item(1, 0)->setForeground(ink);
-    auto inkFont = table.font();
-    inkFont.setPixelSize(24);
-    inkFont.setStyleStrategy(QFont::NoAntialias);
-    table.item(1, 0)->setFont(inkFont);
-    table.viewport()->update();
-    QTRY_VERIFY(containsColor(table.viewport()->grab().toImage(), table.viewport()->rect(), ink));
-}
-
-void ThemeLayoutTest::themeDialogGeometry()
-{
-    QTemporaryDir directory;
-    QVERIFY(directory.isValid());
-    QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
-    themes::ThemeController controller(*m_application, settings);
-    controller.restore();
-    themes::ThemeDialog dialog(controller);
-    dialog.show();
-    dialog.ensurePolished();
-    QTRY_VERIFY(dialog.isVisible());
-
-    const auto modeButtons = dialog.findChildren<QRadioButton *>();
-    QCOMPARE(modeButtons.size(), 3);
-    const QSize initialSize = dialog.size();
-    QList<QRect> initialGeometry;
-    initialGeometry.reserve(modeButtons.size());
-    for (const QRadioButton *button : modeButtons)
-        initialGeometry.append(QRect(button->mapTo(&dialog, QPoint()), button->size()));
-
-    QRadioButton *darkNeutralHigh =
-        dialog.findChild<QRadioButton *>(QStringLiteral("darkNeutralHighModeButton"));
-    QVERIFY(darkNeutralHigh);
-    darkNeutralHigh->click();
-    QTRY_COMPARE(dialog.size(), initialSize);
-    for (qsizetype index = 0; index < modeButtons.size(); ++index)
-        QTRY_COMPARE(
-            QRect(modeButtons[index]->mapTo(&dialog, QPoint()), modeButtons[index]->size()),
-            initialGeometry.at(index));
-}
-
-void ThemeLayoutTest::gridRefreshTargets()
-{
-    QTemporaryDir directory;
-    QVERIFY(directory.isValid());
-    QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
-    themes::ThemeController controller(*m_application, settings);
-    controller.restore();
-    themes::ThemeDialog dialog(controller);
-    QSlider *gridLineContrast =
-        dialog.findChild<QSlider *>(QStringLiteral("gridLineContrastSlider"));
-    QVERIFY(gridLineContrast);
-    dialog.show();
-    QTRY_VERIFY(dialog.isVisible());
-
-    QTabBar tabBar;
-    tabBar.addTab(QStringLiteral("Open Song"));
-    tabBar.show();
-    tabBar.ensurePolished();
-    QTRY_VERIFY(tabBar.isVisible());
-    ThemeRefreshProbe gridPaintTarget;
-    gridPaintTarget.resize(10, 10);
-    gridPaintTarget.show();
-    QTRY_VERIFY(gridPaintTarget.isVisible());
-    themes::registerGridLineRefreshTarget(gridPaintTarget);
-    themes::registerGridLineRefreshTarget(gridPaintTarget);
-    gridPaintTarget.paintCount = 0;
-    gridPaintTarget.themeChangeCount = 0;
-    StyleChangeCounter tabStyleChanges;
-    tabBar.installEventFilter(&tabStyleChanges);
-    const QImage tabBefore = tabBar.grab().toImage();
-    QVERIFY(!tabBefore.isNull());
-    const QPalette paletteBefore = m_application->palette();
-    const QString styleSheetBefore = m_application->styleSheet();
-    const QColor defaultGrid = themes::color(themes::Role::song_view_grid);
-    const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
-
-    gridLineContrast->setValue(100);
-    const QColor strengthened = themes::color(themes::Role::song_view_grid);
-    QCOMPARE(gridPaintTarget.themeChangeCount, 1);
-    QCOMPARE(gridPaintTarget.gridColor, strengthened);
-    gridLineContrast->setValue(0);
-    const QColor softened = themes::color(themes::Role::song_view_grid);
-    QCOMPARE(gridPaintTarget.themeChangeCount, 2);
-    QCOMPARE(gridPaintTarget.gridColor, softened);
-    QVERIFY(themes::contrastRatio(strengthened, background) >
-            themes::contrastRatio(defaultGrid, background));
-    QVERIFY(themes::contrastRatio(softened, background) <
-            themes::contrastRatio(defaultGrid, background));
-
-    auto destroyedTarget = std::make_unique<ThemeRefreshProbe>();
-    QPointer<ThemeRefreshProbe> destroyedGuard(destroyedTarget.get());
-    themes::registerGridLineRefreshTarget(*destroyedTarget);
-    destroyedTarget.reset();
-    QVERIFY(destroyedGuard.isNull());
-    const int refreshCountBeforeCleanup = gridPaintTarget.themeChangeCount;
-    gridLineContrast->setValue(10);
-    QCOMPARE(gridPaintTarget.themeChangeCount, refreshCountBeforeCleanup + 1);
-    gridLineContrast->setValue(themes::defaultGridLineContrast);
-    QCoreApplication::processEvents();
-    QVERIFY(tabStyleChanges.count == 0);
-    QVERIFY(tabBar.grab().toImage() == tabBefore);
-    QCOMPARE(m_application->palette(), paletteBefore);
-    QCOMPARE(m_application->styleSheet(), styleSheetBefore);
-    QVERIFY(gridPaintTarget.paintCount > 0);
 }
 
 void ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette()

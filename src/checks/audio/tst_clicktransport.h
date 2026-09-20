@@ -19,7 +19,6 @@
 
 #include "audio/audioengine.h"
 #include "checks/audio/clickrig.h"
-#include "core/miditimeline.h"
 
 namespace checks {
 
@@ -68,13 +67,14 @@ class ClickTest final : public QObject
     };
 
     // Per-case rig: fresh forced-null engine with the device parked, the
-    // borrowed click voicegroup, and the sustain song built at the engine's
-    // live rate. Every slot constructs its own — no state crosses cases.
+    // borrowed click voicegroup, and the Swift playback publication built
+    // from the sustain fixture at the engine's live rate. Every slot constructs
+    // its own — no state crosses cases.
     struct Rig {
         explicit Rig(bool square) : voicegroup(square) {}
 
         ClickVoicegroup voicegroup;
-        std::shared_ptr<const MidiTimeline> timeline;
+        std::shared_ptr<const PdPlaybackData> timeline;
         AudioEngine engine;
         QString error;
     };

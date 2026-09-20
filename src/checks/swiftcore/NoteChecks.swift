@@ -358,53 +358,67 @@ private func gestureAndIdentityHistory(_ report: CheckReport) {
 @MainActor
 private func historyMergeContracts(_ report: CheckReport) {
     let merged = SongDocument(file: baseFile(events: []))
-    guard let mergedIDs = try? merged.addNotes([
+    guard let mergedID = try? merged.addNotes([
         NewNote(track: 0, tick: 0, pitch: 60, duration: 8, velocity: 90),
-    ]), let mergedID = mergedIDs.first else { return }
+    ]).first else { return }
     let baseIdentity = merged.history.currentIdentity
-    let group = HistoryGroup()
-    merged.moveNotes([mergedID], byTicks: 1, byKeys: 0, group: group)
-    merged.moveNotes([mergedID], byTicks: 3, byKeys: 0, group: group)
-    let finalIdentity = merged.history.currentIdentity
+    let firstGesture = HistoryGroup()
+    merged.moveNotes([mergedID], byTicks: 1, byKeys: 0, group: firstGesture)
+    merged.moveNotes([mergedID], byTicks: 3, byKeys: 0, group: firstGesture)
+    let mergedIdentity = merged.history.currentIdentity
+    let mergedAtLatestResult = merged.note(mergedID)?.tick == 3
     _ = merged.history.undoDocument()
-    let restoredOrigin = merged.note(mergedID)?.tick == 0 &&
-        merged.history.currentIdentity == baseIdentity
+    let restoredOldestOrigin = merged.note(mergedID)?.tick == 0
+        && merged.history.currentIdentity == baseIdentity
     _ = merged.history.redoDocument()
-    report.expect(restoredOrigin && merged.note(mergedID)?.tick == 3 &&
-        merged.history.currentIdentity == finalIdentity,
+    report.expect(mergedAtLatestResult && restoredOldestOrigin
+        && merged.note(mergedID)?.tick == 3
+        && merged.history.currentIdentity == mergedIdentity,
         cppID: "project-identity/ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter",
-        message: "merged gesture keeps its earliest origin and latest accepted result")
+        message: "one merged document gesture undoes to its oldest origin and redoes to its latest result")
 
     let boundary = SongDocument(file: baseFile(events: []))
-    guard let boundaryIDs = try? boundary.addNotes([
+    guard let boundaryID = try? boundary.addNotes([
         NewNote(track: 0, tick: 0, pitch: 61, duration: 8, velocity: 90),
-    ]), let boundaryID = boundaryIDs.first else { return }
-    let boundaryGroup = HistoryGroup()
-    boundary.moveNotes([boundaryID], byTicks: 2, byKeys: 0, group: boundaryGroup)
+    ]).first else { return }
+    let boundaryGesture = HistoryGroup()
+    boundary.moveNotes([boundaryID], byTicks: 1, byKeys: 0, group: boundaryGesture)
+    boundary.moveNotes([boundaryID], byTicks: 3, byKeys: 0, group: boundaryGesture)
     guard let saved = try? boundary.captureSave() else { return }
     boundary.didSave(saved)
-    boundary.moveNotes([boundaryID], byTicks: 4, byKeys: 0, group: boundaryGroup)
+    boundary.moveNotes([boundaryID], byTicks: 4, byKeys: 0, group: boundaryGesture)
+    let postBoundaryIdentity = boundary.history.currentIdentity
+    let postBoundaryValue = boundary.note(boundaryID)?.tick == 7
     _ = boundary.history.undoDocument()
-    report.expect(boundary.note(boundaryID)?.tick == 2 &&
-        boundary.history.currentIdentity == saved.identity,
+    report.expect(postBoundaryValue
+        && postBoundaryIdentity != saved.identity
+        && boundary.note(boundaryID)?.tick == 3
+        && boundary.history.currentIdentity == saved.identity,
         cppID: "project-identity/ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge",
-        message: "save boundary starts a separate gesture history entry")
+        message: "a saved boundary seals the document gesture so one undo restores the saved result")
 
     let cancelling = SongDocument(file: baseFile(events: []))
-    guard let cancellingIDs = try? cancelling.addNotes([
+    guard let cancellingID = try? cancelling.addNotes([
         NewNote(track: 0, tick: 0, pitch: 62, duration: 8, velocity: 90),
-    ]), let cancellingID = cancellingIDs.first else { return }
-    cancelling.nudgeVelocities([cancellingID], by: 1)
-    let precedingIdentity = cancelling.history.currentIdentity
-    let cancellingGroup = HistoryGroup()
-    cancelling.moveNotes([cancellingID], byTicks: 5, byKeys: 0, group: cancellingGroup)
-    cancelling.moveNotes([cancellingID], byTicks: 0, byKeys: 0, group: cancellingGroup)
-    let removedRedundantEntry = cancelling.history.currentIdentity == precedingIdentity &&
-        cancelling.note(cancellingID)?.tick == 0
+    ]).first else { return }
+    let sealedGesture = HistoryGroup()
+    cancelling.moveNotes([cancellingID], byTicks: 1, byKeys: 0, group: sealedGesture)
+    cancelling.moveNotes([cancellingID], byTicks: 3, byKeys: 0, group: sealedGesture)
+    guard let cancellingSaved = try? cancelling.captureSave() else { return }
+    cancelling.didSave(cancellingSaved)
+    cancelling.moveNotes([cancellingID], byTicks: 4, byKeys: 0, group: sealedGesture)
+    let afterRefusal = cancelling.history.currentIdentity
+    let secondGesture = HistoryGroup()
+    cancelling.moveNotes([cancellingID], byTicks: 1, byKeys: 0, group: secondGesture)
+    cancelling.moveNotes([cancellingID], byTicks: 0, byKeys: 0, group: secondGesture)
+    let redundantGestureRemoved = cancelling.note(cancellingID)?.tick == 7
+        && cancelling.history.currentIdentity == afterRefusal
     _ = cancelling.history.undoDocument()
-    report.expect(removedRedundantEntry && cancelling.note(cancellingID)?.velocity == 90,
+    report.expect(redundantGestureRemoved
+        && cancelling.note(cancellingID)?.tick == 3
+        && cancelling.history.currentIdentity == cancellingSaved.identity,
         cppID: "project-identity/ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry",
-        message: "return-to-origin removes the gesture so undo reaches the preceding edit")
+        message: "a self-cancelling document gesture disappears so undo crosses the prior post-save edit")
 }
 
 @MainActor

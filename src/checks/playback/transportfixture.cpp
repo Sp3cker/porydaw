@@ -1,23 +1,88 @@
 #include "checks/playback/transportfixture.h"
 
-#include <QByteArray>
+#include <array>
 #include <cstring>
 
 namespace checks {
 
-SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1)
+TransportMidiEvent channelEvent(uint32_t tick, uint8_t status, uint8_t data0, uint8_t data1)
 {
-    SmfEvent ev;
-    ev.tick = tick;
-    ev.status = status;
-    ev.data0 = data0;
-    ev.data1 = data1;
-    return ev;
+    return {
+        .tick = tick,
+        .status = status,
+        .data0 = data0,
+        .data1 = data1,
+    };
 }
 
 namespace {
 
-constexpr uint32_t kDivision = 24;
+constexpr uint16_t kDivision = 24;
+
+TransportMidiEvent tempoEvent()
+{
+    return {
+        .tick = 0,
+        .status = 0xFF,
+        .data0 = 0x51,
+        .payload = QByteArray("\x07\xA1\x20", 3),
+    };
+}
+
+void appendU16(QByteArray &bytes, uint16_t value)
+{
+    bytes.append(char(value >> 8));
+    bytes.append(char(value));
+}
+
+void appendU32(QByteArray &bytes, uint32_t value)
+{
+    bytes.append(char(value >> 24));
+    bytes.append(char(value >> 16));
+    bytes.append(char(value >> 8));
+    bytes.append(char(value));
+}
+
+void appendVariableLength(QByteArray &bytes, uint32_t value)
+{
+    std::array<char, 5> encoded{};
+    auto index = encoded.size() - 1;
+    encoded[index] = char(value & 0x7F);
+    while ((value >>= 7) != 0) {
+        --index;
+        encoded[index] = char((value & 0x7F) | 0x80);
+    }
+    bytes.append(encoded.data() + index, qsizetype(encoded.size() - index));
+}
+
+bool appendTrack(QByteArray &file, const TransportMidiTrack &track)
+{
+    QByteArray body;
+    uint32_t previousTick = 0;
+    for (const auto &event : track.events) {
+        if (event.tick < previousTick)
+            return false;
+        appendVariableLength(body, event.tick - previousTick);
+        previousTick = event.tick;
+        body.append(char(event.status));
+        body.append(char(event.data0));
+        if (event.status == 0xFF) {
+            appendVariableLength(body, uint32_t(event.payload.size()));
+            body.append(event.payload);
+        } else if ((event.status & 0xF0) != 0xC0 && (event.status & 0xF0) != 0xD0) {
+            body.append(char(event.data1));
+        }
+    }
+    if (track.endTick < previousTick)
+        return false;
+    appendVariableLength(body, track.endTick - previousTick);
+    body.append("\xFF\x2F\x00", 3);
+
+    file.append("MTrk", 4);
+    appendU32(file, uint32_t(body.size()));
+    file.append(body);
+    return true;
+}
 
 // 64 looped square samples; the caller owns the guard byte past the end.
 void fillLoopedSquare(int8_t *sample, WaveData *wave)
@@ -35,57 +100,60 @@ void fillLoopedSquare(int8_t *sample, WaveData *wave)
 
 } // namespace
 
-SmfFile buildSilentSong()
+QByteArray TransportMidiFile::encode() const
 {
-    SmfFile smf;
-    smf.format = 1;
-    smf.division = kDivision;
-    smf.tracks.resize(3);
+    QByteArray bytes;
+    bytes.append("MThd", 4);
+    appendU32(bytes, 6);
+    appendU16(bytes, 1);
+    appendU16(bytes, uint16_t(tracks.size()));
+    appendU16(bytes, division);
+    for (const auto &track : tracks) {
+        if (!appendTrack(bytes, track))
+            return {};
+    }
+    return bytes;
+}
 
-    SmfTrack &conductor = smf.tracks[0];
-    SmfEvent tempo;
-    tempo.tick = 0;
-    tempo.status = 0xFF;
-    tempo.metaType = 0x51;
-    tempo.blob = QByteArray("\x07\xA1\x20", 3); // 120 BPM
-    conductor.events.push_back(tempo);
+TransportMidiFile buildSilentSong()
+{
+    TransportMidiFile midi;
+    midi.division = kDivision;
+    midi.tracks.resize(3);
+
+    TransportMidiTrack &conductor = midi.tracks[0];
+    conductor.events.push_back(tempoEvent());
     conductor.endTick = 4800;
 
-    SmfTrack &t0 = smf.tracks[1];
+    TransportMidiTrack &t0 = midi.tracks[1];
     t0.events.push_back(channelEvent(0, 0xC0, 0, 0));
     t0.events.push_back(channelEvent(4800, 0xB0, 7, 100)); // 100 s at 120 BPM
     t0.endTick = 4800;
 
-    SmfTrack &t1 = smf.tracks[2];
+    TransportMidiTrack &t1 = midi.tracks[2];
     t1.events.push_back(channelEvent(0, 0xC1, 1, 0));
     t1.endTick = 4800;
 
-    return smf;
+    return midi;
 }
 
-SmfFile buildNoteSong(uint8_t program)
+TransportMidiFile buildNoteSong(uint8_t program)
 {
-    SmfFile smf;
-    smf.format = 1;
-    smf.division = kDivision;
-    smf.tracks.resize(2);
+    TransportMidiFile midi;
+    midi.division = kDivision;
+    midi.tracks.resize(2);
 
-    SmfTrack &conductor = smf.tracks[0];
-    SmfEvent tempo;
-    tempo.tick = 0;
-    tempo.status = 0xFF;
-    tempo.metaType = 0x51;
-    tempo.blob = QByteArray("\x07\xA1\x20", 3); // 120 BPM
-    conductor.events.push_back(tempo);
+    TransportMidiTrack &conductor = midi.tracks[0];
+    conductor.events.push_back(tempoEvent());
     conductor.endTick = 4800;
 
-    SmfTrack &t0 = smf.tracks[1];
+    TransportMidiTrack &t0 = midi.tracks[1];
     t0.events.push_back(channelEvent(0, 0xC0, program, 0));
     t0.events.push_back(channelEvent(0, 0x90, 60, 127));
     t0.events.push_back(channelEvent(4800, 0x80, 60, 0));
     t0.endTick = 4800;
 
-    return smf;
+    return midi;
 }
 
 AuditionVoicegroup::AuditionVoicegroup()

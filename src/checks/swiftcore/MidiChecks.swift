@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawCoreCheckNative
 
 private struct CodecObservation {
     var valid = false
@@ -86,6 +87,8 @@ private let timeDefaultsID = "no-row/core/timedefaults.h"
 private let trackLimitsID = "no-row/core/tracklimits.h"
 private let noteIdentityID =
     "noteidcheck/NoteIdentityCheckTest::identityDoesNotAffectEqualityOrSerialization"
+private let xcmdConverterID =
+    "roundtrip/MidiRoundtripTest::xcmdEchoTrafficCompilesToGameCommands"
 
 func runMidiCodecSuite(_ report: CheckReport) {
     let fixtures: [(cppID: String, path: String, canonical: [UInt8]?,
@@ -193,31 +196,49 @@ func runMidiCodecSuite(_ report: CheckReport) {
                         event: .channel(tick: 352, status: 0x81, data0: 0x43)),
                 ])),
     ]
-    let projectSongs = [
-        "sound/songs/midi/mus_caught.mid",
-        "sound/songs/midi/mus_dummy.mid",
-        "sound/songs/midi/mus_gsc_route38.mid",
-        "sound/songs/midi/mus_gym.mid",
-        "sound/songs/midi/mus_littleroot_test.mid",
-        "sound/songs/midi/mus_oldale.mid",
-        "sound/songs/midi/mus_petalburg.mid",
-        "sound/songs/midi/mus_route101.mid",
-        "sound/songs/midi/mus_route102.mid",
-        "sound/songs/midi/mus_surf.mid",
-        "sound/songs/midi/mus_victory_wild.mid",
-        "sound/songs/midi/se_fanfare_1trk.mid",
-        "sound/songs/midi/se_pc_login.mid",
-        "sound/songs/midi/se_use_item.mid",
+    let projectSongs: [(path: String, cppID: String)] = [
+        ("sound/songs/midi/mus_caught.mid",
+         "roundtrip/MidiRoundtripTest::songM2Roundtrip[mus_caught]"),
+        ("sound/songs/midi/mus_dummy.mid",
+         "roundtrip/MidiRoundtripTest::songM2Roundtrip[mus_dummy]"),
+        ("sound/songs/midi/mus_gsc_route38.mid",
+         "roundtrip/MidiRoundtripTest::songM2Roundtrip[mus_gsc_route38]"),
+        ("sound/songs/midi/mus_gym.mid",
+         "roundtrip/MidiRoundtripTest::songM2Roundtrip[mus_gym]"),
+        ("sound/songs/midi/mus_littleroot_test.mid",
+         "roundtrip/MidiRoundtripTest::songM2Roundtrip[mus_littleroot_test]"),
+        ("sound/songs/midi/mus_oldale.mid",
+         "roundtrip/MidiRoundtripTest::songM2Roundtrip[mus_oldale]"),
+        ("sound/songs/midi/mus_petalburg.mid",
+         "roundtrip/MidiRoundtripTest::songM2Roundtrip[mus_petalburg]"),
+        ("sound/songs/midi/mus_route101.mid",
+         "roundtrip/MidiRoundtripTest::songM2Roundtrip[mus_route101]"),
+        ("sound/songs/midi/mus_route102.mid",
+         "roundtrip/MidiRoundtripTest::songM2Roundtrip[mus_route102]"),
+        ("sound/songs/midi/mus_surf.mid",
+         "roundtrip/MidiRoundtripTest::songM2Roundtrip[mus_surf]"),
+        ("sound/songs/midi/mus_victory_wild.mid",
+         "roundtrip/MidiRoundtripTest::songM2Roundtrip[mus_victory_wild]"),
+        ("sound/songs/midi/se_fanfare_1trk.mid",
+         "roundtrip/MidiRoundtripTest::songM2Roundtrip[se_fanfare_1trk]"),
+        ("sound/songs/midi/se_pc_login.mid",
+         "roundtrip/MidiRoundtripTest::songM2Roundtrip[se_pc_login]"),
+        ("sound/songs/midi/se_use_item.mid",
+         "roundtrip/MidiRoundtripTest::songM2Roundtrip[se_use_item]"),
     ]
+    let exportRoot = CheckEnvironment.fixtureRoot.map {
+        URL(fileURLWithPath: $0).appendingPathComponent("swiftcore-midi-export")
+    }
 
-    for relativePath in projectSongs {
-        let cppID = "no-row/core/smf.cpp/normal-project-song/\(relativePath)"
-        if relativePath == "sound/songs/midi/se_fanfare_1trk.mid" {
+    for song in projectSongs {
+        let encodedOutput = exportRoot?.appendingPathComponent("encoded")
+            .appendingPathComponent(URL(fileURLWithPath: song.path).lastPathComponent)
+        if song.path == "sound/songs/midi/se_fanfare_1trk.mid" {
             // The source fixture is format 0, so its bytes are not the canonical format-1 output.
             // Retain the independently decoded routing/order contract instead of transcribing a
             // long output vector from either implementation.
             compareFixture(
-                relativePath: relativePath, cppID: cppID, assertCanonicalBytes: false,
+                relativePath: song.path, cppID: song.cppID, assertCanonicalBytes: false,
                 expectedFormatZero: true,
                 expectedDecoded: DecodedCodecExpectation(
                     division: 24, wasFormatZero: true, endTicks: [144, 144],
@@ -242,11 +263,13 @@ func runMidiCodecSuite(_ report: CheckReport) {
                             chunk: 1, index: 12,
                             event: .channel(tick: 108, status: 0x80, data0: 0x54)),
                     ]),
-                report: report)
+                encodedOutputURL: encodedOutput, report: report)
         } else {
-            compareFixture(relativePath: relativePath, cppID: cppID, report: report)
+            compareFixture(relativePath: song.path, cppID: song.cppID,
+                           encodedOutputURL: encodedOutput, report: report)
         }
     }
+    runMidiExportEquivalence(projectSongs: projectSongs, exportRoot: exportRoot, report: report)
     for fixture in fixtures {
         compareFixture(relativePath: fixture.path, cppID: fixture.cppID,
                        expectedCanonicalBytes: fixture.canonical,
@@ -528,12 +551,6 @@ func runMusicalSemanticsSuite(_ report: CheckReport) {
         expectOracleValue(actual, .xcmdLane, Int64(selector), row: "xcmd-\(selector)-lane",
                           cppID: m4aSemanticsID, report: report)
     }
-    let unknownSelectorLane = m4aLane(forXCMDSelector: 0xFF)
-    expectOracleValue(Int64(unknownSelectorLane.rawValue), .xcmdLane, 0xFF,
-                      row: "xcmd-255-out-of-contract oracle fallback",
-                      cppID: m4aSemanticsID, report: report)
-    report.expectEqual(M4aLane.echoVolume, unknownSelectorLane, cppID: m4aSemanticsID,
-                       what: "row=xcmd-255-out-of-contract literal fallback")
     for bend in -8192...8191 {
         expectOracleText(m4aFormatBend(bend), .bend, Int64(bend), row: "bend-\(bend)",
                          cppID: m4aSemanticsID, report: report)
@@ -726,11 +743,73 @@ func runMusicalSemanticsSuite(_ report: CheckReport) {
 
 }
 
+private func runMidiExportEquivalence(
+    projectSongs: [(path: String, cppID: String)], exportRoot: URL?, report: CheckReport
+) {
+    guard let exportRoot else {
+        report.fail(xcmdConverterID, "missing --swiftcore fixture root")
+        return
+    }
+
+    let xcmdFile = MidiFile(division: 24, chunks: [
+        MidiChunk(events: [
+            .meta(type: 0x51, data: hex("07a120")),
+        ]),
+        MidiChunk(events: [
+            .channel(status: 0x90, data0: 60, data1: 64),
+            .channel(status: 0xB0, data0: 0x1E, data1: 0x08),
+            .channel(status: 0xB0, data0: 0x1D, data1: 0x40),
+            .channel(tick: 10, status: 0xB0, data0: 0x1E, data1: 0x09),
+            .channel(tick: 10, status: 0xB0, data0: 0x1D, data1: 0x33),
+            .channel(tick: 20, status: 0xB0, data0: 0x1E, data1: 0x2A),
+            .channel(tick: 20, status: 0xB0, data0: 0x1D, data1: 0x7F),
+            .channel(tick: 24, status: 0x80, data0: 60),
+        ], endTick: 24),
+    ])
+    do {
+        try FileManager.default.createDirectory(at: exportRoot, withIntermediateDirectories: true)
+        try Data(xcmdFile.encoded()).write(
+            to: exportRoot.appendingPathComponent("echo_traffic.mid"), options: .atomic)
+    } catch {
+        report.fail(xcmdConverterID, "Swift XCMD fixture write failed: \(error)")
+    }
+
+    let native = pdc_check_midi_exports()
+    for (index, song) in projectSongs.enumerated() {
+        let bit = UInt32(1) << UInt32(index)
+        if native.matchingSongBits & bit != 0 {
+            report.pass(song.cppID, row: "mid2agb assembly matches Swift encoding")
+        } else {
+            report.fail(
+                song.cppID,
+                "mid2agb assembly mismatch or compile failure " +
+                    "(projectOpen=\(native.projectOpenFailed), " +
+                    "missing=\(native.missingSongBits & bit), " +
+                    "originalCompile=\(native.originalCompileFailureBits & bit), " +
+                    "encodedCompile=\(native.encodedCompileFailureBits & bit))")
+        }
+    }
+
+    report.expectEqual(Int32(0), native.xcmdCompileFailed, cppID: xcmdConverterID,
+                       what: "mid2agb compiles Swift XCMD traffic")
+    report.expectEqual(Int32(1), native.xiecvCount, cppID: xcmdConverterID,
+                       what: "one xIECV command")
+    report.expectEqual(Int32(1), native.xieclCount, cppID: xcmdConverterID,
+                       what: "one xIECL command")
+    report.expectEqual(Int32(1), native.xiecv64Count, cppID: xcmdConverterID,
+                       what: "xIECV carries value 64")
+    report.expectEqual(Int32(1), native.xiecl51Count, cppID: xcmdConverterID,
+                       what: "xIECL carries value 51")
+    report.expectEqual(Int32(0), native.unknown127Count, cppID: xcmdConverterID,
+                       what: "unknown selector emits no echo command")
+}
+
 private func compareFixture(relativePath: String, cppID: String,
                             expectedCanonicalBytes: [UInt8]? = nil,
                             assertCanonicalBytes: Bool = true,
                             expectedFormatZero: Bool = false,
                             expectedDecoded: DecodedCodecExpectation? = nil,
+                            encodedOutputURL: URL? = nil,
                             report: CheckReport) {
     guard let path = CheckEnvironment.fixturePath(relativePath) else {
         report.fail(cppID, "missing --swiftcore fixture root")
@@ -738,23 +817,31 @@ private func compareFixture(relativePath: String, cppID: String,
     }
     do {
         let sourceBytes = Array(try Data(contentsOf: URL(fileURLWithPath: path)))
-        compareCodecCase(cppID: cppID, bytes: sourceBytes, expectedValid: true,
-                         expectedCanonicalBytes: expectedCanonicalBytes ?? sourceBytes,
-                         assertCanonicalBytes: assertCanonicalBytes,
-                         expectedFormatZero: expectedFormatZero,
-                         expectedDecoded: expectedDecoded, report: report)
+        let observation = compareCodecCase(
+            cppID: cppID, bytes: sourceBytes, expectedValid: true,
+            expectedCanonicalBytes: expectedCanonicalBytes ?? sourceBytes,
+            assertCanonicalBytes: assertCanonicalBytes,
+            expectedFormatZero: expectedFormatZero,
+            expectedDecoded: expectedDecoded, report: report)
+        if let encodedOutputURL, observation.valid {
+            try FileManager.default.createDirectory(
+                at: encodedOutputURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true)
+            try Data(observation.encoded).write(to: encodedOutputURL, options: .atomic)
+        }
     } catch {
-        report.fail(cppID, "missing fixture \(path): \(error)")
+        report.fail(cppID, "fixture/export I/O failed for \(path): \(error)")
     }
 }
 
+@discardableResult
 private func compareCodecCase(cppID: String, bytes: [UInt8], expectedValid: Bool,
                               expectedSwiftError: String? = nil,
                               expectedCanonicalBytes: [UInt8]? = nil,
                               assertCanonicalBytes: Bool = true,
                               expectedFormatZero: Bool = false,
                               expectedDecoded: DecodedCodecExpectation? = nil,
-                              report: CheckReport) {
+                              report: CheckReport) -> CodecObservation {
     let swift = swiftCodec(bytes)
     report.expectEqual(expectedValid, swift.valid, cppID: cppID,
                        what: "independent Swift validity (error=\(swift.error))")
@@ -772,7 +859,7 @@ private func compareCodecCase(cppID: String, bytes: [UInt8], expectedValid: Bool
                            what: "independent format-0 provenance")
         expectDecodedStructure(file, expected: expectedDecoded, cppID: cppID, report: report)
     }
-
+    return swift
 }
 
 private func expectDecodedStructure(_ file: MidiFile, expected: DecodedCodecExpectation?,

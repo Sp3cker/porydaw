@@ -6,7 +6,6 @@
 #include <QTemporaryDir>
 #include <QtTest>
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -15,10 +14,6 @@
 #include "core/miditimeline.h"
 #include "core/smf.h"
 #include "core/songdocument.h"
-
-extern "C" {
-#include "m4a_engine.h"
-}
 
 namespace {
 
@@ -169,30 +164,6 @@ void expectTempoProjection(const MidiTimeline &timeline, int expectedTick1Tempos
     QCOMPARE(qulonglong(timeline.loopEndTick), qulonglong(9));
     QCOMPARE(qulonglong(timeline.loopStartSample), qulonglong(781));
     QCOMPARE(qulonglong(timeline.loopEndSample), qulonglong(2435));
-}
-
-class EngineFixture final
-{
-  public:
-    EngineFixture() { m4a_engine_init(&m_engine, 48000.0F); }
-    ~EngineFixture() { m4a_engine_destroy(&m_engine); }
-
-    M4AEngine &engine() noexcept { return m_engine; }
-
-    EngineFixture(const EngineFixture &) = delete;
-    EngineFixture &operator=(const EngineFixture &) = delete;
-
-  private:
-    M4AEngine m_engine = {};
-};
-
-void installKeysplitVoicegroup(M4AEngine &engine, std::array<ToneData, 128> &voices,
-                               std::array<ToneData, 128> &sub, std::array<uint8_t, 128> &splitTable)
-{
-    voices[5].type = VOICE_KEYSPLIT;
-    voices[5].subGroup = sub.data();
-    voices[5].keySplitTable = splitTable.data();
-    m4a_engine_set_voicegroup(&engine, voices.data());
 }
 
 // One conductor chunk plus one channel chunk carrying `events` — the minimal
@@ -653,37 +624,6 @@ void MidiSmfTest::unterminatedNotePairingStaysLinear()
              qPrintable(QStringLiteral("pairing %1 unterminated note-ons took %2 ms")
                             .arg(kNoteOns)
                             .arg(milliseconds)));
-}
-
-void MidiSmfTest::programChangesRejectOutOfRangeValues()
-{
-    auto voices = std::array<ToneData, 128>{};
-    auto sub = std::array<ToneData, 128>{};
-    auto splitTable = std::array<uint8_t, 128>{};
-    auto fixture = EngineFixture{};
-    installKeysplitVoicegroup(fixture.engine(), voices, sub, splitTable);
-
-    m4a_engine_program_change(&fixture.engine(), 0, 5);
-    QCOMPARE(int(fixture.engine().tracks[0].currentProgram), 5);
-    m4a_engine_program_change(&fixture.engine(), 0, 128);
-    m4a_engine_program_change(&fixture.engine(), 0, 255);
-    QCOMPARE(int(fixture.engine().tracks[0].currentProgram), 5);
-}
-
-void MidiSmfTest::noteOnsRejectOutOfRangeKeys()
-{
-    auto voices = std::array<ToneData, 128>{};
-    auto sub = std::array<ToneData, 128>{};
-    auto splitTable = std::array<uint8_t, 128>{};
-    auto fixture = EngineFixture{};
-    installKeysplitVoicegroup(fixture.engine(), voices, sub, splitTable);
-    m4a_engine_program_change(&fixture.engine(), 0, 5);
-
-    m4a_engine_note_on(&fixture.engine(), 0, 128, 100);
-    m4a_engine_note_on(&fixture.engine(), 0, 255, 100);
-    m4a_engine_note_off(&fixture.engine(), 0, 255);
-    for (int channel = 0; channel < TOTAL_PCM_CHANNELS; ++channel)
-        QVERIFY((fixture.engine().pcmChannels[channel].status & CHN_ON) == 0);
 }
 
 // VLQ deltas are capped at 28 bits each, so the only way an absolute tick

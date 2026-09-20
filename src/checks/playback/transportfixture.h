@@ -1,8 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
-#include "core/smf.h"
+#include <QByteArray>
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -10,8 +11,30 @@ extern "C" {
 
 namespace checks {
 
-// Generic SMF channel event for the synthesized transport-suite songs.
-SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1);
+// Minimal MIDI-file fixture representation. The encoder below is independent
+// of production Swift playback logic; production still parses and projects
+// these bytes through pd_playback_data_load_file().
+struct TransportMidiEvent final {
+    uint32_t tick = 0;
+    uint8_t status = 0;
+    uint8_t data0 = 0;
+    uint8_t data1 = 0;
+    QByteArray payload;
+};
+
+struct TransportMidiTrack final {
+    std::vector<TransportMidiEvent> events;
+    uint32_t endTick = 0;
+};
+
+struct TransportMidiFile final {
+    uint16_t division = 24;
+    std::vector<TransportMidiTrack> tracks;
+
+    QByteArray encode() const;
+};
+
+TransportMidiEvent channelEvent(uint32_t tick, uint8_t status, uint8_t data0, uint8_t data1);
 
 // Synthesized transport-suite songs (all 24 divisions/quarter, 120 BPM, so
 // the tick->sample math is exact at any engine rate):
@@ -25,8 +48,8 @@ SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data
 // unload-while-playing scenario exercises the PLAYER (not a preview) as the
 // source of the sounding channel. `program` selects the bank voice; 2 is
 // the PSG square (the CGB-channel scenarios).
-SmfFile buildSilentSong();
-SmfFile buildNoteSong(uint8_t program = 0);
+TransportMidiFile buildSilentSong();
+TransportMidiFile buildNoteSong(uint8_t program = 0);
 
 // A minimal in-memory voicegroup for the AudioEngine transport suites: one
 // looped PCM square wave, instant attack, full sustain; only the release

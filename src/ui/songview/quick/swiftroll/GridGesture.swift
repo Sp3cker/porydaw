@@ -1,4 +1,5 @@
 import Foundation
+import PorydawCore
 
 // Pointer interaction state machine for the piano grid. Each kind carries
 // only the state that kind actually uses; transitions happen in updated(x:y:).
@@ -50,7 +51,7 @@ enum GridGesture {
         var pressX: Double
         var pressY: Double
         var threshold: Double
-        var hitNoteId: Int
+        var hitNoteId: NoteID
     }
 
     struct Band {

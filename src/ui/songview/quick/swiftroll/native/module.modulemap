@@ -2,7 +2,3 @@ module NativeGridTypography {
     header "font_metrics.h"
     export *
 }
-module NativeGridWindowCancel {
-    header "window_cancel.h"
-    export *
-}
