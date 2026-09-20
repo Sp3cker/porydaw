@@ -64,6 +64,7 @@ public final class DocumentSession {
     private let service: ProjectService
     private let inbox = BankResultInbox()
     private let sampleRate: Double
+    private var previousBankVoices: [BankVoice?]
 
     public init(document: SongDocument, service: ProjectService,
                 lease: NativeBankLease, slots: [BankSlotView], dirty: Bool,
@@ -74,6 +75,7 @@ public final class DocumentSession {
         self.bankSlots = slots
         self.bankDirty = dirty
         self.bankLoadName = loadName
+        self.previousBankVoices = slots.map(\.voice)
         self.sampleRate = sampleRate
         self.timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
         document.onChange = { [weak self] change in
@@ -119,7 +121,7 @@ public final class DocumentSession {
         }
         document.didSave(snapshot)
         if let refreshed = receipt.bank {
-            adoptBank(refreshed)
+            adoptBank(refreshed, remembersPrevious: false)
         }
     }
 
@@ -129,10 +131,10 @@ public final class DocumentSession {
     public func applyBankEdit(slot: Int, value: BankVoice,
                               expected: BankVoice?) async throws -> AppliedBankEdit {
         try requireOpen()
-        if bankSlots.indices.contains(slot), bankSlots[slot].voice != expected {
-            // A request queued while another transition was pending can resume
-            // after that transition publishes its new view. Refuse it at the
-            // session gate instead of submitting its now-stale expectation.
+        if bankSlots.indices.contains(slot),
+           bankSlots[slot].voice != expected,
+           previousBankVoices.indices.contains(slot),
+           previousBankVoices[slot] == expected {
             throw ProjectServiceError.operationFailed(
                 "A bank transition is already in progress.")
         }
@@ -145,14 +147,14 @@ public final class DocumentSession {
         }
         let result = try await service.bankApply(lease: bankLease, slot: slot,
                                                  value: value, expected: expected)
-        document.history.endBankTransition(transition)
-        ownsTransition = false
-        document.history.recordConfirmedBank(ServiceBankAction(
-            service: service, slot: slot, before: expected, after: value,
-            token: result.materializationToken,
-            materializedBlank: result.materializationToken != nil,
-            current: result, inbox: inbox))
         adoptBank(result)
+        let materializationToken = expected == nil ? result.materializationToken : nil
+        document.history.finishBankTransition(transition, recording: ServiceBankAction(
+            service: service, slot: slot, before: expected, after: value,
+            token: materializationToken,
+            materializedBlank: materializationToken != nil,
+            current: result, inbox: inbox))
+        ownsTransition = false
         return result
     }
 
@@ -178,13 +180,16 @@ public final class DocumentSession {
 
     /// Breaks presenter callbacks first, then releases the service worker
     /// after its outstanding work finishes. Owned leases outlive the session.
-    public func close() async {
-        guard !document.history.bankTransitionInFlight else { return }
+    /// Returns `false` without changing the session while a bank transition owns it.
+    @discardableResult
+    public func close() async -> Bool {
+        guard !document.history.bankTransitionInFlight else { return false }
         onChange = nil
         onPlayback = nil
         document.onChange = nil
         await service.close()
         isClosed = true
+        return true
     }
 
     // MARK: - Internals
@@ -195,7 +200,10 @@ public final class DocumentSession {
         }
     }
 
-    private func adoptBank(_ result: AppliedBankEdit) {
+    private func adoptBank(_ result: AppliedBankEdit, remembersPrevious: Bool = true) {
+        if remembersPrevious {
+            previousBankVoices = bankSlots.map(\.voice)
+        }
         bankLease = result.lease
         bankSlots = result.slots
         bankDirty = result.dirty

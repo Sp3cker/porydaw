@@ -44,11 +44,11 @@ extension SongDocument {
     public func addNotes(_ notes: [NewNote]) throws -> [NoteID] {
         guard history.acceptsDocumentMutation else { return [] }
         guard !notes.isEmpty else { return [] }
-        var candidate = state
+        var mutation = DocumentMutation(state)
         var spans: [PlannedNote] = []
         spans.reserveCapacity(notes.count)
         for note in notes {
-            guard let mapping = mapping(for: note.track, in: candidate.file) else {
+            guard let mapping = mapping(for: note.track, in: mutation.state.file) else {
                 throw NoteEditError.invalidTrack(note.track)
             }
             guard note.pitch <= 127 else { throw NoteEditError.invalidPitch(Int(note.pitch)) }
@@ -63,36 +63,37 @@ extension SongDocument {
         guard participantsAreCompatible(spans, allowExactDuplicates: true) else {
             throw NoteEditError.conflictingEditedNotes
         }
-        applyEditedWins(spans: spans, editedIDs: Set(), to: &candidate)
+        applyEditedWins(spans: spans, editedIDs: Set(), to: &mutation)
         var insertedIDs: [NoteID] = []
         insertedIDs.reserveCapacity(notes.count)
         for note in notes {
-            guard let mapping = mapping(for: note.track, in: candidate.file) else {
+            guard let mapping = mapping(for: note.track, in: mutation.state.file) else {
                 throw NoteEditError.invalidTrack(note.track)
             }
             let duration = max(note.duration, 1)
             let id = mintNoteID()
             insertedIDs.append(id)
-            Self.insert(.channel(tick: note.tick, status: 0x90 | mapping.channel,
-                                 data0: note.pitch,
-                                 data1: clampVelocity(Int(note.velocity)), noteID: id),
-                        into: &candidate.file.chunks[mapping.chunk])
-            Self.insert(.channel(tick: note.tick + duration, status: 0x90 | mapping.channel,
-                                 data0: note.pitch, data1: 0),
-                        into: &candidate.file.chunks[mapping.chunk])
+            mutation.insert(.channel(tick: note.tick, status: 0x90 | mapping.channel,
+                                     data0: note.pitch,
+                                     data1: clampVelocity(Int(note.velocity)), noteID: id),
+                            chunk: mapping.chunk)
+            mutation.insert(.channel(tick: note.tick + duration, status: 0x90 | mapping.channel,
+                                     data0: note.pitch, data1: 0), chunk: mapping.chunk)
         }
-        commit(before: state, after: candidate, group: nil, operation: .addNotes)
+        commit(mutation, group: nil, operation: .addNotes)
         return insertedIDs
     }
 
     public func deleteNotes(_ ids: [NoteID]) {
         guard history.acceptsDocumentMutation else { return }
         guard !ids.isEmpty, let resolved = resolve(ids, in: state) else { return }
-        var candidate = state
-        remove(resolved, from: &candidate)
-        commit(before: state, after: candidate, group: nil, operation: .deleteNotes)
+        var mutation = DocumentMutation(state)
+        remove(resolved, from: &mutation)
+        commit(mutation, group: nil, operation: .deleteNotes)
     }
 
+    /// `tickDelta` and `keyDelta` are cumulative from the gesture's starting
+    /// notes when `group` is reused; they are not per-update increments.
     public func moveNotes(_ ids: [NoteID], byTicks tickDelta: Int64, byKeys keyDelta: Int,
                           group: HistoryGroup? = nil) {
         guard history.acceptsDocumentMutation else { return }
@@ -113,6 +114,8 @@ extension SongDocument {
              group: group, operation: operation)
     }
 
+    /// `pitches` is the cumulative gesture result relative to the notes at the
+    /// group's start when `group` is reused.
     public func moveNotes(_ ids: [NoteID], toPitches pitches: [UInt8],
                           group: HistoryGroup? = nil) {
         guard history.acceptsDocumentMutation else { return }
@@ -128,6 +131,8 @@ extension SongDocument {
              group: group, operation: operation)
     }
 
+    /// `delta` is cumulative from the gesture's starting edge when `group` is
+    /// reused; it is not a per-update increment.
     public func resizeNotes(_ ids: [NoteID], edge: ResizeEdge, byTicks delta: Int64,
                             group: HistoryGroup? = nil) {
         guard history.acceptsDocumentMutation else { return }
@@ -198,20 +203,22 @@ extension SongDocument {
 
     private func applyVelocities(_ orderedIDs: [NoteID], valuesByID: [NoteID: Int],
                                  notesByID: [NoteID: Note]) {
-        var candidate = state
+        var mutation = DocumentMutation(state)
         var changed = false
         for id in orderedIDs {
             guard let note = notesByID[id], let velocity = valuesByID[id] else { continue }
             let target = clampVelocity(velocity)
             guard target != note.velocity,
                   case let .channel(status, pitch, _) =
-                    candidate.file.chunks[note.chunk].events[note.onIndex].payload else { continue }
-            candidate.file.chunks[note.chunk].events[note.onIndex].payload =
-                .channel(status: status, data0: pitch, data1: target)
+                    mutation.state.file.chunks[note.chunk].events[note.onIndex].payload else {
+                continue
+            }
+            var event = mutation.state.file.chunks[note.chunk].events[note.onIndex]
+            event.payload = .channel(status: status, data0: pitch, data1: target)
+            mutation.replace(chunk: note.chunk, offset: note.onIndex, with: event)
             changed = true
         }
-        commit(before: state, after: candidate, group: nil, operation: .setVelocities,
-               changed: changed)
+        commit(mutation, group: nil, operation: .setVelocities, changed: changed)
     }
 
     private func move(_ ids: [NoteID], original: [Note], destinations: [(Tick, UInt8)],
@@ -242,8 +249,6 @@ extension SongDocument {
         for (index, relocation) in relocations.enumerated() {
             let note = relocation.original
             if let end = relocation.endTick {
-                // Every selected participant remains part of validation even
-                // when its requested destination equals its origin.
                 spans.append(PlannedNote(track: note.track, chunk: note.chunk,
                                          pitch: relocation.pitch, tick: relocation.tick,
                                          endTick: end))
@@ -255,21 +260,21 @@ extension SongDocument {
             active.append(index)
         }
         guard participantsAreCompatible(spans, allowExactDuplicates: false) else { return }
-        var candidate = base
+        var mutation = DocumentMutation(base)
         let activeIDs = active.map { ids[$0] }
         applyEditedWins(spans: spans, editedIDs: Set(ids),
-                        to: &candidate, reference: base)
-        if let selectedInCandidate = resolve(activeIDs, in: candidate) {
-            remove(selectedInCandidate, from: &candidate)
+                        to: &mutation, reference: base)
+        if let selectedInCandidate = resolve(activeIDs, in: mutation.state) {
+            remove(selectedInCandidate, from: &mutation)
         } else if !activeIDs.isEmpty {
             return
         }
         for index in active {
             let relocation = relocations[index]
             insertMoved(relocation.original, tick: relocation.tick, pitch: relocation.pitch,
-                        endTick: relocation.endTick, source: base, into: &candidate)
+                        endTick: relocation.endTick, source: base, into: &mutation)
         }
-        commit(before: base, after: candidate, group: group, operation: operation,
+        commit(mutation, group: group, operation: operation,
                changed: !active.isEmpty || group != nil,
                returnsToOrigin: active.isEmpty)
     }
@@ -306,19 +311,20 @@ extension SongDocument {
         return notesByID
     }
 
-    private func remove(_ notes: [Note], from candidate: inout SongState) {
-        var removals = Array(repeating: [Int](), count: candidate.file.chunks.count)
+    private func remove(_ notes: [Note], from mutation: inout DocumentMutation) {
+        var removals = Array(repeating: [Int](), count: mutation.state.file.chunks.count)
         for note in notes {
             removals[note.chunk].append(note.onIndex)
             if let endIndex = note.endIndex { removals[note.chunk].append(endIndex) }
         }
-        applyRemovals(removals, to: &candidate)
+        applyRemovals(removals, to: &mutation)
     }
 
     private func applyEditedWins(spans: [PlannedNote], editedIDs: Set<NoteID>,
-                                 to candidate: inout SongState, reference: SongState? = nil) {
+                                 to mutation: inout DocumentMutation,
+                                 reference: SongState? = nil) {
         guard !spans.isEmpty else { return }
-        let source = reference ?? candidate
+        let source = reference ?? mutation.state
         let orderedSpans = spans.sorted {
             ($0.track, $0.pitch, $0.tick) < ($1.track, $1.pitch, $1.tick)
         }
@@ -357,7 +363,9 @@ extension SongDocument {
                 }
                 if covered {
                     removals[stationary.chunk].append(stationary.onIndex)
-                    if let endIndex = stationary.endIndex { removals[stationary.chunk].append(endIndex) }
+                    if let endIndex = stationary.endIndex {
+                        removals[stationary.chunk].append(endIndex)
+                    }
                 } else {
                     if trimStart {
                         removals[stationary.chunk].append(stationary.onIndex)
@@ -374,8 +382,8 @@ extension SongDocument {
                 }
             }
         }
-        applyRemovals(removals, to: &candidate)
-        for (chunk, event) in insertions { Self.insert(event, into: &candidate.file.chunks[chunk]) }
+        applyRemovals(removals, to: &mutation)
+        for (chunk, event) in insertions { mutation.insert(event, chunk: chunk) }
     }
 
     private func projectedNotes(track: Int, in songState: SongState) -> [Note] {
@@ -386,14 +394,14 @@ extension SongDocument {
                          channel: map.tracks[track].channel, chunk: chunk, track: track)
     }
 
-    private func applyRemovals(_ removals: [[Int]], to candidate: inout SongState) {
+    private func applyRemovals(_ removals: [[Int]], to mutation: inout DocumentMutation) {
         for chunk in removals.indices where !removals[chunk].isEmpty {
             let sorted = removals[chunk].sorted(by: >)
             var previous: Int?
             for index in sorted {
                 guard index != previous else { continue }
-                if candidate.file.chunks[chunk].events.indices.contains(index) {
-                    candidate.file.chunks[chunk].events.remove(at: index)
+                if mutation.state.file.chunks[chunk].events.indices.contains(index) {
+                    mutation.remove(chunk: chunk, offset: index)
                 }
                 previous = index
             }
@@ -401,21 +409,21 @@ extension SongDocument {
     }
 
     private func insertMoved(_ note: Note, tick: Tick, pitch: UInt8, endTick: UInt64?,
-                             source: SongState, into candidate: inout SongState) {
+                             source: SongState, into mutation: inout DocumentMutation) {
         var on = source.file.chunks[note.chunk].events[note.onIndex]
         on.tick = tick
         if case let .channel(status, _, velocity) = on.payload {
             on.payload = .channel(status: status, data0: pitch, data1: velocity)
         }
         on.noteID = note.id
-        Self.insert(on, into: &candidate.file.chunks[note.chunk])
+        mutation.insert(on, chunk: note.chunk)
         if let endTick, let endIndex = note.endIndex {
             var end = source.file.chunks[note.chunk].events[endIndex]
             end.tick = Tick(endTick)
             if case let .channel(status, _, velocity) = end.payload {
                 end.payload = .channel(status: status, data0: pitch, data1: velocity)
             }
-            Self.insert(end, into: &candidate.file.chunks[note.chunk])
+            mutation.insert(end, chunk: note.chunk)
         }
     }
 }

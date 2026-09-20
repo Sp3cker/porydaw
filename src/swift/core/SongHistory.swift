@@ -29,11 +29,18 @@ public enum BankHistoryReplayError: Error, Equatable, Sendable {
 public protocol BankHistoryAction: AnyObject {
     func apply(direction: BankHistoryDirection) async throws
     func merged(with newer: any BankHistoryAction) -> (any BankHistoryAction)?
+    func rebaseCurrent(with newer: any BankHistoryAction)
     var isRedundant: Bool { get }
 }
 
 public extension BankHistoryAction {
     var isRedundant: Bool { false }
+    func rebaseCurrent(with _: any BankHistoryAction) {}
+}
+
+internal enum EventChange: Sendable {
+    case insert(EventInsertion)
+    case remove(EventRemoval)
 }
 
 internal struct EventInsertion: Sendable {
@@ -48,12 +55,6 @@ internal struct EventRemoval: Sendable {
     let event: MidiEvent
 }
 
-internal struct EventReplacement: Sendable {
-    let chunk: Int
-    let offset: Int
-    let before: MidiEvent
-    let after: MidiEvent
-}
 
 internal struct ChunkInsertion: Sendable {
     let offset: Int
@@ -65,10 +66,15 @@ internal struct ChunkRemoval: Sendable {
     let chunk: MidiChunk
 }
 
+internal struct ChunkMove: Sendable {
+    let from: Int
+    let to: Int
+}
+
 internal struct ChunkEndChange: Sendable {
     let chunk: Int
     let before: Tick
-    let after: Tick
+    var after: Tick
 }
 
 internal struct FileMetadataChange: Sendable {
@@ -98,190 +104,124 @@ internal struct ConfigChange: Sendable {
     let after: SongConfig
 }
 
-/// A compact reversible record of one accepted document transaction. Editing
-/// code constructs it while its short-lived candidate is still owned by the
-/// mutation. Only changed values are retained; unrelated song state is not.
+/// A compact reversible record assembled by an accepted document mutation.
+/// Only exact inserted and removed values are retained; unrelated song state
+/// is not.
 internal struct DocumentChangeSet: Sendable {
-    var eventInsertions: [EventInsertion] = []
-    var eventRemovals: [EventRemoval] = []
-    var eventReplacements: [EventReplacement] = []
+    var events: [EventChange] = []
     var chunkInsertions: [ChunkInsertion] = []
     var chunkRemovals: [ChunkRemoval] = []
+    var chunkMoves: [ChunkMove] = []
     var chunkEnds: [ChunkEndChange] = []
     var fileMetadata: FileMetadataChange?
     var tempo: TempoChange?
     var config: ConfigChange?
 
     var isEmpty: Bool {
-        eventInsertions.isEmpty && eventRemovals.isEmpty && eventReplacements.isEmpty &&
-            chunkInsertions.isEmpty && chunkRemovals.isEmpty && chunkEnds.isEmpty &&
+        events.isEmpty && chunkInsertions.isEmpty && chunkRemovals.isEmpty &&
+            chunkMoves.isEmpty && chunkEnds.isEmpty &&
             fileMetadata == nil && tempo == nil && config == nil
     }
 
-    static func capture(before: SongState, after: SongState,
-                        structuralChunks: Bool) -> DocumentChangeSet {
-        var result = DocumentChangeSet()
-        if before.file.division != after.file.division ||
-            before.file.wasFormat0 != after.file.wasFormat0 {
-            result.fileMetadata = FileMetadataChange(
-                beforeDivision: before.file.division, afterDivision: after.file.division,
-                beforeWasFormat0: before.file.wasFormat0,
-                afterWasFormat0: after.file.wasFormat0)
-        }
-        if before.tempo != after.tempo {
-            result.tempo = captureTempo(before: before.tempo, after: after.tempo)
-        }
-        if before.config != after.config {
-            result.config = ConfigChange(before: before.config, after: after.config)
-        }
-        if structuralChunks || before.file.chunks.count != after.file.chunks.count {
-            result.captureChunkLayout(before: before.file.chunks, after: after.file.chunks)
-        } else {
-            for chunk in before.file.chunks.indices {
-                result.captureEvents(chunk: chunk, before: before.file.chunks[chunk],
-                                     after: after.file.chunks[chunk])
-            }
-        }
-        return result
-    }
-
-    mutating func captureEvents(chunk: Int, before: MidiChunk, after: MidiChunk) {
-        if before.endTick != after.endTick {
-            chunkEnds.append(ChunkEndChange(chunk: chunk, before: before.endTick,
-                                            after: after.endTick))
-        }
-        let difference = after.events.difference(from: before.events, by: eventsExactlyEqual)
-        var removals: [EventRemoval] = []
-        var insertions: [EventInsertion] = []
-        for change in difference {
-            switch change {
-            case let .insert(offset, event, _):
-                insertions.append(EventInsertion(chunk: chunk, offset: offset, event: event))
-            case let .remove(offset, event, _):
-                removals.append(EventRemoval(chunk: chunk, offset: offset, event: event))
-            }
-        }
-        if removals.count == 1, insertions.count == 1,
-           removals[0].offset == insertions[0].offset {
-            eventReplacements.append(EventReplacement(
-                chunk: chunk, offset: removals[0].offset,
-                before: removals[0].event, after: insertions[0].event))
-        } else {
-            eventRemovals.append(contentsOf: removals)
-            eventInsertions.append(contentsOf: insertions)
-        }
-    }
-
-    mutating func captureChunkLayout(before: [MidiChunk], after: [MidiChunk]) {
-        let difference = after.difference(from: before, by: chunksExactlyEqual)
-        for change in difference {
-            switch change {
-            case let .insert(offset, chunk, _):
-                chunkInsertions.append(ChunkInsertion(offset: offset, chunk: chunk))
-            case let .remove(offset, chunk, _):
-                chunkRemovals.append(ChunkRemoval(offset: offset, chunk: chunk))
-            }
-        }
-    }
 
     func apply(to state: inout SongState, direction: BankHistoryDirection) {
+        if direction == .undo { applyChunkEnds(to: &state, direction: direction) }
+        if direction == .redo { applyChunks(to: &state, direction: direction) }
+        applyEvents(to: &state, direction: direction)
+        if direction == .undo { applyChunks(to: &state, direction: direction) }
+        if direction == .redo { applyChunkEnds(to: &state, direction: direction) }
+        if let change = fileMetadata {
+            state.file.division = direction == .redo
+                ? change.afterDivision : change.beforeDivision
+            state.file.wasFormat0 = direction == .redo
+                ? change.afterWasFormat0 : change.beforeWasFormat0
+        }
+        if let tempo { applyTempo(tempo, to: &state.tempo, direction: direction) }
+        if let config { state.config = direction == .redo ? config.after : config.before }
+    }
+
+    private func applyChunkEnds(to state: inout SongState,
+                                direction: BankHistoryDirection) {
+        for change in chunkEnds {
+            state.file.chunks[change.chunk].endTick =
+                direction == .redo ? change.after : change.before
+        }
+    }
+
+
+    private func applyTempo(_ change: TempoChange, to tempo: inout [TempoPoint],
+                            direction: BankHistoryDirection) {
         switch direction {
         case .redo:
-            applyChunks(removing: chunkRemovals, inserting: chunkInsertions, to: &state)
-            applyEvents(removing: eventRemovals, replacing: eventReplacements,
-                        inserting: eventInsertions, to: &state)
-            for change in chunkEnds { state.file.chunks[change.chunk].endTick = change.after }
-            if let change = fileMetadata {
-                state.file.division = change.afterDivision
-                state.file.wasFormat0 = change.afterWasFormat0
+            for removal in change.removals.sorted(by: { $0.offset > $1.offset }) {
+                tempo.remove(at: removal.offset)
             }
-            if let tempo { applyTempo(tempo, to: &state.tempo) }
-            if let config { state.config = config.after }
+            for insertion in change.insertions.sorted(by: { $0.offset < $1.offset }) {
+                tempo.insert(insertion.point, at: insertion.offset)
+            }
         case .undo:
-            applyChunks(removing: chunkInsertions.map {
-                ChunkRemoval(offset: $0.offset, chunk: $0.chunk)
-            }, inserting: chunkRemovals.map {
-                ChunkInsertion(offset: $0.offset, chunk: $0.chunk)
-            }, to: &state)
-            applyEvents(removing: eventInsertions.map {
-                EventRemoval(chunk: $0.chunk, offset: $0.offset, event: $0.event)
-            }, replacing: eventReplacements.map {
-                EventReplacement(chunk: $0.chunk, offset: $0.offset,
-                                 before: $0.after, after: $0.before)
-            }, inserting: eventRemovals.map {
-                EventInsertion(chunk: $0.chunk, offset: $0.offset, event: $0.event)
-            }, to: &state)
-            for change in chunkEnds { state.file.chunks[change.chunk].endTick = change.before }
-            if let change = fileMetadata {
-                state.file.division = change.beforeDivision
-                state.file.wasFormat0 = change.beforeWasFormat0
+            for insertion in change.insertions.sorted(by: { $0.offset > $1.offset }) {
+                tempo.remove(at: insertion.offset)
             }
-            if let tempo {
-                applyTempo(TempoChange(
-                    insertions: tempo.removals.map {
-                        TempoInsertion(offset: $0.offset, point: $0.point)
-                    },
-                    removals: tempo.insertions.map {
-                        TempoRemoval(offset: $0.offset, point: $0.point)
-                    }), to: &state.tempo)
+            for removal in change.removals.sorted(by: { $0.offset < $1.offset }) {
+                tempo.insert(removal.point, at: removal.offset)
             }
-            if let config { state.config = config.before }
         }
     }
 
-    private static func captureTempo(before: [TempoPoint], after: [TempoPoint]) -> TempoChange {
-        var result = TempoChange(insertions: [], removals: [])
-        for change in after.difference(from: before) {
-            switch change {
-            case let .insert(offset, point, _):
-                result.insertions.append(TempoInsertion(offset: offset, point: point))
-            case let .remove(offset, point, _):
-                result.removals.append(TempoRemoval(offset: offset, point: point))
+    private func applyChunks(to state: inout SongState, direction: BankHistoryDirection) {
+        switch direction {
+        case .redo:
+            for change in chunkRemovals.sorted(by: { $0.offset > $1.offset }) {
+                state.file.chunks.remove(at: change.offset)
+            }
+            for change in chunkInsertions.sorted(by: { $0.offset < $1.offset }) {
+                state.file.chunks.insert(change.chunk, at: change.offset)
+            }
+            for change in chunkMoves {
+                let chunk = state.file.chunks.remove(at: change.from)
+                state.file.chunks.insert(chunk, at: change.to)
+            }
+        case .undo:
+            for change in chunkMoves.reversed() {
+                let chunk = state.file.chunks.remove(at: change.to)
+                state.file.chunks.insert(chunk, at: change.from)
+            }
+            for change in chunkInsertions.sorted(by: { $0.offset > $1.offset }) {
+                state.file.chunks.remove(at: change.offset)
+            }
+            for change in chunkRemovals.sorted(by: { $0.offset < $1.offset }) {
+                state.file.chunks.insert(change.chunk, at: change.offset)
             }
         }
-        return result
     }
 
-    private func applyTempo(_ change: TempoChange, to tempo: inout [TempoPoint]) {
-        for removal in change.removals.sorted(by: { $0.offset > $1.offset }) {
-            tempo.remove(at: removal.offset)
-        }
-        for insertion in change.insertions.sorted(by: { $0.offset < $1.offset }) {
-            tempo.insert(insertion.point, at: insertion.offset)
-        }
-    }
-
-    private func applyChunks(removing: [ChunkRemoval], inserting: [ChunkInsertion],
-                             to state: inout SongState) {
-        for change in removing.sorted(by: { $0.offset > $1.offset }) {
-            state.file.chunks.remove(at: change.offset)
-        }
-        for change in inserting.sorted(by: { $0.offset < $1.offset }) {
-            state.file.chunks.insert(change.chunk, at: change.offset)
+    private func applyEvents(to state: inout SongState, direction: BankHistoryDirection) {
+        switch direction {
+        case .redo:
+            for change in events { applyEvent(change, to: &state) }
+        case .undo:
+            for change in events.reversed() { unapplyEvent(change, to: &state) }
         }
     }
 
-    private func applyEvents(removing: [EventRemoval], replacing: [EventReplacement],
-                             inserting: [EventInsertion], to state: inout SongState) {
-        for change in removing.sorted(by: {
-            $0.chunk == $1.chunk ? $0.offset > $1.offset : $0.chunk > $1.chunk
-        }) {
-            state.file.chunks[change.chunk].events.remove(at: change.offset)
+    private func applyEvent(_ change: EventChange, to state: inout SongState) {
+        switch change {
+        case let .insert(insertion):
+            state.file.chunks[insertion.chunk].events.insert(
+                insertion.event, at: insertion.offset)
+        case let .remove(removal):
+            state.file.chunks[removal.chunk].events.remove(at: removal.offset)
         }
-        for change in replacing {
-            let precedingRemovals = removing.reduce(into: 0) { count, removal in
-                if removal.chunk == change.chunk && removal.offset < change.offset {
-                    count += 1
-                }
-            }
-            state.file.chunks[change.chunk].events[
-                change.offset - precedingRemovals
-            ] = change.after
-        }
-        for change in inserting.sorted(by: {
-            $0.chunk == $1.chunk ? $0.offset < $1.offset : $0.chunk < $1.chunk
-        }) {
-            state.file.chunks[change.chunk].events.insert(change.event, at: change.offset)
+    }
+
+    private func unapplyEvent(_ change: EventChange, to state: inout SongState) {
+        switch change {
+        case let .insert(insertion):
+            state.file.chunks[insertion.chunk].events.remove(at: insertion.offset)
+        case let .remove(removal):
+            state.file.chunks[removal.chunk].events.insert(
+                removal.event, at: removal.offset)
         }
     }
 }
@@ -334,7 +274,9 @@ public final class SongHistory {
 
     public init() {}
 
+    /// The caller must end any owned bank transition before publishing a save.
     public func markSaved(_ identity: DocumentIdentity) {
+        assert(transition == nil, "Cannot mark saved during a bank transition.")
         guard transition == nil else { return }
         savedIdentity = identity
         sealMergeBoundary()
@@ -352,8 +294,25 @@ public final class SongHistory {
         if transition == token { transition = nil }
     }
 
+    /// Records a confirmed edit when no bank transition owns the history.
     public func recordConfirmedBank(_ action: any BankHistoryAction) {
-        guard transition == nil, !action.isRedundant else { return }
+        assert(transition == nil, "Cannot record a bank edit during a bank transition.")
+        guard transition == nil else { return }
+        recordConfirmedBankOwned(action)
+    }
+
+    /// Publishes the confirmed action and releases its transition as one
+    /// synchronous state change. No other history operation can observe a gap.
+    public func finishBankTransition(_ token: BankTransitionToken,
+                                     recording action: any BankHistoryAction) {
+        assert(transition == token, "Only the transition owner can finish a bank edit.")
+        guard transition == token else { return }
+        recordConfirmedBankOwned(action)
+        transition = nil
+    }
+
+    private func recordConfirmedBankOwned(_ action: any BankHistoryAction) {
+        guard !action.isRedundant else { return }
         let mayMerge = index == entries.count
         discardRedo()
         if mayMerge, index > 0, case var .bank(previous) = entries[index - 1],
@@ -361,6 +320,9 @@ public final class SongHistory {
             if merged.isRedundant {
                 entries.removeLast()
                 index -= 1
+                if index > 0, case let .bank(predecessor) = entries[index - 1] {
+                    predecessor.action.rebaseCurrent(with: merged)
+                }
             } else {
                 previous.action = merged
                 entries[index - 1] = .bank(previous)
@@ -450,9 +412,11 @@ public final class SongHistory {
         return entry.changes
     }
 
+    /// Document mutations are synchronous and must not race an owned bank transition.
     internal func record(changes: DocumentChangeSet, group: HistoryGroup?,
                          operation: HistoryOperation, returnsToOrigin: Bool,
                          trackRemap: TrackRemap?) {
+        assert(transition == nil, "Cannot record a document edit during a bank transition.")
         guard transition == nil else { return }
         let mayMerge = group != nil && index == entries.count
         if mayMerge, let group, index > 0,
@@ -501,16 +465,6 @@ public final class SongHistory {
     }
 }
 
-private func eventsExactlyEqual(_ lhs: MidiEvent, _ rhs: MidiEvent) -> Bool {
-    lhs.tick == rhs.tick && lhs.payload == rhs.payload && lhs.noteID == rhs.noteID
-}
-
-private func chunksExactlyEqual(_ lhs: MidiChunk, _ rhs: MidiChunk) -> Bool {
-    lhs.endTick == rhs.endTick && lhs.events.count == rhs.events.count &&
-        zip(lhs.events, rhs.events).allSatisfy {
-            eventsExactlyEqual($0.0, $0.1)
-        }
-}
 
 internal enum HistoryOperation: Hashable {
     case addNotes

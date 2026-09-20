@@ -148,6 +148,102 @@ public struct TimeSignature: Equatable, Sendable {
 }
 
 @MainActor
+internal struct DocumentMutation {
+    var state: SongState
+    var changes = DocumentChangeSet()
+
+    init(_ state: SongState) {
+        self.state = state
+    }
+
+    mutating func insert(_ event: MidiEvent, chunk: Int) {
+        let oldEnd = state.file.chunks[chunk].endTick
+        let offset = SongDocument.insert(event, into: &state.file.chunks[chunk])
+        changes.events.append(.insert(EventInsertion(
+            chunk: chunk, offset: offset, event: event)))
+        recordEnd(chunk: chunk, before: oldEnd,
+                  after: state.file.chunks[chunk].endTick)
+    }
+
+    @discardableResult
+    mutating func remove(chunk: Int, offset: Int) -> MidiEvent {
+        let event = state.file.chunks[chunk].events.remove(at: offset)
+        changes.events.append(.remove(EventRemoval(
+            chunk: chunk, offset: offset, event: event)))
+        return event
+    }
+
+    mutating func replace(chunk: Int, offset: Int, with event: MidiEvent) {
+        _ = remove(chunk: chunk, offset: offset)
+        state.file.chunks[chunk].events.insert(event, at: offset)
+        changes.events.append(.insert(EventInsertion(
+            chunk: chunk, offset: offset, event: event)))
+    }
+
+    mutating func appendChunk(_ chunk: MidiChunk) {
+        let offset = state.file.chunks.count
+        state.file.chunks.append(chunk)
+        changes.chunkInsertions.append(ChunkInsertion(offset: offset, chunk: chunk))
+    }
+
+    @discardableResult
+    mutating func removeChunk(at offset: Int) -> MidiChunk {
+        let chunk = state.file.chunks.remove(at: offset)
+        changes.chunkRemovals.append(ChunkRemoval(offset: offset, chunk: chunk))
+        return chunk
+    }
+
+    mutating func insertChunk(_ chunk: MidiChunk, at offset: Int) {
+        state.file.chunks.insert(chunk, at: offset)
+        changes.chunkInsertions.append(ChunkInsertion(offset: offset, chunk: chunk))
+    }
+
+    mutating func moveChunk(from: Int, to: Int) {
+        let chunk = state.file.chunks.remove(at: from)
+        state.file.chunks.insert(chunk, at: to)
+        changes.chunkMoves.append(ChunkMove(from: from, to: to))
+    }
+
+    mutating func setConfig(_ config: SongConfig) {
+        guard state.config != config else { return }
+        changes.config = ConfigChange(before: state.config, after: config)
+        state.config = config
+    }
+
+    mutating func setChunkEnd(_ tick: Tick, chunk: Int) {
+        let before = state.file.chunks[chunk].endTick
+        guard before != tick else { return }
+        state.file.chunks[chunk].endTick = tick
+        recordEnd(chunk: chunk, before: before, after: tick)
+    }
+
+    mutating func setTempo(_ tempo: [TempoPoint]) {
+        guard state.tempo != tempo else { return }
+        var change = TempoChange(insertions: [], removals: [])
+        for item in tempo.difference(from: state.tempo) {
+            switch item {
+            case let .insert(offset, point, _):
+                change.insertions.append(TempoInsertion(offset: offset, point: point))
+            case let .remove(offset, point, _):
+                change.removals.append(TempoRemoval(offset: offset, point: point))
+            }
+        }
+        state.tempo = tempo
+        changes.tempo = change
+    }
+
+    private mutating func recordEnd(chunk: Int, before: Tick, after: Tick) {
+        guard before != after else { return }
+        if let index = changes.chunkEnds.firstIndex(where: { $0.chunk == chunk }) {
+            changes.chunkEnds[index].after = after
+        } else {
+            changes.chunkEnds.append(ChunkEndChange(
+                chunk: chunk, before: before, after: after))
+        }
+    }
+}
+
+@MainActor
 public final class SongDocument {
     public private(set) var state: SongState
     public let history: SongHistory
@@ -279,17 +375,13 @@ public final class SongDocument {
         history.markSaved(snapshot.identity)
     }
 
-    internal func commit(before: SongState, after: SongState, group: HistoryGroup?,
+
+    internal func commit(_ mutation: DocumentMutation, group: HistoryGroup?,
                          operation: HistoryOperation, changed: Bool = true,
                          returnsToOrigin: Bool = false, trackRemap: TrackRemap? = nil) {
-        guard history.acceptsDocumentMutation, changed, after != state else { return }
-        let structuralChunks = before.file.chunks.count != after.file.chunks.count ||
-            operation == .addTrack || operation == .duplicateTrack ||
-            operation == .deleteTrack || operation == .moveTrack
-        let changes = DocumentChangeSet.capture(before: before, after: after,
-                                                structuralChunks: structuralChunks)
-        state = after
-        history.record(changes: changes, group: group, operation: operation,
+        guard history.acceptsDocumentMutation, changed, mutation.state != state else { return }
+        state = mutation.state
+        history.record(changes: mutation.changes, group: group, operation: operation,
                        returnsToOrigin: returnsToOrigin, trackRemap: trackRemap)
         publish(trackRemap: trackRemap)
     }
@@ -316,7 +408,8 @@ public final class SongDocument {
         return result
     }
 
-    internal static func insert(_ event: MidiEvent, into chunk: inout MidiChunk) {
+    @discardableResult
+    internal static func insert(_ event: MidiEvent, into chunk: inout MidiChunk) -> Int {
         var index = chunk.events.endIndex
         while index > chunk.events.startIndex, chunk.events[index - 1].tick > event.tick {
             index -= 1
@@ -328,7 +421,9 @@ public final class SongDocument {
         }
         chunk.events.insert(event, at: index)
         chunk.endTick = max(chunk.endTick, event.tick)
+        return index
     }
+
     internal static func pair(events: [MidiEvent], channel: UInt8, chunk: Int,
                               track: Int) -> [Note] {
         withUnsafeTemporaryAllocation(of: Int.self, capacity: 16 * 256) { nextEnd in

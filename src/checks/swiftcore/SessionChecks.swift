@@ -836,13 +836,35 @@ internal func runBankHistorySuite(_ report: CheckReport) {
                     "merge rules threw: \(error)")
     }
 
+    do {
+        var panOut = session.bankSlots[0].voice!
+        panOut.pan = 20
+        let panOrigin = session.bankSlots[0].voice!
+        _ = try runBlocking {
+            try await session.applyBankEdit(slot: 0, value: panOut, expected: panOrigin)
+        }
+        _ = try runBlocking {
+            try await session.applyBankEdit(slot: 0, value: panOrigin, expected: panOut)
+        }
+        let reachedPreceding = try runBlocking { try await session.undo() }
+        report.expect(reachedPreceding && session.bankSlots[3].kind == BankSlotKind.none,
+                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+                      message: "real-service pan A-to-B-to-A removes its entry so undo reaches the preceding materialization")
+        _ = try runBlocking { try await session.redo() }
+    } catch {
+        report.fail("voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+                    "real-service self-cancelling pan merge threw: \(error)")
+    }
+
     // 4. Bank Conflict Handling
+    let undoBeforeInitialConflict = session.document.history.canUndo
+    let redoBeforeInitialConflict = session.document.history.canRedo
     do {
         // Expected value mismatch (stale voice) must trigger bankConflict
         let staleVoice = BankVoice(macro: BankVoiceMacro.square1, key: 99, pan: 99)
         _ = try runBlocking {
-            try await service.bankApply(lease: session.bankLease, slot: 0,
-                                        value: BankVoice(), expected: staleVoice)
+            try await session.applyBankEdit(slot: 0, value: BankVoice(),
+                                            expected: staleVoice)
         }
         report.fail("project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
                     "stale expected voice should trigger bankConflict")
@@ -854,6 +876,12 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         report.fail("project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
                     "unexpected error type: \(error)")
     }
+    report.expectEqual(undoBeforeInitialConflict, session.document.history.canUndo,
+                       cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+                       what: "initial conflict leaves canUndo unchanged")
+    report.expectEqual(redoBeforeInitialConflict, session.document.history.canRedo,
+                       cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+                       what: "initial conflict leaves canRedo unchanged")
 
     // Materializing an already occupied slot must conflict
     do {

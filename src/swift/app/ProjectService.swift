@@ -404,14 +404,23 @@ final class ServiceBankAction: BankHistoryAction {
         guard let other = newer as? ServiceBankAction,
               other.service === service,
               other.slot == slot,
+              other.current.lease.sourcePath == current.lease.sourcePath,
               !materializedBlank, !other.materializedBlank,
               token == nil, other.token == nil,
               let oldest = before, let middle = other.before,
+              middle == after,
               bankChangedFieldMask(oldest, after) == bankChangedFieldMask(middle, other.after)
         else { return nil }
         return ServiceBankAction(service: service, slot: slot, before: oldest,
                                  after: other.after, token: nil, materializedBlank: false,
                                  current: other.current, inbox: inbox)
+    }
+
+    func rebaseCurrent(with newer: any BankHistoryAction) {
+        guard let other = newer as? ServiceBankAction,
+              other.service === service,
+              other.current.lease.sourcePath == current.lease.sourcePath else { return }
+        current = other.current
     }
 }
 
