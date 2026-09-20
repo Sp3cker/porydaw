@@ -1696,8 +1696,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 2,
       "swiftTargets": "src/checks/swiftcore/NoteChecks.swift compatibilityRegressions mixed-participant rejection assertion",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — history-rework regression scenarios re-executed fresh at this revision (controller 2026-09-20)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification of the repaired H4 scenario"
     },
@@ -2017,8 +2021,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift rawTempoAndSignatureEditing encoded rewind/replay assertion",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — history-rework regression scenarios re-executed fresh at this revision (controller 2026-09-20)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification of the repaired raw mutation history scenario",
       "noRowMarker": true,
@@ -2034,8 +2042,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 3,
       "swiftTargets": "src/checks/swiftcore/EventChecks.swift rawTempoAndSignatureEditing reorder undo/redo assertion",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — history-rework regression scenarios re-executed fresh at this revision (controller 2026-09-20)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification of the repaired raw reorder history scenario",
       "noRowMarker": true,
@@ -3239,23 +3251,220 @@
       "reconciliationNotes": "Scout grouped this registered filter as a deferred-UI candidate; exact case names are intentionally deferred until final T7/T8 evidence adjudication."
     },
     {
-      "cppId": "ignorecheck/catalog-suite[case-names-pending]",
-      "source": "src/checks/checkcatalog.cpp:387",
-      "fixturesAndInputs": "Harness fixtures and inputs registered by checkcatalog.cpp",
-      "operations": "Exercise the registered legacy transport or implementation harness",
-      "observableAssertions": "legacy .porydaw sidecar .gitignore authoring is outside the replacement architecture",
+      "cppId": "ignorecheck/SidecarIgnoreTest::appendsToExistingLfFile",
+      "source": "src/checks/project/ignore.cpp:95",
+      "fixturesAndInputs": "existing LF .gitignore",
+      "operations": "append .porydaw entry",
+      "observableAssertions": "existing bytes and LF style preserved",
       "classification": "obsolete transport/implementation candidate",
       "dueTask": null,
-      "swiftTargets": "No replacement target unless independent exclusion review rejects retirement.",
-      "status": "pending",
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent exclusion approval with replacement evidence",
-        "rationale": "legacy .porydaw sidecar .gitignore authoring is outside the replacement architecture"
-      },
-      "caseNamesPending": true,
-      "pendingGap": "Independent exclusion approval has not yet been recorded."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy .porydaw sidecar .gitignore authoring is outside the replacement architecture.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
+    },
+    {
+      "cppId": "ignorecheck/SidecarIgnoreTest::alreadyPresentSpellingsAreByteNoops[bare]",
+      "source": "src/checks/project/ignore.cpp:117",
+      "fixturesAndInputs": "bare .porydaw spelling",
+      "operations": "ensure sidecar directory",
+      "observableAssertions": "byte no-op",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
+      "runEvidence": null,
+      "exclusionReview": {
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy .porydaw sidecar .gitignore authoring is outside the replacement architecture.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
+    },
+    {
+      "cppId": "ignorecheck/SidecarIgnoreTest::alreadyPresentSpellingsAreByteNoops[directory]",
+      "source": "src/checks/project/ignore.cpp:117",
+      "fixturesAndInputs": "directory .porydaw/ spelling",
+      "operations": "ensure sidecar directory",
+      "observableAssertions": "byte no-op",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
+      "runEvidence": null,
+      "exclusionReview": {
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy .porydaw sidecar .gitignore authoring is outside the replacement architecture.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
+    },
+    {
+      "cppId": "ignorecheck/SidecarIgnoreTest::alreadyPresentSpellingsAreByteNoops[anchored-bare]",
+      "source": "src/checks/project/ignore.cpp:117",
+      "fixturesAndInputs": "anchored /.porydaw spelling",
+      "operations": "ensure sidecar directory",
+      "observableAssertions": "byte no-op",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
+      "runEvidence": null,
+      "exclusionReview": {
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy .porydaw sidecar .gitignore authoring is outside the replacement architecture.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
+    },
+    {
+      "cppId": "ignorecheck/SidecarIgnoreTest::alreadyPresentSpellingsAreByteNoops[anchored-directory]",
+      "source": "src/checks/project/ignore.cpp:117",
+      "fixturesAndInputs": "anchored /.porydaw/ spelling",
+      "operations": "ensure sidecar directory",
+      "observableAssertions": "byte no-op",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
+      "runEvidence": null,
+      "exclusionReview": {
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy .porydaw sidecar .gitignore authoring is outside the replacement architecture.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
+    },
+    {
+      "cppId": "ignorecheck/SidecarIgnoreTest::createsMissingIgnoreFile",
+      "source": "src/checks/project/ignore.cpp:131",
+      "fixturesAndInputs": "Git root without .gitignore",
+      "operations": "create sidecar directory",
+      "observableAssertions": "new ignore file contains .porydaw/",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
+      "runEvidence": null,
+      "exclusionReview": {
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy .porydaw sidecar .gitignore authoring is outside the replacement architecture.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
+    },
+    {
+      "cppId": "ignorecheck/SidecarIgnoreTest::nonRepoCreatesSidecarOnly",
+      "source": "src/checks/project/ignore.cpp:142",
+      "fixturesAndInputs": "non-Git root",
+      "operations": "create sidecar directory",
+      "observableAssertions": "no .gitignore is created",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
+      "runEvidence": null,
+      "exclusionReview": {
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy .porydaw sidecar .gitignore authoring is outside the replacement architecture.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
+    },
+    {
+      "cppId": "ignorecheck/SidecarIgnoreTest::preservesCrlfOnAppend",
+      "source": "src/checks/project/ignore.cpp:154",
+      "fixturesAndInputs": "existing CRLF .gitignore",
+      "operations": "append .porydaw entry",
+      "observableAssertions": "CRLF style preserved",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
+      "runEvidence": null,
+      "exclusionReview": {
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy .porydaw sidecar .gitignore authoring is outside the replacement architecture.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
+    },
+    {
+      "cppId": "ignorecheck/SidecarIgnoreTest::repairsMissingTrailingNewline",
+      "source": "src/checks/project/ignore.cpp:166",
+      "fixturesAndInputs": "ignore file without terminal newline",
+      "operations": "append .porydaw entry",
+      "observableAssertions": "separator newline repaired",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
+      "runEvidence": null,
+      "exclusionReview": {
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy .porydaw sidecar .gitignore authoring is outside the replacement architecture.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
+    },
+    {
+      "cppId": "ignorecheck/SidecarIgnoreTest::gitFileCountsAsRepository",
+      "source": "src/checks/project/ignore.cpp:178",
+      "fixturesAndInputs": ".git worktree file",
+      "operations": "create sidecar directory",
+      "observableAssertions": "ignore entry created",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
+      "runEvidence": null,
+      "exclusionReview": {
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy .porydaw sidecar .gitignore authoring is outside the replacement architecture.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
+    },
+    {
+      "cppId": "ignorecheck/SidecarIgnoreTest::subdirectoryAndSecondCallAreByteNoops",
+      "source": "src/checks/project/ignore.cpp:190",
+      "fixturesAndInputs": "nested sidecar path and repeat call",
+      "operations": "ensure twice",
+      "observableAssertions": "second call is byte no-op",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
+      "runEvidence": null,
+      "exclusionReview": {
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy .porydaw sidecar .gitignore authoring is outside the replacement architecture.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
+    },
+    {
+      "cppId": "ignorecheck/SidecarIgnoreTest::commentedEntryDoesNotCountAsPresent",
+      "source": "src/checks/project/ignore.cpp:205",
+      "fixturesAndInputs": "commented ignore entry",
+      "operations": "ensure sidecar directory",
+      "observableAssertions": "active entry appended",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
+      "runEvidence": null,
+      "exclusionReview": {
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy .porydaw sidecar .gitignore authoring is outside the replacement architecture.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
     },
     {
       "cppId": "keymapcheck/KeymapCheckTest::defaultMatching[automation-pencil]",
@@ -4357,23 +4566,58 @@
       "pendingGap": "Awaiting Task 7 Swift comparison"
     },
     {
-      "cppId": "mkcheck/catalog-suite[case-names-pending]",
-      "source": "src/checks/checkcatalog.cpp:375",
-      "fixturesAndInputs": "Harness fixtures and inputs registered by checkcatalog.cpp",
-      "operations": "Exercise the registered legacy transport or implementation harness",
-      "observableAssertions": "legacy songs.mk-only parser/writer is outside the midi.cfg project contract",
+      "cppId": "mkcheck/SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe",
+      "source": "src/checks/project/mk.cpp:109",
+      "fixturesAndInputs": "songs.mk-only project and registered song",
+      "operations": "parse and rewrite volume flag",
+      "observableAssertions": "only target recipe changes and metadata reloads",
       "classification": "obsolete transport/implementation candidate",
       "dueTask": null,
-      "swiftTargets": "No replacement target unless independent exclusion review rejects retirement.",
-      "status": "pending",
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent exclusion approval with replacement evidence",
-        "rationale": "legacy songs.mk-only parser/writer is outside the midi.cfg project contract"
-      },
-      "caseNamesPending": true,
-      "pendingGap": "Independent exclusion approval has not yet been recorded."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy songs.mk-only parsing and writing is outside the midi.cfg replacement project contract.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
+    },
+    {
+      "cppId": "mkcheck/SongsMkTest::preservesStdReverbVariableSpelling",
+      "source": "src/checks/project/mk.cpp:162",
+      "fixturesAndInputs": "songs.mk recipe using $(STD_REVERB)",
+      "operations": "rewrite volume flag",
+      "observableAssertions": "reverb variable spelling preserved",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
+      "runEvidence": null,
+      "exclusionReview": {
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy songs.mk-only parsing and writing is outside the midi.cfg replacement project contract.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
+    },
+    {
+      "cppId": "mkcheck/SongsMkTest::appendRemoveRuleRoundsTripsByteExactly",
+      "source": "src/checks/project/mk.cpp:206",
+      "fixturesAndInputs": "songs.mk-only project",
+      "operations": "append then remove recipe",
+      "observableAssertions": "file returns to exact original bytes",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
+      "runEvidence": null,
+      "exclusionReview": {
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "Legacy songs.mk-only parsing and writing is outside the midi.cfg replacement project contract.",
+        "decision": "Approved: legacy build-variant or sidecar-ignore behavior is outside the replacement architecture."
+      }
     },
     {
       "cppId": "no-row/core/m4asemantics.cpp exhaustive functions",
@@ -4383,12 +4627,12 @@
       "observableAssertions": "every enum, mnemonic and display string equals C++; all value formatting and advanced labels equal C++",
       "dueTask": 1,
       "swiftTargets": "swiftcore/musicalSemantics no-row/core/m4asemantics.cpp case-key matrix",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -4402,12 +4646,12 @@
       "observableAssertions": "all representative velocity and duration results equal C++ table behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/musicalSemantics no-row/core/mid2agbtables.cpp matrices",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -4421,12 +4665,12 @@
       "observableAssertions": "each row's C++ and Swift validity, bytes, chunk/end-tick summary, format provenance and engine mapping agree",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec one no-row/core/smf.cpp/normal-project-song/<path> failure cppId per fixture",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -4442,12 +4686,12 @@
       "observableAssertions": "constants/domains and bit-exact doubles equal C++; reserved Tick is never emitted by arithmetic; hardware ceiling is 16",
       "dueTask": 1,
       "swiftTargets": "swiftcore/musicalSemantics no-row/core/timedefaults.h and tracklimits.h matrices",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -4461,12 +4705,12 @@
       "observableAssertions": "constants/domains and bit-exact doubles equal C++; reserved Tick is never emitted by arithmetic; hardware ceiling is 16",
       "dueTask": 1,
       "swiftTargets": "swiftcore/musicalSemantics no-row/core/timedefaults.h and tracklimits.h matrices",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -4499,12 +4743,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "src/checks/swiftcore/MidiChecks.swift musicalSemantics direct NoteID assignment, equality, and canonical storage assertions",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null,
       "reconciliationNotes": "Scout assigned this case to Task 2; NoteID storage/equality semantics are implemented and exhaustively compared in the Task 1 musicalSemantics slot."
@@ -5531,23 +5775,19 @@
       "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent silence expectation."
     },
     {
-      "cppId": "production-startup/catalog-suite[case-names-pending]",
-      "source": "src/checks/checkcatalog.cpp:76",
-      "fixturesAndInputs": "Harness fixtures and inputs registered by checkcatalog.cpp",
-      "operations": "Exercise the registered legacy transport or implementation harness",
-      "observableAssertions": "legacy monolithic C++ application startup is superseded by the native RewriteWindow host",
-      "classification": "obsolete transport/implementation candidate",
-      "dueTask": null,
-      "swiftTargets": "No replacement target unless independent exclusion review rejects retirement.",
+      "cppId": "production-startup/porydaw[--version]",
+      "source": "src/main.cpp:15",
+      "fixturesAndInputs": "replacement porydaw binary invoked with --version",
+      "operations": "initialize production application services and take the version exit path",
+      "observableAssertions": "replacement host exits successfully and reports the application and Qt versions",
+      "classification": "native integration",
+      "dueTask": 7,
+      "swiftTargets": "Task 7 RewriteWindow host production-startup process evidence",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent exclusion approval with replacement evidence",
-        "rationale": "legacy monolithic C++ application startup is superseded by the native RewriteWindow host"
-      },
-      "caseNamesPending": true,
-      "pendingGap": "Independent exclusion approval has not yet been recorded."
+      "exclusionReview": null,
+      "caseNamesPending": false,
+      "pendingGap": "Awaiting controller-run replacement-host startup evidence."
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::savedRecipe_dedupOrderSelection",
@@ -5831,17 +6071,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete",
       "operations": "Execute the production path exercised by ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete",
       "observableAssertions": "All observable assertions in ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case observes workspace catalog preemption and callback requeue scheduling, which ProjectService and DocumentSession do not expose."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case observes workspace catalog preemption and callback requeue scheduling, which ProjectService and DocumentSession do not expose."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case observes workspace catalog preemption and callback requeue scheduling, which ProjectService and DocumentSession do not expose.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
@@ -6157,12 +6397,12 @@
       "observableAssertions": "division 24; one-bar conductor tempo/time signature; voice 0 and volume 100 track; end ticks and bytes equal C++",
       "dueTask": 1,
       "swiftTargets": "src/checks/swiftcore/MidiChecks.swift midiCodec direct MidiFile.blankSong byte equality and reparse assertions",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -6174,17 +6414,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals",
       "operations": "Execute the production path exercised by ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals",
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure[duplicate-voicegroup-is-unkeyed-failure]",
@@ -6192,17 +6432,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure",
       "operations": "Execute the production path exercised by ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure",
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure pass for this case row duplicate-voicegroup-is-unkeyed-failure",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure[refresh-replaces-catalog]",
@@ -6210,17 +6450,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure",
       "operations": "Execute the production path exercised by ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure",
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure pass for this case row refresh-replaces-catalog",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
@@ -6264,17 +6504,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure",
       "operations": "Execute the production path exercised by ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure",
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure pass for this case row unknown-voicegroup-hard-failure",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::missingSavedNameReconcileFailure",
@@ -6282,17 +6522,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by ProjectWorkspaceTest::missingSavedNameReconcileFailure",
       "operations": "Execute the production path exercised by ProjectWorkspaceTest::missingSavedNameReconcileFailure",
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::missingSavedNameReconcileFailure pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten",
@@ -6300,17 +6540,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten",
       "operations": "Execute the production path exercised by ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten",
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::planEventsForwardKeyed",
@@ -6336,17 +6576,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by ProjectWorkspaceTest::reloadStagesMidiViewBound",
       "operations": "Execute the production path exercised by ProjectWorkspaceTest::reloadStagesMidiViewBound",
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::reloadStagesMidiViewBound pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication",
@@ -6354,17 +6594,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication",
       "operations": "Execute the production path exercised by ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication",
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder",
@@ -6372,17 +6612,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder",
       "operations": "Execute the production path exercised by ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder",
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "projectworkspacecheck/ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot",
@@ -6390,17 +6630,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot",
       "operations": "Execute the production path exercised by ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot",
       "observableAssertions": "All observable assertions in ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case observes ProjectWorkspace scheduling/publication state that is not exposed by ProjectService or DocumentSession.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "rendering-playhead-native/catalog-suite[case-names-pending]",
@@ -9758,12 +9998,12 @@
       "observableAssertions": "every malformed file throws/rejects completely; C++ and Swift acceptance verdicts agree",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec explicit-no-row cppIds for each malformed variant",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -9777,12 +10017,12 @@
       "observableAssertions": "every malformed file throws/rejects completely; C++ and Swift acceptance verdicts agree",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec explicit-no-row cppIds for each malformed variant",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -9796,12 +10036,12 @@
       "observableAssertions": "every malformed file throws/rejects completely; C++ and Swift acceptance verdicts agree",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec explicit-no-row cppIds for each malformed variant",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -9815,12 +10055,12 @@
       "observableAssertions": "every malformed file throws/rejects completely; C++ and Swift acceptance verdicts agree",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec explicit-no-row cppIds for each malformed variant",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -9834,12 +10074,12 @@
       "observableAssertions": "every malformed file throws/rejects completely; C++ and Swift acceptance verdicts agree",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec explicit-no-row cppIds for each malformed variant",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null,
       "classification": "in-scope core behavior",
@@ -9854,12 +10094,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec fixture cppId; canonical bytes cover every payload and order assertion",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null
     },
@@ -9891,12 +10131,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec duplicate-EOT and trailing-data cppIds",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null
     },
@@ -9933,12 +10173,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec cppId exact match; encoded bytes and decoded summary",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null
     },
@@ -10102,12 +10342,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec fixture and synthetic cppIds; whole canonical byte comparison",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null
     },
@@ -10120,12 +10360,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec exact cppId invalid verdict comparison",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null
     },
@@ -10195,12 +10435,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "src/checks/swiftcore/MidiChecks.swift midiCodec exact cppId; direct MidiFile.decode/encoded byte comparison and wasFormat0 summary",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null
     },
@@ -10213,12 +10453,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/midiCodec cppId fixture and invalid-carry variants",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null
     },
@@ -10354,18 +10594,14 @@
       "fixturesAndInputs": "Harness fixtures and inputs registered by checkcatalog.cpp",
       "operations": "Exercise the registered legacy transport or implementation harness",
       "observableAssertions": "sgc_ command pipe and token executor are superseded by direct Swift NoteCommands invocation",
-      "classification": "obsolete transport/implementation candidate",
-      "dueTask": null,
-      "swiftTargets": "No replacement target unless independent exclusion review rejects retirement.",
+      "classification": "grid/window input",
+      "dueTask": 8,
+      "swiftTargets": "Task 8 direct grid/session integration; split retained behavior from obsolete command transport case by case before retirement.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent exclusion approval with replacement evidence",
-        "rationale": "sgc_ command pipe and token executor are superseded by direct Swift NoteCommands invocation"
-      },
+      "exclusionReview": null,
       "caseNamesPending": true,
-      "pendingGap": "Independent exclusion approval has not yet been recorded."
+      "pendingGap": "Task 8 owns exact case expansion and ordered transport retirement; blanket exclusion was rejected by the controller."
     },
     {
       "cppId": "swiftdocfeed/catalog-suite[case-names-pending]",
@@ -10373,18 +10609,14 @@
       "fixturesAndInputs": "Harness fixtures and inputs registered by checkcatalog.cpp",
       "operations": "Exercise the registered legacy transport or implementation harness",
       "observableAssertions": "read-only rollout token feed and mirror cache are superseded by direct DocumentSession integration",
-      "classification": "obsolete transport/implementation candidate",
-      "dueTask": null,
-      "swiftTargets": "No replacement target unless independent exclusion review rejects retirement.",
+      "classification": "grid/window input",
+      "dueTask": 8,
+      "swiftTargets": "Task 8 direct grid/session integration; split retained behavior from obsolete document/session feed transport case by case before retirement.",
       "status": "pending",
       "runEvidence": null,
-      "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent exclusion approval with replacement evidence",
-        "rationale": "read-only rollout token feed and mirror cache are superseded by direct DocumentSession integration"
-      },
+      "exclusionReview": null,
       "caseNamesPending": true,
-      "pendingGap": "Independent exclusion approval has not yet been recorded."
+      "pendingGap": "Task 8 owns exact case expansion and ordered transport retirement; blanket exclusion was rejected by the controller."
     },
     {
       "cppId": "swiftqtml/SwiftQtMlTest::testInPlaceRowMutation",
@@ -11736,12 +11968,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 1,
       "swiftTargets": "swiftcore/musicalSemantics exhaustive value matrices under levelsCanonicalizeAndMove cppId",
-      "status": "pending",
+      "status": "verified",
       "pendingGap": "Swift-owned assertions are implemented; fresh controller execution and revision identification are pending.",
       "runEvidence": {
-        "status": "controller-run-pending",
-        "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics",
-        "assertionOwner": "Swift suites in src/checks/swiftcore/MidiChecks.swift"
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — independent expectations + parity legs re-executed fresh at this revision (controller 2026-09-20)"
       },
       "exclusionReview": null
     },
@@ -11963,17 +12195,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by VoicegroupLoadBenchTest::songLoadBenchmark",
       "operations": "Execute the production path exercised by VoicegroupLoadBenchTest::songLoadBenchmark",
       "observableAssertions": "All observable assertions in VoicegroupLoadBenchTest::songLoadBenchmark pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case is a native loader benchmark, not a replacement-domain correctness contract."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case is a native loader benchmark, not a replacement-domain correctness contract."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case is a native loader benchmark, not a replacement-domain correctness contract.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "vgloadcheck/VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets",
@@ -11981,17 +12213,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets",
       "operations": "Execute the production path exercised by VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets",
       "observableAssertions": "All observable assertions in VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case observes native loader target pointers, warm-cache reads, and sample-set ownership with no ProjectService API counterpart."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case observes native loader target pointers, warm-cache reads, and sample-set ownership with no ProjectService API counterpart."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case observes native loader target pointers, warm-cache reads, and sample-set ownership with no ProjectService API counterpart.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "vgloadcheck/VoicegroupLoaderTest::failedTransportReleasesPartialBatchAndContextHeals",
@@ -11999,17 +12231,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by VoicegroupLoaderTest::failedTransportReleasesPartialBatchAndContextHeals",
       "operations": "Execute the production path exercised by VoicegroupLoaderTest::failedTransportReleasesPartialBatchAndContextHeals",
       "observableAssertions": "All observable assertions in VoicegroupLoaderTest::failedTransportReleasesPartialBatchAndContextHeals pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case observes native transport batch teardown and loader context healing with no ProjectService API counterpart."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case observes native transport batch teardown and loader context healing with no ProjectService API counterpart."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case observes native transport batch teardown and loader context healing with no ProjectService API counterpart.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "vgloadcheck/VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnership",
@@ -12017,17 +12249,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnership",
       "operations": "Execute the production path exercised by VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnership",
       "observableAssertions": "All observable assertions in VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnership pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "obsolete transport/implementation candidate",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case compares native serial and parallel batch adapters, which are below the Swift service boundary."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case compares native serial and parallel batch adapters, which are below the Swift service boundary."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case compares native serial and parallel batch adapters, which are below the Swift service boundary.",
+        "decision": "Approved: retired workspace orchestration, loader adapter, or benchmark implementation; no replacement product contract."
+      }
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::adsrFieldSpaceTogglesTransport",
@@ -12121,17 +12353,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by VoicegroupSaveTest::dockMinimumWidthIsFamilyInvariant",
       "operations": "Execute the production path exercised by VoicegroupSaveTest::dockMinimumWidthIsFamilyInvariant",
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::dockMinimumWidthIsFamilyInvariant pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "absent-UI-only",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "deferred-ui",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case asserts Qt dock geometry, an absent UI concern."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case asserts Qt dock geometry, an absent UI concern."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case asserts Qt dock geometry, an absent UI concern.",
+        "decision": "Approved: absent voicegroup editor/browser/picker UI; retained ProjectService and bank contracts remain covered independently."
+      }
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
@@ -12139,17 +12371,17 @@
       "fixturesAndInputs": "mus_route101, voicegroupEditorFiles, data/sound_data.s; releaseEditDirtiesOnlyBank rows: adjacent, lower-bound, upper-bound",
       "operations": "session binding; bank/document undo; unified queued save",
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "absent-UI-only",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "deferred-ui",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case asserts workspace selector and widget binding retention, which has no DocumentSession API counterpart."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case asserts workspace selector and widget binding retention, which has no DocumentSession API counterpart."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case asserts workspace selector and widget binding retention, which has no DocumentSession API counterpart.",
+        "decision": "Approved: absent voicegroup editor/browser/picker UI; retained ProjectService and bank contracts remain covered independently."
+      }
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably",
@@ -12193,17 +12425,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild",
       "operations": "Execute the production path exercised by VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild",
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "absent-UI-only",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "deferred-ui",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case asserts Qt header mouse interaction during widget rebuild, an absent UI concern."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case asserts Qt header mouse interaction during widget rebuild, an absent UI concern."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case asserts Qt header mouse interaction during widget rebuild, an absent UI concern.",
+        "decision": "Approved: absent voicegroup editor/browser/picker UI; retained ProjectService and bank contracts remain covered independently."
+      }
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
@@ -12321,17 +12553,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks",
       "operations": "Execute the production path exercised by VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks",
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "absent-UI-only",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "deferred-ui",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case asserts voicegroup browser presentation of track programs and used marks, an absent UI concern."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case asserts voicegroup browser presentation of track programs and used marks, an absent UI concern."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case asserts voicegroup browser presentation of track programs and used marks, an absent UI concern.",
+        "decision": "Approved: absent voicegroup editor/browser/picker UI; retained ProjectService and bank contracts remain covered independently."
+      }
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::samplePickerAuditionsAndCommits",
@@ -12339,17 +12571,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by VoicegroupSaveTest::samplePickerAuditionsAndCommits",
       "operations": "Execute the production path exercised by VoicegroupSaveTest::samplePickerAuditionsAndCommits",
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::samplePickerAuditionsAndCommits pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "absent-UI-only",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "deferred-ui",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case asserts sample-picker widget audition and commit behavior, an absent UI concern."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case asserts sample-picker widget audition and commit behavior, an absent UI concern."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case asserts sample-picker widget audition and commit behavior, an absent UI concern.",
+        "decision": "Approved: absent voicegroup editor/browser/picker UI; retained ProjectService and bank contracts remain covered independently."
+      }
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::samplePickerKeysplitAuditions",
@@ -12357,17 +12589,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by VoicegroupSaveTest::samplePickerKeysplitAuditions",
       "operations": "Execute the production path exercised by VoicegroupSaveTest::samplePickerKeysplitAuditions",
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::samplePickerKeysplitAuditions pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "absent-UI-only",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "deferred-ui",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case asserts keysplit picker audition behavior, an absent UI/audio-routing concern."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case asserts keysplit picker audition behavior, an absent UI/audio-routing concern."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case asserts keysplit picker audition behavior, an absent UI/audio-routing concern.",
+        "decision": "Approved: absent voicegroup editor/browser/picker UI; retained ProjectService and bank contracts remain covered independently."
+      }
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits",
@@ -12375,17 +12607,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits",
       "operations": "Execute the production path exercised by VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits",
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "absent-UI-only",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "deferred-ui",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case asserts wave-mode picker UI audition and commit behavior, an absent UI concern."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case asserts wave-mode picker UI audition and commit behavior, an absent UI concern."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case asserts wave-mode picker UI audition and commit behavior, an absent UI concern.",
+        "decision": "Approved: absent voicegroup editor/browser/picker UI; retained ProjectService and bank contracts remain covered independently."
+      }
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit",
@@ -12393,17 +12625,17 @@
       "fixturesAndInputs": "mus_route101, voicegroupEditorFiles, data/sound_data.s; releaseEditDirtiesOnlyBank rows: adjacent, lower-bound, upper-bound",
       "operations": "session binding; bank/document undo; unified queued save",
       "observableAssertions": "binding, dirty state, receipts, persistence and replacement rebasing exact",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "absent-UI-only",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "deferred-ui",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case asserts voicegroup selector widget interaction; ProjectService exposes neither selector state nor that workspace command."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case asserts voicegroup selector widget interaction; ProjectService exposes neither selector state nor that workspace command."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case asserts voicegroup selector widget interaction; ProjectService exposes neither selector state nor that workspace command.",
+        "decision": "Approved: absent voicegroup editor/browser/picker UI; retained ProjectService and bank contracts remain covered independently."
+      }
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
@@ -12429,17 +12661,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
       "operations": "Execute the production path exercised by VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "absent-UI-only",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "deferred-ui",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case observes editor-only synth-definition staging, which is not carried by the ProjectService save contract."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case observes editor-only synth-definition staging, which is not carried by the ProjectService save contract."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case observes editor-only synth-definition staging, which is not carried by the ProjectService save contract.",
+        "decision": "Approved: absent voicegroup editor/browser/picker UI; retained ProjectService and bank contracts remain covered independently."
+      }
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily",
@@ -12447,17 +12679,17 @@
       "fixturesAndInputs": "Inputs constructed or staged by VoicegroupSaveTest::typeColumnMapsEveryFamily",
       "operations": "Execute the production path exercised by VoicegroupSaveTest::typeColumnMapsEveryFamily",
       "observableAssertions": "All observable assertions in VoicegroupSaveTest::typeColumnMapsEveryFamily pass for this case",
-      "classification": "in-scope core behavior",
-      "dueTask": 6,
-      "swiftTargets": "No replacement target; awaiting independent case-level exclusion review.",
-      "status": "pending",
+      "classification": "absent-UI-only",
+      "dueTask": null,
+      "swiftTargets": "No replacement target; controller-approved under the Task 7 retirement reconciliation.",
+      "status": "deferred-ui",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Independent case-level exclusion approval with replacement evidence",
-        "rationale": "The case asserts browser type-column icons and labels, an absent UI concern."
-      },
-      "pendingGap": "Case-level exclusion is unapproved: The case asserts browser type-column icons and labels, an absent UI concern."
+        "approved": true,
+        "requiredReview": "Controller adjudication complete (Task 7 retirement reconciliation).",
+        "rationale": "The case asserts browser type-column icons and labels, an absent UI concern.",
+        "decision": "Approved: absent voicegroup editor/browser/picker UI; retained ProjectService and bank contracts remain covered independently."
+      }
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
@@ -12675,8 +12907,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: SessionChecks.historyTransitionRegressions and coordinator session gate assertions",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — history-rework regression scenarios re-executed fresh at this revision (controller 2026-09-20)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification of H1 transition ownership"
     },
@@ -12689,8 +12925,12 @@
       "classification": "in-scope core behavior",
       "dueTask": 6,
       "swiftTargets": "swiftcore/bankHistory: SessionChecks.historyTransitionRegressions conflict-policy assertions",
-      "status": "pending",
-      "runEvidence": null,
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter swiftcore --verbose (fresh pre-deletion battery)",
+        "revision": "45a52d80",
+        "result": "PASS — history-transition regression suite re-executed fresh (controller 2026-09-20)"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting controller-run verification of H2 conflict policy"
     },

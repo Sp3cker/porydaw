@@ -1,12 +1,10 @@
 import Foundation
 import PorydawCore
-import PorydawCoreCheckNative
 
 private struct CodecObservation {
     var valid = false
     var encoded: [UInt8] = []
     var wasFormatZero = false
-    var summary = ""
     var error = ""
     var decoded: MidiFile?
 }
@@ -34,7 +32,7 @@ private struct DecodedCodecExpectation {
     }
 }
 
-// Keep raw values in sync with OracleSemanticValueOperation in oracle_check.h.
+// Tags for the checked-in independent value expectations below.
 private enum OracleValueOp: UInt32 {
     case ccClass = 1
     case ccLane = 2
@@ -66,7 +64,7 @@ private enum OracleValueOp: UInt32 {
     case noteIDStorage = 34
 }
 
-// Keep raw values in sync with OracleSemanticTextOperation in oracle_check.h.
+// Tags for the checked-in independent text expectations below.
 private enum OracleTextOp: UInt32 {
     case ccName = 1
     case ccDisplay = 2
@@ -471,19 +469,6 @@ func runMidiCodecSuite(_ report: CheckReport) {
         let swiftBlank = try MidiFile.blankSong().encoded()
         report.expectEqual(expectedBlank, swiftBlank, cppID: blankID,
                            what: "independent canonical byte vector")
-        let oracleSize = oracle_blank_song(nil, 0)
-        if oracleSize < 0 {
-            report.fail(blankID, "C++ oracle blank-song factory failed")
-        } else {
-            var oracleBlank = [UInt8](repeating: 0, count: Int(oracleSize))
-            let copied = oracleBlank.withUnsafeMutableBufferPointer {
-                oracle_blank_song($0.baseAddress, $0.count)
-            }
-            report.expectEqual(oracleSize, copied, cppID: blankID,
-                               what: "supplemental oracle sizing/copy")
-            report.expectEqual(oracleBlank, swiftBlank, cppID: blankID,
-                               what: "supplemental C++ canonical bytes")
-        }
         compareCodecCase(
             cppID: "project/SongRegistry::blankSong/reparse", bytes: swiftBlank,
             expectedValid: true, expectedCanonicalBytes: expectedBlank,
@@ -739,10 +724,6 @@ func runMusicalSemanticsSuite(_ report: CheckReport) {
     expectOracleValue(storageEqual ? 1 : 0, .noteIDStorage, 0, row: "note-id-storage",
                       cppID: noteIdentityID, report: report)
 
-    report.expectEqual(Int64.min, oracle_semantic_value(999, 0, 0, 0, 0),
-                       cppID: "swiftcore/oracle-adapter", what: "unknown value operation sentinel")
-    report.expectEqual(Int64(-1), oracle_semantic_text(999, 0, 0, nil, 0),
-                       cppID: "swiftcore/oracle-adapter", what: "unknown text operation sentinel")
 }
 
 private func compareFixture(relativePath: String, cppID: String,
@@ -792,18 +773,6 @@ private func compareCodecCase(cppID: String, bytes: [UInt8], expectedValid: Bool
         expectDecodedStructure(file, expected: expectedDecoded, cppID: cppID, report: report)
     }
 
-    let oracle = oracleCodec(bytes)
-    report.expectEqual(expectedValid, oracle.valid, cppID: cppID,
-                       what: "C++ validity (error=\(oracle.error))")
-    report.expectEqual(oracle.valid, swift.valid, cppID: cppID,
-                       what: "Swift validity (C++ error=\(oracle.error), Swift error=\(swift.error))")
-    guard oracle.valid, swift.valid else { return }
-    report.expectEqual(oracle.encoded, swift.encoded, cppID: cppID,
-                       what: "supplemental C++ canonical bytes")
-    report.expectEqual(oracle.summary, swift.summary, cppID: cppID,
-                       what: "supplemental C++ codec summary")
-    report.expectEqual(oracle.wasFormatZero, swift.wasFormatZero, cppID: cppID,
-                       what: "supplemental C++ wasFormat0")
 }
 
 private func expectDecodedStructure(_ file: MidiFile, expected: DecodedCodecExpectation?,
@@ -847,79 +816,17 @@ private func expectDecodedStructure(_ file: MidiFile, expected: DecodedCodecExpe
     }
 }
 
-private func oracleCodec(_ bytes: [UInt8]) -> CodecObservation {
-    var result = CodecObservation()
-    var wasFormatZero: UInt8 = 0
-    var summarySize = 0
-    var errorSize = 0
-    let encodedSize = bytes.withUnsafeBufferPointer {
-        oracle_codec_roundtrip($0.baseAddress, $0.count, nil, 0, &wasFormatZero,
-                               nil, 0, &summarySize, nil, 0, &errorSize)
-    }
-    result.wasFormatZero = wasFormatZero != 0
-    if encodedSize < 0 {
-        var error = [CChar](repeating: 0, count: errorSize)
-        _ = bytes.withUnsafeBufferPointer { input in
-            error.withUnsafeMutableBufferPointer { errorBuffer in
-                oracle_codec_roundtrip(input.baseAddress, input.count, nil, 0, &wasFormatZero,
-                                       nil, 0, &summarySize, errorBuffer.baseAddress,
-                                       errorBuffer.count, &errorSize)
-            }
-        }
-        result.error = String(decoding: error.map { UInt8(bitPattern: $0) }, as: UTF8.self)
-        return result
-    }
-
-    result.valid = true
-    result.encoded = [UInt8](repeating: 0, count: Int(encodedSize))
-    var summary = [CChar](repeating: 0, count: summarySize)
-    let copied = bytes.withUnsafeBufferPointer { input in
-        result.encoded.withUnsafeMutableBufferPointer { output in
-            summary.withUnsafeMutableBufferPointer { summaryBuffer in
-                oracle_codec_roundtrip(input.baseAddress, input.count,
-                                       output.baseAddress, output.count, &wasFormatZero,
-                                       summaryBuffer.baseAddress, summaryBuffer.count,
-                                       &summarySize, nil, 0, &errorSize)
-            }
-        }
-    }
-    if copied != encodedSize {
-        result.valid = false
-        result.error = "oracle sizing call returned \(encodedSize), copy call returned \(copied)"
-        return result
-    }
-    result.wasFormatZero = wasFormatZero != 0
-    result.summary = String(decoding: summary.map { UInt8(bitPattern: $0) }, as: UTF8.self)
-    return result
-}
 
 private func swiftCodec(_ bytes: [UInt8]) -> CodecObservation {
     do {
         let file = try MidiFile.decode(bytes)
         return CodecObservation(valid: true, encoded: try file.encoded(),
-                                wasFormatZero: file.wasFormat0, summary: codecSummary(file),
-                                decoded: file)
+                                wasFormatZero: file.wasFormat0, decoded: file)
     } catch {
         return CodecObservation(error: String(describing: error))
     }
 }
 
-private func codecSummary(_ file: MidiFile) -> String {
-    var parts = [
-        "division=\(file.division)", "chunks=\(file.chunks.count)",
-        "was0=\(file.wasFormat0 ? 1 : 0)",
-    ]
-    for (index, chunk) in file.chunks.enumerated() {
-        parts.append("chunk\(index)=\(chunk.endTick),\(chunk.events.count)")
-    }
-    let mapping = file.engineTracks()
-    parts.append("map=\(mapping.usedTrackCount),\(mapping.droppedTracks)")
-    for index in 0..<mapping.usedTrackCount {
-        let track = mapping.tracks[index]
-        parts.append("slot\(index)=\(track.midiChunk ?? -1),\(track.channel)")
-    }
-    return parts.joined(separator: ";")
-}
 
 private struct ExpectedCCDescriptor {
     let eventClass: Int64
@@ -1189,9 +1096,6 @@ private func expectOracleValue(_ actual: Int64, _ operation: OracleValueOp,
     let independent = independentExpectedValue(operation, a, b, c, d)
     report.expectEqual(independent, actual, cppID: cppID,
                        what: "row=\(row) independent expected value")
-    let oracle = oracle_semantic_value(operation.rawValue, a, b, c, d)
-    report.expectEqual(oracle, actual, cppID: cppID,
-                       what: "row=\(row) supplemental C++ parity")
 }
 
 private func expectOracleText(_ actual: String, _ operation: OracleTextOp,
@@ -1200,22 +1104,6 @@ private func expectOracleText(_ actual: String, _ operation: OracleTextOp,
     let independent = independentExpectedText(operation, a, b)
     report.expectEqual(independent, actual, cppID: cppID,
                        what: "row=\(row) independent expected text")
-    let count = oracle_semantic_text(operation.rawValue, a, b, nil, 0)
-    guard count >= 0 else {
-        report.fail(cppID, "row=\(row) supplemental oracle text operation failed")
-        return
-    }
-    var bytes = [CChar](repeating: 0, count: Int(count))
-    let copied = bytes.withUnsafeMutableBufferPointer {
-        oracle_semantic_text(operation.rawValue, a, b, $0.baseAddress, $0.count)
-    }
-    guard copied == count else {
-        report.fail(cppID, "row=\(row) supplemental oracle sizing=\(count) copy=\(copied)")
-        return
-    }
-    let oracle = String(decoding: bytes.map { UInt8(bitPattern: $0) }, as: UTF8.self)
-    report.expectEqual(oracle, actual, cppID: cppID,
-                       what: "row=\(row) supplemental C++ parity")
 }
 
 private func midiBytes(format: UInt16, division: UInt16, tracks: [[UInt8]]) -> [UInt8] {

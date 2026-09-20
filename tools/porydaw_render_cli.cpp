@@ -1,20 +1,19 @@
 // porydaw_render_cli — offline renderer used to verify that porydaw's
-// playback path (MidiTimeline + TimelinePlayer + poryaaaa engine) produces
+// playback path (Swift timeline + sequencer + poryaaaa engine) produces
 // output matching poryaaaa_render for the same song. Not shipped to users.
 //
 // Usage:
 //   porydaw_render_cli <projectRoot> <voicegroup> <file.mid> <out.wav>
 //       [--seconds N] [--sample-rate HZ] [--song-volume V] [--reverb R] [--no-loop]
 
-#include <QString>
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
-#include <span>
 #include <vector>
 
-#include "core/miditimeline.h"
-#include "core/timelineplayer.h"
+#include "audio/swift_playback.h"
 
 extern "C" {
 #include "m4a_engine.h"
@@ -112,19 +111,23 @@ int main(int argc, char *argv[])
         }
     }
 
-    QString error;
-    auto timeline =
-        MidiTimeline::load(QString::fromLocal8Bit(midiPath), double(sampleRate), &error);
-    if (!timeline) {
-        fprintf(stderr, "%s\n", error.toLocal8Bit().constData());
+    PdPlaybackData *timeline = nullptr;
+    char playbackError[1024] = {};
+    if (!pd_playback_data_load_file(midiPath, double(sampleRate), &timeline, playbackError,
+                                    sizeof(playbackError))) {
+        fprintf(stderr, "%s\n", playbackError);
         return 1;
     }
-    printf("Timeline: %zu events, length %.2f s, loop %s\n", timeline->events.size(),
-           double(timeline->lengthSamples) / sampleRate, timeline->hasLoop() ? "yes" : "no");
+    const bool hasLoop = timeline->loopStartSample != UINT64_MAX &&
+                         timeline->loopEndSample != UINT64_MAX &&
+                         timeline->loopEndSample > timeline->loopStartSample;
+    printf("Timeline: %zu events, length %.2f s, loop %s\n", timeline->eventCount,
+           double(timeline->lengthSamples) / sampleRate, hasLoop ? "yes" : "no");
 
     LoadedVoiceGroup *vg = voicegroup_load(projectRoot, vgName, nullptr);
     if (!vg) {
         fprintf(stderr, "Failed to load voicegroup '%s'\n", vgName);
+        pd_playback_data_release(timeline);
         return 1;
     }
 
@@ -139,20 +142,28 @@ int main(int argc, char *argv[])
     const uint64_t totalSamples = uint64_t(seconds * sampleRate + 0.5);
     std::vector<float> outL(totalSamples), outR(totalSamples);
 
-    TimelinePlayer player;
-    player.reset();
+    void *player = pd_player_create();
+    if (!player) {
+        fprintf(stderr, "Failed to initialize the Swift sequencer\n");
+        m4a_engine_destroy(&engine);
+        voicegroup_free(vg);
+        pd_playback_data_release(timeline);
+        return 1;
+    }
     constexpr uint32_t kChunk = 4096;
     uint64_t pos = 0;
     while (pos < totalSamples) {
         const uint32_t n = uint32_t(std::min<uint64_t>(kChunk, totalSamples - pos));
-        player.render(&engine, timeline.get(), std::span(outL).subspan(size_t(pos), n),
-                      std::span(outR).subspan(size_t(pos), n), loop, 0);
+        pd_player_render(player, &engine, timeline, outL.data() + pos, outR.data() + pos, n, loop,
+                         0);
         pos += n;
     }
 
     const int rc = writeWav(outPath, outL, outR, sampleRate);
+    pd_player_destroy(player);
     m4a_engine_destroy(&engine);
     voicegroup_free(vg);
+    pd_playback_data_release(timeline);
     if (rc == 0)
         printf("Wrote %s (%.2f s @ %d Hz)\n", outPath, seconds, sampleRate);
     return rc;

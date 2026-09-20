@@ -57,8 +57,6 @@ private func rangeEditing(_ report: CheckReport) {
     report.expect(document.state.tempo.contains {
         $0.tick == 61 && $0.microsecondsPerQuarterNote == 400_000
     }, cppID: "editcheck/EditCheckTest::rangeEdit", message: "tempo replacement is atomic")
-    expectNoteTempoOracleParity(document, cppID: "editcheck/EditCheckTest::rangeEdit",
-                                row: "post-transform frozen observation", report: report)
     _ = document.history.undoDocument()
     report.expectEqual(before, bytes(document),
                        cppID: "editcheck/EditCheckTest::rangeEdit",
@@ -516,31 +514,3 @@ private func hasChannel(_ events: [MidiEvent], tick: Tick, type: UInt8, key: UIn
     }
 }
 
-@MainActor
-private func expectNoteTempoOracleParity(_ document: SongDocument, cppID: String, row: String,
-                                         report: CheckReport) {
-    guard let snapshot = try? document.captureSave() else {
-        report.fail(cppID, "\(row): Swift save capture failed")
-        return
-    }
-    var output = Array<CChar>(repeating: 0, count: 16_384)
-    let count = snapshot.bytes.withUnsafeBufferPointer { bytes in
-        output.withUnsafeMutableBufferPointer { buffer in
-            oracle_document_summary(bytes.baseAddress, bytes.count,
-                                    buffer.baseAddress, buffer.count)
-        }
-    }
-    guard count >= 0 else {
-        report.fail(cppID, "\(row): frozen C++ document observation failed")
-        return
-    }
-    let oracle = String(decoding: output.prefix(Int(count)).map { UInt8(bitPattern: $0) },
-                        as: UTF8.self)
-    var parts: [String] = ["tempo=\(document.state.tempo.count)"]
-    for track in 0..<document.engineTracks.usedTrackCount {
-        for note in document.notes(in: track) {
-            parts.append("n=\(track),\(note.tick),\(note.duration),\(note.pitch),\(note.velocity),\(note.isUnterminated ? 1 : 0)")
-        }
-    }
-    report.expectEqual(oracle, parts.joined(separator: ";"), cppID: cppID, what: row)
-}

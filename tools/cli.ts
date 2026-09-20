@@ -3,6 +3,7 @@
 // Usage:
 // deno task build:app [--release] -> build porydaw only
 // deno task build:checks [--release] -> build porydaw + porydaw_checks + mid2agb
+// deno task build:render [--release] -> build porydaw_render_cli only
 // deno task verify [--verbose] [--filter <name>] [-- <run_checks args>]
 // deno task format [--check] [files...]
 
@@ -18,7 +19,12 @@ import { parseCheckOptions, VERIFY_HELP } from "./checks_options.ts";
 const decoder = new TextDecoder();
 const BUILD_DIR = "build";
 
-type Subcommand = "build:app" | "build:checks" | "verify" | "format";
+type Subcommand =
+  | "build:app"
+  | "build:checks"
+  | "build:render"
+  | "verify"
+  | "format";
 
 function help(command?: Subcommand): string {
   switch (command) {
@@ -26,10 +32,13 @@ function help(command?: Subcommand): string {
       return VERIFY_HELP;
     case "build:app":
     case "build:checks":
+    case "build:render":
       return `usage: deno task ${command} [--release] [--help]
   ${
         command === "build:app"
           ? "build the application"
+          : command === "build:render"
+          ? "build the Swift-backed offline renderer"
           : "build the application, checks, and mid2agb"
       }
   --release       configure and build Release
@@ -52,6 +61,7 @@ Examples:
       return `usage: deno task <command> [options]
   build:app     build the application
   build:checks  build the application, checks, and mid2agb
+  build:render  build the Swift-backed offline renderer
   verify        build and run checks
   format        format sources (or --check)
 help: deno task <command> --help`;
@@ -341,10 +351,14 @@ const rest = raw.slice(1);
 // Normalize hyphen vs colon: build-app -> build:app
 if (sub === "build-app") sub = "build:app";
 if (sub === "build-checks" || sub === "build:check") sub = "build:checks";
+if (sub === "build-render") sub = "build:render";
 const normalized = sub as Subcommand;
 switch (normalized) {
   case "build:app":
     await runBuild(["porydaw"], buildRelease(rest, "build:app"));
+    break;
+  case "build:render":
+    await runBuild(["porydaw_render_cli"], buildRelease(rest, "build:render"));
     break;
   case "build:checks":
     await runBuild(

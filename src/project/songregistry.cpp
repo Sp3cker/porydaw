@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <limits>
 
-#include "core/smf.h"
 #include "project/songsmk.h"
 #include "project/voicegroupsource.h"
 
@@ -1598,42 +1597,6 @@ bool removeSongFlags(const QString &midiDir, const QString &label, QString *erro
     if (QFile::exists(mkPath))
         return SongsMk::removeRule(mkPath, label, error);
     return true;
-}
-
-SmfFile blankSong()
-{
-    SmfFile smf;
-    smf.format = 1;
-    smf.division = 24; // vanilla pokeemerald resolution: 1 tick per m4a clock
-    const Tick oneBar = Tick(smf.division) * 4;
-
-    SmfTrack seq; // MTrk chunk 0: the only chunk mid2agb reads seq events from
-    SmfEvent tempo;
-    tempo.status = 0xFF;
-    tempo.metaType = 0x51;
-    tempo.blob = QByteArray("\x07\xA1\x20", 3); // 500000 us/beat = 120 BPM
-    seq.events.push_back(tempo);
-    SmfEvent timeSig;
-    timeSig.status = 0xFF;
-    timeSig.metaType = 0x58;
-    timeSig.blob = QByteArray("\x04\x02\x18\x08", 4); // 4/4
-    seq.events.push_back(timeSig);
-    seq.endTick = oneBar;
-    smf.tracks.push_back(seq);
-
-    SmfTrack track;
-    SmfEvent program;
-    program.status = 0xC0;
-    program.data0 = 0; // voice 0
-    track.events.push_back(program);
-    SmfEvent volume;
-    volume.status = 0xB0;
-    volume.data0 = 7;
-    volume.data1 = 100;
-    track.events.push_back(volume);
-    track.endTick = oneBar;
-    smf.tracks.push_back(track);
-    return smf;
 }
 
 } // namespace SongRegistry

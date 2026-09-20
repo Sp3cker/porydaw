@@ -86,6 +86,8 @@ typedef struct PdSongMeta {
 } PdSongMeta;
 
 typedef void (*PdOpenCompletion)(void *context, bool ok, const char *error);
+typedef void (*PdSongListCompletion)(void *context, bool ok, const char *const *labels,
+                                     size_t labelCount, const char *error);
 typedef void (*PdSongCompletion)(void *context, bool ok, const uint8_t *midiBytes,
                                  size_t midiByteCount, const PdSongMeta *meta,
                                  const PdBankView *bank, PdBankLease *lease, const char *error);
@@ -136,6 +138,8 @@ void pd_service_destroy(PdProjectService *service);
 
 void pd_service_open(PdProjectService *service, const char *projectRoot, void *context,
                      PdOpenCompletion completion);
+void pd_service_list_songs(PdProjectService *service, void *context,
+                           PdSongListCompletion completion);
 void pd_service_open_song(PdProjectService *service, const char *label, void *context,
                           PdSongCompletion completion);
 void pd_service_save(PdProjectService *service, const PdSaveRequest *request, void *context,

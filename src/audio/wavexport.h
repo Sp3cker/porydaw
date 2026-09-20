@@ -5,7 +5,7 @@
 #include <functional>
 
 #include "audio/audioengine.h"
-#include "core/miditimeline.h"
+#include "audio/swift_playback.h"
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -33,13 +33,14 @@ struct WavExportTotals {
 // The render length implied by a timeline and options (also drives the
 // export dialog's duration preview and the harness's expected file size).
 // The timeline must have been built at opts.sampleRate.
-WavExportTotals wavExportTotals(const MidiTimeline &timeline, const WavExportOptions &opts);
+WavExportTotals wavExportTotals(const PdPlaybackData &timeline, const WavExportOptions &opts);
 
 // Renders and writes the file, streaming in chunks so memory use is flat.
 // progress (optional) receives a 0..1 fraction; returning false cancels the
 // export, which removes the partial file and fails with an empty *error.
 // Real failures set a non-empty *error. The caller's lease retains the
 // bank for the whole render.
-bool exportWav(const QString &path, const MidiTimeline &timeline, const VoicegroupLease &voicegroup,
-               const SongSettings &settings, const WavExportOptions &opts,
-               const std::function<bool(double)> &progress, QString *error);
+bool exportWav(const QString &path, const PdPlaybackData &timeline,
+               const VoicegroupLease &voicegroup, const SongSettings &settings,
+               const WavExportOptions &opts, const std::function<bool(double)> &progress,
+               QString *error);

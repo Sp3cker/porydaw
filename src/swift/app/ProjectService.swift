@@ -101,7 +101,7 @@ public struct BankSlotView: Equatable, Sendable {
 /// reference (the release is thread-safe). Applied edits mint a fresh lease;
 /// the superseded wrapper keeps its own bank alive, so old views stay valid.
 public final class NativeBankLease: @unchecked Sendable {
-    fileprivate let handle: OpaquePointer
+    let handle: OpaquePointer
     /// Voicegroup identity, copied from the published view for save requests.
     public let sourcePath: String
     public let sectionLabel: String
@@ -166,11 +166,17 @@ public struct SaveReceipt: Sendable {
 /// Async Swift front over the serial native worker. The actor serializes bank
 /// transitions; document history never blocks on it.
 public actor ProjectService {
-    private var handle: OpaquePointer?
+    nonisolated(unsafe) private var handle: OpaquePointer?
     private var closed = false
 
     public init() {
         handle = pd_service_create()
+    }
+
+    deinit {
+        if let handle {
+            pd_service_destroy(handle)
+        }
     }
 
     private func requireHandle() throws -> OpaquePointer {
@@ -186,6 +192,15 @@ public actor ProjectService {
                 let context = Unmanaged.passRetained(ContinuationBox(continuation)).toOpaque()
                 pd_service_open(handle, rootPtr, context, openCompletion)
             }
+        }
+    }
+    /// Returns the playable labels copied from the native project snapshot.
+    public func songLabels() async throws -> [String] {
+        let handle = try requireHandle()
+        return try await withCheckedThrowingContinuation {
+            (continuation: CheckedContinuation<[String], Error>) in
+            let context = Unmanaged.passRetained(ContinuationBox(continuation)).toOpaque()
+            pd_service_list_songs(handle, context, songListCompletion)
         }
     }
 
@@ -511,6 +526,27 @@ private let openCompletion: PdOpenCompletion = { context, ok, error in
     } else {
         holder.continuation.resume(throwing: ProjectServiceError.operationFailed(copyCString(error)))
     }
+}
+
+private let songListCompletion: PdSongListCompletion = {
+    context, ok, labels, labelCount, error in
+    let holder =
+        Unmanaged<ContinuationBox<[String]>>.fromOpaque(context!).takeRetainedValue()
+    guard ok else {
+        holder.continuation.resume(
+            throwing: ProjectServiceError.operationFailed(copyCString(error)))
+        return
+    }
+    var result: [String] = []
+    result.reserveCapacity(labelCount)
+    if let labels {
+        for index in 0..<labelCount {
+            if let label = labels[index] {
+                result.append(String(cString: label))
+            }
+        }
+    }
+    holder.continuation.resume(returning: result)
 }
 
 private let songCompletion: PdSongCompletion = {

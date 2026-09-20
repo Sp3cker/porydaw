@@ -169,8 +169,8 @@ if(APPLE)
     enable_language(Swift)
     add_subdirectory(src/swift/core)
     add_subdirectory(src/swift/playback)
-    add_subdirectory(src/swift/app)
     include(cmake/QtBridge.cmake)
+    add_subdirectory(src/swift/app)
 
     set(SWIFT_GRID_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swiftroll")
     set(SWIFT_GRID_NATIVE_DIR "${SWIFT_GRID_DIR}/native")
@@ -215,91 +215,28 @@ endif()
 
 # ---- porydaw application ----
 qt_add_library(porydaw_app STATIC
-    src/mainwindow.cpp
-    src/mainwindow.h
-    src/ui/layout.cpp
-    src/ui/layout.h
-    src/ui/typography.cpp
-    src/ui/typography.h
-    # Editable swatches and color policy stay separate from Qt runtime mapping;
-    # paint code consumes only fully resolved roles.
-    src/ui/theme/theme.h
-    src/ui/theme/themeruntime.cpp
-    src/ui/theme/themeruntime.h
-    src/ui/theme/theme_roles.h
-    src/ui/theme/color_math.cpp
-    src/ui/theme/color_math.h
-    src/ui/theme/presetcolors.h
-    src/ui/theme/trackidentitycolors.h
-    src/ui/theme/trackidentitycolors.cpp
-    src/ui/theme/themeresolver.cpp
-    src/ui/theme/themeresolver.h
-    src/ui/theme/themecontroller.cpp
-    src/ui/theme/themecontroller.h
-    src/ui/theme/themedialog.cpp
-    src/ui/theme/themedialog.h
-
+    src/app/RewriteWindow.cpp
+    src/app/RewriteWindow.h
+    src/app/native_host.h
     src/audio/audioengine.cpp
     src/audio/audioengine.h
-    src/audio/resonance_suppressor.cpp
-    src/audio/resonance_suppressor.h
     src/audio/auditionslots.cpp
     src/audio/auditionslots.h
-    src/audio/miniaudio_impl.c
-    src/audio/stb_vorbis_impl.c
+    src/audio/resonance_suppressor.cpp
+    src/audio/resonance_suppressor.h
+    src/audio/swift_audio_service.cpp
+    src/audio/swift_audio_service.h
+    src/audio/swift_playback.h
+    src/audio/timeline_handoff.h
+    src/audio/trackactivitylevel.h
     src/audio/wavexport.cpp
     src/audio/wavexport.h
-    src/audio/sampledata.h
-    src/audio/sampledsp.cpp
-    src/audio/sampledsp.h
-    src/audio/sampleimport.cpp
-    src/audio/sampleimport.h
-    src/audio/sampledoc.cpp
-    src/audio/sampledoc.h
-    src/audio/samplewav.cpp
-    src/audio/samplewav.h
-    src/audio/sf2reader.cpp
-    src/audio/sf2reader.h
-    src/ui/activity/trackactivity.cpp
-    src/ui/activity/trackactivity.h
-    src/ui/activity/trackactivityrender.cpp
-    src/ui/activity/trackactivityrender.h
-    src/core/mid2agbtables.cpp
-    src/core/mid2agbtables.h
-    src/core/miditimeline.cpp
-    src/core/miditimeline.h
-    src/core/smf.cpp
-    src/core/smf.h
-    src/core/xcmd.cpp
-    src/core/xcmd.h
-    src/core/songdocument.cpp
-    src/core/songdocument_range.cpp
-    src/core/songdocument_timeeditor.cpp
-    src/core/songdocument_timeeditor_insert.cpp
-    src/core/songdocument_timeeditor_xcmd.cpp
-    src/core/songdocument_tempo.cpp
-    src/core/songdocument_xcmd.cpp
-    src/core/songdocument.h
-    src/core/songhistory.cpp
-    src/core/songhistory.h
-    src/core/lanemoveplan.cpp
-    src/core/lanemoveplan.h
-    src/porydaw_scale.cpp
-    src/porydaw_scale.h
-    src/core/timelineplayer.cpp
-    src/core/timelineplayer.h
-    src/core/midiimport.cpp
-    src/core/midiimport.h
+    src/audio/miniaudio_impl.c
+    src/audio/stb_vorbis_impl.c
     src/project/decompproject.cpp
     src/project/decompproject.h
-    src/project/voicegroupprojectcontext.cpp
-    src/project/voicegroupprojectcontext.h
     src/project/projectidentity.cpp
     src/project/projectidentity.h
-    src/project/projectworkspace.cpp
-    src/project/projectworkspace.h
-    src/project/projectio.cpp
-    src/project/projectio.h
     src/project/songregistry.cpp
     src/project/songregistry.h
     src/project/songsmk.cpp
@@ -310,246 +247,30 @@ qt_add_library(porydaw_app STATIC
     src/project/samplereg.h
     src/project/sidecar.cpp
     src/project/sidecar.h
+    src/project/voicegroupprojectcontext.cpp
+    src/project/voicegroupprojectcontext.h
     src/project/voicegroupsource.cpp
     src/project/voicegroupsource.h
-    src/ui/dragspinbox.cpp
-    src/ui/dragspinbox.h
-    src/core/m4asemantics.cpp
-    src/core/m4asemantics.h
     src/ui/applicationstartup.cpp
     src/ui/applicationstartup.h
-    src/ui/newsongwizard.cpp
-    src/ui/newsongwizard.h
-    src/ui/sampleeditordialog.cpp
-    src/ui/sampleeditordialog.h
-    src/ui/sf2zonepicker.cpp
-    src/ui/sf2zonepicker.h
-    src/ui/waveformview.cpp
-    src/ui/waveformview.h
-    src/ui/samplepicker.cpp
-    src/ui/samplepicker.h
-    src/ui/voicegroupbrowser.cpp
-    src/ui/voicegroupbrowser.h
-    src/ui/voicetypeicons.cpp
     src/ui/keymap.cpp
     src/ui/keymap.h
-    src/ui/enginesettingsdialog.cpp
-    src/ui/enginesettingsdialog.h
-    src/ui/songsettingsdialog.cpp
-    src/ui/songsettingsdialog.h
-    src/ui/settingsdialog.cpp
-    src/ui/settingsdialog.h
-    src/ui/polyphonypanel.cpp
-    src/ui/polyphonypanel.h
-    src/ui/songlistpanel.cpp
-    src/ui/songlistpanel.h
-    src/ui/songviewmodel.cpp
-    src/ui/songviewmodel.h
-    src/ui/transportbar.cpp
-    src/ui/transportbar.h
-    src/ui/fastlabel.cpp
-    src/ui/fastlabel.h
-    src/ui/mousehints/hintprofiles.cpp
-    src/ui/mousehints/hintprofiles.h
-    src/ui/mousehints/mousehints.cpp
-    src/ui/mousehints/mousehints.h
-    src/ui/mousehints/widgethints.cpp
-    src/ui/workspaceui.cpp
-    src/ui/workspaceui_tabs.cpp
-    src/ui/workspaceui_project.cpp
-    src/ui/workspaceui_voicegroup.cpp
-    src/ui/workspaceui_samples.cpp
-    src/ui/workspaceui.h
-    src/ui/songtab.cpp
-    src/ui/songtab.h
-    src/ui/songtabquickhost.cpp
-    src/ui/songtabquickhost.h
-    src/ui/voicegroupviewcache.cpp
-    src/ui/voicegroupviewcache.h
-    src/ui/pitchprojection.cpp
-    src/ui/pitchprojection.h
-    src/ui/songview.cpp
-    src/ui/songview.h
-    src/ui/playheadoverlay.cpp
-    src/ui/playheadoverlay.h
-    src/ui/songview/otherstrip.cpp
-    src/ui/songview/otherstrip.h
-    src/ui/songview/voicepicker.cpp
-    src/ui/songview/voicepicker.h
-    src/ui/songview/trackheadermodel.cpp
-    src/ui/songview/trackheadermodel.h
-    src/ui/songview/trackheadermenu.cpp
-    src/ui/songview/editorselectionmodel.cpp
-    src/ui/songview/editorselectionmodel.h
-    src/ui/songview/detail.cpp
-    src/ui/songview/detail.h
-    src/ui/songview/camera.cpp
-    src/ui/songview/grid.cpp
-    src/ui/songview/grid.h
-    src/ui/songview/timeaxis.cpp
-    src/ui/songview/timeaxis.h
-    src/ui/songview/timecamera.cpp
-    src/ui/songview/timecamera.h
-    src/ui/songview/rangeedit.cpp
-    src/ui/songview/editkeyrouting.cpp
-    src/ui/songview/editactions.cpp
-    src/ui/songview/editactions.h
-    src/ui/songview/editcommandtable.cpp
-    src/ui/songview/editcommandtable.h
-    src/ui/songview/scalecontroller.cpp
-    src/ui/songview/scalecontroller.h
-    src/ui/songview/clipmime.cpp
-    src/ui/songview/trackvoiceops.cpp
-    src/ui/songview/viewstate.cpp
-    src/ui/songview/drawercoordination.cpp
-    src/ui/songview/timeruler.cpp
-    src/ui/songview/timeruler.h
-    src/ui/songview/timeruler_interaction.cpp
-    src/ui/songview/pianoroll.cpp
-    src/ui/songview/pianoroll.h
-    src/ui/songview/pianoroll_geometry.cpp
-    src/ui/songview/pianoroll_interaction.cpp
-    src/ui/songview/pianoroll_gestures.cpp
-    src/ui/songview/pianoroll_gestures_active.cpp
-    src/ui/songview/pianoroll_commands.cpp
-    src/ui/songview/quick/eventlistcontroller.cpp
-    src/ui/songview/quick/eventlistcontroller.h
-    src/ui/songview/quick/quickmenumodel.cpp
-    src/ui/songview/quick/quickmenuhost.cpp
-    src/ui/songview/quick/quickpopupsession.cpp
-    src/ui/songview/quick/quickpopupsession.h
-    src/ui/songview/quick/quickmenulayout.cpp
-    src/ui/songview/quick/quickmenulayout.h
-    src/ui/songview/quick/promptappearance.cpp
-    src/ui/songview/quick/promptappearance.h
-    src/ui/songview/quick/quickmenumodel.h
-    src/ui/songview/quick/otherstripquick.cpp
-    src/ui/songview/quick/automationnodelanequick.cpp
-    src/ui/songview/quick/automationnodelanequick.h
-    src/ui/songview/quick/automationquick.cpp
-    src/ui/songview/quick/velocityquick.cpp
-    src/ui/songview/quick/voicechangequick.cpp
-    src/ui/songview/quick/pianorollquick.h
-    src/ui/songview/quick/timelineinput.h
-    src/ui/songview/quick/timelineinputitem.cpp
-    src/ui/songview/quick/timelineinputitem.h
-    src/ui/songview/quick/timelinequickscene.cpp
-    src/ui/songview/quick/timelinequickchrome.cpp
-    src/ui/songview/quick/timelinequickchrome.h
-    src/ui/songview/quick/playheadquick.cpp
-    src/ui/songview/quick/playheadquick.h
-    src/ui/songview/quick/timelinequicklayer.h
-    src/ui/songview/quick/timelinequickscene.h
-    src/ui/songview/quick/timelinequickview.cpp
-    src/ui/songview/quick/timelinequickview.h
-    src/ui/songview/quick/timelinequickview_pianoroll.cpp
-    src/ui/songview/quick/timelinequickview_keyrouting.cpp
-    src/ui/songview/quick/timelinequickview_window.cpp
-    src/ui/songview/quick/timerulerquick.cpp
-    src/ui/pitchbendeditor.cpp
-    src/ui/pitchbendeditor.hpp
-    src/ui/pitchbendgeometry.h
-    src/ui/pitchbendgraph.cpp
-    src/ui/pitchbendgraph.hpp
-    src/ui/pitchbendgraph_render.cpp
-    src/ui/pitchbendkernel.cpp
-    src/ui/pitchbendkernel.h
-    src/ui/eventtablemodel.cpp
-    src/ui/eventtablemodeledit.cpp
-    src/ui/eventtablemodel.h
-    src/ui/eventtabletypes.cpp
-    src/ui/eventtabletypes.h
-    src/core/noteid.h
-    src/core/velocitymodel.cpp
-    src/core/velocitymodel.h
-    src/ui/velocitygesturemodel.cpp
-    src/ui/velocitygesturemodel.h
-    src/ui/editordrawer/drawerpage.h
-    src/ui/editorviewstate.cpp
-    src/ui/editorviewstate.h
-    src/ui/editordrawer/editordrawer.cpp
-    src/ui/editordrawer/editordrawer.h
-    src/ui/editordrawer/taptempo.h
-    src/ui/editordrawer/drawersections.cpp
-    src/ui/editordrawer/drawersections.h
-    src/ui/editordrawer/drawerchrome.cpp
-    src/ui/editordrawer/drawerchrome.h
-    src/ui/editordrawer/automationcanvas.cpp
-    src/ui/editordrawer/automationcanvas_tabs.cpp
-    src/ui/editordrawer/automationcanvas_gesture.cpp
-    src/ui/editordrawer/automationcanvas_input.cpp
-    src/ui/editordrawer/automationcanvas_menu.cpp
-    src/ui/editordrawer/automationcanvas_pointmenu.cpp
-    src/ui/editordrawer/automationcanvas_deleteprompt.cpp
-    src/ui/editordrawer/automationcanvas_taptempo.cpp
-    src/ui/editordrawer/automationviewmodel.cpp
-    src/ui/editordrawer/automationviewmodel.h
-    src/ui/editordrawer/nodelane/gesture.cpp
-    src/ui/editordrawer/nodelane/gesture.h
-    src/ui/editordrawer/nodelane/hover.cpp
-    src/ui/editordrawer/nodelane/hover.h
-    src/ui/editordrawer/cclanes.cpp
-    src/ui/editordrawer/cclanes.h
-    src/ui/editordrawer/voicechangearea/voicechangearea.cpp
-    src/ui/editordrawer/voicechangearea/voicechangearea.h
-    src/ui/editordrawer/voicechangearea/voicechangemenu.cpp
-    src/ui/editordrawer/nodelane/pencilgesture.cpp
-    src/ui/editordrawer/nodelane/pencilgesture.h
-    src/ui/editordrawer/automationprojection.cpp
-    src/ui/editordrawer/automationprojection.h
-    src/ui/editordrawer/automationpage.cpp
-    src/ui/editordrawer/automationpage.h
-    src/ui/editordrawer/nodelane/nodelane.cpp
-    src/ui/editordrawer/nodelane/nodelane.h
-    src/ui/editordrawer/nodelane/batchcommit.cpp
-    src/ui/editordrawer/nodelane/batchcommit.h
-    src/ui/editordrawer/nodelane/tempoadapter.cpp
-    src/ui/editordrawer/tempolane.cpp
-    src/ui/editordrawer/tempolane.h
-    src/ui/editordrawer/velocityarea/velocityarea.cpp
-    src/ui/editordrawer/velocityarea/velocityarea.h
-    src/ui/editordrawer/velocityarea/velocityarea_interaction.cpp
-    src/ui/editordrawer/velocityarea/detail.h
-    src/ui/editordrawer/linearramp.h
-    src/ui/editordrawer/velocityaxis.cpp
-    src/ui/editordrawer/velocityaxis.h
+    src/ui/layout.cpp
+    src/ui/layout.h
+    src/ui/typography.cpp
+    src/ui/typography.h
+    src/ui/theme/color_math.cpp
+    src/ui/theme/color_math.h
+    src/ui/theme/presetcolors.h
+    src/ui/theme/theme.h
+    src/ui/theme/theme_roles.h
+    src/ui/theme/themecontroller.cpp
+    src/ui/theme/themecontroller.h
+    src/ui/theme/themeresolver.cpp
+    src/ui/theme/themeresolver.h
+    src/ui/theme/themeruntime.cpp
+    src/ui/theme/themeruntime.h
 )
-if(APPLE)
-    target_sources(porydaw_app PRIVATE
-        src/ui/nativelayerutils_macos_p.h
-        src/ui/playheadrenderer_macos.mm
-        "${SWIFT_GRID_NATIVE_DIR}/font_metrics.cpp"
-        "${SWIFT_GRID_NATIVE_DIR}/window_cancel.cpp"
-        "${SWIFT_GRID_FEED_DIR}/command_feed.cpp"
-        "${SWIFT_GRID_FEED_DIR}/command_feed.h"
-        "${SWIFT_GRID_FEED_DIR}/intent_executor.cpp"
-        "${SWIFT_GRID_FEED_DIR}/intent_executor.h"
-        "${SWIFT_GRID_FEED_DIR}/key_feed.cpp"
-        "${SWIFT_GRID_FEED_DIR}/key_feed.h"
-        "${SWIFT_GRID_FEED_DIR}/document_feed.cpp"
-        "${SWIFT_GRID_FEED_DIR}/document_feed.h"
-        "${SWIFT_GRID_FEED_DIR}/swift_grid_document_feed.cpp"
-        "${SWIFT_GRID_FEED_DIR}/swift_grid_document_feed.h"
-        "${SWIFT_GRID_FEED_DIR}/session_feed.cpp"
-        "${SWIFT_GRID_FEED_DIR}/session_feed.h"
-        "${SWIFT_GRID_FEED_DIR}/grid_host.h"
-        "${SWIFT_GRID_FEED_DIR}/swift_roll_mount.cpp"
-        "${SWIFT_GRID_FEED_DIR}/swift_roll_mount.h"
-        "${SWIFT_GRID_FEED_DIR}/swift_roll_band.cpp"
-        "${SWIFT_GRID_FEED_DIR}/swift_roll_band.h"
-    )
-    target_link_libraries(porydaw_app PUBLIC swiftgrid)
-    # Qt's qdebug.h UInt alias collides with macOS OSTypes.h only in this
-    # Objective-C++ bridge; keep project -Wshadow enabled everywhere else.
-    set_property(SOURCE src/ui/playheadrenderer_macos.mm APPEND PROPERTY
-        COMPILE_OPTIONS -Wno-shadow)
-    find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
-    find_library(QUARTZCORE_FRAMEWORK QuartzCore REQUIRED)
-    target_link_libraries(porydaw_app PRIVATE
-        ${APPKIT_FRAMEWORK}
-        ${QUARTZCORE_FRAMEWORK}
-    )
-endif()
 
 target_include_directories(porydaw_app PUBLIC
     src
@@ -564,19 +285,15 @@ target_include_directories(porydaw_app SYSTEM PUBLIC
     ${PORYAAAA_DIR}/plugin/hw_audio
     ${PORYAAAA_DIR}/plugin/hw_audio/..
 )
-target_include_directories(porydaw_app PRIVATE
-    src/ui
-    src/ui/mousehints
-    src/ui/songview/quick
-)
 
 porydaw_enable_project_warnings(porydaw_app)
 # The project() version is the single source of truth (docs/RELEASING.md);
 # release CI refuses a tag that doesn't match it.
 target_compile_definitions(porydaw_app PUBLIC
     "$<$<NOT:$<COMPILE_LANGUAGE:Swift>>:PORYDAW_VERSION=\"${PROJECT_VERSION}\">")
-target_link_libraries(porydaw_app PUBLIC Qt6::Svg Qt6::Widgets poryaaaa_engine)
-target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick Qt6::QuickControls2)
+target_link_libraries(porydaw_app PUBLIC Qt6::Widgets poryaaaa_engine PorydawApp
+    PorydawPlayback)
+target_link_libraries(porydaw_app PRIVATE Qt6::Qml QtBridge)
 if(APPLE)
     # Keep framework headers ahead of stale non-framework Qt installs such
     # as /usr/local/include/Qt*. Treating imported frameworks as system
@@ -586,66 +303,6 @@ if(APPLE)
     set_target_properties(porydaw_app PROPERTIES
         NO_SYSTEM_FROM_IMPORTED ON
         LINKER_LANGUAGE CXX
-    )
-endif()
-set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-# Each Quick file is bundled at its basename; one loop instead of one
-# set_source_files_properties block per file.
-foreach(qml IN
-    ITEMS AutomationTabs TimelineCanvas PianoRollCanvas TimelineScrollbar
-          RulerControls RulerToolTip TrackHeaderBand OtherStripToolTip
-          DrawerChromeLayer DragInput HoverHint PromptCard PromptButton
-          PitchBendPopup VelocityPrompt CcDeleteConfirm TimeSignaturePrompt
-          InsertTimePrompt VoicePickerPrompt EventListPage QuickMenuPanel
-          QuickPopupLayer)
-    set_source_files_properties(
-        src/ui/songview/quick/${qml}.qml
-        PROPERTIES QT_RESOURCE_ALIAS ${qml}.qml)
-endforeach()
-qt_add_qml_module(porydaw_app
-    URI Porydaw.Ui
-    VERSION 1.0
-    RESOURCE_PREFIX /qt/qml
-    NO_PLUGIN
-    SOURCES
-        src/ui/mousehints/hintprofiles.h
-        src/ui/pitchbendgraph.hpp
-        src/ui/songview/quick/playheadquick.h
-        src/ui/songview/quick/timelineinputitem.h
-        src/ui/songview/quick/timelinequickchrome.h
-        src/ui/songview/quick/timelinequickscene.h
-    QML_FILES
-        src/ui/songview/quick/AutomationTabs.qml
-        src/ui/songview/quick/TimelineCanvas.qml
-        src/ui/songview/quick/PianoRollCanvas.qml
-        src/ui/songview/quick/TimelineScrollbar.qml
-        src/ui/songview/quick/RulerControls.qml
-        src/ui/songview/quick/RulerToolTip.qml
-        src/ui/songview/quick/TrackHeaderBand.qml
-        src/ui/songview/quick/DrawerChromeLayer.qml
-        src/ui/songview/quick/OtherStripToolTip.qml
-        src/ui/songview/quick/QuickMenuPanel.qml
-        src/ui/songview/quick/QuickPopupLayer.qml
-        src/ui/songview/quick/EventListPage.qml
-        src/ui/songview/quick/DragInput.qml
-        src/ui/songview/quick/HoverHint.qml
-        src/ui/songview/quick/PromptCard.qml
-        src/ui/songview/quick/PromptButton.qml
-        src/ui/songview/quick/PitchBendPopup.qml
-        src/ui/songview/quick/VelocityPrompt.qml
-        src/ui/songview/quick/CcDeleteConfirm.qml
-        src/ui/songview/quick/TimeSignaturePrompt.qml
-        src/ui/songview/quick/InsertTimePrompt.qml
-        src/ui/songview/quick/VoicePickerPrompt.qml
-)
-if(APPLE)
-    qt_add_resources(porydaw_app "swift_grid_qml"
-        PREFIX "/swiftgrid"
-        BASE "${SWIFT_GRID_DIR}"
-        FILES
-            "${SWIFT_GRID_DIR}/SwiftRollOverlay.qml"
-            "${SWIFT_GRID_DIR}/PianoRollCanvas.qml"
-            "${SWIFT_GRID_DIR}/TimelineQuickItem.qml"
     )
 endif()
 target_precompile_headers(porydaw_app PRIVATE
@@ -672,33 +329,11 @@ qt_add_resources(porydaw "app_icon"
     PREFIX "/icons"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
     FILES
-        resources/flat-music.svg
         resources/porydaw-16.png
         resources/porydaw-32.png
         resources/porydaw-48.png
         resources/porydaw-128.png
         resources/porydaw-256.png
-        resources/velocity.svg
-        resources/velocity_labels.svg
-        resources/automation.svg
-        resources/drum.svg
-        resources/piano-keyboard.svg
-        resources/wave-sine.svg
-        resources/wave-square.svg
-        resources/wave-triangle.svg
-        resources/waveform-path.svg
-        resources/waveform.svg
-)
-qt_add_resources(porydaw "cursor_images"
-    PREFIX "/cursors"
-    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
-    FILES
-        resources/left-drag.png
-        resources/left-drag@2x.png
-        resources/pencil.png
-        resources/pencil@2x.png
-        resources/right-drag.png
-        resources/right-drag@2x.png
 )
 if(WIN32)
     # Stage the Qt DLLs beside porydaw.exe so the build tree runs directly.
@@ -755,15 +390,17 @@ endif()
 # ---- Offline render CLI (development/testing: parity vs poryaaaa_render) ----
 add_executable(porydaw_render_cli
     tools/porydaw_render_cli.cpp
-    src/core/mid2agbtables.cpp
-    src/core/miditimeline.cpp
-    src/core/smf.cpp
-    src/core/timelineplayer.cpp
+    src/audio/swift_playback.h
 )
 target_include_directories(porydaw_render_cli PRIVATE src)
-target_link_libraries(porydaw_render_cli PRIVATE Qt6::Core poryaaaa_engine)
-
+target_link_libraries(porydaw_render_cli PRIVATE PorydawPlayback poryaaaa_engine)
 porydaw_enable_project_warnings(porydaw_render_cli)
+if(APPLE)
+    # PorydawPlayback is a Swift archive, but this executable contains only
+    # native objects. Match the application target: let CMake propagate the
+    # Swift runtime link items while the C++ driver performs the final link.
+    set_target_properties(porydaw_render_cli PROPERTIES LINKER_LANGUAGE CXX)
+endif()
 if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_options(porydaw_render_cli PRIVATE -static)
 endif()

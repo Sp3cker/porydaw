@@ -286,3 +286,16 @@ Mechanical validation passed for 11 Markdown documents, 41 local links/anchors,
 eight brief schemas and ledger totals; all 834 baseline identities and historical
 per-row evidence were preserved. This closes the planning findings, not task
 acceptance: Swift-body execution, storage comparison and retirement gates remain.
+
+## Pre-deletion gate evidence (controller, 2026-09-20)
+
+Fresh full battery at revision 45a52d80 (pre-7A/7B): `deno task verify
+--filter swiftcore --filter smfcheck --filter editcheck --filter noteidcheck
+--filter xcmdcheck --filter automation-domain --filter velocity-model
+--filter savecheck --filter vgbankcheck --filter vgsavecheck --filter
+roundtrip --filter loopcheck --filter primecheck --filter trackactivitycheck
+--filter exportcheck --verbose` → run_checks PASS. Ledger adjudication:
+845 rows, 0 unapproved exclusions (30 excluded, 59 deferred-ui); T1 20 rows
++ history-transition rows promoted with fresh-run evidence. 7B (oracle/core
+deletion) blocked until T8's 43 core rows pass headless, per the case-by-case
+retirement gate.

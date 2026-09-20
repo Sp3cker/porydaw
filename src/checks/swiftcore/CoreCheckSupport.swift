@@ -77,7 +77,7 @@ struct CheckReport {
 
 enum CheckEnvironment {
     static let fixtureRoot: String? = {
-        guard let pointer = oracle_check_fixture_root() else { return nil }
+        guard let pointer = pdc_check_fixture_root() else { return nil }
         return String(cString: pointer)
     }()
 

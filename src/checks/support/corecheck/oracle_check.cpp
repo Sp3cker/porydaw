@@ -8,10 +8,8 @@
 #include <bit>
 #include <cstring>
 #include <limits>
-#include <memory>
 #include <utility>
 
-#include "checks/playback/sustainvoicegroup.h"
 #include "core/m4asemantics.h"
 #include "core/mid2agbtables.h"
 #include "core/smf.h"
@@ -19,37 +17,9 @@
 #include "core/timedefaults.h"
 #include "core/tracklimits.h"
 #include "core/velocitymodel.h"
-#include "project/songregistry.h"
-
-struct PdcPlaybackEngine {
-    M4AEngine engine{};
-    checks::SustainVoicegroup bank;
-    bool initialized = false;
-
-    explicit PdcPlaybackEngine(double sampleRate)
-    {
-        ToneData &square = bank.voices[2];
-        square.type = VOICE_SQUARE_2;
-        square.key = 60;
-        square.wavePointer = reinterpret_cast<uint32_t *>(uintptr_t{2});
-        square.attack = 7;
-        square.decay = 0;
-        square.sustain = 15;
-        square.release = 7;
-        initialized = m4a_engine_init(&engine, float(sampleRate));
-        if (initialized)
-            m4a_engine_set_voicegroup(&engine, bank.voices);
-    }
-
-    ~PdcPlaybackEngine()
-    {
-        if (initialized)
-            m4a_engine_destroy(&engine);
-    }
-};
+#include "project/decompproject.h"
 
 namespace {
-QByteArray gFixtureRoot;
 
 QString codecSummary(const SmfFile &file)
 {
@@ -167,16 +137,6 @@ std::optional<QByteArray> semanticText(uint32_t operation, int64_t a, int64_t b)
 
 } // namespace
 
-extern "C" void oracle_check_set_fixture_root(const char *path)
-{
-    gFixtureRoot = path ? QByteArray(path) : QByteArray();
-}
-
-extern "C" const char *oracle_check_fixture_root()
-{
-    return gFixtureRoot.isEmpty() ? nullptr : gFixtureRoot.constData();
-}
-
 extern "C" int64_t oracle_codec_roundtrip(const uint8_t *input, size_t inputCount, uint8_t *output,
                                           size_t outputCapacity, uint8_t *wasFormatZero,
                                           char *summary, size_t summaryCapacity,
@@ -213,7 +173,25 @@ extern "C" int64_t oracle_codec_roundtrip(const uint8_t *input, size_t inputCoun
 
 extern "C" int64_t oracle_blank_song(uint8_t *output, size_t outputCapacity)
 {
-    const QByteArray bytes = SongRegistry::blankSong().write();
+    SmfFile smf;
+    smf.format = 1;
+    smf.division = 24;
+    const Tick oneBar = Tick(smf.division) * 4;
+    SmfTrack sequence;
+    sequence.events = {
+        SmfEvent{.status = 0xFF, .metaType = 0x51, .blob = QByteArray("\x07\xA1\x20", 3)},
+        SmfEvent{.status = 0xFF, .metaType = 0x58, .blob = QByteArray("\x04\x02\x18\x08", 4)},
+    };
+    sequence.endTick = oneBar;
+    smf.tracks.push_back(sequence);
+    SmfTrack track;
+    track.events = {
+        SmfEvent{.status = 0xC0, .data0 = 0},
+        SmfEvent{.status = 0xB0, .data0 = 7, .data1 = 100},
+    };
+    track.endTick = oneBar;
+    smf.tracks.push_back(track);
+    const QByteArray bytes = smf.write();
     copyBytes(bytes, output, outputCapacity);
     return bytes.size();
 }
@@ -347,22 +325,4 @@ extern "C" int64_t oracle_semantic_text(uint32_t operation, int64_t a, int64_t b
         return -1;
     copyBytes(*bytes, output, outputCapacity);
     return bytes->size();
-}
-
-extern "C" PdcPlaybackEngine *pdc_playback_engine_create(double sampleRate)
-{
-    std::unique_ptr<PdcPlaybackEngine> engine = std::make_unique<PdcPlaybackEngine>(sampleRate);
-    if (!engine->initialized)
-        return nullptr;
-    return engine.release();
-}
-
-extern "C" void pdc_playback_engine_destroy(PdcPlaybackEngine *engine)
-{
-    delete engine;
-}
-
-extern "C" void *pdc_playback_engine_pointer(PdcPlaybackEngine *engine)
-{
-    return engine ? &engine->engine : nullptr;
 }

@@ -4,8 +4,10 @@ import PorydawPlaybackNative
 
 /// Owns the immutable C publication and all buffers borrowed through it.
 /// Instances are retained and released only through the control-thread ABI.
-final class PlaybackPublication {
-    static func create(from timeline: borrowing PlaybackTimeline) -> UnsafeMutablePointer<PdPlaybackData> {
+public final class PlaybackPublication {
+    public static func create(
+        from timeline: borrowing PlaybackTimeline
+    ) -> UnsafeMutablePointer<PdPlaybackData> {
         let publication = PlaybackPublication(timeline: timeline)
         let owner = Unmanaged.passRetained(publication)
         publication.data.pointee.ownerContext = UnsafeRawPointer(owner.toOpaque())

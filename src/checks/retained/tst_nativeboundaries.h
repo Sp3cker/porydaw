@@ -2,11 +2,6 @@
 
 #include <QString>
 #include <QStringList>
-
-#ifdef __APPLE__
-int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);
-#endif
-
 int runRetainedBoundaryCheck(const QString &mode, const QString &projectRoot,
                              const QString &songLabel, const QString &toolPath,
                              const QStringList &qtArguments);

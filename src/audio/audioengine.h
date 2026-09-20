@@ -2,10 +2,9 @@
 
 #include "audio/auditionslots.h"
 #include "audio/resonance_suppressor.h"
+#include "audio/swift_playback.h"
 #include "audio/timeline_handoff.h"
 #include "audio/trackactivitylevel.h"
-#include "core/miditimeline.h"
-#include "core/timelineplayer.h"
 #include "project/voicegroupsource.h"
 #include <QString>
 #include <algorithm>
@@ -48,7 +47,7 @@ enum class Transport : int {
 };
 
 // Owns the audio output device (miniaudio), the poryaaaa M4AEngine instance,
-// and the sequencer that walks a MidiTimeline on the audio thread.
+// and the sequencer that walks a PdPlaybackData on the audio thread.
 //
 // Thread model, split hot/cold:
 //  - Cold operations (loadSong/unloadSong/shutdown) stop the device first, so
@@ -88,14 +87,14 @@ class AudioEngine
 
     // Cold: swaps song data with the device stopped. Takes shared ownership
     // of the timeline; the bank stays leased by the active song session.
-    void loadSong(std::shared_ptr<const MidiTimeline> timeline, const VoicegroupLease &voicegroup,
+    void loadSong(std::shared_ptr<const PdPlaybackData> timeline, const VoicegroupLease &voicegroup,
                   const SongSettings &settings);
     void unloadSong();
 
     // Publishes the latest rebuilt timeline for the next audio callback.
     // Ownership handoff and deferred reclamation stay inside TimelineHandoff;
     // this call never waits for the callback.
-    void updateTimeline(std::shared_ptr<const MidiTimeline> timeline);
+    void updateTimeline(std::shared_ptr<const PdPlaybackData> timeline);
     // Hot: requests a jump at the next audio callback. Releases sounding
     // notes and chases controller state at the landing position. Works in
     // any transport state; playing from Stopped starts wherever the last
@@ -154,7 +153,7 @@ class AudioEngine
 
     // Borrowed snapshots for immediate GUI-thread reads. The engine retains
     // replaced timelines until the audio callback finishes with them.
-    const MidiTimeline *timeline() const { return m_timelineHandoff.active(); }
+    const PdPlaybackData *timeline() const { return m_timelineHandoff.active(); }
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
 
     // Hot transport controls.
@@ -231,7 +230,7 @@ class AudioEngine
                              uint32_t frameCount);
     void process(float *interleavedOut, uint32_t frameCount);
     void applyPendingSeek();
-    void applyTimelineAdoption(const MidiTimeline *timeline);
+    void applyTimelineAdoption(const PdPlaybackData *timeline);
     void applyTransportTransition();
     // Transport cut-fade: the requested state is normally applied at the
     // exact zero-gain sample. A start at song position zero is deferred until
@@ -363,7 +362,7 @@ class AudioEngine
     uint64_t m_appliedPreviewVoice = 0;
     int m_previewVoiceKey = -1; // sounding voice-preview note, -1 when none
     uint32_t m_appliedPolyReset = 0;
-    TimelinePlayer m_player;
+    void *m_player = nullptr;
 
     // Scratch deinterleave buffers (allocated in init)
     std::unique_ptr<float[]> m_bufL;

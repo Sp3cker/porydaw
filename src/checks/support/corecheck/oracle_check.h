@@ -64,15 +64,6 @@ int64_t oracle_document_summary(const uint8_t *input, size_t inputCount, char *o
 int64_t oracle_semantic_value(uint32_t operation, int64_t a, int64_t b, int64_t c, int64_t d);
 int64_t oracle_semantic_text(uint32_t operation, int64_t a, int64_t b, char *output,
                              size_t outputCapacity);
-void oracle_check_set_fixture_root(const char *path);
-const char *oracle_check_fixture_root(void);
-
-// Native engine fixture boundary only; playback assertions live in Swift.
-typedef struct PdcPlaybackEngine PdcPlaybackEngine;
-
-PdcPlaybackEngine *pdc_playback_engine_create(double sampleRate);
-void pdc_playback_engine_destroy(PdcPlaybackEngine *engine);
-void *pdc_playback_engine_pointer(PdcPlaybackEngine *engine);
 
 #ifdef __cplusplus
 }

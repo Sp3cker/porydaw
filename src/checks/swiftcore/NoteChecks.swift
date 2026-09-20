@@ -102,8 +102,6 @@ private func insertionAndCollision(_ report: CheckReport) {
     report.expectEqual(revisionBeforeNoOp, document.revision,
                        cppID: "editcheck/EditCheckTest::documentPublicationNetZero",
                        what: "empty delete is a no-op")
-    expectOracleParity(document, cppID: "editcheck/EditCheckTest::noteEditingAbutting",
-                       row: "inserted note observation", report: report)
 }
 
 @MainActor
@@ -180,8 +178,6 @@ private func movementAndResize(_ report: CheckReport) {
     report.expect(unterminated.note(unterminatedID)?.isUnterminated == true,
                   cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                   message: "moving an unterminated note does not invent an end")
-    expectOracleParity(document, cppID: "editcheck/EditCheckTest::noteMoveCollision",
-                       row: "post-collision note observation", report: report)
 }
 
 @MainActor
@@ -502,39 +498,6 @@ private final class ProbeBankAction: BankHistoryAction {
     }
 }
 
-@MainActor
-private func expectOracleParity(_ document: SongDocument, cppID: String, row: String,
-                                report: CheckReport) {
-    guard let snapshot = try? document.captureSave() else {
-        report.fail(cppID, "\(row): Swift save capture failed")
-        return
-    }
-    var output = Array<CChar>(repeating: 0, count: 16_384)
-    let count = snapshot.bytes.withUnsafeBufferPointer { bytes in
-        output.withUnsafeMutableBufferPointer { buffer in
-            oracle_document_summary(bytes.baseAddress, bytes.count,
-                                    buffer.baseAddress, buffer.count)
-        }
-    }
-    guard count >= 0 else {
-        report.fail(cppID, "\(row): frozen C++ document observation failed")
-        return
-    }
-    let oracle = String(decoding: output.prefix(Int(count)).map { UInt8(bitPattern: $0) }, as: UTF8.self)
-    let swift = noteSummary(document)
-    report.expectEqual(oracle, swift, cppID: cppID, what: row)
-}
-
-@MainActor
-private func noteSummary(_ document: SongDocument) -> String {
-    var parts: [String] = ["tempo=\(document.state.tempo.count)"]
-    for track in 0..<document.engineTracks.usedTrackCount {
-        for note in document.notes(in: track) {
-            parts.append("n=\(track),\(note.tick),\(note.duration),\(note.pitch),\(note.velocity),\(note.isUnterminated ? 1 : 0)")
-        }
-    }
-    return parts.joined(separator: ";")
-}
 
 private func baseFile(events: [MidiEvent]) -> MidiFile {
     MidiFile(division: 24, chunks: [

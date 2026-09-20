@@ -5,10 +5,7 @@
 #include <QFile>
 
 #include <algorithm>
-#include <span>
 #include <vector>
-
-#include "core/timelineplayer.h"
 
 extern "C" {
 #include "m4a_engine.h"
@@ -37,13 +34,19 @@ int16_t toPcm16(float sample)
     return int16_t(std::clamp(v, -32768, 32767));
 }
 
+bool playbackHasLoop(const PdPlaybackData &data)
+{
+    return data.loopStartSample != UINT64_MAX && data.loopEndSample != UINT64_MAX &&
+           data.loopEndSample > data.loopStartSample;
+}
+
 } // namespace
 
-WavExportTotals wavExportTotals(const MidiTimeline &timeline, const WavExportOptions &opts)
+WavExportTotals wavExportTotals(const PdPlaybackData &timeline, const WavExportOptions &opts)
 {
     WavExportTotals totals;
     const double rate = double(opts.sampleRate);
-    if (timeline.hasLoop()) {
+    if (playbackHasLoop(timeline)) {
         const uint64_t loopDuration = timeline.loopEndSample - timeline.loopStartSample;
         totals.fadeStartSample = timeline.loopStartSample + uint64_t(opts.loopCount) * loopDuration;
         totals.totalSamples = totals.fadeStartSample + uint64_t(opts.fadeoutSeconds * rate + 0.5);
@@ -53,9 +56,10 @@ WavExportTotals wavExportTotals(const MidiTimeline &timeline, const WavExportOpt
     return totals;
 }
 
-bool exportWav(const QString &path, const MidiTimeline &timeline, const VoicegroupLease &voicegroup,
-               const SongSettings &settings, const WavExportOptions &opts,
-               const std::function<bool(double)> &progress, QString *error)
+bool exportWav(const QString &path, const PdPlaybackData &timeline,
+               const VoicegroupLease &voicegroup, const SongSettings &settings,
+               const WavExportOptions &opts, const std::function<bool(double)> &progress,
+               QString *error)
 {
     const WavExportTotals totals = wavExportTotals(timeline, opts);
     const uint64_t dataSize = totals.totalSamples * 4; // 16-bit stereo
@@ -118,8 +122,15 @@ bool exportWav(const QString &path, const MidiTimeline &timeline, const Voicegro
 
     bool ok = file.write(header) == header.size();
     bool cancelled = false;
-    TimelinePlayer player;
-    player.reset();
+    void *player = pd_player_create();
+    if (!player) {
+        *error = QCoreApplication::translate("WavExport", "Cannot initialize the Swift sequencer.");
+        m4a_engine_destroy(&engine);
+        file.close();
+        file.remove();
+        return false;
+    }
+    pd_player_reset(player);
     if (progress && !progress(0.0))
         cancelled = true;
     uint64_t sourcePos = 0;
@@ -127,8 +138,8 @@ bool exportWav(const QString &path, const MidiTimeline &timeline, const Voicegro
         const auto sourceFrames =
             uint32_t(std::min<uint64_t>(frames, totals.totalSamples - sourcePos));
         if (sourceFrames > 0) {
-            player.render(&engine, &timeline, std::span(bufL).first(sourceFrames),
-                          std::span(bufR).first(sourceFrames), timeline.hasLoop(), 0);
+            pd_player_render(player, &engine, &timeline, bufL.data(), bufR.data(), sourceFrames,
+                             playbackHasLoop(timeline), 0);
         }
         std::fill(bufL.begin() + sourceFrames, bufL.begin() + frames, 0.0f);
         std::fill(bufR.begin() + sourceFrames, bufR.begin() + frames, 0.0f);
@@ -154,8 +165,8 @@ bool exportWav(const QString &path, const MidiTimeline &timeline, const Voicegro
         if (opts.resonanceSuppression) {
             renderSuppressed(n);
         } else {
-            player.render(&engine, &timeline, std::span(bufL).first(n), std::span(bufR).first(n),
-                          timeline.hasLoop(), 0);
+            pd_player_render(player, &engine, &timeline, bufL.data(), bufR.data(), n,
+                             playbackHasLoop(timeline), 0);
         }
 
         pcm.resize(int(n) * 4);
@@ -182,6 +193,7 @@ bool exportWav(const QString &path, const MidiTimeline &timeline, const Voicegro
             break;
         }
     }
+    pd_player_destroy(player);
     m4a_engine_destroy(&engine);
 
     if (!ok) {

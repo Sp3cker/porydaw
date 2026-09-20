@@ -49,6 +49,12 @@ namespace {
 // Silence to render after the last event before auto-stopping (no loop).
 constexpr double kTailSeconds = 3.0;
 
+bool playbackHasLoop(const PdPlaybackData *data)
+{
+    return data && data->loopStartSample != UINT64_MAX && data->loopEndSample != UINT64_MAX &&
+           data->loopEndSample > data->loopStartSample;
+}
+
 void applyEngineSettings(M4AEngine *engine, const SongSettings &settings)
 {
     m4a_engine_set_song_volume(engine, settings.songVolume);
@@ -180,6 +186,12 @@ bool AudioEngine::init(QString *error)
     m4a_engine_init(m_engine.get(), float(m_sampleRate));
     m_previewEngine = std::make_unique<M4AEngine>();
     m4a_engine_init(m_previewEngine.get(), float(m_sampleRate));
+    m_player = pd_player_create();
+    if (!m_player) {
+        if (error)
+            *error = QStringLiteral("Failed to initialize the Swift sequencer.");
+        return false;
+    }
 
     if (ma_device_start(m_device) != MA_SUCCESS) {
         if (error)
@@ -202,6 +214,10 @@ void AudioEngine::shutdown()
         m_deviceStarted = false;
     }
     resetOutputCut();
+    if (m_player) {
+        pd_player_destroy(m_player);
+        m_player = nullptr;
+    }
     if (m_engine) {
         m4a_engine_destroy(m_engine.get());
         m_engine.reset();
@@ -233,7 +249,7 @@ void AudioEngine::bindEngineVoicegroup(M4AEngine *engine, const VoicegroupLease 
     m4a_engine_set_voicegroup(engine, bank ? bank.borrow()->voices : nullptr);
 }
 
-void AudioEngine::loadSong(std::shared_ptr<const MidiTimeline> timeline,
+void AudioEngine::loadSong(std::shared_ptr<const PdPlaybackData> timeline,
                            const VoicegroupLease &voicegroup, const SongSettings &settings)
 {
     // Cold swap: the audio thread must not be running while pointers change.
@@ -257,10 +273,10 @@ void AudioEngine::loadSong(std::shared_ptr<const MidiTimeline> timeline,
     // so auditioned notes (previewNote) sound as they would in the song
     // before playback has ever dispatched the track's events. Playback
     // re-dispatches the real events, so this changes nothing it plays.
-    const MidiTimeline *activeTimeline = m_timelineHandoff.active();
+    const PdPlaybackData *activeTimeline = m_timelineHandoff.active();
     if (activeTimeline) {
-        TimelinePlayer::chase(m_engine.get(), activeTimeline, 0);
-        TimelinePlayer::primeVoices(m_engine.get(), activeTimeline, 0);
+        pd_player_chase(m_engine.get(), activeTimeline, 0);
+        pd_player_prime(m_engine.get(), activeTimeline, 0);
     }
     resetPreviewEngine();
     clearTimedPreviews();
@@ -270,7 +286,7 @@ void AudioEngine::loadSong(std::shared_ptr<const MidiTimeline> timeline,
     m_muteMask.store(0);
     m_soloMask.store(0);
     m_appliedMute = 0;
-    m_player.reset();
+    pd_player_reset(m_player);
     m_playhead.store(0);
     m_activePcm.store(0);
     m_activeCgb.store(0);
@@ -279,7 +295,7 @@ void AudioEngine::loadSong(std::shared_ptr<const MidiTimeline> timeline,
         ma_device_start(m_device);
 }
 
-void AudioEngine::updateTimeline(std::shared_ptr<const MidiTimeline> timeline)
+void AudioEngine::updateTimeline(std::shared_ptr<const PdPlaybackData> timeline)
 {
     if (!timeline || !songLoaded())
         return;
@@ -290,25 +306,25 @@ void AudioEngine::updateTimeline(std::shared_ptr<const MidiTimeline> timeline)
     }
 }
 
-void AudioEngine::applyTimelineAdoption(const MidiTimeline *timeline)
+void AudioEngine::applyTimelineAdoption(const PdPlaybackData *timeline)
 {
     // A seek published before the rebuild belongs on the replacement.
     const uint64_t pending = m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
     const bool seeking = pending != kNoPendingSeek;
-    const uint64_t pos = seeking ? pending : m_player.position();
+    const uint64_t pos = seeking ? pending : pd_player_position(m_player);
     if (seeking) {
         for (int track = 0; track < MAX_TRACKS; track++)
             m4a_engine_all_notes_off(m_engine.get(), track);
         m_previewTrack = -1;
         m_previewKey = -1;
         clearTimedPreviews();
-        m_player.seek(pos, timeline);
+        pd_player_seek(m_player, pos, timeline);
     } else {
-        m_player.replaceTimeline(pos, timeline);
+        pd_player_replace(m_player, pos, timeline);
     }
     m_playhead.store(pos);
-    TimelinePlayer::chase(m_engine.get(), timeline, pos);
-    TimelinePlayer::primeVoices(m_engine.get(), timeline, pos);
+    pd_player_chase(m_engine.get(), timeline, pos);
+    pd_player_prime(m_engine.get(), timeline, pos);
 }
 
 void AudioEngine::seek(uint64_t samplePos)
@@ -321,7 +337,7 @@ void AudioEngine::seek(uint64_t samplePos)
 void AudioEngine::applyPendingSeek()
 {
     const uint64_t samplePos = m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
-    const MidiTimeline *timeline = m_timelineHandoff.active();
+    const PdPlaybackData *timeline = m_timelineHandoff.active();
     if (samplePos == kNoPendingSeek || !timeline)
         return;
     m_resonance.reset();
@@ -329,9 +345,9 @@ void AudioEngine::applyPendingSeek()
     for (int track = 0; track < MAX_TRACKS; track++)
         m4a_engine_all_notes_off(m_engine.get(), track);
     clearTimedPreviews();
-    m_player.seek(samplePos, timeline);
-    TimelinePlayer::chase(m_engine.get(), timeline, samplePos);
-    TimelinePlayer::primeVoices(m_engine.get(), timeline, samplePos);
+    pd_player_seek(m_player, samplePos, timeline);
+    pd_player_chase(m_engine.get(), timeline, samplePos);
+    pd_player_prime(m_engine.get(), timeline, samplePos);
     m_playhead.store(samplePos);
 }
 
@@ -361,10 +377,10 @@ void AudioEngine::updateVoicegroup(const VoicegroupLease &voicegroup)
     m4a_engine_set_voicegroup(m_engine.get(), m_voicegroup ? m_voicegroup->voices : nullptr);
     // Re-latch program changes: the tracks' instrument state still points
     // into the old voices array until the chase reapplies it.
-    const MidiTimeline *timeline = m_timelineHandoff.active();
+    const PdPlaybackData *timeline = m_timelineHandoff.active();
     if (timeline) {
-        TimelinePlayer::chase(m_engine.get(), timeline, m_playhead.load());
-        TimelinePlayer::primeVoices(m_engine.get(), timeline, m_playhead.load());
+        pd_player_chase(m_engine.get(), timeline, m_playhead.load());
+        pd_player_prime(m_engine.get(), timeline, m_playhead.load());
     }
     resetPreviewEngine();
     if (m_deviceStarted)
@@ -436,7 +452,7 @@ void AudioEngine::unloadSong()
     clearTimedPreviews();
     m_transport.store(Transport::Stopped);
     m_appliedTransport = Transport::Stopped;
-    m_player.reset();
+    pd_player_reset(m_player);
     m_playhead.store(0);
     m_activePcm.store(0);
     m_activeCgb.store(0);
@@ -624,7 +640,7 @@ void AudioEngine::finishOutputCut()
     const bool deferredPlayingStart = target == Transport::Playing && prior != Transport::Playing;
     switch (target) {
     case Transport::Stopped:
-        m_player.reset();
+        pd_player_reset(m_player);
         break;
     case Transport::Paused:
         break;
@@ -808,7 +824,7 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
     // requested after stop() (play-from-cursor) must land on top of the
     // rewind, not under it.
     applyTransportTransition();
-    if (const MidiTimeline *timeline = m_timelineHandoff.acquirePending())
+    if (const PdPlaybackData *timeline = m_timelineHandoff.acquirePending())
         applyTimelineAdoption(timeline);
     applyPendingSeek();
     applyMuteTransition();
@@ -831,17 +847,18 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
 
     while (done < frameCount) {
         const uint32_t n = std::min(frameCount - done, m_bufCapacity);
-        const MidiTimeline *tl = m_timelineHandoff.active();
+        const PdPlaybackData *tl = m_timelineHandoff.active();
         const bool playing = m_appliedTransport == Transport::Playing && tl != nullptr;
 
         if (playing) {
             const bool looping = m_loopEnabled.load();
-            m_player.render(engine, tl, std::span(m_bufL.get(), n), std::span(m_bufR.get(), n),
-                            looping, m_appliedMute);
+            pd_player_render(m_player, engine, tl, m_bufL.get(), m_bufR.get(), n, looping,
+                             m_appliedMute);
 
             // Auto-stop a non-looping song after the tail rings out.
-            if (!(looping && tl->hasLoop()) &&
-                m_player.position() > tl->lengthSamples + uint64_t(kTailSeconds * m_sampleRate)) {
+            if (!(looping && playbackHasLoop(tl)) &&
+                pd_player_position(m_player) >
+                    tl->lengthSamples + uint64_t(kTailSeconds * m_sampleRate)) {
                 m_transport.store(Transport::Stopped);
                 applyTransportTransition();
             }
@@ -928,7 +945,7 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
         done += n;
     }
 
-    m_playhead.store(m_player.position());
+    m_playhead.store(pd_player_position(m_player));
 
     TrackActivityLevels callbackActivity{};
     int pcm = 0;

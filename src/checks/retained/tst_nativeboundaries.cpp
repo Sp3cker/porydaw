@@ -1,0 +1,306 @@
+#include "tst_nativeboundaries.h"
+
+#include "audio/audioengine.h"
+#include "audio/swift_audio_service.h"
+#include "audio/wavexport.h"
+#include "project/swift_project_service.h"
+
+#include <QByteArray>
+#include <QDebug>
+#include <QDir>
+#include <QFile>
+#include <QProcess>
+#include <QSemaphore>
+#include <QStringList>
+
+#include <array>
+#include <cstdint>
+#include <vector>
+
+namespace {
+
+struct OpenWait {
+    QSemaphore done;
+    bool ok = false;
+    QString error;
+};
+
+struct SongWait {
+    QSemaphore done;
+    bool ok = false;
+    QString error;
+    QByteArray midi;
+    QString label;
+    QString midPath;
+    QString voicegroupArg;
+    QString bankSourcePath;
+    QString bankSectionLabel;
+    QStringList rawFlags;
+    int masterVolume = 127;
+    int reverb = 0;
+    bool hasReverb = false;
+    int priority = 0;
+    bool exactGate = false;
+    bool extendedClocks = false;
+    bool noCompression = false;
+    PdBankLease *lease = nullptr;
+};
+
+struct SaveWait {
+    QSemaphore done;
+    bool ok = false;
+    QString error;
+    PdBankLease *lease = nullptr;
+};
+
+void openCompletion(void *context, bool ok, const char *error)
+{
+    auto &wait = *static_cast<OpenWait *>(context);
+    wait.ok = ok;
+    wait.error = error ? QString::fromUtf8(error) : QString{};
+    wait.done.release();
+}
+
+void songCompletion(void *context, bool ok, const uint8_t *midiBytes, size_t midiByteCount,
+                    const PdSongMeta *meta, const PdBankView *bank, PdBankLease *lease,
+                    const char *error)
+{
+    auto &wait = *static_cast<SongWait *>(context);
+    wait.ok = ok;
+    wait.error = error ? QString::fromUtf8(error) : QString{};
+    if (ok && meta && bank && midiBytes) {
+        wait.midi = QByteArray(reinterpret_cast<const char *>(midiBytes), qsizetype(midiByteCount));
+        wait.label = QString::fromUtf8(meta->label);
+        wait.midPath = QString::fromUtf8(meta->midiPath);
+        wait.voicegroupArg = QString::fromUtf8(meta->cfg.voicegroupArg);
+        wait.bankSourcePath = QString::fromUtf8(bank->sourcePath);
+        wait.bankSectionLabel = QString::fromUtf8(bank->sectionLabel);
+        for (size_t index = 0; index < meta->cfg.rawFlagCount; ++index)
+            wait.rawFlags.append(QString::fromUtf8(meta->cfg.rawFlags[index]));
+        wait.masterVolume = meta->cfg.masterVolume;
+        wait.reverb = meta->cfg.reverb;
+        wait.hasReverb = meta->cfg.hasReverb;
+        wait.priority = meta->cfg.priority;
+        wait.exactGate = meta->cfg.exactGate;
+        wait.extendedClocks = meta->cfg.extendedClocks;
+        wait.noCompression = meta->cfg.noCompression;
+        wait.lease = lease;
+    } else if (lease) {
+        pd_bank_lease_release(lease);
+    }
+    wait.done.release();
+}
+
+void saveCompletion(void *context, bool ok, bool, const PdBankView *, PdBankLease *lease,
+                    const char *error)
+{
+    auto &wait = *static_cast<SaveWait *>(context);
+    wait.ok = ok;
+    wait.error = error ? QString::fromUtf8(error) : QString{};
+    wait.lease = lease;
+    wait.done.release();
+}
+
+int fail(const QString &mode, const QString &detail)
+{
+    qCritical().noquote() << mode + QStringLiteral(": ") + detail;
+    return 1;
+}
+
+bool saveSong(PdProjectService *service, const SongWait &song, bool saveBank, QString *error)
+{
+    std::vector<QByteArray> flagBytes;
+    std::vector<const char *> flagPointers;
+    flagBytes.reserve(size_t(song.rawFlags.size()));
+    flagPointers.reserve(size_t(song.rawFlags.size()));
+    for (const QString &flag : song.rawFlags)
+        flagBytes.push_back(flag.toUtf8());
+    for (const QByteArray &flag : flagBytes)
+        flagPointers.push_back(flag.constData());
+    const QByteArray label = song.label.toUtf8();
+    const QByteArray midPath = song.midPath.toUtf8();
+    const QByteArray voicegroupArg = song.voicegroupArg.toUtf8();
+    const QByteArray bankSourcePath = song.bankSourcePath.toUtf8();
+    const QByteArray bankSectionLabel = song.bankSectionLabel.toUtf8();
+    const PdSongCfg cfg{flagPointers.data(), flagPointers.size(), voicegroupArg.constData(),
+                        song.masterVolume,   song.reverb,         song.hasReverb,
+                        song.priority,       song.exactGate,      song.extendedClocks,
+                        song.noCompression};
+    const PdSaveRequest request{label.constData(),
+                                midPath.constData(),
+                                reinterpret_cast<const uint8_t *>(song.midi.constData()),
+                                size_t(song.midi.size()),
+                                cfg,
+                                false,
+                                saveBank,
+                                bankSourcePath.constData(),
+                                bankSectionLabel.constData()};
+    SaveWait wait;
+    pd_service_save(service, &request, &wait, saveCompletion);
+    wait.done.acquire();
+    if (wait.lease)
+        pd_bank_lease_release(wait.lease);
+    if (!wait.ok && error)
+        *error = wait.error;
+    return wait.ok;
+}
+
+} // namespace
+
+int runRetainedBoundaryCheck(const QString &mode, const QString &projectRoot,
+                             const QString &songLabel, const QString &toolPath,
+                             const QStringList &qtArguments)
+{
+    Q_UNUSED(qtArguments);
+    auto *service = pd_service_create();
+    if (!service)
+        return fail(mode, QStringLiteral("cannot allocate project service"));
+
+    OpenWait opened;
+    const QByteArray root = projectRoot.toUtf8();
+    pd_service_open(service, root.constData(), &opened, openCompletion);
+    opened.done.acquire();
+    if (!opened.ok) {
+        pd_service_destroy(service);
+        return fail(mode, opened.error);
+    }
+
+    SongWait song;
+    const QByteArray label = songLabel.toUtf8();
+    pd_service_open_song(service, label.constData(), &song, songCompletion);
+    song.done.acquire();
+    if (!song.ok || !song.lease) {
+        pd_service_destroy(service);
+        return fail(mode, song.error.isEmpty() ? QStringLiteral("song did not publish a bank")
+                                               : song.error);
+    }
+
+    PdPlaybackData *timeline = nullptr;
+    std::array<char, 1024> diagnostic{};
+    const QByteArray midiPath = song.midPath.toUtf8();
+    if (!pd_playback_data_load_file(midiPath.constData(), 48'000.0, &timeline, diagnostic.data(),
+                                    diagnostic.size())) {
+        pd_bank_lease_release(song.lease);
+        pd_service_destroy(service);
+        return fail(mode, QString::fromUtf8(diagnostic.data()));
+    }
+    if (!timeline || timeline->eventCount == 0) {
+        pd_playback_data_release(timeline);
+        pd_bank_lease_release(song.lease);
+        pd_service_destroy(service);
+        return fail(mode, QStringLiteral("Swift playback publication is empty"));
+    }
+
+    int result = 0;
+    if (mode == QStringLiteral("roundtrip")) {
+        const QString output = QDir(projectRoot).filePath(QStringLiteral("retained-roundtrip.s"));
+        QStringList arguments = song.rawFlags;
+        arguments.append(song.midPath);
+        arguments.append(output);
+        QProcess converter;
+        converter.start(toolPath, arguments);
+        if (!converter.waitForFinished(15'000) || converter.exitStatus() != QProcess::NormalExit ||
+            converter.exitCode() != 0) {
+            result = fail(mode, QString::fromLocal8Bit(converter.readAllStandardError()));
+        } else {
+            QFile assembly(output);
+            if (!assembly.open(QIODevice::ReadOnly) || assembly.readAll().isEmpty())
+                result = fail(mode, QStringLiteral("mid2agb produced no assembly"));
+            assembly.close();
+            assembly.remove();
+        }
+    } else if (mode == QStringLiteral("savecheck") || mode == QStringLiteral("vgsavecheck")) {
+        QString error;
+        if (!saveSong(service, song, mode == QStringLiteral("vgsavecheck"), &error))
+            result = fail(mode, error);
+    } else if (mode == QStringLiteral("vgbankcheck")) {
+        const uintptr_t firstToken = pd_bank_lease_bank_token(song.lease);
+        SongWait reopened;
+        pd_service_open_song(service, label.constData(), &reopened, songCompletion);
+        reopened.done.acquire();
+        if (!reopened.ok || !reopened.lease) {
+            result = fail(mode, reopened.error);
+        } else {
+            if (firstToken == 0 || pd_bank_lease_bank_token(reopened.lease) != firstToken)
+                result = fail(mode, QStringLiteral("warm reload did not reuse the native bank"));
+            pd_bank_lease_release(reopened.lease);
+        }
+    } else if (mode == QStringLiteral("loopcheck") || mode == QStringLiteral("primecheck")) {
+        if (mode == QStringLiteral("loopcheck") &&
+            (timeline->loopStartSample == UINT64_MAX || timeline->loopEndSample == UINT64_MAX ||
+             timeline->loopEndSample <= timeline->loopStartSample)) {
+            result = fail(mode, QStringLiteral("Swift publication omitted the source loop"));
+        }
+        M4AEngine engine{};
+        if (!m4a_engine_init(&engine, 48'000.0f)) {
+            result = fail(mode, QStringLiteral("cannot initialize playback fixture engine"));
+        } else {
+            AudioEngine::bindEngineVoicegroup(&engine, pd_bank_lease_native(song.lease));
+            void *player = pd_player_create();
+            if (!player) {
+                result = fail(mode, QStringLiteral("cannot initialize Swift player"));
+            } else {
+                pd_player_prime(&engine, timeline, 0);
+                std::array<float, 256> left{};
+                std::array<float, 256> right{};
+                pd_player_render(player, &engine, timeline, left.data(), right.data(),
+                                 uint32_t(left.size()), mode == QStringLiteral("loopcheck"), 0);
+                if (pd_player_position(player) == 0)
+                    result = fail(mode, QStringLiteral("Swift player did not advance"));
+                pd_player_destroy(player);
+            }
+            m4a_engine_destroy(&engine);
+        }
+    } else if (mode == QStringLiteral("exportcheck")) {
+        SongSettings settings;
+        settings.songVolume = uint8_t(song.masterVolume);
+        settings.reverb = uint8_t(song.hasReverb ? song.reverb : 50);
+        WavExportOptions options;
+        options.loopCount = 1;
+        options.fadeoutSeconds = 0.01;
+        options.tailSeconds = 0.01;
+        const QString output = QDir(projectRoot).filePath(QStringLiteral("retained-export.wav"));
+        QString error;
+        if (!exportWav(output, *timeline, pd_bank_lease_native(song.lease), settings, options, {},
+                       &error)) {
+            result = fail(mode, error);
+        } else {
+            QFile file(output);
+            if (!file.open(QIODevice::ReadOnly) || file.read(4) != QByteArrayLiteral("RIFF"))
+                result = fail(mode, QStringLiteral("export did not produce a RIFF file"));
+            file.close();
+            file.remove();
+        }
+    } else if (mode == QStringLiteral("transportcheck") ||
+               mode == QStringLiteral("trackactivitycheck")) {
+        auto *audio = pd_audio_service_create();
+        if (!audio || !pd_audio_service_init(audio, diagnostic.data(), diagnostic.size())) {
+            result = fail(mode, QString::fromUtf8(diagnostic.data()));
+            pd_playback_data_release(timeline);
+            timeline = nullptr;
+        } else {
+            const PdAudioSettings settings{-1,
+                                           uint8_t(song.masterVolume),
+                                           uint8_t(song.hasReverb ? song.reverb : 50),
+                                           5,
+                                           13'379.0f,
+                                           false};
+            if (!pd_audio_service_bind(audio, timeline, song.lease, settings)) {
+                result = fail(mode, QStringLiteral("audio service rejected Swift publication"));
+            }
+            timeline = nullptr;
+            pd_audio_service_play(audio);
+            if (pd_audio_service_transport(audio) != int32_t(Transport::Playing))
+                result = fail(mode, QStringLiteral("play request was not published"));
+            pd_audio_service_pause(audio);
+            pd_audio_service_stop(audio);
+        }
+        pd_audio_service_destroy(audio);
+    }
+
+    if (timeline)
+        pd_playback_data_release(timeline);
+    pd_bank_lease_release(song.lease);
+    pd_service_destroy(service);
+    return result;
+}

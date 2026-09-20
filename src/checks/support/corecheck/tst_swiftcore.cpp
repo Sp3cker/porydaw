@@ -1,7 +1,7 @@
 #include "tst_swiftcore.h"
 
 #include "core_check.h"
-#include "oracle_check.h"
+#include "native_check.h"
 
 #include <QDebug>
 #include <QFile>
@@ -81,7 +81,7 @@ void SwiftCoreTest::bankHistory()
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);
-    oracle_check_set_fixture_root(encodedRoot.constData());
+    pdc_check_set_fixture_root(encodedRoot.constData());
     SwiftCoreTest test;
     // qExec treats arguments[0] as the program name; without it the first
     // payload token is consumed and function selection silently stops.

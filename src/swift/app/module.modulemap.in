@@ -1,4 +1,5 @@
 module PorydawProjectService {
     header "@CMAKE_SOURCE_DIR@/src/project/swift_project_service.h"
+    header "@CMAKE_SOURCE_DIR@/src/audio/swift_audio_service.h"
     export *
 }

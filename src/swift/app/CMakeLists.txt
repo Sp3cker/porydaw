@@ -1,6 +1,8 @@
 add_library(PorydawApp STATIC
     ProjectService.swift
     DocumentSession.swift
+    NativeAudio.swift
+    ApplicationSession.swift
 )
 
 # Generated like the playback module map: the service header lives at the
@@ -22,7 +24,7 @@ target_include_directories(PorydawApp INTERFACE
 
 target_compile_options(PorydawApp PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/module.modulemap>"
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/../../project>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
 )
 
-target_link_libraries(PorydawApp PUBLIC PorydawCore)
+target_link_libraries(PorydawApp PUBLIC PorydawCore PorydawPlayback QtBridge)

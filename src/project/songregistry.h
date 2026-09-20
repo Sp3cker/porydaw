@@ -7,8 +7,6 @@
 
 #include "project/decompproject.h"
 
-struct SmfFile;
-
 // The onboarding backend (SPEC.md §6.3): everything the New Song / Import
 // wizards need to create a song and register it. porydaw writes the .mid,
 // the midi.cfg line, and the registration files (song_table.inc, songs.h,
@@ -198,10 +196,5 @@ bool writeSongFlags(const QString &midiDir, const QString &label, const QStringL
 // and its songs.mk rule (a project can carry both when midi.cfg arrived
 // later). Missing files or lines are a no-op success.
 bool removeSongFlags(const QString &midiDir, const QString &label, QString *error);
-
-// A minimal editable song: format 1, division 24 (vanilla), a seq track with
-// tempo 120 + 4/4 time signature, and one instrument track (voice 0, VOL 100)
-// spanning one bar.
-SmfFile blankSong();
 
 } // namespace SongRegistry

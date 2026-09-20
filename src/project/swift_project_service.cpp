@@ -11,7 +11,6 @@
 #include "project/swift_project_service.h"
 
 #include "project/decompproject.h"
-#include "project/projectidentity.h"
 #include "project/songregistry.h"
 
 #include <QByteArray>
@@ -308,6 +307,25 @@ void pd_service_open(PdProjectService *service, const char *projectRoot, void *c
         const bool ok = service->project.open(root, &error);
         const QByteArray bytes = error.toUtf8();
         completion(context, ok, ok ? nullptr : bytes.constData());
+    });
+}
+
+void pd_service_list_songs(PdProjectService *service, void *context,
+                           PdSongListCompletion completion)
+{
+    if (!service || !completion)
+        return;
+    service->post([service, context, completion] {
+        QVector<QByteArray> labels;
+        for (const SongInfo &song : service->project.songs()) {
+            if (song.registered && song.hasMid)
+                labels.append(song.label.toUtf8());
+        }
+        QVector<const char *> pointers;
+        pointers.reserve(labels.size());
+        for (const QByteArray &label : labels)
+            pointers.append(label.constData());
+        completion(context, true, pointers.constData(), size_t(pointers.size()), nullptr);
     });
 }
 
