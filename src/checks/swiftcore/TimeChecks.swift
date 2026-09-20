@@ -83,6 +83,25 @@ private func rangeEditing(_ report: CheckReport) {
         bytes(limited) == limitedBefore,
         cppID: "editcheck/EditCheckTest::rangeEditCollisionRejects",
         message: "budget-constrained expansion leaves the prior state intact")
+
+    let progressive = timeDocument()
+    _ = try? progressive.addNotes([
+        NewNote(track: 0, tick: 0, pitch: 60, duration: 100, velocity: 91),
+    ])
+    let original = bytes(progressive)
+    let multiSpan = RangeEdit(addNotes: [
+        NewNote(track: 0, tick: 10, pitch: 60, duration: 10, velocity: 80),
+        NewNote(track: 0, tick: 30, pitch: 60, duration: 10, velocity: 81),
+    ])
+    let accepted = progressive.applyRangeEdit(multiSpan)
+    let forward = progressive.notes(in: 0).map(noteShape)
+    _ = progressive.history.undoDocument()
+    let undoRestored = bytes(progressive) == original
+    _ = progressive.history.redoDocument()
+    report.expect(accepted && forward == ["0:60:10", "10:60:10", "30:60:10"] &&
+        undoRestored && progressive.notes(in: 0).map(noteShape) == forward,
+        cppID: "editcheck/EditCheckTest::rangeEdit",
+        message: "successive inserted spans resolve against the progressively shortened stationary note")
 }
 
 @MainActor

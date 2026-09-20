@@ -159,6 +159,7 @@ private func rawTempoAndSignatureEditing(_ report: CheckReport) {
             .channel(tick: 10, status: 0x90, data0: 60, data1: 90),
         ], endTick: 12),
     ]))
+    let rawBaseline = try? document.captureSave().bytes
     report.expectEqual(Optional(0...1), document.rawMoveBounds(chunk: 0, index: 0),
                        cppID: "editcheck/EditCheckTest::rawEventReorder",
                        what: "setup events reorder only before the note")
@@ -175,6 +176,19 @@ private func rawTempoAndSignatureEditing(_ report: CheckReport) {
     report.expectEqual(UInt8(10), firstController,
                        cppID: "editcheck/EditCheckTest::rawEventReorder",
                        what: "same-tick raw order changes")
+    _ = document.history.undoDocument()
+    let undoControllers = document.rawChunks[0].events.prefix(2).compactMap { event -> UInt8? in
+        guard case let .channel(_, controller, _) = event.payload else { return nil }
+        return controller
+    }
+    _ = document.history.redoDocument()
+    let redoControllers = document.rawChunks[0].events.prefix(2).compactMap { event -> UInt8? in
+        guard case let .channel(_, controller, _) = event.payload else { return nil }
+        return controller
+    }
+    report.expect(undoControllers == [7, 10] && redoControllers == [10, 7],
+        cppID: "editcheck/EditCheckTest::rawEventReorder",
+        message: "raw reorder undo and redo reproduce the exact event order")
 
     document.insertRawEvent(chunk: 0,
         event: .systemExclusive(tick: 11, status: 0xF0, data: [0x7D, 1, 2, 0xF7]))
@@ -182,10 +196,32 @@ private func rawTempoAndSignatureEditing(_ report: CheckReport) {
         .first(where: { $0.isSystemExclusive })?.blob,
         cppID: "editcheck/EditCheckTest::rawEventMutate",
         what: "opaque bytes are stored without normalization")
+    if let opaqueIndex = document.rawChunks[0].events.firstIndex(where: { $0.isSystemExclusive }) {
+        document.modifyRawEvent(
+            chunk: 0, index: opaqueIndex,
+            event: .systemExclusive(tick: 11, status: 0xF0, data: [0x7D, 9, 8, 0xF7]))
+    }
+    let disposable = MidiEvent.channel(tick: 11, status: 0xB0, data0: 11, data1: 77)
+    document.insertRawEvent(chunk: 0, event: disposable)
+    if let disposableIndex = document.rawChunks[0].events.firstIndex(of: disposable) {
+        document.deleteRawEvents(chunk: 0, indices: [disposableIndex])
+    }
+    report.expectEqual([UInt8(0x7D), 9, 8, 0xF7], document.rawChunks[0].events
+        .first(where: { $0.isSystemExclusive })?.blob,
+        cppID: "editcheck/EditCheckTest::rawEventMutate",
+        what: "modify and delete retain the intended opaque mutation")
     document.setChunkEnd(0, tick: 1)
     report.expectEqual(Tick(11), document.rawChunks[0].endTick,
                        cppID: "editcheck/EditCheckTest::rawEventMutate",
                        what: "chunk end clamps to its last event tick")
+    let rawEdited = try? document.captureSave().bytes
+    while document.history.undoDocument() {}
+    let rawRewound = try? document.captureSave().bytes
+    while document.history.redoDocument() {}
+    let rawReplayed = try? document.captureSave().bytes
+    report.expect(rawRewound == rawBaseline && rawReplayed == rawEdited,
+        cppID: "editcheck/EditCheckTest::rawEventMutate",
+        message: "raw mutation history fully rewinds to encoded baseline and replays exactly")
     let beforeTempoRaw = document.revision
     document.insertRawEvent(chunk: 0, event: .meta(type: 0x51, data: [1, 2, 3]))
     report.expectEqual(beforeTempoRaw, document.revision,

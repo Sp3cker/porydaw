@@ -363,33 +363,41 @@ final class ServiceBankAction: BankHistoryAction {
     }
 
     func apply(direction: BankHistoryDirection) async throws {
-        let result: AppliedBankEdit
-        switch direction {
-        case .undo:
-            if materializedBlank, let live = token {
-                result = try await service.bankRevert(lease: current.lease, token: live)
-                token = nil
-            } else if let restore = before {
-                result = try await service.bankApply(lease: current.lease, slot: slot,
-                                                     value: restore, expected: after)
-            } else {
-                throw ProjectServiceError.operationFailed("Bank undo has no pre-edit voice.")
+        do {
+            let result: AppliedBankEdit
+            switch direction {
+            case .undo:
+                if materializedBlank, let live = token {
+                    result = try await service.bankRevert(lease: current.lease, token: live)
+                    token = nil
+                } else if let restore = before {
+                    result = try await service.bankApply(lease: current.lease, slot: slot,
+                                                         value: restore, expected: after)
+                } else {
+                    throw ProjectServiceError.operationFailed("Bank undo has no pre-edit voice.")
+                }
+            case .redo:
+                if materializedBlank, token == nil {
+                    result = try await service.bankApply(lease: current.lease, slot: slot,
+                                                         value: after, expected: nil)
+                    token = result.materializationToken
+                } else if let reapply = before {
+                    result = try await service.bankApply(lease: current.lease, slot: slot,
+                                                         value: after, expected: reapply)
+                } else {
+                    throw ProjectServiceError.operationFailed("Bank redo has no pre-edit voice.")
+                }
             }
-        case .redo:
-            if materializedBlank, token == nil {
-                // A blank redo materializes again and mints a fresh token.
-                result = try await service.bankApply(lease: current.lease, slot: slot,
-                                                     value: after, expected: nil)
-                token = result.materializationToken
-            } else if let reapply = before {
-                result = try await service.bankApply(lease: current.lease, slot: slot,
-                                                     value: after, expected: reapply)
-            } else {
-                throw ProjectServiceError.operationFailed("Bank redo has no pre-edit voice.")
-            }
+            current = result
+            inbox.deliver(result)
+        } catch let error as ProjectServiceError {
+            guard error == .bankConflict else { throw error }
+            throw BankHistoryReplayError.staleEntry
         }
-        current = result
-        inbox.deliver(result)
+    }
+
+    var isRedundant: Bool {
+        !materializedBlank && before == after
     }
 
     func merged(with newer: any BankHistoryAction) -> (any BankHistoryAction)? {

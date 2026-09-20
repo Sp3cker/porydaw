@@ -100,9 +100,23 @@ public final class DocumentSession {
     /// throw and never mark clean.
     public func save() async throws {
         try requireOpen()
+        guard !document.history.bankTransitionInFlight else {
+            throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
+        }
         guard document.isDirty || bankDirty else { return }
+        let transition = bankDirty ? document.history.beginBankTransition() : nil
+        var ownsTransition = transition != nil
+        defer {
+            if ownsTransition, let transition {
+                document.history.endBankTransition(transition)
+            }
+        }
         let snapshot = try document.captureSave()
         let receipt = try await service.save(snapshot, bank: bankDirty ? bankLease : nil)
+        if let transition {
+            document.history.endBankTransition(transition)
+            ownsTransition = false
+        }
         document.didSave(snapshot)
         if let refreshed = receipt.bank {
             adoptBank(refreshed)
@@ -115,8 +129,24 @@ public final class DocumentSession {
     public func applyBankEdit(slot: Int, value: BankVoice,
                               expected: BankVoice?) async throws -> AppliedBankEdit {
         try requireOpen()
+        if bankSlots.indices.contains(slot), bankSlots[slot].voice != expected {
+            // A request queued while another transition was pending can resume
+            // after that transition publishes its new view. Refuse it at the
+            // session gate instead of submitting its now-stale expectation.
+            throw ProjectServiceError.operationFailed(
+                "A bank transition is already in progress.")
+        }
+        guard let transition = document.history.beginBankTransition() else {
+            throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
+        }
+        var ownsTransition = true
+        defer {
+            if ownsTransition { document.history.endBankTransition(transition) }
+        }
         let result = try await service.bankApply(lease: bankLease, slot: slot,
                                                  value: value, expected: expected)
+        document.history.endBankTransition(transition)
+        ownsTransition = false
         document.history.recordConfirmedBank(ServiceBankAction(
             service: service, slot: slot, before: expected, after: value,
             token: result.materializationToken,
@@ -149,6 +179,7 @@ public final class DocumentSession {
     /// Breaks presenter callbacks first, then releases the service worker
     /// after its outstanding work finishes. Owned leases outlive the session.
     public func close() async {
+        guard !document.history.bankTransitionInFlight else { return }
         onChange = nil
         onPlayback = nil
         document.onChange = nil

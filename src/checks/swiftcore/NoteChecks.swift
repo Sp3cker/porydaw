@@ -10,6 +10,7 @@ func runNoteEditsSuite(_ report: CheckReport) {
     insertionAndCollision(report)
     movementAndResize(report)
     velocityEditing(report)
+    compatibilityRegressions(report)
 }
 
 @MainActor
@@ -17,6 +18,7 @@ func runDocumentHistorySuite(_ report: CheckReport) {
     gestureAndIdentityHistory(report)
     saveIdentity(report)
     confirmedBankOrdering(report)
+    historyMergeContracts(report)
 }
 
 @MainActor
@@ -233,6 +235,87 @@ private func velocityEditing(_ report: CheckReport) {
                   cppID: "velocity-model/VelocityModelTest::gestureLifecycle",
                   message: "velocity batch participates in undo and redo")
 }
+@MainActor
+private func compatibilityRegressions(_ report: CheckReport) {
+    let rejection = SongDocument(file: baseFile(events: []))
+    guard let selected = try? rejection.addNotes([
+        NewNote(track: 0, tick: 0, pitch: 60, duration: 4, velocity: 90),
+        NewNote(track: 0, tick: 0, pitch: 62, duration: 4, velocity: 91),
+    ]), selected.count == 2, let saved = try? rejection.captureSave() else { return }
+    rejection.didSave(saved)
+    rejection.nudgeVelocities([selected[0]], by: 1)
+    _ = rejection.history.undoDocument()
+    let before = rejection.state
+    let revision = rejection.revision
+    let dirty = rejection.isDirty
+    let redo = rejection.history.canRedo
+    rejection.moveNotes(selected, toPitches: [60, 60])
+    report.expect(rejection.state == before && rejection.revision == revision &&
+        rejection.isDirty == dirty && rejection.history.canRedo == redo &&
+        Set(rejection.notes(in: 0).map(\.id)) == Set(selected),
+        cppID: "editcheck/EditCheckTest::noteBatchCollisionRejects",
+        message: "unchanged selected participant rejects collision without consuming redo")
+
+    for endPayload in [
+        MidiEventPayload.channel(status: 0x80, data0: 64, data1: 55),
+        MidiEventPayload.channel(status: 0x90, data0: 64, data1: 0),
+    ] {
+        let exact = SongDocument(file: baseFile(events: [
+            MidiEvent(tick: 8, payload: .channel(status: 0x90, data0: 64, data1: 88)),
+            MidiEvent(tick: 16, payload: endPayload),
+        ]))
+        guard let id = exact.notes(in: 0).first?.id else { continue }
+        let originalEnd = noteEndPayload(exact, id: id)
+        exact.moveNotes([id], byTicks: 4, byKeys: 2)
+        let movedEnd = noteEndPayload(exact, id: id)
+        _ = exact.history.undoDocument()
+        let undoneEnd = noteEndPayload(exact, id: id)
+        _ = exact.history.redoDocument()
+        let redoneEnd = noteEndPayload(exact, id: id)
+        report.expect(originalEnd == endPayload && movedEnd == shiftedEndPayload(endPayload, pitch: 66) &&
+            undoneEnd == endPayload && redoneEnd == shiftedEndPayload(endPayload, pitch: 66),
+            cppID: "editcheck/EditCheckTest::noteMoveBatch",
+            message: "move and history preserve the original note-end form and release velocity")
+    }
+
+    let resized = SongDocument(file: baseFile(events: [
+        .channel(tick: 8, status: 0x90, data0: 65, data1: 88),
+        .channel(tick: 16, status: 0x80, data0: 65, data1: 47),
+    ]))
+    if let id = resized.notes(in: 0).first?.id {
+        resized.resizeNotes([id], edge: .trailing, byTicks: 2)
+        report.expect(noteEndPayload(resized, id: id) ==
+            .channel(status: 0x80, data0: 65, data1: 47),
+            cppID: "editcheck/EditCheckTest::noteResizeStopsAtNextSelectedStart",
+            message: "resize retains explicit note-off bytes")
+    }
+
+    let overlap = SongDocument(file: baseFile(events: [
+        .channel(tick: 0, status: 0x90, data0: 67, data1: 88),
+        .channel(tick: 20, status: 0x80, data0: 67, data1: 39),
+    ]))
+    _ = try? overlap.addNotes([
+        NewNote(track: 0, tick: 10, pitch: 67, duration: 4, velocity: 70),
+    ])
+    let retainedEnd = overlap.rawChunks[1].events.first { event in
+        event.tick == 10 && event.isNoteEnd
+    }?.payload
+    report.expect(retainedEnd == .channel(status: 0x80, data0: 67, data1: 39),
+        cppID: "editcheck/EditCheckTest::noteMoveOverlap",
+        message: "collision trim retains the stationary note's end-event bytes")
+}
+
+@MainActor
+private func noteEndPayload(_ document: SongDocument, id: NoteID) -> MidiEventPayload? {
+    guard let note = document.note(id), let index = note.endIndex else { return nil }
+    return document.rawChunks[note.chunk].events[index].payload
+}
+
+private func shiftedEndPayload(_ payload: MidiEventPayload, pitch: UInt8) -> MidiEventPayload {
+    guard case let .channel(status, _, velocity) = payload else { return payload }
+    return .channel(status: status, data0: pitch, data1: velocity)
+}
+
 
 @MainActor
 private func gestureAndIdentityHistory(_ report: CheckReport) {
@@ -274,6 +357,58 @@ private func gestureAndIdentityHistory(_ report: CheckReport) {
     report.expect(remaps.allSatisfy { $0 == nil },
                   cppID: "editcheck/EditCheckTest::documentRemapsAndRaw",
                   message: "note-only mutations publish without a track remap")
+}
+
+@MainActor
+private func historyMergeContracts(_ report: CheckReport) {
+    let merged = SongDocument(file: baseFile(events: []))
+    guard let mergedIDs = try? merged.addNotes([
+        NewNote(track: 0, tick: 0, pitch: 60, duration: 8, velocity: 90),
+    ]), let mergedID = mergedIDs.first else { return }
+    let baseIdentity = merged.history.currentIdentity
+    let group = HistoryGroup()
+    merged.moveNotes([mergedID], byTicks: 1, byKeys: 0, group: group)
+    merged.moveNotes([mergedID], byTicks: 3, byKeys: 0, group: group)
+    let finalIdentity = merged.history.currentIdentity
+    _ = merged.history.undoDocument()
+    let restoredOrigin = merged.note(mergedID)?.tick == 0 &&
+        merged.history.currentIdentity == baseIdentity
+    _ = merged.history.redoDocument()
+    report.expect(restoredOrigin && merged.note(mergedID)?.tick == 3 &&
+        merged.history.currentIdentity == finalIdentity,
+        cppID: "project-identity/ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter",
+        message: "merged gesture keeps its earliest origin and latest accepted result")
+
+    let boundary = SongDocument(file: baseFile(events: []))
+    guard let boundaryIDs = try? boundary.addNotes([
+        NewNote(track: 0, tick: 0, pitch: 61, duration: 8, velocity: 90),
+    ]), let boundaryID = boundaryIDs.first else { return }
+    let boundaryGroup = HistoryGroup()
+    boundary.moveNotes([boundaryID], byTicks: 2, byKeys: 0, group: boundaryGroup)
+    guard let saved = try? boundary.captureSave() else { return }
+    boundary.didSave(saved)
+    boundary.moveNotes([boundaryID], byTicks: 4, byKeys: 0, group: boundaryGroup)
+    _ = boundary.history.undoDocument()
+    report.expect(boundary.note(boundaryID)?.tick == 2 &&
+        boundary.history.currentIdentity == saved.identity,
+        cppID: "project-identity/ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge",
+        message: "save boundary starts a separate gesture history entry")
+
+    let cancelling = SongDocument(file: baseFile(events: []))
+    guard let cancellingIDs = try? cancelling.addNotes([
+        NewNote(track: 0, tick: 0, pitch: 62, duration: 8, velocity: 90),
+    ]), let cancellingID = cancellingIDs.first else { return }
+    cancelling.nudgeVelocities([cancellingID], by: 1)
+    let precedingIdentity = cancelling.history.currentIdentity
+    let cancellingGroup = HistoryGroup()
+    cancelling.moveNotes([cancellingID], byTicks: 5, byKeys: 0, group: cancellingGroup)
+    cancelling.moveNotes([cancellingID], byTicks: 0, byKeys: 0, group: cancellingGroup)
+    let removedRedundantEntry = cancelling.history.currentIdentity == precedingIdentity &&
+        cancelling.note(cancellingID)?.tick == 0
+    _ = cancelling.history.undoDocument()
+    report.expect(removedRedundantEntry && cancelling.note(cancellingID)?.velocity == 90,
+        cppID: "project-identity/ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry",
+        message: "return-to-origin removes the gesture so undo reaches the preceding edit")
 }
 
 @MainActor

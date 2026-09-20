@@ -193,8 +193,8 @@ public final class SongDocument {
         self.trackBudget = min(max(trackBudget, 0), TrackLimits.hardwareCapacity)
         history = SongHistory()
         mintAllNoteIDs()
-        history.attachRestore { [weak self] restored, trackRemap in
-            self?.restore(restored, trackRemap: trackRemap)
+        history.attachApply { [weak self] changes, direction, trackRemap in
+            self?.applyHistory(changes, direction: direction, trackRemap: trackRemap)
         }
     }
 
@@ -282,15 +282,25 @@ public final class SongDocument {
     internal func commit(before: SongState, after: SongState, group: HistoryGroup?,
                          operation: HistoryOperation, changed: Bool = true,
                          returnsToOrigin: Bool = false, trackRemap: TrackRemap? = nil) {
-        guard changed, after != state else { return }
+        guard history.acceptsDocumentMutation, changed, after != state else { return }
+        let structuralChunks = before.file.chunks.count != after.file.chunks.count ||
+            operation == .addTrack || operation == .duplicateTrack ||
+            operation == .deleteTrack || operation == .moveTrack
+        let changes = DocumentChangeSet.capture(before: before, after: after,
+                                                structuralChunks: structuralChunks)
         state = after
-        history.record(before: before, after: after, group: group, operation: operation,
+        history.record(changes: changes, group: group, operation: operation,
                        returnsToOrigin: returnsToOrigin, trackRemap: trackRemap)
         publish(trackRemap: trackRemap)
     }
 
     internal func origin(for group: HistoryGroup?, operation: HistoryOperation) -> SongState {
-        history.origin(for: group, operation: operation) ?? state
+        guard let changes = history.originChanges(for: group, operation: operation) else {
+            return state
+        }
+        var origin = state
+        changes.apply(to: &origin, direction: .undo)
+        return origin
     }
 
     internal func mapping(for track: Int, in file: MidiFile? = nil) -> (chunk: Int, channel: UInt8)? {
@@ -361,8 +371,9 @@ public final class SongDocument {
         nextNoteID = identifier
     }
 
-    private func restore(_ restored: SongState, trackRemap: TrackRemap?) {
-        state = restored
+    private func applyHistory(_ changes: DocumentChangeSet, direction: BankHistoryDirection,
+                              trackRemap: TrackRemap?) {
+        changes.apply(to: &state, direction: direction)
         publish(trackRemap: trackRemap)
     }
 

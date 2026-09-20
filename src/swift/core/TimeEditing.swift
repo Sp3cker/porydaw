@@ -92,6 +92,7 @@ public struct TimeScope: Equatable, Sendable {
 extension SongDocument {
     @discardableResult
     public func applyRangeEdit(_ edit: RangeEdit) -> Bool {
+        guard history.acceptsDocumentMutation else { return false }
         guard !edit.isEmpty else { return false }
         let requestedTracks = max(engineTracks.usedTrackCount, edit.minimumEngineTrackCount)
         guard requestedTracks <= trackBudget, requestedTracks <= TrackLimits.hardwareCapacity else {
@@ -218,6 +219,7 @@ extension SongDocument {
     @discardableResult
     public func moveRange(notes: [Note], points: [LanePoint], by delta: Int64,
                           tempo: [TempoPoint] = []) -> Bool {
+        guard history.acceptsDocumentMutation else { return false }
         guard delta != 0, !notes.isEmpty || !points.isEmpty || !tempo.isEmpty else { return false }
         for note in notes {
             guard tickFits(note.tick, delta: delta),
@@ -268,17 +270,20 @@ extension SongDocument {
 
     @discardableResult
     public func removeTime(_ range: TimeRange, scope: TimeScope) -> Bool {
-        transformTime(range, scope: scope, mode: .remove)
+        guard history.acceptsDocumentMutation else { return false }
+        return transformTime(range, scope: scope, mode: .remove)
     }
 
     @discardableResult
     public func insertBlankTime(_ range: TimeRange, scope: TimeScope) -> Bool {
-        transformTime(range, scope: scope, mode: .insertBlank)
+        guard history.acceptsDocumentMutation else { return false }
+        return transformTime(range, scope: scope, mode: .insertBlank)
     }
 
     @discardableResult
     public func duplicateTime(_ range: TimeRange, scope: TimeScope) -> Bool {
-        transformTime(range, scope: scope, mode: .duplicate)
+        guard history.acceptsDocumentMutation else { return false }
+        return transformTime(range, scope: scope, mode: .duplicate)
     }
 }
 
@@ -850,14 +855,20 @@ private extension SongDocument {
                                   channel: map.tracks[span.track].channel,
                                   chunk: chunk, track: span.track)
             for note in notes where note.pitch == span.pitch && !editedIDs.contains(note.id) {
-                guard let oldEnd = note.endTick, span.end > UInt64(note.tick),
-                      UInt64(span.tick) < oldEnd else { continue }
-                guard let current = findNote(note.id, in: candidate) else { continue }
+                guard let current = findNote(note.id, in: candidate),
+                      let currentEnd = current.endTick, let endIndex = current.endIndex,
+                      span.end > UInt64(current.tick), UInt64(span.tick) < currentEnd else {
+                    continue
+                }
+                let onEvent = candidate.file.chunks[current.chunk].events[current.onIndex]
+                let endEvent = candidate.file.chunks[current.chunk].events[endIndex]
                 removeNote(current, from: &candidate)
-                if note.tick < span.tick {
-                    insertNoteCopy(note, tick: note.tick, end: UInt64(span.tick), into: &candidate)
-                } else if oldEnd > span.end {
-                    insertNoteCopy(note, tick: Tick(span.end), end: oldEnd, into: &candidate)
+                if current.tick < span.tick {
+                    insertNoteCopy(current, onEvent: onEvent, endEvent: endEvent,
+                                   tick: current.tick, end: UInt64(span.tick), into: &candidate)
+                } else if currentEnd > span.end {
+                    insertNoteCopy(current, onEvent: onEvent, endEvent: endEvent,
+                                   tick: Tick(span.end), end: currentEnd, into: &candidate)
                 }
             }
         }
@@ -883,12 +894,15 @@ private extension SongDocument {
         }
     }
 
-    func insertNoteCopy(_ note: Note, tick: Tick, end: UInt64, into state: inout SongState) {
-        Self.insert(.channel(tick: tick, status: 0x90 | note.channel, data0: note.pitch,
-                             data1: note.velocity, noteID: note.id),
-                    into: &state.file.chunks[note.chunk])
-        Self.insert(.channel(tick: Tick(end), status: 0x90 | note.channel, data0: note.pitch),
-                    into: &state.file.chunks[note.chunk])
+    func insertNoteCopy(_ note: Note, onEvent: MidiEvent, endEvent: MidiEvent,
+                        tick: Tick, end: UInt64, into state: inout SongState) {
+        var movedOn = onEvent
+        movedOn.tick = tick
+        movedOn.noteID = note.id
+        Self.insert(movedOn, into: &state.file.chunks[note.chunk])
+        var movedEnd = endEvent
+        movedEnd.tick = Tick(end)
+        Self.insert(movedEnd, into: &state.file.chunks[note.chunk])
     }
 
     func expandTracks(in state: inout SongState, to count: Int,

@@ -1690,20 +1690,16 @@
     {
       "cppId": "editcheck/EditCheckTest::noteBatchCollisionRejects",
       "source": "src/checks/editcheck/tst_songdocument_songnotes.cpp:128",
-      "fixturesAndInputs": "Inputs constructed or staged by EditCheckTest::noteBatchCollisionRejects",
-      "operations": "Execute the production path exercised by EditCheckTest::noteBatchCollisionRejects",
-      "observableAssertions": "All observable assertions in EditCheckTest::noteBatchCollisionRejects pass for this case",
+      "fixturesAndInputs": "Two selected notes plus an established redo branch; one selected note remains stationary while the other is requested onto its pitch",
+      "operations": "Attempt the conflicting mixed stationary/moving batch after undo created a redo branch",
+      "observableAssertions": "Rejection preserves MIDI state, note identities, revision, dirty state, and redo availability",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift insertionAndCollision whole-batch rejection assertion",
-      "status": "verified",
-      "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory; deno task verify --filter editcheck --filter noteidcheck --verbose",
-        "revision": "86f7a3c9",
-        "result": "PASS (all suites) after T2 r2; reviews CoreT2SpecReview PASS/PASS + CoreT2ThermoReview PASS confirmed"
-      },
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift compatibilityRegressions mixed-participant rejection assertion",
+      "status": "pending",
+      "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 2 Swift comparison"
+      "pendingGap": "Awaiting controller-run verification of the repaired H4 scenario"
     },
     {
       "cppId": "editcheck/EditCheckTest::noteEditingAbutting",
@@ -2015,20 +2011,16 @@
     {
       "cppId": "editcheck/EditCheckTest::rawEventMutate",
       "source": "src/checks/editcheck/tst_songdocument_songraw.cpp:43",
-      "fixturesAndInputs": "Inputs constructed or staged by EditCheckTest::rawEventMutate; dynamic QTest rows are generated from the staged fixture and eligibility predicate; dynamic QTest rows are generated from the staged fixture and eligibility predicate; dynamic QTest rows are generated from the staged fixture and eligibility predicate; dynamic QTest rows are generated from the staged fixture and eligibility predicate; dynamic QTest rows are generated from the staged fixture and eligibility predicate",
-      "operations": "Execute the production path exercised by EditCheckTest::rawEventMutate",
-      "observableAssertions": "All observable assertions in EditCheckTest::rawEventMutate pass for this case",
+      "fixturesAndInputs": "Raw channel and opaque events in a deterministic Swift MIDI fixture",
+      "operations": "Insert, modify, delete, and reorder raw events, clamp chunk end, then unwind every raw-history entry and replay it",
+      "observableAssertions": "Undo-all reproduces the exact encoded baseline bytes and redo-all reproduces the exact edited bytes",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "verified",
-      "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "revision": "e36e0fea",
-        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
-      },
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift rawTempoAndSignatureEditing encoded rewind/replay assertion",
+      "status": "pending",
+      "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 3 Swift comparison",
+      "pendingGap": "Awaiting controller-run verification of the repaired raw mutation history scenario",
       "noRowMarker": true,
       "rowCount": null,
       "rowGenerator": "src/checks/editcheck/tst_songdocument_songraw.cpp:38"
@@ -2036,20 +2028,16 @@
     {
       "cppId": "editcheck/EditCheckTest::rawEventReorder",
       "source": "src/checks/editcheck/tst_songdocument_songraw.cpp:112",
-      "fixturesAndInputs": "Inputs constructed or staged by EditCheckTest::rawEventReorder; dynamic QTest rows are generated from the staged fixture and eligibility predicate; dynamic QTest rows are generated from the staged fixture and eligibility predicate; dynamic QTest rows are generated from the staged fixture and eligibility predicate; dynamic QTest rows are generated from the staged fixture and eligibility predicate; dynamic QTest rows are generated from the staged fixture and eligibility predicate",
-      "operations": "Execute the production path exercised by EditCheckTest::rawEventReorder",
-      "observableAssertions": "All observable assertions in EditCheckTest::rawEventReorder pass for this case",
+      "fixturesAndInputs": "Two same-tick controllers followed by a pinned note event",
+      "operations": "Move the first controller within its legal bounds, then undo and redo the reorder",
+      "observableAssertions": "Bounds prevent crossing the note; forward, undo, and redo event order are exact",
       "classification": "in-scope core behavior",
       "dueTask": 3,
-      "swiftTargets": "src/checks/swiftcore/EventChecks.swift (eventEdits/xcmdEdits/midiImport suites)",
-      "status": "verified",
-      "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt eventEdits xcmdEdits midiImport; deno task verify --filter editcheck --filter xcmdcheck --filter smfcheck --filter automation-domain --verbose",
-        "revision": "e36e0fea",
-        "result": "PASS after T3 r2; CoreT3SpecReview PASS/PASS + CoreT3ThermoReview blockers-closed confirmed"
-      },
+      "swiftTargets": "src/checks/swiftcore/EventChecks.swift rawTempoAndSignatureEditing reorder undo/redo assertion",
+      "status": "pending",
+      "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 3 Swift comparison",
+      "pendingGap": "Awaiting controller-run verification of the repaired raw reorder history scenario",
       "noRowMarker": true,
       "rowCount": null,
       "rowGenerator": "src/checks/editcheck/tst_songdocument_songraw.cpp:107"
@@ -5618,56 +5606,44 @@
     {
       "cppId": "project-identity/ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry",
       "source": "src/checks/project/identity.cpp:237",
-      "fixturesAndInputs": "saved recipe and history synthetic cases",
-      "operations": "recipe selection/dedup; history merge and saved boundary",
-      "observableAssertions": "ordering/fallbacks and merge/cancel semantics exact",
+      "fixturesAndInputs": "Document edit followed by a grouped note move that returns to its origin",
+      "operations": "Commit the grouped move and its inverse, then undo once",
+      "observableAssertions": "The cancelling group is removed and the next undo reaches the preceding document edit",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry",
-      "status": "verified",
-      "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
-        "revision": "cb6052f5",
-        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
-      },
+      "swiftTargets": "swiftcore/documentHistory: NoteChecks.historyMergeContracts cancelling gesture assertion",
+      "status": "pending",
+      "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "pendingGap": "Awaiting controller-run verification of the repaired history assertion"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter",
       "source": "src/checks/project/identity.cpp:196",
-      "fixturesAndInputs": "saved recipe and history synthetic cases",
-      "operations": "recipe selection/dedup; history merge and saved boundary",
-      "observableAssertions": "ordering/fallbacks and merge/cancel semantics exact",
+      "fixturesAndInputs": "One note edited twice under one HistoryGroup",
+      "operations": "Move to two origin-relative destinations, undo, then redo",
+      "observableAssertions": "Undo restores the earliest origin and redo restores the latest result and identity",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter",
-      "status": "verified",
-      "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
-        "revision": "cb6052f5",
-        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
-      },
+      "swiftTargets": "swiftcore/documentHistory: NoteChecks.historyMergeContracts earliest-origin/latest-result assertion",
+      "status": "pending",
+      "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "pendingGap": "Awaiting controller-run verification of the repaired history assertion"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge",
       "source": "src/checks/project/identity.cpp:217",
-      "fixturesAndInputs": "saved recipe and history synthetic cases",
-      "operations": "recipe selection/dedup; history merge and saved boundary",
-      "observableAssertions": "ordering/fallbacks and merge/cancel semantics exact",
+      "fixturesAndInputs": "Grouped note edit, matching save, then another edit with the same group token",
+      "operations": "Save between gesture entries and undo the post-save edit",
+      "observableAssertions": "The save boundary prevents merging and undo returns exactly to the saved identity",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/projectSession: runProjectSessionSuite under cppId project-identity/ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge",
-      "status": "verified",
-      "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
-        "revision": "cb6052f5",
-        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
-      },
+      "swiftTargets": "swiftcore/documentHistory: NoteChecks.historyMergeContracts save-boundary assertion",
+      "status": "pending",
+      "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "pendingGap": "Awaiting controller-run verification of the repaired history assertion"
     },
     {
       "cppId": "project-identity/ProjectIdentityTest::songHistory_startsClean",
@@ -12693,38 +12669,30 @@
     {
       "cppId": "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
       "source": "src/checks/voicegroup/tst_voicegroupviewcache.cpp:254",
-      "fixturesAndInputs": "Inputs constructed or staged by VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-      "operations": "Execute the production path exercised by VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-      "observableAssertions": "All observable assertions in VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates pass for this case",
+      "fixturesAndInputs": "Controlled suspending bank actions plus concurrent session bank edits",
+      "operations": "Delay Undo and Redo while attempting document/history mutation; submit two concurrent session transitions",
+      "observableAssertions": "Only one transition owns the index; repeated history requests and document edits are gated; the second session transition is refused",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-      "status": "verified",
-      "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
-        "revision": "cb6052f5",
-        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
-      },
+      "swiftTargets": "swiftcore/bankHistory: SessionChecks.historyTransitionRegressions and coordinator session gate assertions",
+      "status": "pending",
+      "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "pendingGap": "Awaiting controller-run verification of H1 transition ownership"
     },
     {
       "cppId": "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
       "source": "src/checks/voicegroup/tst_voicegroupviewcache.cpp:122",
-      "fixturesAndInputs": "Inputs constructed or staged by VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-      "operations": "Execute the production path exercised by VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-      "observableAssertions": "All observable assertions in VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions pass for this case",
+      "fixturesAndInputs": "Controlled stale-conflict and hard-failure bank actions around document history",
+      "operations": "Undo or redo stale entries and retry a hard-failing entry",
+      "observableAssertions": "Stale entries are removed without state mutation; hard failures keep the entry and block crossing",
       "classification": "in-scope core behavior",
       "dueTask": 6,
-      "swiftTargets": "swiftcore/bankHistory: runBankHistorySuite under cppId voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-      "status": "verified",
-      "runEvidence": {
-        "command": "deno task verify --filter swiftcore --verbose --qt projectSession bankHistory; deno task verify --filter savecheck --filter vgbankcheck --filter vgsavecheck --verbose",
-        "revision": "cb6052f5",
-        "result": "PASS after T6 r2; CoreT6SpecReview PASS/PASS + CoreT6ThermoReview PASS confirmed"
-      },
+      "swiftTargets": "swiftcore/bankHistory: SessionChecks.historyTransitionRegressions conflict-policy assertions",
+      "status": "pending",
+      "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting controller-run verification"
+      "pendingGap": "Awaiting controller-run verification of H2 conflict policy"
     },
     {
       "cppId": "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",

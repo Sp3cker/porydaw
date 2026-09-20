@@ -41,6 +41,7 @@ extension SongDocument {
 
     @discardableResult
     public func addTrack(voice: Int) -> Int? {
+        guard history.acceptsDocumentMutation else { return nil }
         let map = engineTracks
         guard !state.file.chunks.isEmpty, map.usedTrackCount < trackBudget,
               let channel = freeChannel(in: map) else { return nil }
@@ -60,6 +61,7 @@ extension SongDocument {
 
     @discardableResult
     public func duplicateTrack(_ track: Int) -> Int? {
+        guard history.acceptsDocumentMutation else { return nil }
         let map = engineTracks
         guard !state.file.chunks.isEmpty, map.usedTrackCount < trackBudget,
               track >= 0, track < map.usedTrackCount,
@@ -91,6 +93,7 @@ extension SongDocument {
     }
 
     public func deleteTrack(_ track: Int) {
+        guard history.acceptsDocumentMutation else { return }
         guard let mapping = mapping(for: track) else { return }
         let before = state
         var after = before
@@ -120,6 +123,7 @@ extension SongDocument {
 
     @discardableResult
     public func moveTrack(_ track: Int, to target: Int) -> Bool {
+        guard history.acceptsDocumentMutation else { return false }
         guard track != target, let source = mapping(for: track), let destination = mapping(for: target)
         else { return false }
         let before = state
@@ -149,6 +153,7 @@ extension SongDocument {
     }
 
     public func renameTrack(_ track: Int, to proposedName: String) {
+        guard history.acceptsDocumentMutation else { return }
         guard let mapping = mapping(for: track) else { return }
         let name = String(proposedName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(64))
         guard !MidiFile.textIsMarker(name) else { return }
@@ -175,6 +180,7 @@ extension SongDocument {
     }
     /// Sets the stored end tick of a raw SMF chunk, not an engine-track index.
     public func setChunkEnd(_ chunk: Int, tick: Tick) {
+        guard history.acceptsDocumentMutation else { return }
         guard state.file.chunks.indices.contains(chunk) else { return }
         let before = state
         var after = before
@@ -185,6 +191,7 @@ extension SongDocument {
     }
 
     public func setConfig(_ config: SongConfig) {
+        guard history.acceptsDocumentMutation else { return }
         let before = state
         var after = before
         after.config = config
@@ -192,6 +199,7 @@ extension SongDocument {
     }
 
     public func insertRawEvent(chunk: Int, event: MidiEvent) {
+        guard history.acceptsDocumentMutation else { return }
         guard state.file.chunks.indices.contains(chunk), !isTempo(event) else { return }
         let before = state
         var after = before
@@ -200,6 +208,7 @@ extension SongDocument {
     }
 
     public func modifyRawEvent(chunk: Int, index: Int, event: MidiEvent) {
+        guard history.acceptsDocumentMutation else { return }
         guard state.file.chunks.indices.contains(chunk),
               state.file.chunks[chunk].events.indices.contains(index), !isTempo(event),
               state.file.chunks[chunk].events[index] != event else { return }
@@ -215,6 +224,7 @@ extension SongDocument {
     }
 
     public func deleteRawEvents(chunk: Int, indices: [Int]) {
+        guard history.acceptsDocumentMutation else { return }
         guard state.file.chunks.indices.contains(chunk) else { return }
         let valid = Set(indices.filter { state.file.chunks[chunk].events.indices.contains($0) })
         guard !valid.isEmpty else { return }
@@ -239,6 +249,7 @@ extension SongDocument {
     }
 
     public func moveRawEvent(chunk: Int, index: Int, to destination: Int) {
+        guard history.acceptsDocumentMutation else { return }
         guard let bounds = rawMoveBounds(chunk: chunk, index: index) else { return }
         let target = min(max(destination, bounds.lowerBound), bounds.upperBound)
         guard target != index else { return }
@@ -250,6 +261,7 @@ extension SongDocument {
     }
 
     public func editTempo(_ edit: TempoEdit) {
+        guard history.acceptsDocumentMutation else { return }
         let before = state
         var after = before
         after.tempo = editedTempo(before.tempo, edit)
@@ -258,6 +270,7 @@ extension SongDocument {
 
     public func editRawAndTempo(chunk: Int, deleting indices: [Int], tempo: TempoEdit,
                                 inserting event: MidiEvent? = nil) {
+        guard history.acceptsDocumentMutation else { return }
         guard state.file.chunks.indices.contains(chunk), event.map({ !isTempo($0) }) ?? true else {
             return
         }
@@ -271,6 +284,7 @@ extension SongDocument {
     }
 
     public func setLoop(end: Bool, tick: Int64?) {
+        guard history.acceptsDocumentMutation else { return }
         guard !state.file.chunks.isEmpty else { return }
         let before = state
         var after = before
@@ -293,6 +307,7 @@ extension SongDocument {
     }
 
     public func setTimeSignature(tick: Tick, numerator: Int, denominatorPower: Int) {
+        guard history.acceptsDocumentMutation else { return }
         guard !state.file.chunks.isEmpty else { return }
         let before = state
         var after = before
@@ -315,6 +330,7 @@ extension SongDocument {
     }
 
     public func moveTimeSignature(from: Tick, to: Tick) {
+        guard history.acceptsDocumentMutation else { return }
         guard from != to else { return }
         let before = state
         var after = before
@@ -341,6 +357,7 @@ extension SongDocument {
     }
 
     public func deleteTimeSignature(at tick: Tick) {
+        guard history.acceptsDocumentMutation else { return }
         let before = state
         var after = before
         for chunk in after.file.chunks.indices {
@@ -351,6 +368,7 @@ extension SongDocument {
 
     public func writeLane(track: Int, lane: Lane, from begin: Tick, through end: Tick,
                           points: [LaneWrite]) {
+        guard history.acceptsDocumentMutation else { return }
         guard let mapping = mapping(for: track) else { return }
         if case let .controller(controller) = lane, Xcmd.descriptor(forLane: controller) != nil {
             rewriteXcmdLane(track: track, mapping: mapping, controller: controller,
@@ -371,6 +389,7 @@ extension SongDocument {
     }
 
     public func moveLanePoints(track: Int, lane: Lane, moves: [LanePointMove]) {
+        guard history.acceptsDocumentMutation else { return }
         guard let mapping = mapping(for: track), !moves.isEmpty else { return }
         let existing = lanePoints(track: track, lane: lane)
         guard let plan = planLaneMoves(existing: existing, requests: moves) else { return }
@@ -401,6 +420,7 @@ extension SongDocument {
     }
 
     public func deleteLanePoints(track: Int, lane: Lane, points: [LanePoint]) {
+        guard history.acceptsDocumentMutation else { return }
         guard let mapping = mapping(for: track), !points.isEmpty else { return }
         if case let .controller(controller) = lane, Xcmd.descriptor(forLane: controller) != nil {
             let localPoints = points.filter { $0.chunk == mapping.chunk }
