@@ -9,11 +9,14 @@
 #include <QCoreApplication>
 #include <QDeadlineTimer>
 #include <QEventLoop>
+#include <QPainter>
+#include <QPixmap>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QRect>
 #include <QRectF>
 #include <QString>
+#include <QWidget>
 #include <QtGlobal>
 
 #include "ui/layout.h"
@@ -236,6 +239,37 @@ QImage captureQuickBand(SongView &view, const QRect &viewportRect, QString *erro
     }
     bandFramebuffer.setDevicePixelRatio(devicePixelRatio);
     return bandFramebuffer;
+}
+
+QImage compositeQuickWindowIntoGrab(QWidget &root, QWidget &container, QQuickWindow &quickWindow,
+                                    QRect *containerBounds, QString *error)
+{
+    if (error)
+        error->clear();
+    QImage composite = root.grab().toImage();
+    if (composite.isNull()) {
+        if (error)
+            *error = QStringLiteral("widget grab of the capture root returned a null image");
+        return {};
+    }
+    if (!waitForQuickFrame(quickWindow, error))
+        return {};
+    const QImage framebuffer = quickWindow.grabWindow();
+    if (framebuffer.isNull()) {
+        if (error)
+            *error = QStringLiteral("Quick window grab returned a null image");
+        return {};
+    }
+    const QRect bounds(container.mapTo(&root, QPoint(0, 0)), container.size());
+    if (containerBounds)
+        *containerBounds = bounds;
+    // The container bounds are logical pixels, the grab device pixels: scale the
+    // target rect by the composite's ratio so the framebuffer lands unscaled.
+    QPainter painter(&composite);
+    painter.drawImage(QRectF(QPointF(bounds.topLeft()) * composite.devicePixelRatio(),
+                             QSizeF(bounds.size()) * composite.devicePixelRatio()),
+                      framebuffer, QRectF(framebuffer.rect()));
+    return composite;
 }
 
 } // namespace checks::support

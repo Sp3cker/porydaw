@@ -14,6 +14,7 @@ class QColor;
 class QQuickItem;
 class QQuickWindow;
 class QString;
+class QWidget;
 class SongView;
 
 namespace checks::support {
@@ -42,5 +43,16 @@ bool showQuickViewport(SongView &view, const QSize &size);
 // Captures a viewport-local Quick framebuffer crop (the Quick window spans
 // the canonical viewport with origin (0, 0)); never walks the widget tree.
 QImage captureQuickBand(SongView &view, const QRect &viewportRect, QString *error = nullptr);
+
+// Grabs `root` and paints the live `quickWindow` framebuffer over `container`'s
+// bounds: QWidget::grab() cannot see a native embedded window, so a mixed
+// QWidget + Quick surface compares as one image only after this composition.
+// `containerBounds` receives the container's logical bounds inside `root` (the
+// caller's semantic "quick surface" region). Waits for a rendered frame before
+// grabbing the framebuffer; returns a null image and, when `error` is given, a
+// description of what failed: the root grab, the frame wait, or the Quick grab.
+// `container` must be a descendant of `root`.
+QImage compositeQuickWindowIntoGrab(QWidget &root, QWidget &container, QQuickWindow &quickWindow,
+                                    QRect *containerBounds, QString *error = nullptr);
 
 } // namespace checks::support

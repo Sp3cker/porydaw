@@ -4,21 +4,19 @@
 // region names are semantic — never QWidget/QQuickItem class names — so a
 // future Swift/QtBridge adapter can supply the same bounds.
 
-#include "checks/visual/visualbaseline.h"
+#include "checks/visual/visualquick.h"
 
+#include <QApplication>
 #include <QCoreApplication>
-#include <QGuiApplication>
-#include <QImage>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QRect>
 #include <QString>
-#include <QStyleHints>
 #include <QtTest>
 
 #include <cstring>
-#include <functional>
+#include <initializer_list>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -98,6 +96,57 @@ SmfFile visualSmf()
     return smf;
 }
 
+// One row of a surface's region table: the frozen semantic name plus the
+// production object name whose scene bounds it must cover. Band regions stay
+// out of the tables — they are surface geometry, not named items.
+struct ItemRegionSpec {
+    const char *name;
+    const char *objectName;
+};
+
+// Appends a surface's item regions in table order, resolving each entry
+// through the shared item-region helper. `root` is the scenario's scene root.
+void appendItemRegions(QList<checks::visual::Region> &regions, QQuickItem *root,
+                       std::initializer_list<ItemRegionSpec> specs)
+{
+    regions.reserve(regions.size() + static_cast<qsizetype>(specs.size()));
+    for (const ItemRegionSpec &spec : specs) {
+        regions.push_back(checks::visual::quickItemRegion(QString::fromLatin1(spec.name), root,
+                                                          QString::fromLatin1(spec.objectName)));
+    }
+}
+
+// Raw C voicegroup storage for the drum-keyboard fixture. A LoadedVoiceGroup
+// borrows the tone tables it points into, so they all live in one local the
+// caller owns; buildDrumBank() only describes them.
+struct DrumBankStorage {
+    ToneData tones[VOICEGROUP_SIZE]{};
+    char names[VOICEGROUP_SIZE][VG_VOICE_NAME_LEN]{};
+    ToneData *subGroups[1]{};
+    char (*subGroupNames[1])[VG_VOICE_NAME_LEN]{};
+
+    // One keysplit voice resolving to a subgroup that holds `noiseKey` as an
+    // unlabeled noise pad, `namedKey` as "Kick" and `longNameKey` as a pad
+    // whose label must elide.
+    LoadedVoiceGroup buildDrumBank(int noiseKey, int namedKey, int longNameKey)
+    {
+        tones[noiseKey].type = VOICE_NOISE;
+        std::strncpy(names[namedKey], "Kick", VG_VOICE_NAME_LEN - 1);
+        std::strncpy(names[longNameKey], "Fixture Drum Pad With A Long Name",
+                     VG_VOICE_NAME_LEN - 1);
+        subGroups[0] = tones;
+        subGroupNames[0] = names;
+        LoadedVoiceGroup bank{};
+        bank.voices[1].type = VOICE_KEYSPLIT_ALL;
+        bank.voices[1].subGroup = tones;
+        bank.subGroups = subGroups;
+        bank.subGroupVoiceNames = subGroupNames;
+        bank.subGroupCount = 1;
+        bank.subGroupCapacity = 1;
+        return bank;
+    }
+};
+
 } // namespace
 
 class VisualQuickTest : public QObject
@@ -129,22 +178,18 @@ class VisualQuickTest : public QObject
   private:
     bool createFixture(QString &error);
     void destroyFixture();
-    QImage grab(QString &error);
-    QRect itemBounds(const QString &objectName) const;
     QRect bandBounds(songview::TimelineBand band) const;
-    checks::visual::Region region(const QString &name, const QRect &bounds) const;
-    checks::visual::Region itemRegion(const QString &name, const QString &objectName) const;
     checks::visual::Region bandRegion(const QString &name, songview::TimelineBand band) const;
-    void expectBaseline(const QString &id, const QList<checks::visual::Region> &regions);
-    bool openPitchBendPopup();
-    // Waits for the shared QuickPopupSession to open a form and returns its
-    // content item; null when the command never produced a popup.
-    QQuickItem *awaitPopupForm();
-    // Menus push QuickMenuPanel levels onto the session overlay rather than a
-    // single content item; returns the root panel once the session is open.
-    QQuickItem *awaitMenuPanel();
+    // Issues the pitch-bend EditCommand and returns the popup form the shared
+    // session opens; null when the command is unavailable or nothing opens.
+    QQuickItem *openPitchBendPopup();
+    // Captures the popup form and requires a baseline match. Keyboard focus
+    // parks on the steady control named here — the suite's single popup focus
+    // policy — so no blinking caret or focus frame races the grab.
     void expectPopupBaseline(const QString &id, QQuickItem *form,
-                             const QString &steadyFocusObjectName = QString());
+                             const QString &steadyFocusObjectName);
+    // Clicks the row whose model text is `rowText` in an open menu panel.
+    void clickMenuRow(QQuickItem *panel, const QString &rowText);
 
     LoadedVoiceGroup m_bank{};
     std::unique_ptr<SongTab> m_tab;
@@ -162,6 +207,11 @@ void VisualQuickTest::initTestCase()
 
 void VisualQuickTest::init()
 {
+    // Each slot owns a fresh SongTab: slots end with a popup session still
+    // open (the velocity, insert-time and time-signature prompts are never
+    // accepted), swap the voicegroup, and mutate drawer, event-list and
+    // selection state, so a shared fixture would leak an open session and
+    // stale view state into the next scenario.
     QString error;
     QVERIFY2(createFixture(error), qPrintable(error));
 }
@@ -270,28 +320,6 @@ void VisualQuickTest::destroyFixture()
     m_hasNote = false;
 }
 
-QImage VisualQuickTest::grab(QString &error)
-{
-    if (!m_window || !checks::support::waitForQuickFrame(*m_window, &error))
-        return {};
-    const QImage image = m_window->grabWindow();
-    if (image.isNull())
-        error = QStringLiteral("Quick framebuffer grab is empty");
-    return image;
-}
-
-QRect VisualQuickTest::itemBounds(const QString &objectName) const
-{
-    // Input items are transparent hit targets: bounds matter, opacity does
-    // not, so visibility is not required — only a real mapped rectangle.
-    QQuickItem *const item = checks::support::visualDescendant(m_root.data(), objectName);
-    if (!item || item->width() <= 0 || item->height() <= 0)
-        return {};
-    const QPointF topLeft = item->mapToScene(QPointF{});
-    return {qRound(topLeft.x()), qRound(topLeft.y()), qRound(item->width()),
-            qRound(item->height())};
-}
-
 QRect VisualQuickTest::bandBounds(songview::TimelineBand band) const
 {
     const std::optional<songview::TimelineBandGeometry> &geometry =
@@ -299,72 +327,58 @@ QRect VisualQuickTest::bandBounds(songview::TimelineBand band) const
     return geometry ? geometry->rect : QRect{};
 }
 
-checks::visual::Region VisualQuickTest::region(const QString &name, const QRect &bounds) const
-{
-    return {name, bounds};
-}
-
-checks::visual::Region VisualQuickTest::itemRegion(const QString &name,
-                                                   const QString &objectName) const
-{
-    return region(name, itemBounds(objectName));
-}
-
 checks::visual::Region VisualQuickTest::bandRegion(const QString &name,
                                                    songview::TimelineBand band) const
 {
-    return region(name, bandBounds(band));
-}
-
-void VisualQuickTest::expectBaseline(const QString &id,
-                                     const QList<checks::visual::Region> &regions)
-{
-    QString error;
-    const QImage image = grab(error);
-    QVERIFY2(!image.isNull(), qPrintable(error));
-    for (const checks::visual::Region &entry : regions)
-        QVERIFY2(!entry.bounds.isEmpty(), qPrintable(entry.name + " has no visible bounds"));
-    QVERIFY2(checks::visual::compare(id, image, regions, &error), qPrintable(error));
+    return {name, bandBounds(band)};
 }
 
 void VisualQuickTest::timelineRulerBaseline()
 {
-    expectBaseline(
-        QStringLiteral("quick/vanilla/timeline-ruler"),
-        {bandRegion(QStringLiteral("timeline.ruler.band"), songview::TimelineBand::Ruler),
-         itemRegion(QStringLiteral("timeline.ruler.gutter"),
-                    QStringLiteral("timelineQuickRulerGutterChrome")),
-         itemRegion(QStringLiteral("timeline.ruler.chrome"),
-                    QStringLiteral("timelineQuickRulerChrome")),
-         itemRegion(QStringLiteral("timeline.ruler.marks"),
-                    QStringLiteral("timelineQuickRulerMarks")),
-         itemRegion(QStringLiteral("timeline.ruler.controls"),
-                    QStringLiteral("timelineRulerControls"))});
+    QList<checks::visual::Region> regions{
+        bandRegion(QStringLiteral("timeline.ruler.band"), songview::TimelineBand::Ruler)};
+    appendItemRegions(regions, m_root.data(),
+                      {
+                          {"timeline.ruler.gutter", "timelineQuickRulerGutterChrome"},
+                          {"timeline.ruler.chrome", "timelineQuickRulerChrome"},
+                          {"timeline.ruler.marks", "timelineQuickRulerMarks"},
+                          {"timeline.ruler.controls", "timelineRulerControls"},
+                      });
+    QString error;
+    QVERIFY2(checks::visual::expectQuickBaseline(QStringLiteral("quick/vanilla/timeline-ruler"),
+                                                 *m_window, m_root.data(), regions, &error),
+             qPrintable(error));
 }
 
 void VisualQuickTest::pianoRollBaseline()
 {
-    expectBaseline(QStringLiteral("quick/vanilla/piano-roll"),
-                   {bandRegion(QStringLiteral("piano-roll.band"), songview::TimelineBand::Roll),
-                    itemRegion(QStringLiteral("piano-roll.grid.rows"),
-                               QStringLiteral("timelineQuickPianoGridRows")),
-                    itemRegion(QStringLiteral("piano-roll.grid.time"),
-                               QStringLiteral("timelineQuickPianoGridTime")),
-                    itemRegion(QStringLiteral("piano-roll.note-fills"),
-                               QStringLiteral("timelineQuickPianoNoteFills")),
-                    itemRegion(QStringLiteral("piano-roll.note-borders-selection"),
-                               QStringLiteral("timelineQuickPianoNoteBordersAndSelection")),
-                    itemRegion(QStringLiteral("piano-roll.keyboard.keys"),
-                               QStringLiteral("timelineQuickPianoKeyboardKeys"))});
+    QList<checks::visual::Region> regions{
+        bandRegion(QStringLiteral("piano-roll.band"), songview::TimelineBand::Roll)};
+    appendItemRegions(
+        regions, m_root.data(),
+        {
+            {"piano-roll.grid.rows", "timelineQuickPianoGridRows"},
+            {"piano-roll.grid.time", "timelineQuickPianoGridTime"},
+            {"piano-roll.note-fills", "timelineQuickPianoNoteFills"},
+            {"piano-roll.note-borders-selection", "timelineQuickPianoNoteBordersAndSelection"},
+            {"piano-roll.keyboard.keys", "timelineQuickPianoKeyboardKeys"},
+        });
+    QString error;
+    QVERIFY2(checks::visual::expectQuickBaseline(QStringLiteral("quick/vanilla/piano-roll"),
+                                                 *m_window, m_root.data(), regions, &error),
+             qPrintable(error));
 }
 
 void VisualQuickTest::trackHeaderBaseline()
 {
-    expectBaseline(
-        QStringLiteral("quick/vanilla/track-headers"),
-        {bandRegion(QStringLiteral("track-headers.band"), songview::TimelineBand::TrackHeaders),
-         itemRegion(QStringLiteral("track-headers.rows"),
-                    QStringLiteral("timelineQuickTrackHeaders"))});
+    QList<checks::visual::Region> regions{
+        bandRegion(QStringLiteral("track-headers.band"), songview::TimelineBand::TrackHeaders)};
+    appendItemRegions(regions, m_root.data(),
+                      {{"track-headers.rows", "timelineQuickTrackHeaders"}});
+    QString error;
+    QVERIFY2(checks::visual::expectQuickBaseline(QStringLiteral("quick/vanilla/track-headers"),
+                                                 *m_window, m_root.data(), regions, &error),
+             qPrintable(error));
 }
 
 void VisualQuickTest::velocityLaneBaseline()
@@ -373,17 +387,19 @@ void VisualQuickTest::velocityLaneBaseline()
     songView.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
     songView.setDrawerSectionHeight(EditorDrawerPage::Velocity, kVelocityLaneHeight);
     checks::support::pumpQuick();
-    expectBaseline(
-        QStringLiteral("quick/vanilla/velocity-lane"),
-        {bandRegion(QStringLiteral("velocity-lane.band"), songview::TimelineBand::Velocity),
-         itemRegion(QStringLiteral("velocity-lane.axis"),
-                    QStringLiteral("timelineQuickVelocityAxis")),
-         itemRegion(QStringLiteral("velocity-lane.grid"),
-                    QStringLiteral("timelineQuickVelocityGrid")),
-         itemRegion(QStringLiteral("velocity-lane.stems"),
-                    QStringLiteral("timelineQuickVelocityStems")),
-         itemRegion(QStringLiteral("velocity-lane.nodes"),
-                    QStringLiteral("timelineQuickVelocityNodes"))});
+    QList<checks::visual::Region> regions{
+        bandRegion(QStringLiteral("velocity-lane.band"), songview::TimelineBand::Velocity)};
+    appendItemRegions(regions, m_root.data(),
+                      {
+                          {"velocity-lane.axis", "timelineQuickVelocityAxis"},
+                          {"velocity-lane.grid", "timelineQuickVelocityGrid"},
+                          {"velocity-lane.stems", "timelineQuickVelocityStems"},
+                          {"velocity-lane.nodes", "timelineQuickVelocityNodes"},
+                      });
+    QString error;
+    QVERIFY2(checks::visual::expectQuickBaseline(QStringLiteral("quick/vanilla/velocity-lane"),
+                                                 *m_window, m_root.data(), regions, &error),
+             qPrintable(error));
 }
 
 void VisualQuickTest::editorDrawerBaseline()
@@ -393,14 +409,18 @@ void VisualQuickTest::editorDrawerBaseline()
     songView.setDrawerSectionHeight(EditorDrawerPage::Velocity, kVelocityLaneHeight);
     songView.setDrawerActivePage(EditorDrawerPage::Velocity);
     checks::support::pumpQuick();
-    expectBaseline(
-        QStringLiteral("quick/vanilla/editor-drawer"),
-        {itemRegion(QStringLiteral("editor-drawer.bar"), QStringLiteral("drawerBarInput")),
-         itemRegion(QStringLiteral("editor-drawer.detent"), QStringLiteral("drawerDetent")),
-         itemRegion(QStringLiteral("editor-drawer.velocity-toggle"),
-                    QStringLiteral("drawerVelocityToggle")),
-         bandRegion(QStringLiteral("editor-drawer.velocity-page"),
-                    songview::TimelineBand::Velocity)});
+    QList<checks::visual::Region> regions{bandRegion(QStringLiteral("editor-drawer.velocity-page"),
+                                                     songview::TimelineBand::Velocity)};
+    appendItemRegions(regions, m_root.data(),
+                      {
+                          {"editor-drawer.bar", "drawerBarInput"},
+                          {"editor-drawer.detent", "drawerDetent"},
+                          {"editor-drawer.velocity-toggle", "drawerVelocityToggle"},
+                      });
+    QString error;
+    QVERIFY2(checks::visual::expectQuickBaseline(QStringLiteral("quick/vanilla/editor-drawer"),
+                                                 *m_window, m_root.data(), regions, &error),
+             qPrintable(error));
 }
 
 void VisualQuickTest::drumKeyboardBaseline()
@@ -435,24 +455,8 @@ void VisualQuickTest::drumKeyboardBaseline()
 
     // Keysplit bank: the selected track's program resolves to a drum subgroup
     // whose named keys render label plates on the keyboard gutter.
-    static ToneData tones[VOICEGROUP_SIZE]{};
-    static char names[VOICEGROUP_SIZE][VG_VOICE_NAME_LEN]{};
-    static ToneData *subGroups[1]{};
-    static char (*subGroupNames[1])[VG_VOICE_NAME_LEN]{};
-    std::memset(tones, 0, sizeof(tones));
-    std::memset(names, 0, sizeof(names));
-    tones[unnamedKey].type = VOICE_NOISE;
-    std::strncpy(names[namedKey], "Kick", VG_VOICE_NAME_LEN - 1);
-    std::strncpy(names[longKey], "Fixture Drum Pad With A Long Name", VG_VOICE_NAME_LEN - 1);
-    subGroups[0] = tones;
-    subGroupNames[0] = names;
-    LoadedVoiceGroup drumBank{};
-    drumBank.voices[1].type = VOICE_KEYSPLIT_ALL;
-    drumBank.voices[1].subGroup = tones;
-    drumBank.subGroups = subGroups;
-    drumBank.subGroupVoiceNames = subGroupNames;
-    drumBank.subGroupCount = 1;
-    drumBank.subGroupCapacity = 1;
+    DrumBankStorage storage;
+    const LoadedVoiceGroup drumBank = storage.buildDrumBank(unnamedKey, namedKey, longKey);
 
     const LoadedVoiceGroup *const originalBank = songView.voicegroup();
     const auto restore =
@@ -461,10 +465,9 @@ void VisualQuickTest::drumKeyboardBaseline()
     checks::support::pumpQuick();
 
     QList<checks::visual::Region> regions{
-        bandRegion(QStringLiteral("drum-keyboard.band"), songview::TimelineBand::Roll),
-        itemRegion(QStringLiteral("drum-keyboard.keys"),
-                   QStringLiteral("timelineQuickPianoKeyboardKeys")),
-    };
+        bandRegion(QStringLiteral("drum-keyboard.band"), songview::TimelineBand::Roll)};
+    appendItemRegions(regions, m_root.data(),
+                      {{"drum-keyboard.keys", "timelineQuickPianoKeyboardKeys"}});
 
     // Semantic bounds for the named-pad label plate: the text model publishes
     // the plate rect in band-local coordinates.
@@ -494,89 +497,77 @@ void VisualQuickTest::drumKeyboardBaseline()
     const QRectF plate =
         model->data(namedIndex, songview::TimelineQuickTextModel::BackgroundRectRole).toRectF();
     QVERIFY2(!plate.isEmpty(), "named drum pad must publish a label plate");
-    regions.push_back(
-        region(QStringLiteral("drum-keyboard.named-plate"),
-               QRect{rollRect.x() + qRound(plate.x()), rollRect.y() + qRound(plate.y()),
-                     qRound(plate.width()), qRound(plate.height())}));
+    regions.push_back({QStringLiteral("drum-keyboard.named-plate"),
+                       QRect{rollRect.x() + qRound(plate.x()), rollRect.y() + qRound(plate.y()),
+                             qRound(plate.width()), qRound(plate.height())}});
 
-    expectBaseline(QStringLiteral("quick/vanilla/drum-keyboard"), regions);
+    QString error;
+    QVERIFY2(checks::visual::expectQuickBaseline(QStringLiteral("quick/vanilla/drum-keyboard"),
+                                                 *m_window, m_root.data(), regions, &error),
+             qPrintable(error));
 }
 
-bool VisualQuickTest::openPitchBendPopup()
+QQuickItem *VisualQuickTest::openPitchBendPopup()
 {
     // Invoke the same semantic command the G key routes to; this is an
     // appearance check, so popup opening must not depend on desktop focus or
     // synthetic key delivery.
     m_tab->view().selectionModel().setNoteSelection({m_note.noteId});
     if (!m_tab->view().editCommandAvailable(SongView::EditCommand::PitchBend))
-        return false;
+        return nullptr;
     m_tab->view().executeEditCommand(SongView::EditCommand::PitchBend);
-    return QTest::qWaitFor([this] {
-        songview::QuickPopupSession *session = quick_popup::popupSession(m_tab->view());
-        return session && session->isOpen() && session->contentItem() != nullptr;
-    });
+    return checks::visual::awaitPopupForm(m_tab->view());
 }
 
 void VisualQuickTest::pitchBendPopupBaseline()
 {
     QVERIFY(m_hasNote);
-    QVERIFY2(openPitchBendPopup(), "pitch-bend popup did not open in the Quick canvas");
-    songview::QuickPopupSession *session = quick_popup::popupSession(m_tab->view());
-    QVERIFY(session);
-    QQuickItem *const form = session->contentItem();
-    QVERIFY(form);
-    const QPointF formScene = form->mapToScene(QPointF{});
-    QList<checks::visual::Region> regions{
-        region(QStringLiteral("popup.pitch-bend.form"),
-               QRect{qRound(formScene.x()), qRound(formScene.y()), qRound(form->width()),
-                     qRound(form->height())}),
-    };
+    QQuickItem *const form = openPitchBendPopup();
+    QVERIFY2(form, "pitch-bend popup did not open in the Quick canvas");
+    // The popup has no prompt buttons, so focus parks on its static reset
+    // chrome: same policy as the prompt captures, and it keeps the graph's
+    // focus frame out of the frozen pixels.
+    checks::visual::steadyPopupFocus(form, QStringLiteral("pitchBendReset"));
+    checks::support::pumpQuick();
     QQuickItem *const graph =
         checks::support::visualDescendant(form, QStringLiteral("pitchBendGraph"));
-    QVERIFY(graph);
-    // Canonical fixture state is explicitly unfocused, like the other
-    // non-input captures: the focus frame is input-routing appearance, not
-    // size/color baseline. Assert the real precondition the renderer checks.
-    graph->setFocus(false);
-    checks::support::pumpQuick();
+    QVERIFY2(graph, "pitch-bend popup lacks the pitch graph");
     QVERIFY2(!graph->hasActiveFocus(),
-             "pitch-bend graph kept active focus for the unfocused baseline capture");
-    {
-        const QPointF graphScene = graph->mapToScene(QPointF{});
-        regions.push_back(region(QStringLiteral("popup.pitch-bend.graph"),
-                                 QRect{qRound(graphScene.x()), qRound(graphScene.y()),
-                                       qRound(graph->width()), qRound(graph->height())}));
-    }
-    expectBaseline(QStringLiteral("quick/vanilla/pitch-bend-popup"), regions);
+             "pitch-bend graph kept active focus, so its focus frame would be captured");
+    const QPointF formScene = form->mapToScene(QPointF{});
+    QList<checks::visual::Region> regions{
+        {QStringLiteral("popup.pitch-bend.form"),
+         QRect{qRound(formScene.x()), qRound(formScene.y()), qRound(form->width()),
+               qRound(form->height())}},
+        checks::visual::quickItemRegion(QStringLiteral("popup.pitch-bend.graph"), form,
+                                        QStringLiteral("pitchBendGraph")),
+    };
+    QString error;
+    QVERIFY2(checks::visual::expectQuickBaseline(QStringLiteral("quick/vanilla/pitch-bend-popup"),
+                                                 *m_window, m_root.data(), regions, &error),
+             qPrintable(error));
 }
 
-QQuickItem *VisualQuickTest::awaitPopupForm()
-{
-    if (!QTest::qWaitFor([this] {
-            songview::QuickPopupSession *session = quick_popup::popupSession(m_tab->view());
-            return session && session->isOpen() && session->contentItem() != nullptr;
-        }))
-        return nullptr;
-    return quick_popup::popupSession(m_tab->view())->contentItem();
-}
-
-// Shared popup-form capture: the session's content item is the whole dialog,
-// so its scene rect is the single semantic region. A focused text field
-// blinks its caret, which would race the capture; callers pass the accept
-// button's objectName so focus lands on a steady (non-blinking) control.
+// Shared popup-form capture: the session's content item is the whole surface,
+// so its scene rect is the single region. The suite's one focus policy parks
+// keyboard focus on the named steady control the caller passes — an accept
+// button, the confirm's resting Cancel button, the menu frame, or the
+// pitch-bend reset chrome — before the grab: a blinking caret or a focused
+// graph's frame would otherwise race the capture, while a parked control
+// paints a fixed face.
 void VisualQuickTest::expectPopupBaseline(const QString &id, QQuickItem *form,
                                           const QString &steadyFocusObjectName)
 {
     QVERIFY(form);
-    if (!steadyFocusObjectName.isEmpty()) {
-        if (QQuickItem *const steady = form->findChild<QQuickItem *>(steadyFocusObjectName))
-            steady->setFocus(true);
-    }
+    checks::visual::steadyPopupFocus(form, steadyFocusObjectName);
     checks::support::pumpQuick();
     const QPointF scene = form->mapToScene(QPointF{});
-    expectBaseline(id, {region(QStringLiteral("popup.form"),
-                               QRect{qRound(scene.x()), qRound(scene.y()), qRound(form->width()),
-                                     qRound(form->height())})});
+    QList<checks::visual::Region> regions{
+        {QStringLiteral("popup.form"), QRect{qRound(scene.x()), qRound(scene.y()),
+                                             qRound(form->width()), qRound(form->height())}}};
+    QString error;
+    QVERIFY2(checks::visual::expectQuickBaseline(id, *m_window, m_root.data(), regions, &error),
+             qPrintable(error));
 }
 
 void VisualQuickTest::velocityPromptBaseline()
@@ -586,7 +577,8 @@ void VisualQuickTest::velocityPromptBaseline()
     QVERIFY2(m_tab->view().editCommandAvailable(SongView::EditCommand::SetVelocity),
              "Set Velocity must be available with a note selected");
     m_tab->view().executeEditCommand(SongView::EditCommand::SetVelocity);
-    expectPopupBaseline(QStringLiteral("quick/vanilla/velocity-prompt"), awaitPopupForm(),
+    expectPopupBaseline(QStringLiteral("quick/vanilla/velocity-prompt"),
+                        checks::visual::awaitPopupForm(m_tab->view()),
                         QStringLiteral("noteVelocityAccept"));
 }
 
@@ -595,7 +587,8 @@ void VisualQuickTest::insertTimePromptBaseline()
     QVERIFY2(m_tab->view().editCommandAvailable(SongView::EditCommand::InsertTime),
              "Insert Time must be available on a loaded timeline");
     m_tab->view().executeEditCommand(SongView::EditCommand::InsertTime);
-    expectPopupBaseline(QStringLiteral("quick/vanilla/insert-time-prompt"), awaitPopupForm(),
+    expectPopupBaseline(QStringLiteral("quick/vanilla/insert-time-prompt"),
+                        checks::visual::awaitPopupForm(m_tab->view()),
                         QStringLiteral("insertTimeAccept"));
 }
 
@@ -604,7 +597,8 @@ void VisualQuickTest::timeSignaturePromptBaseline()
     QVERIFY2(m_tab->view().editCommandAvailable(SongView::EditCommand::EditTimeSignature),
              "Edit Time Signature must be available on a loaded timeline");
     m_tab->view().executeEditCommand(SongView::EditCommand::EditTimeSignature);
-    expectPopupBaseline(QStringLiteral("quick/vanilla/time-signature-prompt"), awaitPopupForm(),
+    expectPopupBaseline(QStringLiteral("quick/vanilla/time-signature-prompt"),
+                        checks::visual::awaitPopupForm(m_tab->view()),
                         QStringLiteral("timeSignatureAccept"));
 }
 
@@ -623,7 +617,9 @@ void VisualQuickTest::noteMenuBaseline()
     const QPointF local{noteX, (rowRect.top() + rowRect.bottom()) / 2.0};
     const QPoint windowPos = m_rollInput->mapToScene(local).toPoint();
     QTest::mouseClick(m_window, Qt::RightButton, Qt::NoModifier, windowPos);
-    expectPopupBaseline(QStringLiteral("quick/vanilla/note-menu"), awaitMenuPanel());
+    // Menus have no buttons; their frame is the steady chrome to park on.
+    expectPopupBaseline(QStringLiteral("quick/vanilla/note-menu"),
+                        checks::visual::awaitMenuPanel(songView), QStringLiteral("quickMenuFrame"));
 }
 
 void VisualQuickTest::quickMenuPanelBaseline()
@@ -639,7 +635,9 @@ void VisualQuickTest::quickMenuPanelBaseline()
     const QPoint windowPos =
         filter->mapToScene(QPointF{filter->width() / 2.0, filter->height() / 2.0}).toPoint();
     QTest::mouseClick(m_window, Qt::LeftButton, Qt::NoModifier, windowPos);
-    expectPopupBaseline(QStringLiteral("quick/vanilla/quick-menu-panel"), awaitMenuPanel());
+    expectPopupBaseline(QStringLiteral("quick/vanilla/quick-menu-panel"),
+                        checks::visual::awaitMenuPanel(m_tab->view()),
+                        QStringLiteral("quickMenuFrame"));
 }
 
 void VisualQuickTest::ccDeleteConfirmBaseline()
@@ -658,18 +656,26 @@ void VisualQuickTest::ccDeleteConfirmBaseline()
     // Parameter 0 is Volume in the supported-controller order; open its lane
     // menu at a fixed scene point.
     canvas->openParameterMenu(0, 200.0, 200.0);
-    QQuickItem *const panel = awaitMenuPanel();
+    QQuickItem *const panel = checks::visual::awaitMenuPanel(songView);
     QVERIFY2(panel, "lane menu did not open");
+    clickMenuRow(panel, QStringLiteral("Delete automation events"));
+    // Cancel is the confirm's own resting focus (a bare Return cancels), so
+    // parking there is steady and never fights the popup's queued focus.
+    expectPopupBaseline(QStringLiteral("quick/vanilla/cc-delete-confirm"),
+                        checks::visual::awaitPopupForm(songView), QStringLiteral("cancelButton"));
+}
 
-    // Locate the destructive row by its model text, then click it. Row y is
-    // the running sum of row/separator heights above it.
+void VisualQuickTest::clickMenuRow(QQuickItem *panel, const QString &rowText)
+{
+    // Rows render inside quickMenuFrame's border as a running sum of row and
+    // separator heights, so the target row's center maps through the frame.
     auto *const model =
         qobject_cast<songview::QuickMenuModel *>(panel->property("menuModel").value<QObject *>());
     QVERIFY2(model, "lane menu model is unavailable");
     const qreal rowHeight = panel->property("rowHeight").toDouble();
     const qreal separatorHeight = panel->property("separatorHeight").toDouble();
     qreal rowY = 0.0;
-    int targetRow = -1;
+    bool found = false;
     for (int i = 0; i < model->count(); ++i) {
         const songview::QuickMenuItem *item = model->itemAt(i);
         if (!item)
@@ -678,56 +684,33 @@ void VisualQuickTest::ccDeleteConfirmBaseline()
             rowY += separatorHeight;
             continue;
         }
-        if (item->text == QStringLiteral("Delete automation events")) {
-            targetRow = i;
+        if (item->text == rowText) {
+            found = true;
             break;
         }
         rowY += rowHeight;
     }
-    QVERIFY2(targetRow >= 0, "lane menu lacks a Delete automation events row");
-    // Rows live in the ListView inside quickMenuFrame (offset by menuOrigin
-    // plus the frame border), so map the row center through the frame.
+    QVERIFY2(found, qPrintable(QStringLiteral("lane menu lacks the '%1' row").arg(rowText)));
     QQuickItem *const frame = panel->findChild<QQuickItem *>(QStringLiteral("quickMenuFrame"));
     QVERIFY2(frame, "lane menu frame is unavailable");
-    const qreal frameBorder =
-        frame->property("border").value<QObject *>()
-            ? frame->property("border").value<QObject *>()->property("width").toDouble()
-            : 1.0;
+    const QObject *const border = frame->property("border").value<QObject *>();
+    const qreal frameBorder = border ? border->property("width").toDouble() : 1.0;
     const QPoint windowPos =
         frame->mapToScene(QPointF{frame->width() / 2.0, frameBorder + rowY + rowHeight / 2.0})
             .toPoint();
     QTest::mouseClick(m_window, Qt::LeftButton, Qt::NoModifier, windowPos);
-    expectPopupBaseline(QStringLiteral("quick/vanilla/cc-delete-confirm"), awaitPopupForm());
-}
-
-QQuickItem *VisualQuickTest::awaitMenuPanel()
-{
-    if (!QTest::qWaitFor([this] {
-            songview::QuickPopupSession *session = quick_popup::popupSession(m_tab->view());
-            return session && session->isOpen();
-        }))
-        return nullptr;
-    songview::QuickPopupSession *session = quick_popup::popupSession(m_tab->view());
-    QQuickItem *const overlay = session ? session->overlayRoot() : nullptr;
-    if (!overlay)
-        return nullptr;
-    // Panels are item-children of the overlay but QObject-children of the menu
-    // host, so findChild cannot reach them; scan the visual children.
-    for (QQuickItem *child : overlay->childItems()) {
-        if (child->objectName() == QStringLiteral("quickMenuPanelRoot"))
-            return child;
-    }
-    return nullptr;
 }
 
 void VisualQuickTest::voicePickerBaseline()
 {
     // The picker is a request-driven form, not an EditCommand; open it the way
     // a track header does, over the roll band.
-    m_tab->view().requestVoicePicker(
-        QStringLiteral("Track 1 instrument"), 0, m_tab->view().quickView(), [](int) {},
+    SongView &songView = m_tab->view();
+    songView.requestVoicePicker(
+        QStringLiteral("Track 1 instrument"), 0, songView.quickView(), [](int) {},
         songview::TimelineBand::Roll);
-    expectPopupBaseline(QStringLiteral("quick/vanilla/voice-picker"), awaitPopupForm(),
+    expectPopupBaseline(QStringLiteral("quick/vanilla/voice-picker"),
+                        checks::visual::awaitPopupForm(songView),
                         QStringLiteral("voicePickerAccept"));
 }
 
@@ -735,11 +718,17 @@ void VisualQuickTest::eventListBaseline()
 {
     m_tab->view().setEventListVisible(true);
     checks::support::pumpQuick();
-    expectBaseline(
-        QStringLiteral("quick/vanilla/event-list"),
-        {bandRegion(QStringLiteral("event-list.band"), songview::TimelineBand::OtherEvents),
-         itemRegion(QStringLiteral("event-list.chunk"), QStringLiteral("eventListChunk")),
-         itemRegion(QStringLiteral("event-list.filter"), QStringLiteral("eventListFilter"))});
+    QList<checks::visual::Region> regions{
+        bandRegion(QStringLiteral("event-list.band"), songview::TimelineBand::OtherEvents)};
+    appendItemRegions(regions, m_root.data(),
+                      {
+                          {"event-list.chunk", "eventListChunk"},
+                          {"event-list.filter", "eventListFilter"},
+                      });
+    QString error;
+    QVERIFY2(checks::visual::expectQuickBaseline(QStringLiteral("quick/vanilla/event-list"),
+                                                 *m_window, m_root.data(), regions, &error),
+             qPrintable(error));
 }
 
 void VisualQuickTest::automationTabsBaseline()
@@ -748,11 +737,14 @@ void VisualQuickTest::automationTabsBaseline()
     songView.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
     songView.setDrawerActivePage(EditorDrawerPage::Automations);
     checks::support::pumpQuick();
-    expectBaseline(
-        QStringLiteral("quick/vanilla/automation-tabs"),
-        {bandRegion(QStringLiteral("automation-tabs.band"), songview::TimelineBand::Automation),
-         itemRegion(QStringLiteral("automation-tabs.strip"),
-                    QStringLiteral("automationParameterTabs"))});
+    QList<checks::visual::Region> regions{
+        bandRegion(QStringLiteral("automation-tabs.band"), songview::TimelineBand::Automation)};
+    appendItemRegions(regions, m_root.data(),
+                      {{"automation-tabs.strip", "automationParameterTabs"}});
+    QString error;
+    QVERIFY2(checks::visual::expectQuickBaseline(QStringLiteral("quick/vanilla/automation-tabs"),
+                                                 *m_window, m_root.data(), regions, &error),
+             qPrintable(error));
 }
 
 int runVisualQuickCheck(QApplication &, const QStringList &qtArguments)

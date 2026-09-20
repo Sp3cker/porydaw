@@ -46,6 +46,8 @@ qt_add_executable(porydaw_checks
     support/editorrig.h
     support/eventsynth.cpp
     support/eventsynth.h
+    support/loadedshell.cpp
+    support/loadedshell.h
     support/quickframebuffer.cpp
     support/quickframebuffer.h
     support/songfixture.cpp
@@ -359,6 +361,12 @@ qt_add_executable(porydaw_checks
     themelayout/tst_themelayout_scale.cpp
     visual/visualbaseline.h
     visual/visualbaseline.cpp
+    visual/visualfixture.h
+    visual/visualfixture.cpp
+    visual/transportregions.h
+    visual/transportregions.cpp
+    visual/visualquick.h
+    visual/visualquick.cpp
     visual/chrome.cpp
     visual/transport.cpp
     visual/browsers.cpp
@@ -366,6 +374,7 @@ qt_add_executable(porydaw_checks
     visual/sampleeditor.cpp
     visual/quick.cpp
     visual/newsongwizard.cpp
+    visual/newsongwizardstub.h
     visual/windowfixtures.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/songview/quick/swift-grid-prototype/native/widget_window_fixtures.cpp
     ${PROJECT_SOURCE_DIR}/resources/fonts.qrc

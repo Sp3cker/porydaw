@@ -1,14 +1,17 @@
 #include "checks/support/songfixture.h"
 
+#include <QByteArray>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QList>
 #include <QTemporaryDir>
 #include <cmath>
 #include <utility>
 
 #include "checks/support/support.h"
 #include "core/miditimeline.h"
+#include "project/projectworkspace.h"
 #include "ui/songview.h"
 
 namespace checks {
@@ -186,6 +189,71 @@ ProjectFixture::~ProjectFixture() = default;
 const QString &ProjectFixture::root() const noexcept
 {
     return m_root;
+}
+
+std::unique_ptr<FixtureSampleSet> FixtureSampleSet::load(DecompProject &project,
+                                                         const VgCatalogScan &catalog,
+                                                         const VgDirectSoundScan &directSound,
+                                                         const QStringList &progWaveSymbols,
+                                                         QString &error)
+{
+    error.clear();
+    // The C loader reads every const char* during the call, so the symbol
+    // bytes must be in place before the pointers are taken: one pre-reserved
+    // storage list owns them all, the same dance projectio.cpp's loadSampleSet
+    // uses for the production path.
+    QList<QByteArray> storage;
+    storage.reserve(directSound.directSound.size() + progWaveSymbols.size() +
+                    catalog.keysplits.size() * 2);
+    const auto utf8 = [&storage](const QString &value) {
+        storage.append(value.toUtf8());
+        return storage.last().constData();
+    };
+    QList<const char *> samplePtrs, wavePtrs, keysplitPtrs, keysplitTablePtrs;
+    for (const QString &symbol : directSound.directSound)
+        samplePtrs.append(utf8(symbol));
+    for (const QString &symbol : progWaveSymbols)
+        wavePtrs.append(utf8(symbol));
+    for (const QPair<QString, QString> &keysplit : catalog.keysplits) {
+        keysplitPtrs.append(utf8(keysplit.first));
+        keysplitTablePtrs.append(utf8(keysplit.second));
+    }
+
+    LoadedSampleSet *const set = project.loadSampleSet(
+        samplePtrs.constData(), int(samplePtrs.size()), wavePtrs.constData(), int(wavePtrs.size()),
+        keysplitPtrs.constData(), keysplitTablePtrs.constData(), int(keysplitPtrs.size()));
+    if (!set) {
+        error = QStringLiteral("fixture sample set did not load");
+        return nullptr;
+    }
+
+    auto sampleSet = std::unique_ptr<FixtureSampleSet>(new FixtureSampleSet);
+    sampleSet->m_directSoundSymbols = directSound.directSound;
+    sampleSet->m_set = SampleSetLease(set, &voicegroup_free_samples);
+    return sampleSet;
+}
+
+FixtureSampleSet::~FixtureSampleSet() = default;
+
+SamplePickInfo FixtureSampleSet::pickInfoFor(const QString &symbol) const
+{
+    SamplePickInfo info;
+    const int index = m_directSoundSymbols.indexOf(symbol);
+    if (!m_set || index < 0 || index >= m_set->count)
+        return info;
+    const WaveData *const wave = m_set->waves[index];
+    if (!wave || !wave->data || wave->size == 0)
+        return info;
+    info.known = true;
+    info.looped = (wave->status & 0x4000) != 0;
+    info.rateHz = int(wave->freq / 1024);
+    info.seconds = info.rateHz > 0 ? double(wave->size) / info.rateHz : 0.0;
+    return info;
+}
+
+std::function<SamplePickInfo(const QString &)> FixtureSampleSet::pickInfoProvider() const
+{
+    return [this](const QString &symbol) { return pickInfoFor(symbol); };
 }
 
 } // namespace checks

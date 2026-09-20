@@ -164,20 +164,6 @@
             "w": 111,
             "x": 967,
             "y": 4
-        },
-        {
-            "h": 30,
-            "name": "transport.output-volume-caption",
-            "w": 100,
-            "x": 0,
-            "y": 0
-        },
-        {
-            "h": 35,
-            "name": "transport.output-volume",
-            "w": 35,
-            "x": 0,
-            "y": 0
         }
     ]
 }

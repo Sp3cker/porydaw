@@ -1,9 +1,13 @@
 // Fixture factory for every standalone QWidget window except Theme.
 //
-// Mock data is in-memory only: a deterministic EngineSettings/SongTarget,
-// a synthesized ImportedSample waveform, a synthetic Sf2File pool + zones,
-// and a small deterministic SmfFile. Nothing here reads a project root,
-// writes a file, touches QSettings, or shows/opens/execs anything.
+// The sgw_visual* catalog below is the prototype's single definition of the
+// fixture data: the factory builds every window from it and the
+// frozen-appearance checks (src/checks/visual) pin the same surfaces from the
+// same values. Mock data is in-memory only: a deterministic
+// EngineSettings/SongTarget, a synthesized ImportedSample waveform, a
+// synthetic Sf2File pool + zones, and a small deterministic SmfFile. Nothing
+// here reads a project root, writes a file, touches QSettings, or
+// shows/opens/execs anything.
 //
 // The New Voicegroup and Export WAV kinds are prototype-only mirrors of the
 // inline source forms at src/ui/workspaceui_project.cpp:617 and
@@ -36,14 +40,15 @@
 #include "ui/settingsdialog.h"
 #include "ui/sf2zonepicker.h"
 
-namespace {
+// ---- Canonical mock catalog -------------------------------------------------
+// Exported through widget_window_fixtures.h so the factory below, the
+// prototype windows, and the frozen-appearance checks all pin one set of
+// fixture values.
 
-// ---- Shared mock catalog ----------------------------------------------------
-
-EngineSettings fixtureEngineSettings()
+EngineSettings sgw_visualEngineSettings()
 {
-    // Mirrors the deterministic check fixtures (tst_settingsdialog,
-    // visual/dialogs): fixed mixer/rate/channels so every run matches.
+    // Fixed mixer/rate/channels so the engine tab renders identical rows on
+    // every run.
     EngineSettings settings;
     settings.pcmMixer = M4A_PCM_MIXER_SAPPY;
     settings.maxPcmChannels = 8;
@@ -52,7 +57,7 @@ EngineSettings fixtureEngineSettings()
     return settings;
 }
 
-SongTarget fixtureSongTarget()
+SongTarget sgw_visualSongTarget()
 {
     SongCfg cfg;
     cfg.voicegroupArg = QStringLiteral("_abandoned_ship");
@@ -63,17 +68,17 @@ SongTarget fixtureSongTarget()
     return {cfg, QStringLiteral("mus_route101")};
 }
 
-QStringList fixtureVoicegroups()
+QStringList sgw_visualVoicegroups()
 {
     return {QStringLiteral("_abandoned_ship"), QStringLiteral("_route101")};
 }
 
-NewSongWizard::ProjectData fixtureProjectData()
+NewSongWizard::ProjectData sgw_visualProjectData()
 {
     NewSongWizard::ProjectData data;
     data.players.append({QStringLiteral("MUSIC_PLAYER_BGM"), 0, -1});
     data.players.append({QStringLiteral("MUSIC_PLAYER_SE"), 1, 1});
-    data.voicegroupArgs = fixtureVoicegroups();
+    data.voicegroupArgs = sgw_visualVoicegroups();
     data.canCreateVoicegroup = true;
     SongInfo existing;
     existing.id = 0;
@@ -84,9 +89,7 @@ NewSongWizard::ProjectData fixtureProjectData()
     return data;
 }
 
-// Conductor tempo track plus two note tracks, mirroring the visual check's
-// import SMF shape so the wizard's analysis page renders a real table.
-SmfFile fixtureImportSmf()
+SmfFile sgw_visualImportSmf()
 {
     SmfFile smf;
     smf.format = 1;
@@ -125,46 +128,9 @@ SmfFile fixtureImportSmf()
     return smf;
 }
 
-// Synthesized 440 Hz sine at 22050 Hz: a realistic mono pipeline input with
-// a loop and real pitch metadata. The editor copies it, so no lifetime
-// holder is needed.
-ImportedSample fixtureImportedSample()
+Sf2File sgw_visualSoundFont()
 {
-    ImportedSample sample;
-    constexpr int frames = 2048;
-    constexpr double rate = 22050.0;
-    sample.buffer.reserve(size_t(frames));
-    for (int i = 0; i < frames; ++i)
-        sample.buffer.push_back(float(0.7 * std::sin(2.0 * M_PI * 440.0 * i / rate)));
-    sample.sampleRate = rate;
-    sample.baseKey = 69;
-    sample.fracSemitone = 0.0;
-    sample.hasLoop = true;
-    sample.loopStart = 256;
-    sample.loopEndIncl = 1791;
-    sample.playLength = frames;
-    sample.hasPitchMetadata = true;
-    sample.suggestedName = QStringLiteral("fixture_tone");
-    sample.sourcePath = QStringLiteral("fixture:fixture_tone.wav");
-    sample.sourceKind = ImportedSample::Wav;
-    sample.sourceChannels = 1;
-    sample.sourceBits = 16;
-    return sample;
-}
-
-// Sf2ZonePicker borrows its file by const reference, so the parsed font is
-// held by a child QObject that dies with the dialog it feeds.
-class Sf2Holder final : public QObject
-{
-  public:
-    explicit Sf2Holder(QObject *parent = nullptr) : QObject(parent) {}
-    Sf2File file;
-};
-
-Sf2Holder *makeSoundFont()
-{
-    auto *holder = new Sf2Holder;
-    Sf2File &font = holder->file;
+    Sf2File font;
     font.sourcePath = QStringLiteral("fixture:visual_zones.sf2");
     // 2400-frame 16-bit pool backing every zone below; the picker only
     // renders zone metadata, but a real pool keeps zone extraction honest.
@@ -201,6 +167,53 @@ Sf2Holder *makeSoundFont()
         zone("Pad Right", "PadInst", "PadPreset", 1100, 1500, 1150, 1450, 32000, 60, 8));
     font.zones.push_back(zone("Loose One", "", "", 1500, 1800, 0, 0, 22050, 60, 1));
     font.zones.push_back(zone("Loose Two", "", "", 1800, 2400, 1900, 2300, 22050, 62, 1));
+    return font;
+}
+
+namespace {
+
+// ---- Prototype-only fixtures ------------------------------------------------
+
+// Synthesized 440 Hz sine at 22050 Hz: a realistic mono pipeline input with
+// a loop and real pitch metadata. The editor copies it, so no lifetime
+// holder is needed.
+ImportedSample fixtureImportedSample()
+{
+    ImportedSample sample;
+    constexpr int frames = 2048;
+    constexpr double rate = 22050.0;
+    sample.buffer.reserve(size_t(frames));
+    for (int i = 0; i < frames; ++i)
+        sample.buffer.push_back(float(0.7 * std::sin(2.0 * M_PI * 440.0 * i / rate)));
+    sample.sampleRate = rate;
+    sample.baseKey = 69;
+    sample.fracSemitone = 0.0;
+    sample.hasLoop = true;
+    sample.loopStart = 256;
+    sample.loopEndIncl = 1791;
+    sample.playLength = frames;
+    sample.hasPitchMetadata = true;
+    sample.suggestedName = QStringLiteral("fixture_tone");
+    sample.sourcePath = QStringLiteral("fixture:fixture_tone.wav");
+    sample.sourceKind = ImportedSample::Wav;
+    sample.sourceChannels = 1;
+    sample.sourceBits = 16;
+    return sample;
+}
+
+// Sf2ZonePicker borrows its file by const reference, so the canonical font is
+// held by a child QObject that dies with the dialog it feeds.
+class Sf2Holder final : public QObject
+{
+  public:
+    explicit Sf2Holder(QObject *parent = nullptr) : QObject(parent) {}
+    Sf2File file;
+};
+
+Sf2Holder *makeSoundFont()
+{
+    auto *holder = new Sf2Holder;
+    holder->file = sgw_visualSoundFont();
     return holder;
 }
 
@@ -305,9 +318,9 @@ extern "C" QDialog *sgw_createWindowFixture(int kind)
         // In-memory engine settings + detached song target; the dialog
         // copies both, so nothing outlives the call and no QSettings load
         // or save is involved.
-        return new SettingsDialog(fixtureEngineSettings(),
-                                  std::optional<SongTarget>(fixtureSongTarget()),
-                                  fixtureVoicegroups(), false, nullptr);
+        return new SettingsDialog(sgw_visualEngineSettings(),
+                                  std::optional<SongTarget>(sgw_visualSongTarget()),
+                                  sgw_visualVoicegroups(), false, nullptr);
     case SgwWindowSampleEditor: {
         // Null engine disables the audition strip (header contract); the
         // always-true validator keeps naming project-free. Null destAdsr.
@@ -329,7 +342,7 @@ extern "C" QDialog *sgw_createWindowFixture(int kind)
     case SgwWindowImportMidi:
         // Import-mode wizard over the detached catalog + in-memory SMF; the
         // source path is a fixture label, never read from disk.
-        return new NewSongWizard(fixtureProjectData(), fixtureImportSmf(),
+        return new NewSongWizard(sgw_visualProjectData(), sgw_visualImportSmf(),
                                  QStringLiteral("fixture/external_import.mid"), nullptr);
     case SgwWindowNewVoicegroup:
         return makeNewVoicegroupMirror();

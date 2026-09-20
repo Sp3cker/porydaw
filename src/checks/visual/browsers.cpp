@@ -11,11 +11,11 @@
 // No widget is recreated for the snapshot.
 
 #include "checks/visual/visualbaseline.h"
+#include "checks/visual/visualfixture.h"
 
 #include "checks/support/songfixture.h"
 
 #include "project/decompproject.h"
-#include "project/projectworkspace.h"
 #include "project/voicegroupsource.h"
 
 #include "ui/dragspinbox.h"
@@ -30,13 +30,9 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QHeaderView>
-#include <QLabel>
-#include <QLineEdit>
 #include <QModelIndex>
-#include <QPushButton>
 #include <QSet>
 #include <QSpinBox>
-#include <QToolButton>
 #include <QTreeWidget>
 #include <QTreeWidgetItemIterator>
 #include <QtTest>
@@ -46,6 +42,14 @@
 #include <optional>
 
 namespace {
+
+// The shared region helpers (checks/visual/visualfixture.h): scenario code
+// spells them unqualified, one name per rule.
+using checks::visual::appendNamedRegion;
+using checks::visual::appendRequiredRegion;
+using checks::visual::childRegion;
+using checks::visual::compareShown;
+using checks::visual::Region;
 
 // The fixture song bound to fixture_rich, the voicegroup that exercises every
 // editor family the browser renders.
@@ -60,24 +64,19 @@ constexpr int kDirectSoundSlot = 0; // voice_directsound, looped sample
 constexpr int kSquare1Slot = 4;     // sweep/duty editor rows
 constexpr int kCrySlot = 12;        // read-only notice + disabled editor
 
-struct ThemeVariant {
-    const char *id;
-    themes::Theme (*theme)();
-};
-
-const ThemeVariant kThemeVariants[] = {
-    {"vanilla", &themes::vanilla},
-    {"darkneutralhigh", &themes::darkNeutralHigh},
-};
-
-QRect mappedRect(const QWidget &root, const QWidget &child)
-{
-    return QRect(child.mapTo(const_cast<QWidget *>(&root), QPoint()), child.size());
-}
+// The two committed themes the baselines cover, in data-row order; the id is
+// both the QTest row name and the theme segment of every baseline id, and
+// applyTheme() maps it to the theme itself.
+constexpr const char *kThemeIds[] = {"vanilla", "darkneutralhigh"};
 
 // A tree cell's rect in captured-root coordinates (visualRect is viewport
 // coordinates; the grabbed image is the browser/popup widget's).
-QRect treeCellRect(const QWidget &root, QTreeWidget &tree, QTreeWidgetItem *item, int column)
+//
+// Deliberately stricter than checks::visual::clippedItemRect: a partially
+// scrolled row is not a stable bound for a baseline, so this drops cells the
+// viewport only partly paints instead of freezing the clipped sliver.
+QRect fullyVisibleTreeCellRect(const QWidget &root, QTreeWidget &tree, QTreeWidgetItem *item,
+                               int column)
 {
     const QModelIndex index = tree.indexFromItem(item, column);
     if (!index.isValid())
@@ -85,36 +84,41 @@ QRect treeCellRect(const QWidget &root, QTreeWidget &tree, QTreeWidgetItem *item
     const QRect rect = tree.visualRect(index);
     if (!rect.isValid())
         return QRect();
-    // A partially scrolled row is not a stable bound: only cells fully inside
-    // the tree's own rect become regions.
     const QRect inTree{tree.viewport()->mapTo(&tree, rect.topLeft()), rect.size()};
     if (!tree.rect().contains(inTree))
         return QRect();
     return {tree.viewport()->mapTo(&root, rect.topLeft()), rect.size()};
 }
 
-void addTreeRowRegions(QList<checks::visual::Region> &regions, const QWidget &root,
-                       QTreeWidget &tree, QTreeWidgetItem *item, const QString &name)
+void addTreeRowRegions(QList<Region> &regions, const QWidget &root, QTreeWidget &tree,
+                       QTreeWidgetItem *item, const QString &name)
 {
-    const QRect row = treeCellRect(root, tree, item, 0);
+    const QRect row = fullyVisibleTreeCellRect(root, tree, item, 0);
     if (!row.isValid())
         return;
-    regions.append(
-        {name,
-         row.united(treeCellRect(root, tree, item, 1)).united(treeCellRect(root, tree, item, 2))});
-    const QRect icon = treeCellRect(root, tree, item, 1);
+    regions.append({name, row.united(fullyVisibleTreeCellRect(root, tree, item, 1))
+                              .united(fullyVisibleTreeCellRect(root, tree, item, 2))});
+    const QRect icon = fullyVisibleTreeCellRect(root, tree, item, 1);
     if (icon.isValid())
         regions.append({name + QStringLiteral(".type-icon"), icon});
-    const QRect adsr = treeCellRect(root, tree, item, 2);
+    const QRect adsr = fullyVisibleTreeCellRect(root, tree, item, 2);
     if (adsr.isValid())
         regions.append({name + QStringLiteral(".adsr"), adsr});
 }
 
-void addWidgetRegion(QList<checks::visual::Region> &regions, const QWidget &root,
-                     const QWidget *widget, const QString &name)
+// Pins a child under a caller-chosen semantic name. childRegion() supplies the
+// shared rule — the visibleRegion clipped through ancestor viewports and
+// root.rect() — and a child that paints nothing (whole editor rows hidden for
+// the selected voice family) contributes no region instead of a degenerate
+// one.
+void appendPaintedRegion(QList<Region> &regions, const QString &name, QWidget &root,
+                         const QWidget *child)
 {
-    if (widget && widget->isVisible())
-        regions.append({name, mappedRect(root, *widget)});
+    if (!child)
+        return;
+    const Region region = childRegion(name, root, *child);
+    if (!region.bounds.isEmpty())
+        regions.append(region);
 }
 
 // The editor's unnamed rows are reachable through their field widgets; the
@@ -133,95 +137,130 @@ DragSpinBox *adsrSpin(VoicegroupBrowser &browser, const QString &tooltip)
     return nullptr;
 }
 
+// The editor's type combo is the only combo carrying the Square 1 macro: zero
+// matches (the editor never rendered) and several (an ambiguous editor) both
+// return null, so appendBrowserRegions() fails the test rather than silently
+// pinning whichever combo the scan reached first.
 QComboBox *editorTypeCombo(VoicegroupBrowser &browser)
 {
+    QComboBox *match = nullptr;
     for (QComboBox *combo : browser.findChildren<QComboBox *>()) {
-        if (combo->findData(int(VgMacro::Square1)) >= 0)
-            return combo;
+        if (combo->findData(int(VgMacro::Square1)) < 0)
+            continue;
+        if (match)
+            return nullptr;
+        match = combo;
     }
-    return nullptr;
+    return match;
 }
 
-// Semantic regions for the whole browser: named widgets via the shared
-// helper plus explicit subregions for the custom-painted tree cells and the
-// editor rows a port must reproduce.
-QList<checks::visual::Region> browserRegions(VoicegroupBrowser &browser)
+// Appends the browser's semantic regions on top of the automatic ones the
+// shared compare path adds: stable names for the widgets a QML port must
+// reproduce, plus explicit subregions for the custom-painted tree cells and
+// the editor rows. A widget that paints nothing (the editor rows another voice
+// family hides) contributes no region; chrome that must exist fails the test
+// here rather than silently shrinking the frozen surface.
+void appendBrowserRegions(QList<Region> &regions, VoicegroupBrowser &browser)
 {
-    auto regions = checks::visual::widgetRegions(browser);
-
-    if (QComboBox *selector = browser.findChild<QComboBox *>(QStringLiteral("vgArgCombo")))
-        addWidgetRegion(regions, browser, selector, QStringLiteral("selector"));
+    QVERIFY2(appendNamedRegion(regions, QStringLiteral("selector"), browser,
+                               QStringLiteral("vgArgCombo")),
+             "voicegroup selector combo not found");
 
     auto *tree = browser.findChild<QTreeWidget *>(QString(), Qt::FindDirectChildrenOnly);
-    if (tree) {
-        addWidgetRegion(regions, browser, tree, QStringLiteral("tree"));
-        addWidgetRegion(regions, browser, tree->header(), QStringLiteral("tree.header"));
-        for (int slot = 0; slot < tree->topLevelItemCount(); ++slot) {
-            QTreeWidgetItem *const item = tree->topLevelItem(slot);
-            if (!item->isHidden())
-                addTreeRowRegions(regions, browser, *tree, item,
-                                  QStringLiteral("tree.row.%1").arg(slot, 3, 10, QLatin1Char('0')));
-        }
+    QVERIFY2(tree, "voicegroup tree not found");
+    QVERIFY2(appendRequiredRegion(regions, QStringLiteral("tree"), browser, tree),
+             "voicegroup tree painted nothing");
+    QVERIFY2(appendRequiredRegion(regions, QStringLiteral("tree.header"), browser, tree->header()),
+             "voicegroup tree header painted nothing");
+    for (int slot = 0; slot < tree->topLevelItemCount(); ++slot) {
+        QTreeWidgetItem *const item = tree->topLevelItem(slot);
+        if (!item->isHidden())
+            addTreeRowRegions(regions, browser, *tree, item,
+                              QStringLiteral("tree.row.%1").arg(slot, 3, 10, QLatin1Char('0')));
     }
 
-    addWidgetRegion(regions, browser,
-                    browser.findChild<QLabel *>(QStringLiteral("voicegroupEditorNotice")),
-                    QStringLiteral("editor.notice"));
-    addWidgetRegion(regions, browser, editorTypeCombo(browser), QStringLiteral("editor.type"));
-    if (SamplePickerButton *picker = browser.findChild<SamplePickerButton *>()) {
-        addWidgetRegion(regions, browser, rowOf(picker), QStringLiteral("editor.sample"));
-        addWidgetRegion(regions, browser, picker, QStringLiteral("editor.sample.button"));
-    }
-    addWidgetRegion(regions, browser,
-                    browser.findChild<QToolButton *>(QStringLiteral("vgNewSampleButton")),
-                    QStringLiteral("editor.sample.new"));
-    addWidgetRegion(regions, browser,
-                    browser.findChild<QToolButton *>(QStringLiteral("vgEditSampleButton")),
-                    QStringLiteral("editor.sample.edit"));
+    QVERIFY2(appendNamedRegion(regions, QStringLiteral("editor.notice"), browser,
+                               QStringLiteral("voicegroupEditorNotice")),
+             "voicegroup editor notice not found");
+
+    QComboBox *const typeCombo = editorTypeCombo(browser);
+    QVERIFY2(typeCombo, "voicegroup editor needs exactly one Square 1 type combo");
+    appendPaintedRegion(regions, QStringLiteral("editor.type"), browser, typeCombo);
+
+    auto *picker = browser.findChild<SamplePickerButton *>();
+    QVERIFY2(picker, "voicegroup sample picker not found");
+    appendPaintedRegion(regions, QStringLiteral("editor.sample"), browser, rowOf(picker));
+    QVERIFY2(appendNamedRegion(regions, QStringLiteral("editor.sample.button"), browser,
+                               QStringLiteral("vgSamplePickerButton")),
+             "voicegroup sample picker button not found");
+    QVERIFY2(appendNamedRegion(regions, QStringLiteral("editor.sample.new"), browser,
+                               QStringLiteral("vgNewSampleButton")),
+             "voicegroup new-sample button not found");
+    QVERIFY2(appendNamedRegion(regions, QStringLiteral("editor.sample.edit"), browser,
+                               QStringLiteral("vgEditSampleButton")),
+             "voicegroup edit-sample button not found");
 
     struct AdsrField {
         const char *name;
         const char *tooltip;
     };
-    const AdsrField adsrFields[] = {
+    constexpr AdsrField kAdsrFields[] = {
         {"attack", "Attack"},
         {"decay", "Decay"},
         {"sustain", "Sustain"},
         {"release", "Release"},
     };
-    for (const AdsrField &field : adsrFields) {
-        addWidgetRegion(regions, browser, adsrSpin(browser, QString::fromLatin1(field.tooltip)),
-                        QStringLiteral("editor.adsr.%1").arg(QLatin1String(field.name)));
+    for (const AdsrField &field : kAdsrFields) {
+        const QString tooltip = QString::fromLatin1(field.tooltip);
+        DragSpinBox *const spin = adsrSpin(browser, tooltip);
+        QVERIFY2(spin, qPrintable(QStringLiteral("ADSR spin '%1' not found").arg(tooltip)));
+        const QString name = QStringLiteral("editor.adsr.%1").arg(QLatin1String(field.name));
+        appendPaintedRegion(regions, name, browser, spin);
     }
-    if (DragSpinBox *attack = adsrSpin(browser, QStringLiteral("Attack")))
-        addWidgetRegion(regions, browser, rowOf(attack), QStringLiteral("editor.adsr"));
+    appendPaintedRegion(regions, QStringLiteral("editor.adsr"), browser,
+                        rowOf(adsrSpin(browser, QStringLiteral("Attack"))));
 
-    // CGB-only rows (sweep, duty, period) and the synth rows surface through
-    // their field widgets' tooltips; the row parent is the semantic bound.
-    const QHash<QString, QString> rowTooltips = {
-        {QStringLiteral("editor.sweep"), QStringLiteral("Speed: 128 Hz")},
-        {QStringLiteral("editor.synth.duty"), QStringLiteral("Base duty")},
-        {QStringLiteral("editor.synth.step"), QStringLiteral("Duty LFO step")},
-        {QStringLiteral("editor.synth.depth"), QStringLiteral("Modulation")},
-        {QStringLiteral("editor.synth.phase"), QStringLiteral("Duty LFO phase")},
+    // The CGB-only rows (sweep) and the synth rows surface through their field
+    // widgets' tooltips; the row parent is the semantic bound. The production
+    // tooltips are static strings, so each entry matches exactly: a reworded
+    // tooltip must fail here rather than silently pin a different row.
+    struct TooltipRow {
+        const char *tooltip;
+        const char *name;
     };
-    for (QSpinBox *spin : browser.findChildren<QSpinBox *>()) {
-        for (auto it = rowTooltips.constBegin(); it != rowTooltips.constEnd(); ++it) {
-            if (spin->toolTip().startsWith(it.value()))
-                addWidgetRegion(regions, browser, rowOf(spin), it.key());
+    constexpr TooltipRow kTooltipRows[] = {
+        {"Speed: 128 Hz clocks between pitch steps (1 = fastest, 7 = slowest, Off = no sweep).",
+         "editor.sweep"},
+        {"Base duty cycle: the pulse width the wave centers on (128 = 50% square).",
+         "editor.synth.duty"},
+        {"Duty LFO step per frame: how fast the pulse width wobbles (0 = static).",
+         "editor.synth.step"},
+        {"Modulation amount: how far the pulse width swings around the base duty.",
+         "editor.synth.depth"},
+        {"Duty LFO phase offset.", "editor.synth.phase"},
+    };
+    for (const TooltipRow &row : kTooltipRows) {
+        QSpinBox *match = nullptr;
+        for (QSpinBox *spin : browser.findChildren<QSpinBox *>()) {
+            if (spin->toolTip() == QLatin1String(row.tooltip)) {
+                match = spin;
+                break; // first match wins; the production tooltips are unique
+            }
         }
+        const QString name = QString::fromLatin1(row.name);
+        QVERIFY2(match,
+                 qPrintable(QStringLiteral("editor row '%1' not found by tooltip").arg(name)));
+        appendPaintedRegion(regions, name, browser, rowOf(match));
     }
-    return regions;
 }
 
-// Semantic regions for the open picker popup: the named children plus each
-// section header, every visible row, and the loop-badge cell.
-QList<checks::visual::Region> popupRegions(QWidget &popup)
+// Appends the open picker popup's semantic regions on top of the automatic
+// ones the shared compare path adds: each section header, every visible row,
+// and the loop-badge cell.
+void appendPopupRegions(QList<Region> &regions, QWidget &popup)
 {
-    auto regions = checks::visual::widgetRegions(popup);
     auto *tree = popup.findChild<QTreeWidget *>(QStringLiteral("vgSamplePickerList"));
-    if (!tree)
-        return regions;
+    QVERIFY2(tree, "sample picker list not found");
 
     int section = 0;
     for (QTreeWidgetItemIterator it(tree); *it; ++it) {
@@ -236,11 +275,10 @@ QList<checks::visual::Region> popupRegions(QWidget &popup)
         }
         const QString name = QStringLiteral("picker.row.%1").arg(symbol);
         addTreeRowRegions(regions, popup, *tree, item, name);
-        const QRect badge = treeCellRect(popup, *tree, item, 1);
+        const QRect badge = fullyVisibleTreeCellRect(popup, *tree, item, 1);
         if (badge.isValid() && !item->text(1).isEmpty())
             regions.append({name + QStringLiteral(".loop-badge"), badge});
     }
-    return regions;
 }
 
 } // namespace
@@ -268,20 +306,25 @@ class VisualBrowsersTest final : public QObject
 
   private:
     bool populateBrowser(QString &error);
-    bool applyTheme(const QString &id);
-    bool grabBrowser(const QString &id);
+    void applyTheme(const QString &id);
+    void grabBrowser(const QString &id);
     QWidget *pickerPopup() const;
 
     QString m_projectRoot;
     DecompProject m_project;
     std::optional<LoadedBankView> m_bank;
     std::unique_ptr<SongViewRig> m_rig;
-    SampleSetLease m_sampleSet;
+    std::unique_ptr<FixtureSampleSet> m_sampleSet;
     std::unique_ptr<VoicegroupBrowser> m_browser;
 };
 
 void VisualBrowsersTest::initTestCase()
 {
+    // No QSettings isolation here, unlike the chrome/dialogs suites: nothing
+    // this scenario builds reads or writes settings. DecompProject, the
+    // VoicegroupBrowser, SamplePickerButton, and the theme applier all keep
+    // their state in the fixture project or in memory; each scenario applies
+    // its own theme, so no persisted preference can leak into a capture.
     QString error;
     QVERIFY2(m_project.open(m_projectRoot, &error), qPrintable(error));
 
@@ -324,52 +367,13 @@ bool VisualBrowsersTest::populateBrowser(QString &error)
     const VgDirectSoundScan directSound = VoicegroupSource::directSoundCatalog(m_projectRoot);
     const QStringList progWave = VoicegroupSource::progWaveSymbols(m_projectRoot);
 
-    QVector<QByteArray> sampleSymbols, waveSymbols, keysplitSymbols, keysplitTables;
-    QVector<const char *> samplePtrs, wavePtrs, keysplitPtrs, tablePtrs;
-    for (const QString &symbol : directSound.directSound)
-        sampleSymbols.append(symbol.toUtf8());
-    for (const QString &symbol : progWave)
-        waveSymbols.append(symbol.toUtf8());
-    for (const auto &pair : catalog.keysplits) {
-        keysplitSymbols.append(pair.first.toUtf8());
-        keysplitTables.append(pair.second.toUtf8());
-    }
-    for (const QByteArray &symbol : sampleSymbols)
-        samplePtrs.append(symbol.constData());
-    for (const QByteArray &symbol : waveSymbols)
-        wavePtrs.append(symbol.constData());
-    for (int i = 0; i < keysplitSymbols.size(); ++i) {
-        keysplitPtrs.append(keysplitSymbols.at(i).constData());
-        tablePtrs.append(keysplitTables.at(i).constData());
-    }
-    LoadedSampleSet *const set = m_project.loadSampleSet(
-        samplePtrs.constData(), samplePtrs.size(), wavePtrs.constData(), wavePtrs.size(),
-        keysplitPtrs.constData(), tablePtrs.constData(), keysplitPtrs.size());
-    if (!set) {
-        error = QStringLiteral("fixture sample set did not load");
+    m_sampleSet = FixtureSampleSet::load(m_project, catalog, directSound, progWave, error);
+    if (!m_sampleSet)
         return false;
-    }
-    m_sampleSet = SampleSetLease(set, &voicegroup_free_samples);
 
     m_browser = std::make_unique<VoicegroupBrowser>();
     m_browser->setVoicegroupChoices(catalog.groupArgs);
-    // The same lookup WorkspaceUi::samplePickInfoFor performs against the
-    // loaded sample set: known/looped/rate/seconds from the committed WaveData.
-    const QStringList directSoundSymbols = directSound.directSound;
-    m_browser->setSampleInfoProvider([this, directSoundSymbols](const QString &symbol) {
-        SamplePickInfo info;
-        const int index = directSoundSymbols.indexOf(symbol);
-        const WaveData *wave = m_sampleSet && index >= 0 && index < m_sampleSet->count
-                                   ? m_sampleSet->waves[index]
-                                   : nullptr;
-        if (!wave || !wave->data || wave->size == 0)
-            return info;
-        info.known = true;
-        info.looped = (wave->status & 0x4000) != 0;
-        info.rateHz = int(wave->freq / 1024);
-        info.seconds = info.rateHz > 0 ? double(wave->size) / info.rateHz : 0.0;
-        return info;
-    });
+    m_browser->setSampleInfoProvider(m_sampleSet->pickInfoProvider());
     m_browser->setSource(&*m_bank, directSound.directSound, progWave, catalog.keysplits,
                          catalog.drumkits, catalog.typicalAdsr, directSound.synths);
     m_browser->setCurrentVoicegroupArg(QStringLiteral("_fixture_rich"));
@@ -381,34 +385,40 @@ bool VisualBrowsersTest::populateBrowser(QString &error)
     return true;
 }
 
-bool VisualBrowsersTest::applyTheme(const QString &id)
+// id -> theme, the only two the baselines cover; the data rows cannot carry
+// anything else, so an unknown id is a test bug and fails the scenario.
+void VisualBrowsersTest::applyTheme(const QString &id)
 {
-    for (const ThemeVariant &variant : kThemeVariants) {
-        if (id == QLatin1String(variant.id)) {
-            themes::apply(*qApp, variant.theme());
-            QApplication::processEvents();
-            return true;
-        }
+    if (id == QLatin1String("vanilla")) {
+        themes::apply(*qApp, themes::vanilla());
+    } else if (id == QLatin1String("darkneutralhigh")) {
+        themes::apply(*qApp, themes::darkNeutralHigh());
+    } else {
+        QFAIL(qPrintable(QStringLiteral("unknown theme '%1'").arg(id)));
     }
-    return false;
+    QApplication::processEvents();
 }
 
-bool VisualBrowsersTest::grabBrowser(const QString &id)
+void VisualBrowsersTest::grabBrowser(const QString &id)
 {
     // The canonical fixture size must survive the window system: a native
     // first-show auto-shrink would silently record a different surface.
-    if (m_browser->size() != kBrowserSize) {
-        qWarning() << "browser size" << m_browser->size() << "!= canonical" << kBrowserSize;
-        return false;
-    }
+    QVERIFY2(m_browser->size() == kBrowserSize,
+             qPrintable(QStringLiteral("browser size %1x%2 != canonical %3x%4")
+                            .arg(m_browser->width())
+                            .arg(m_browser->height())
+                            .arg(kBrowserSize.width())
+                            .arg(kBrowserSize.height())));
+    // A focus ring is transient state the baseline must not depend on, and
+    // parking focus (checks::visual::parkFocus) would ink one on the editor's
+    // New… button: drop focus entirely, like the popup's search field.
     if (QWidget *focused = QApplication::focusWidget())
         focused->clearFocus();
     QApplication::processEvents();
-    QString error;
-    const bool ok = visual::compareWidget(id, *m_browser, browserRegions(*m_browser), &error);
-    if (!ok)
-        qWarning().noquote() << error;
-    return ok;
+
+    QList<Region> regions;
+    appendBrowserRegions(regions, *m_browser);
+    compareShown(id, *m_browser, regions);
 }
 
 QWidget *VisualBrowsersTest::pickerPopup() const
@@ -420,8 +430,8 @@ QWidget *VisualBrowsersTest::pickerPopup() const
 void VisualBrowsersTest::browserBaseline_data()
 {
     QTest::addColumn<QString>("theme");
-    for (const ThemeVariant &variant : kThemeVariants)
-        QTest::newRow(variant.id) << QString::fromLatin1(variant.id);
+    for (const char *themeId : kThemeIds)
+        QTest::newRow(themeId) << QString::fromLatin1(themeId);
 }
 
 // The full dock surface: selector, tree header, every visible row with its
@@ -430,11 +440,11 @@ void VisualBrowsersTest::browserBaseline_data()
 void VisualBrowsersTest::browserBaseline()
 {
     QFETCH(QString, theme);
-    QVERIFY2(applyTheme(theme), qPrintable(QStringLiteral("unknown theme '%1'").arg(theme)));
+    applyTheme(theme);
     m_browser->selectSlot(kDirectSoundSlot);
     m_browser->revealSlot(0);
     QApplication::processEvents();
-    QVERIFY(grabBrowser(QStringLiteral("voicegroupbrowser/%1").arg(theme)));
+    grabBrowser(QStringLiteral("voicegroupbrowser/%1").arg(theme));
 }
 
 void VisualBrowsersTest::editorVariants_data()
@@ -442,12 +452,12 @@ void VisualBrowsersTest::editorVariants_data()
     QTest::addColumn<QString>("theme");
     QTest::addColumn<int>("slot");
     QTest::addColumn<QString>("variant");
-    for (const ThemeVariant &variant : kThemeVariants) {
-        const QString id = QString::fromLatin1(variant.id);
-        QTest::newRow(qPrintable(id + "-square1"))
-            << id << kSquare1Slot << QStringLiteral("editor-square1");
-        QTest::newRow(qPrintable(id + "-readonly"))
-            << id << kCrySlot << QStringLiteral("editor-readonly");
+    for (const char *themeId : kThemeIds) {
+        const QString theme = QString::fromLatin1(themeId);
+        QTest::newRow(qPrintable(theme + "-square1"))
+            << theme << kSquare1Slot << QStringLiteral("editor-square1");
+        QTest::newRow(qPrintable(theme + "-readonly"))
+            << theme << kCrySlot << QStringLiteral("editor-readonly");
     }
 }
 
@@ -459,17 +469,17 @@ void VisualBrowsersTest::editorVariants()
     QFETCH(QString, theme);
     QFETCH(int, slot);
     QFETCH(QString, variant);
-    QVERIFY2(applyTheme(theme), qPrintable(QStringLiteral("unknown theme '%1'").arg(theme)));
+    applyTheme(theme);
     m_browser->selectSlot(slot);
     QApplication::processEvents();
-    QVERIFY(grabBrowser(QStringLiteral("voicegroupbrowser/%1/%2").arg(variant, theme)));
+    grabBrowser(QStringLiteral("voicegroupbrowser/%1/%2").arg(variant, theme));
 }
 
 void VisualBrowsersTest::samplePickerPopup_data()
 {
     QTest::addColumn<QString>("theme");
-    for (const ThemeVariant &variant : kThemeVariants)
-        QTest::newRow(variant.id) << QString::fromLatin1(variant.id);
+    for (const char *themeId : kThemeIds)
+        QTest::newRow(themeId) << QString::fromLatin1(themeId);
 }
 
 // The real opened popup: search field, section headers, keysplit/sample/
@@ -477,7 +487,7 @@ void VisualBrowsersTest::samplePickerPopup_data()
 void VisualBrowsersTest::samplePickerPopup()
 {
     QFETCH(QString, theme);
-    QVERIFY2(applyTheme(theme), qPrintable(QStringLiteral("unknown theme '%1'").arg(theme)));
+    applyTheme(theme);
     m_browser->selectSlot(kDirectSoundSlot);
     QApplication::processEvents();
 
@@ -504,16 +514,13 @@ void VisualBrowsersTest::samplePickerPopup()
         focused->clearFocus();
     QApplication::processEvents();
 
-    QString error;
-    const bool ok = visual::compareWidget(QStringLiteral("samplepicker/%1").arg(theme), *popup,
-                                          popupRegions(*popup), &error);
-    if (!ok)
-        qWarning().noquote() << error;
+    QList<Region> regions;
+    appendPopupRegions(regions, *popup);
+    compareShown(QStringLiteral("samplepicker/%1").arg(theme), *popup, regions);
 
     popup->hide();
     QApplication::processEvents();
     QVERIFY2(!picker->popupVisible(), "sample picker popup did not close");
-    QVERIFY(ok);
 }
 
 } // namespace checks

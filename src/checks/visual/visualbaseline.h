@@ -4,7 +4,6 @@
 #include <QList>
 #include <QRect>
 #include <QString>
-#include <QStringList>
 
 class QApplication;
 class QWidget;
@@ -27,7 +26,10 @@ class QWidget;
 // Recording is explicit opt-in only: PORYDAW_RECORD_VISUAL_BASELINES=1 writes
 // new source fixtures for human review, e.g.
 //   PORYDAW_RECORD_VISUAL_BASELINES=1 deno task verify --filter visual
-// Without it a missing baseline fails; normal verification is
+// A record run writes the fixture and reports failure, so an unreviewed
+// baseline can never pass as verification; re-run without the variable once
+// the fixture has been reviewed. Without it a missing baseline fails; normal
+// verification is
 //   deno task verify --filter visual
 // Failure artifacts (actual/expected/diff PNGs plus a summary) go to
 // PORYDAW_VISUAL_ARTIFACT_DIR, defaulting to <temp>/porydaw-visual-artifacts;
@@ -56,10 +58,12 @@ void prepare(QApplication &app);
 /// Compares `image` against the frozen baseline <profile>/<id>: exact image
 /// logical size and DPR, exact region name set and bounds, then per-region
 /// raster comparison. Returns true on match; on failure `error` describes
-/// the first problem and artifacts are written. A missing baseline fails
-/// unless PORYDAW_RECORD_VISUAL_BASELINES=1, which records instead.
+/// the first problem and artifacts are written. A missing baseline fails;
+/// with PORYDAW_RECORD_VISUAL_BASELINES=1 it records the fixture and still
+/// fails, so a fresh baseline must be reviewed and verified separately.
 /// `regions` must be non-empty, uniquely named, non-degenerate, and inside
 /// the image; violations fail rather than record.
+/// Requires a prior checks::visual::prepare().
 bool compare(const QString &id, const QImage &image, const QList<Region> &regions, QString *error);
 
 /// Grabs the shown `widget` (QWidget::grab, DPR retained) and compares it
@@ -70,30 +74,24 @@ bool compareWidget(const QString &id, QWidget &widget, const QList<Region> &regi
 /// Deterministic renderer-neutral regions for `root`'s visible named QWidget
 /// descendants, mapped into root coordinates and sorted by name. Each child's
 /// bounds are its rendered extent (QWidget::visibleRegion) clipped through
-/// ancestor viewports and the root, so scroll-clipped children report only
-/// their actually painted area. Qt implementation internals (qt_* object
-/// names) are skipped. Scenarios add explicit semantically named subregions
-/// for rows and custom painting; those must likewise clip to the painted
-/// extent rather than nominal geometry.
+/// ancestor viewports and root.rect(), so scroll-clipped children report only
+/// their actually painted area and no bound ever leaves the root. Children
+/// sharing an object name collapse to the first sorted (smallest) rectangle,
+/// so the result always satisfies compare()'s uniqueness rule. visibleRegion()
+/// ignores sibling occlusion: a partially occluded child freezes the bounding
+/// rect of its unclipped area, and a fully clipped or out-of-root child
+/// contributes nothing. Qt implementation internals (qt_* object names) are
+/// skipped. Scenarios add explicit semantically named subregions for rows and
+/// custom painting; those must likewise clip to the painted extent rather than
+/// nominal geometry.
 QList<Region> widgetRegions(QWidget &root);
 
 /// Behavior coverage for the comparator itself: proves a 1px bound change,
 /// a modest flat-fill color change, and a missing baseline each fail, using
-/// synthetic baselines in a private directory. Immune to
-/// PORYDAW_RECORD_VISUAL_BASELINES so recording can never bless the mutants.
-/// Returns true when every mutation is rejected; `error` reports the first
-/// acceptance that should have failed.
+/// synthetic baselines in a private directory. Runs in verify-only mode, so
+/// PORYDAW_RECORD_VISUAL_BASELINES can never record a mutant. Returns true
+/// when every mutation is rejected; `error` reports the first acceptance that
+/// should have failed.
 bool selfTest(QString *error);
 
 } // namespace checks::visual
-
-// Suite runners (src/checks/visual/{chrome,transport,browsers,dialogs,
-// sampleeditor,quick}.cpp).
-// Each owns application startup via checks::visual::prepare and runs one
-// qExec; registered in the catalog as HandlerOwned.
-int runVisualChromeCheck(QApplication &application, const QStringList &qtArguments);
-int runVisualTransportCheck(QApplication &application, const QStringList &qtArguments);
-int runVisualBrowsersCheck(QApplication &application, const QStringList &qtArguments);
-int runVisualDialogsCheck(QApplication &application, const QStringList &qtArguments);
-int runVisualSampleEditorCheck(QApplication &application, const QStringList &qtArguments);
-int runVisualQuickCheck(QApplication &application, const QStringList &qtArguments);

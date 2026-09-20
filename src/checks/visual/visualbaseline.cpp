@@ -6,6 +6,7 @@
 #include "ui/typography.h"
 
 #include <algorithm>
+#include <optional>
 #include <tuple>
 
 #include <QApplication>
@@ -45,9 +46,20 @@ constexpr int kRegionBudgetCap = 64;
 // larger cap; geometry and named regions still pin everything that matters.
 constexpr int kUncoveredBudgetCap = 256;
 
-int g_fontPx = 0;
-// Requested native screen DPR (PORYDAW_VISUAL_SCREEN_DPR); 0 = unrestricted.
-qreal g_requestedScreenDpr = 0;
+/// Process-wide visual configuration, installed once by prepare(). The base
+/// font size and the pinned screen DPR must be identical for recording and
+/// verification, so both live in one installed value instead of separate
+/// globals that accessors could re-derive from the environment.
+struct Config {
+    int fontPx = 0;
+    qreal pinnedDpr = 0;
+};
+std::optional<Config> g_config;
+
+const Config *installedConfig()
+{
+    return g_config ? &*g_config : nullptr;
+}
 
 void fail(QString *error, const QString &message)
 {
@@ -68,10 +80,12 @@ QString platformName()
 
 int fontPx()
 {
-    if (g_fontPx > 0)
-        return g_fontPx;
-    const auto value = qEnvironmentVariable("PORYDAW_VISUAL_FONT_PX", "12");
-    return value == QStringLiteral("16") ? 16 : 12;
+    const auto *config = installedConfig();
+    if (!config || config->fontPx <= 0) {
+        qFatal("visual: checks::visual::prepare() must run before any baseline capture or "
+               "comparison and must resolve a positive base font size");
+    }
+    return config->fontPx;
 }
 
 QString profileFor(const QImage &image)
@@ -143,6 +157,16 @@ QScreen *selectScreen(qreal requestedDpr)
     return nullptr;
 }
 
+/// The captured image's logical size, rounded exactly like the fixture it was
+/// or will be recorded as. deviceIndependentSize().toSize() truncates, which
+/// would disagree with the qRound()ed width/height stored in the baseline JSON
+/// for fractional devicePixelRatios.
+QSize logicalSize(const QImage &image)
+{
+    const auto size = image.deviceIndependentSize();
+    return QSize{qRound(size.width()), qRound(size.height())};
+}
+
 /// Validates id and regions against the image's logical-pixel space.
 bool validateInput(const QString &id, const QImage &image, const QList<Region> &regions,
                    QString *error)
@@ -159,7 +183,7 @@ bool validateInput(const QString &id, const QImage &image, const QList<Region> &
         fail(error, QStringLiteral("visual: '%1' declares no regions").arg(id));
         return false;
     }
-    const auto logical = QRect{QPoint{0, 0}, image.deviceIndependentSize().toSize()};
+    const auto logical = QRect{QPoint{0, 0}, logicalSize(image)};
     auto names = QSet<QString>{};
     for (const auto &region : regions) {
         if (region.name.isEmpty()) {
@@ -211,13 +235,13 @@ bool recordBaseline(const QString &basePath, const QString &profile, const QImag
     auto regionArray = QJsonArray{};
     for (const auto &region : regions)
         regionArray.push_back(regionJson(region));
-    const auto logical = image.deviceIndependentSize();
+    const auto logical = logicalSize(image);
     const auto document = QJsonDocument{QJsonObject{
         {QStringLiteral("profile"), profile},
         {QStringLiteral("image"),
          QJsonObject{
-             {QStringLiteral("width"), qRound(logical.width())},
-             {QStringLiteral("height"), qRound(logical.height())},
+             {QStringLiteral("width"), logical.width()},
+             {QStringLiteral("height"), logical.height()},
              {QStringLiteral("dpr"), image.devicePixelRatio()},
          }},
         {QStringLiteral("regions"), regionArray},
@@ -245,74 +269,123 @@ struct Expected {
 
 bool loadExpected(const QString &basePath, Expected &expected, QString *error)
 {
+    const auto malformed = [&]() {
+        fail(error, QStringLiteral("visual: %1.json is malformed").arg(basePath));
+        return false;
+    };
     auto file = QFile{basePath + QStringLiteral(".json")};
     if (!file.open(QIODevice::ReadOnly)) {
         fail(error, QStringLiteral("visual: cannot read %1.json").arg(basePath));
         return false;
     }
     const auto document = QJsonDocument::fromJson(file.readAll());
+    if (!document.isObject())
+        return malformed();
     const auto root = document.object();
-    const auto imageObject = root.value(QStringLiteral("image")).toObject();
-    expected.logicalSize = QSize{imageObject.value(QStringLiteral("width")).toInt(),
-                                 imageObject.value(QStringLiteral("height")).toInt()};
-    expected.dpr = imageObject.value(QStringLiteral("dpr")).toDouble(1.0);
-    for (const auto value : root.value(QStringLiteral("regions")).toArray()) {
+    const auto imageValue = root.value(QStringLiteral("image"));
+    if (!imageValue.isObject())
+        return malformed();
+    const auto imageObject = imageValue.toObject();
+    const auto width = imageObject.value(QStringLiteral("width"));
+    const auto height = imageObject.value(QStringLiteral("height"));
+    const auto dpr = imageObject.value(QStringLiteral("dpr"));
+    // A fixture must state its logical size and DPR: missing keys are
+    // malformed, never silently defaulted.
+    if (!width.isDouble() || !height.isDouble() || !dpr.isDouble())
+        return malformed();
+    expected.logicalSize = QSize{qRound(width.toDouble()), qRound(height.toDouble())};
+    expected.dpr = dpr.toDouble();
+    if (expected.logicalSize.isEmpty() || expected.dpr <= 0.0)
+        return malformed();
+    const auto regionArray = root.value(QStringLiteral("regions"));
+    if (!regionArray.isArray())
+        return malformed();
+    // Every frozen region must be usable as-is: named, unique, non-empty and
+    // inside the logical image, so comparison never works from garbage bounds.
+    const auto logical = QRect{QPoint{0, 0}, expected.logicalSize};
+    auto names = QSet<QString>{};
+    for (const auto value : regionArray.toArray()) {
+        if (!value.isObject())
+            return malformed();
         const auto object = value.toObject();
-        expected.regions.push_back(Region{object.value(QStringLiteral("name")).toString(),
-                                          QRect{object.value(QStringLiteral("x")).toInt(),
-                                                object.value(QStringLiteral("y")).toInt(),
-                                                object.value(QStringLiteral("w")).toInt(),
-                                                object.value(QStringLiteral("h")).toInt()}});
+        const auto nameValue = object.value(QStringLiteral("name"));
+        const auto x = object.value(QStringLiteral("x"));
+        const auto y = object.value(QStringLiteral("y"));
+        const auto w = object.value(QStringLiteral("w"));
+        const auto h = object.value(QStringLiteral("h"));
+        if (!nameValue.isString() || nameValue.toString().isEmpty() || !x.isDouble() ||
+            !y.isDouble() || !w.isDouble() || !h.isDouble())
+            return malformed();
+        const auto name = nameValue.toString();
+        const auto bounds = QRect{x.toInt(), y.toInt(), w.toInt(), h.toInt()};
+        if (bounds.isEmpty() || !logical.contains(bounds) || names.contains(name))
+            return malformed();
+        names.insert(name);
+        expected.regions.push_back(Region{name, bounds});
     }
-    if (expected.logicalSize.isEmpty() || expected.regions.isEmpty()) {
-        fail(error, QStringLiteral("visual: %1.json is malformed").arg(basePath));
-        return false;
-    }
+    if (expected.regions.isEmpty())
+        return malformed();
     return true;
 }
 
 /// Counts pixels whose per-channel RGB distance exceeds kChannelTolerance.
-/// `deviceRect` is in device pixels; both images must share size and format
-/// expectations (converted to Format_RGB32 for comparison).
+/// `deviceRect` is in device pixels; both images must be Format_RGB32 (as
+/// compareInRoot converts them), which lets the loop read scanlines as QRgb
+/// words and extract channels directly.
 qint64 mismatchedPixels(const QImage &actual, const QImage &expected, const QRect &deviceRect,
                         QImage *diff)
 {
     auto mismatches = qint64{0};
     for (auto y = deviceRect.top(); y <= deviceRect.bottom(); ++y) {
+        const auto *actualLine = reinterpret_cast<const QRgb *>(actual.constScanLine(y));
+        const auto *expectedLine = reinterpret_cast<const QRgb *>(expected.constScanLine(y));
+        auto *diffLine = diff ? reinterpret_cast<QRgb *>(diff->scanLine(y)) : nullptr;
         for (auto x = deviceRect.left(); x <= deviceRect.right(); ++x) {
-            const auto a = actual.pixelColor(x, y);
-            const auto e = expected.pixelColor(x, y);
+            const auto a = actualLine[x];
+            const auto e = expectedLine[x];
             const auto delta = std::max(
-                {qAbs(a.red() - e.red()), qAbs(a.green() - e.green()), qAbs(a.blue() - e.blue())});
+                {qAbs(qRed(a) - qRed(e)), qAbs(qGreen(a) - qGreen(e)), qAbs(qBlue(a) - qBlue(e))});
             if (delta > kChannelTolerance) {
                 ++mismatches;
-                if (diff)
-                    diff->setPixelColor(x, y, QColor{255, 0, 0});
+                if (diffLine)
+                    diffLine[x] = qRgb(255, 0, 0);
             }
         }
     }
     return mismatches;
 }
 
-QString writeArtifacts(const QString &id, const QImage &actual, const QImage &expected,
-                       const QImage &diff, const QString &summary)
+/// Destination for a failed comparison's artifact bundle.
+QString artifactDirectoryFor(const QString &id, const QImage &image)
 {
-    const auto directory =
-        QDir{artifactRoot()}.absoluteFilePath(QStringLiteral("%1/%2").arg(profileFor(actual), id));
-    if (!QDir{}.mkpath(directory))
-        return {};
-    actual.save(directory + QStringLiteral("/actual.png"));
-    expected.save(directory + QStringLiteral("/expected.png"));
-    diff.save(directory + QStringLiteral("/diff.png"));
-    auto file = QFile{directory + QStringLiteral("/summary.txt")};
-    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate))
-        file.write(summary.toUtf8());
-    return directory;
+    return QDir{artifactRoot()}.absoluteFilePath(
+        QStringLiteral("%1/%2").arg(profileFor(image), id));
 }
 
+/// Writes the actual/expected/diff bundle plus `summary`; false when any file
+/// could not be written, so the caller can name the unwritable directory
+/// instead of embedding an empty path in the failure message.
+bool writeArtifacts(const QString &directory, const QImage &actual, const QImage &expected,
+                    const QImage &diff, const QString &summary)
+{
+    if (!QDir{}.mkpath(directory) || !actual.save(directory + QStringLiteral("/actual.png")) ||
+        !expected.save(directory + QStringLiteral("/expected.png")) ||
+        !diff.save(directory + QStringLiteral("/diff.png")))
+        return false;
+    auto file = QFile{directory + QStringLiteral("/summary.txt")};
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        return false;
+    const auto payload = summary.toUtf8();
+    return file.write(payload) == payload.size();
+}
+
+enum class Mode {
+    VerifyOnly,  // never writes fixtures (selfTest)
+    AllowRecord, // PORYDAW_RECORD_VISUAL_BASELINES=1 may write a missing fixture
+};
+
 bool compareInRoot(const QString &root, const QString &profile, const QString &id,
-                   const QImage &image, const QList<Region> &regions, bool allowRecording,
-                   QString *error)
+                   const QImage &image, const QList<Region> &regions, Mode mode, QString *error)
 {
     if (!validateInput(id, image, regions, error))
         return false;
@@ -320,8 +393,16 @@ bool compareInRoot(const QString &root, const QString &profile, const QString &i
     const auto jsonExists = QFileInfo::exists(basePath + QStringLiteral(".json"));
     const auto pngExists = QFileInfo::exists(basePath + QStringLiteral(".png"));
     if (!jsonExists || !pngExists) {
-        if (allowRecording && recordingEnabled())
-            return recordBaseline(basePath, profile, image, regions, error);
+        if (mode == Mode::AllowRecord && recordingEnabled()) {
+            if (!recordBaseline(basePath, profile, image, regions, error))
+                return false;
+            // A fresh fixture is unreviewed, so the record run must fail too:
+            // writing a baseline can never read as a passing verification.
+            fail(error, QStringLiteral("visual: recorded baseline %1 — review the new fixture and "
+                                       "re-run without PORYDAW_RECORD_VISUAL_BASELINES")
+                            .arg(basePath));
+            return false;
+        }
         fail(error, QStringLiteral("visual: missing baseline %1.{json,png}; record it with "
                                    "PORYDAW_RECORD_VISUAL_BASELINES=1 and review the new fixtures")
                         .arg(basePath));
@@ -337,7 +418,7 @@ bool compareInRoot(const QString &root, const QString &profile, const QString &i
         return false;
     }
 
-    const auto logical = image.deviceIndependentSize().toSize();
+    const auto logical = logicalSize(image);
     if (logical != expected.logicalSize) {
         fail(error, QStringLiteral("visual: '%1' logical size %2x%3 differs from baseline %4x%5")
                         .arg(id)
@@ -355,28 +436,37 @@ bool compareInRoot(const QString &root, const QString &profile, const QString &i
         return false;
     }
 
-    // Frozen geometry: identical name set and exact logical bounds.
+    // Frozen geometry: identical name set and exact logical bounds. QMap keys
+    // are sorted, so one walk over both name lists decides membership and then
+    // bounds; a name on only one side keeps its original message.
     auto expectedByName = QMap<QString, QRect>{};
     for (const auto &region : expected.regions)
         expectedByName.insert(region.name, region.bounds);
     auto actualByName = QMap<QString, QRect>{};
     for (const auto &region : regions)
         actualByName.insert(region.name, region.bounds);
-    for (const auto &name : expectedByName.keys()) {
-        if (!actualByName.contains(name)) {
-            fail(error,
-                 QStringLiteral("visual: '%1' is missing baseline region '%2'").arg(id, name));
+    const auto expectedNames = expectedByName.keys();
+    const auto actualNames = actualByName.keys();
+    auto expectedIndex = qsizetype{0};
+    auto actualIndex = qsizetype{0};
+    while (expectedIndex < expectedNames.size() || actualIndex < actualNames.size()) {
+        const auto hasExpected = expectedIndex < expectedNames.size();
+        const auto hasActual = actualIndex < actualNames.size();
+        if (!hasActual ||
+            (hasExpected && expectedNames.at(expectedIndex) < actualNames.at(actualIndex))) {
+            fail(error, QStringLiteral("visual: '%1' is missing baseline region '%2'")
+                            .arg(id, expectedNames.at(expectedIndex)));
             return false;
         }
-    }
-    for (const auto &name : actualByName.keys()) {
-        if (!expectedByName.contains(name)) {
-            fail(error, QStringLiteral("visual: '%1' adds unrecorded region '%2'").arg(id, name));
+        if (!hasExpected || actualNames.at(actualIndex) < expectedNames.at(expectedIndex)) {
+            fail(error, QStringLiteral("visual: '%1' adds unrecorded region '%2'")
+                            .arg(id, actualNames.at(actualIndex)));
             return false;
         }
-        if (actualByName.value(name) != expectedByName.value(name)) {
-            const auto actual = actualByName.value(name);
-            const auto frozen = expectedByName.value(name);
+        const auto &name = actualNames.at(actualIndex);
+        const auto actual = actualByName.value(name);
+        const auto frozen = expectedByName.value(name);
+        if (actual != frozen) {
             fail(error, QStringLiteral("visual: '%1' region '%2' bounds %3x%4+%5+%6 differ from "
                                        "baseline %7x%8+%9+%10")
                             .arg(id, name)
@@ -390,6 +480,8 @@ bool compareInRoot(const QString &root, const QString &profile, const QString &i
                             .arg(frozen.y()));
             return false;
         }
+        ++expectedIndex;
+        ++actualIndex;
     }
 
     // Raster comparison in device pixels, per region with a bounded budget.
@@ -443,7 +535,9 @@ bool compareInRoot(const QString &root, const QString &profile, const QString &i
     }
     if (!failed)
         return true;
-    const auto directory = writeArtifacts(id, actual32, expected32, diff, summary);
+    const auto directory = artifactDirectoryFor(id, actual32);
+    if (!writeArtifacts(directory, actual32, expected32, diff, summary))
+        summary += QStringLiteral("(artifacts unwritable: %1)\n").arg(directory);
     fail(error, QStringLiteral("visual: '%1' raster mismatch under %2; artifacts in %3\n%4")
                     .arg(id, profile, directory, summary));
     return false;
@@ -466,6 +560,7 @@ void prepare(QApplication &app)
     // leaves screen selection to the platform. No matching screen is fatal —
     // never fall back to a different profile.
     const auto dprValue = qEnvironmentVariable("PORYDAW_VISUAL_SCREEN_DPR");
+    auto pinnedDpr = qreal{0};
     if (!dprValue.isEmpty()) {
         bool ok = false;
         const auto requested = dprValue.toDouble(&ok);
@@ -479,7 +574,7 @@ void prepare(QApplication &app)
                    "devicePixelRatio; connect a matching display or unset the variable",
                    qPrintable(dprValue));
         }
-        g_requestedScreenDpr = requested;
+        pinnedDpr = requested;
         app.installEventFilter(new ScreenPinning(screen, &app));
     }
     QApplication::setStyle(QStringLiteral("fusion"));
@@ -492,24 +587,29 @@ void prepare(QApplication &app)
     }
     if (!ui::initializeApplication(app))
         qFatal("visual: ui::initializeApplication failed");
-    g_fontPx = *typography::baseFontPx();
+    g_config = Config{*typography::baseFontPx(), pinnedDpr};
     themes::apply(app, themes::vanilla());
 }
 
 bool compare(const QString &id, const QImage &image, const QList<Region> &regions, QString *error)
 {
+    const auto *config = installedConfig();
+    if (!config) {
+        fail(error, QStringLiteral("visual: checks::visual::prepare() must run before compare()"));
+        return false;
+    }
     // A requested native screen DPR must be what was actually captured —
     // never record or verify against a different profile silently.
-    if (g_requestedScreenDpr > 0 && qAbs(image.devicePixelRatio() - g_requestedScreenDpr) > 0.01) {
+    if (config->pinnedDpr > 0 && qAbs(image.devicePixelRatio() - config->pinnedDpr) > 0.01) {
         fail(error, QStringLiteral("visual: '%1' captured DPR %2 but PORYDAW_VISUAL_SCREEN_DPR=%3 "
                                    "was requested; the window did not land on the pinned screen")
                         .arg(id)
                         .arg(image.devicePixelRatio())
-                        .arg(g_requestedScreenDpr));
+                        .arg(config->pinnedDpr));
         return false;
     }
-    return compareInRoot(fixtureRoot(), profileFor(image), id, image, regions,
-                         /*allowRecording=*/true, error);
+    return compareInRoot(fixtureRoot(), profileFor(image), id, image, regions, Mode::AllowRecord,
+                         error);
 }
 
 bool compareWidget(const QString &id, QWidget &widget, const QList<Region> &regions, QString *error)
@@ -543,7 +643,11 @@ QList<Region> widgetRegions(QWidget &root)
         auto mapped = QRegion{};
         for (const auto &rect : visible)
             mapped += QRegion{QRect{child->mapTo(&root, rect.topLeft()), rect.size()}};
-        const auto bounds = mapped.boundingRect();
+        // Freeze only what the root can paint: visibleRegion() clips ancestor
+        // viewports but not siblings, so a partially occluded child freezes its
+        // unclipped bounding rect, and an area outside the root contributes
+        // nothing.
+        const auto bounds = mapped.boundingRect().intersected(root.rect());
         if (bounds.isEmpty())
             continue;
         regions.push_back(Region{name, bounds});
@@ -556,6 +660,12 @@ QList<Region> widgetRegions(QWidget &root)
         return std::make_tuple(ra.y(), ra.x(), ra.width(), ra.height()) <
                std::make_tuple(rb.y(), rb.x(), rb.width(), rb.height());
     });
+    // Qt allows duplicate object names, regions do not: the sort above orders
+    // duplicates deterministically, so keep the first (smallest) rect and this
+    // helper can never emit output compare() rejects.
+    regions.erase(std::unique(regions.begin(), regions.end(),
+                              [](const auto &a, const auto &b) { return a.name == b.name; }),
+                  regions.end());
     return regions;
 }
 
@@ -577,29 +687,29 @@ bool selfTest(QString *error)
         return false;
 
     // Exact replay must pass.
-    if (!compareInRoot(scratch.path(), profile, id, baseline, {region},
-                       /*allowRecording=*/false, error)) {
+    if (!compareInRoot(scratch.path(), profile, id, baseline, {region}, Mode::VerifyOnly, error)) {
         fail(error, QStringLiteral("visual: selfTest exact replay failed: %1")
                         .arg(error ? *error : QString{}));
         return false;
     }
     const auto shifted = Region{region.name, region.bounds.adjusted(0, 0, -1, 0)};
-    if (compareInRoot(scratch.path(), profile, id, baseline, {shifted},
-                      /*allowRecording=*/false, nullptr)) {
+    if (compareInRoot(scratch.path(), profile, id, baseline, {shifted}, Mode::VerifyOnly,
+                      nullptr)) {
         fail(error, QStringLiteral("visual: selfTest accepted a 1px bound change"));
         return false;
     }
     // A modest flat-fill color change must fail.
     auto recolored = baseline;
     recolored.fill(QColor{96, 120, 160});
-    if (compareInRoot(scratch.path(), profile, id, recolored, {region},
-                      /*allowRecording=*/false, nullptr)) {
+    if (compareInRoot(scratch.path(), profile, id, recolored, {region}, Mode::VerifyOnly,
+                      nullptr)) {
         fail(error, QStringLiteral("visual: selfTest accepted a flat-fill color change"));
         return false;
     }
-    // A missing baseline must fail even though recording is unavailable here.
+    // A missing baseline must fail: VerifyOnly cannot record it by construction,
+    // whatever PORYDAW_RECORD_VISUAL_BASELINES says.
     if (compareInRoot(scratch.path(), profile, QStringLiteral("synthetic/absent"), baseline,
-                      {region}, /*allowRecording=*/false, nullptr)) {
+                      {region}, Mode::VerifyOnly, nullptr)) {
         fail(error, QStringLiteral("visual: selfTest accepted a missing baseline"));
         return false;
     }

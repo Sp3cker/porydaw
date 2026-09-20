@@ -1,0 +1,57 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 684,
+        "width": 936
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 30,
+            "name": "wizard.name",
+            "w": 811,
+            "x": 107,
+            "y": 97
+        },
+        {
+            "h": 30,
+            "name": "wizard.constant",
+            "w": 811,
+            "x": 107,
+            "y": 141
+        },
+        {
+            "h": 40,
+            "name": "wizard.player",
+            "w": 811,
+            "x": 107,
+            "y": 185
+        },
+        {
+            "h": 36,
+            "name": "wizard.identity-error",
+            "w": 811,
+            "x": 107,
+            "y": 239
+        },
+        {
+            "h": 34,
+            "name": "wizard.next",
+            "w": 126,
+            "x": 652,
+            "y": 632
+        },
+        {
+            "h": 34,
+            "name": "wizard.cancel",
+            "w": 126,
+            "x": 792,
+            "y": 632
+        }
+    ]
+}

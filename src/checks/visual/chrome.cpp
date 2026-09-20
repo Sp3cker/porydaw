@@ -10,7 +10,6 @@
 
 #include "checks/visual/visualbaseline.h"
 
-#include <QAbstractItemView>
 #include <QApplication>
 #include <QCheckBox>
 #include <QCoreApplication>
@@ -19,11 +18,9 @@
 #include <QListWidget>
 #include <QMainWindow>
 #include <QMenuBar>
-#include <QPainter>
 #include <QPushButton>
 #include <QQuickWindow>
 #include <QScrollArea>
-#include <QScrollBar>
 #include <QSettings>
 #include <QStatusBar>
 #include <QTabBar>
@@ -34,16 +31,17 @@
 #include <QtTest>
 
 #include <memory>
+#include <optional>
 
 #include "audio/audioengine.h"
-#include "checks/support/asyncwait.h"
+#include "checks/support/loadedshell.h"
 #include "checks/support/quickframebuffer.h"
+#include "checks/visual/transportregions.h"
+#include "checks/visual/visualfixture.h"
 #include "core/miditimeline.h"
 #include "core/smf.h"
 #include "mainwindow.h"
 #include "project/decompproject.h"
-#include "project/projectidentity.h"
-#include "project/projectworkspace.h"
 #include "ui/fastlabel.h"
 #include "ui/polyphonypanel.h"
 #include "ui/songlistpanel.h"
@@ -53,141 +51,63 @@
 #include "ui/theme/themeresolver.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/transportbar.h"
-#include "ui/workspaceui.h"
 
-extern "C" {
-#include "m4a_engine.h"
-}
+// The scenarios consume the shared visual helpers unqualified: one definition
+// per rule lives in checks/visual (regions, focus parking, compare path, the
+// canonical transport strip) so every suite pins the same bounds for the same
+// surface.
+using checks::visual::appendRequiredRegion;
+using checks::visual::childRegion;
+using checks::visual::clippedItemRect;
+using checks::visual::compare;
+using checks::visual::compareShown;
+using checks::visual::mergeRegions;
+using checks::visual::nameChild;
+using checks::visual::parkFocus;
+using checks::visual::Region;
+using checks::visual::scopeIndicatorNames;
+using checks::visual::showSettled;
+using checks::visual::transportRegions;
+using checks::visual::widgetRegions;
 
 namespace {
 
 constexpr uint32_t kPolyDivision = 24;
 constexpr double kPolySampleRate = 48000.0;
 
-// Logical-pixel rect of a child widget relative to the grabbed root image,
-// clipped to the root so a partly hidden child freezes its visible bounds.
-checks::visual::Region childRegion(const QString &name, QWidget &root, const QWidget &child)
-{
-    const QRect rect(child.mapTo(&root, QPoint(0, 0)), child.size());
-    return {name, rect.intersected(QRect(QPoint(0, 0), root.size()))};
-}
+// ---- Fail-loud discovery ---------------------------------------------------
 
-checks::visual::Region namedChildRegion(const QString &name, QWidget &root,
-                                        const QString &objectName)
+// Display text is the only handle on several production labels: the polyphony
+// panel ships its headings unnamed, and so does the status meter's caption
+// without an object name. A missing or duplicated label would silently drop
+// regions from the frozen baseline, so these lookups report the drift instead.
+bool uniqueLabel(QWidget &root, const QString &text, QLabel **out, QString *error)
 {
-    const QWidget *child = root.findChild<QWidget *>(objectName);
-    if (!child)
-        return {};
-    return childRegion(name, root, *child);
-}
-
-// Show a top-level widget, let layout/focus settle, then drop focus so no
-// blinking caret lands in the grab. Qt silently shrinks a first-shown
-// top-level to the available screen geometry (visible at DPR 2), so the
-// requested size is re-applied after the native first-show placement; the
-// widget keeps its real resizable state (status-bar grip included) — no
-// min/max pinning that would alter the rendered chrome.
-void showSettled(QWidget &widget)
-{
-    const QSize requested = widget.size();
-    widget.show();
-    QApplication::processEvents();
-    widget.resize(requested);
-    QApplication::processEvents();
-    widget.clearFocus();
-    QApplication::processEvents();
-}
-
-// Compare the shown widget against its frozen baseline: automatic named
-// descendant regions plus the caller's semantic subregions.
-void compareShown(const QString &id, QWidget &widget, const QList<checks::visual::Region> &extra)
-{
-    QList<checks::visual::Region> regions = checks::visual::widgetRegions(widget);
-    regions.append(extra);
-    QString error;
-    QVERIFY2(checks::visual::compareWidget(id, widget, regions, &error), qPrintable(error));
-}
-
-// Assign a semantic object name in the test only, for production children
-// that ship without one. widgetRegions() then picks them up automatically.
-void nameChild(QWidget *child, const QString &name)
-{
-    if (child && child->objectName().isEmpty())
-        child->setObjectName(name);
-}
-
-// The shared listPositionIndicator scrollbar name is not unique once several
-// lists live in one capture: rescope each to its owning list so every region
-// stays semantically distinct.
-void scopeIndicatorNames(QWidget &root)
-{
-    const auto scrollBars =
-        root.findChildren<QScrollBar *>(QStringLiteral("listPositionIndicator"));
-    int index = 0;
-    for (QScrollBar *bar : scrollBars) {
-        QString scope;
-        for (QWidget *ancestor = bar->parentWidget(); ancestor;
-             ancestor = ancestor->parentWidget()) {
-            if (!ancestor->objectName().isEmpty() &&
-                !ancestor->objectName().startsWith(QLatin1String("qt_"))) {
-                scope = ancestor->objectName();
-                break;
-            }
-        }
-        if (scope.isEmpty())
-            scope = QStringLiteral("list.%1").arg(index);
-        bar->setObjectName(scope + QStringLiteral(".position-indicator"));
-        ++index;
+    QList<QLabel *> matches;
+    for (QLabel *label : root.findChildren<QLabel *>())
+        if (label->text() == text)
+            matches.append(label);
+    if (matches.size() != 1) {
+        *error = matches.isEmpty()
+                     ? QStringLiteral("no label reads \"%1\"").arg(text)
+                     : QStringLiteral("%1 labels read \"%2\"; the label must be unique")
+                           .arg(matches.size())
+                           .arg(text);
+        return false;
     }
+    *out = matches.first();
+    return true;
 }
 
-// Item rects report the full content row even when the viewport clips it;
-// freeze the actually rendered (viewport-clipped) rect instead.
-QRect clippedItemRect(QAbstractItemView &view, const QRect &itemRect)
+// Names an unnamed production label through its display text; false with
+// `error` when that text is absent or ambiguous.
+bool nameLabelByText(QWidget &root, const QString &text, const QString &name, QString *error)
 {
-    return itemRect.intersected(view.viewport()->rect());
-}
-
-// ---- TransportBar ----------------------------------------------------------
-
-QList<checks::visual::Region> transportRegions(TransportBar &bar)
-{
-    QList<checks::visual::Region> regions;
-    const struct {
-        const char *name;
-        QAction *action;
-    } buttons[] = {
-        {"transport.go-to-start", bar.goToStartAction()},
-        {"transport.play", bar.playAction()},
-        {"transport.pause", bar.pauseAction()},
-        {"transport.stop", bar.stopAction()},
-        {"transport.loop", bar.loopAction()},
-        {"transport.follow-playhead", bar.followPlayheadAction()},
-        {"transport.resonance", bar.resonanceAction()},
-    };
-    for (const auto &entry : buttons) {
-        if (QWidget *button = bar.widgetForAction(entry.action))
-            regions.append(childRegion(QString::fromLatin1(entry.name), bar, *button));
-    }
-    regions.append(namedChildRegion(QStringLiteral("transport.time"), bar,
-                                    QStringLiteral("transportTimeLabel")));
-    regions.append(namedChildRegion(QStringLiteral("transport.scale-root"), bar,
-                                    QStringLiteral("transportScaleRoot")));
-    regions.append(namedChildRegion(QStringLiteral("transport.scale-type"), bar,
-                                    QStringLiteral("transportScaleType")));
-    regions.append(namedChildRegion(QStringLiteral("transport.scale-highlight"), bar,
-                                    QStringLiteral("transportScaleHighlight")));
-    regions.append(namedChildRegion(QStringLiteral("transport.scale-fold"), bar,
-                                    QStringLiteral("transportScaleFold")));
-    regions.append(namedChildRegion(QStringLiteral("transport.master-volume-caption"), bar,
-                                    QStringLiteral("transportMasterVolumeCaption")));
-    regions.append(namedChildRegion(QStringLiteral("transport.master-volume"), bar,
-                                    QStringLiteral("transportMasterVolume")));
-    regions.append(namedChildRegion(QStringLiteral("transport.output-volume-caption"), bar,
-                                    QStringLiteral("transportOutputVolumeCaption")));
-    regions.append(namedChildRegion(QStringLiteral("transport.output-volume"), bar,
-                                    QStringLiteral("transportOutputVolume")));
-    return regions;
+    QLabel *label = nullptr;
+    if (!uniqueLabel(root, text, &label, error))
+        return false;
+    nameChild(label, name);
+    return true;
 }
 
 // ---- SongListPanel ---------------------------------------------------------
@@ -221,41 +141,55 @@ QVector<SongInfo> visualSongs()
     };
 }
 
-QList<checks::visual::Region> songListRegions(SongListPanel &panel)
+// The panel's semantic regions: the list and its count label ship unnamed, so
+// the scenario names them here and every listed child is required — a renamed
+// or removed production widget fails the scenario instead of quietly shrinking
+// the frozen baseline.
+bool appendSongListRegions(QList<Region> &regions, SongListPanel &panel, QString *error)
 {
-    QList<checks::visual::Region> regions;
-    // The list and count label ship unnamed; give them semantic names in the
-    // test so both widgetRegions() and the explicit lookups below find them.
-    nameChild(panel.findChild<QListWidget *>(), QStringLiteral("songList"));
-    nameChild(panel.findChild<QLabel *>(), QStringLiteral("songListCount"));
-    scopeIndicatorNames(panel);
-    regions.append(
-        namedChildRegion(QStringLiteral("songs.search"), panel, QStringLiteral("songListSearch")));
-    regions.append(namedChildRegion(QStringLiteral("songs.category"), panel,
-                                    QStringLiteral("songListCategory")));
-    regions.append(
-        namedChildRegion(QStringLiteral("songs.sort"), panel, QStringLiteral("songListSort")));
-    regions.append(
-        namedChildRegion(QStringLiteral("songs.list"), panel, QStringLiteral("songList")));
-    regions.append(
-        namedChildRegion(QStringLiteral("songs.count"), panel, QStringLiteral("songListCount")));
-    auto *list = panel.findChild<QListWidget *>(QStringLiteral("songList"));
-    if (list) {
-        const auto itemRegion = [&](const QString &name, int row) {
-            QListWidgetItem *item = list->item(row);
-            if (!item)
-                return;
-            const QRect rect = clippedItemRect(*list, list->visualItemRect(item));
-            if (rect.isValid() && !rect.isEmpty())
-                regions.append(
-                    {name, rect.translated(list->viewport()->mapTo(&panel, QPoint(0, 0)))});
-        };
-        itemRegion(QStringLiteral("songs.row.first"), 0);
-        itemRegion(QStringLiteral("songs.row.second"), 1);
-        itemRegion(QStringLiteral("songs.row.unregistered"), 8);
-        itemRegion(QStringLiteral("songs.row.partial"), 9);
+    auto *const list = panel.findChild<QListWidget *>();
+    auto *const count = panel.findChild<QLabel *>();
+    if (!list || !count) {
+        *error =
+            QStringLiteral("the song list panel no longer holds its song list and count label");
+        return false;
     }
-    return regions;
+    nameChild(list, QStringLiteral("songList"));
+    nameChild(count, QStringLiteral("songListCount"));
+    scopeIndicatorNames(panel);
+    const struct {
+        const char *name;
+        const char *objectName;
+        QWidget *child;
+    } required[] = {
+        {"songs.search", "songListSearch",
+         panel.findChild<QWidget *>(QStringLiteral("songListSearch"))},
+        {"songs.category", "songListCategory",
+         panel.findChild<QWidget *>(QStringLiteral("songListCategory"))},
+        {"songs.sort", "songListSort", panel.findChild<QWidget *>(QStringLiteral("songListSort"))},
+        {"songs.list", "songList", list},
+        {"songs.count", "songListCount", count},
+    };
+    for (const auto &entry : required) {
+        if (appendRequiredRegion(regions, QString::fromLatin1(entry.name), panel, entry.child))
+            continue;
+        *error = QStringLiteral("region \"%1\" needs a rendered widget named \"%2\"")
+                     .arg(QString::fromLatin1(entry.name), QString::fromLatin1(entry.objectName));
+        return false;
+    }
+    const auto itemRegion = [&](const QString &name, int row) {
+        QListWidgetItem *item = list->item(row);
+        if (!item)
+            return;
+        const QRect rect = clippedItemRect(*list, list->visualItemRect(item));
+        if (rect.isValid() && !rect.isEmpty())
+            regions.append({name, rect.translated(list->viewport()->mapTo(&panel, QPoint(0, 0)))});
+    };
+    itemRegion(QStringLiteral("songs.row.first"), 0);
+    itemRegion(QStringLiteral("songs.row.second"), 1);
+    itemRegion(QStringLiteral("songs.row.unregistered"), 8);
+    itemRegion(QStringLiteral("songs.row.partial"), 9);
+    return true;
 }
 
 // ---- PolyphonyPanel --------------------------------------------------------
@@ -316,80 +250,87 @@ AudioEngine::PolySnapshot polySnapshot()
 }
 
 // PolyphonyPanel ships no object names; name the semantic children in the
-// test so widgetRegions() covers them, then add row-level subregions.
-QList<checks::visual::Region> polyphonyRegions(PolyphonyPanel &panel)
+// test so widgetRegions() covers them, then add row-level subregions. The
+// headings are found by display text alone, so an absent or duplicated heading
+// fails the scenario instead of silently losing its region.
+bool appendPolyphonyRegions(QList<Region> &regions, PolyphonyPanel &panel, QString *error)
 {
-    QList<checks::visual::Region> regions;
-    nameChild(panel.findChild<QCheckBox *>(), QStringLiteral("poly.invert"));
-    nameChild(panel.findChild<QTableWidget *>(), QStringLiteral("poly.overflow-table"));
-    nameChild(panel.findChild<QListWidget *>(), QStringLiteral("poly.event-log"));
-    nameChild(panel.findChild<QPushButton *>(), QStringLiteral("poly.reset"));
-    nameChild(panel.findChild<QScrollArea *>(), QStringLiteral("poly.scroll"));
+    auto *const invert = panel.findChild<QCheckBox *>();
+    auto *const table = panel.findChild<QTableWidget *>();
+    auto *const log = panel.findChild<QListWidget *>();
+    auto *const reset = panel.findChild<QPushButton *>();
+    auto *const scroll = panel.findChild<QScrollArea *>();
+    if (!invert || !table || !log || !reset || !scroll) {
+        *error = QStringLiteral("the polyphony panel no longer holds its invert toggle, "
+                                "overflow table, event log, reset button, and scroll area");
+        return false;
+    }
+    nameChild(invert, QStringLiteral("poly.invert"));
+    nameChild(table, QStringLiteral("poly.overflow-table"));
+    nameChild(log, QStringLiteral("poly.event-log"));
+    nameChild(reset, QStringLiteral("poly.reset"));
+    nameChild(scroll, QStringLiteral("poly.scroll"));
     scopeIndicatorNames(panel);
-    for (QLabel *label : panel.findChildren<QLabel *>()) {
-        const QString text = label->text();
-        if (text == QStringLiteral("Channel usage"))
-            nameChild(label, QStringLiteral("poly.usage-heading"));
-        else if (text == QStringLiteral("Overflow by track"))
-            nameChild(label, QStringLiteral("poly.overflow-heading"));
-        else if (text == QStringLiteral("Recent events"))
-            nameChild(label, QStringLiteral("poly.log-heading"));
-        else if (text == QStringLiteral("No overflow recorded"))
-            nameChild(label, QStringLiteral("poly.overflow-empty"));
+    const struct {
+        const char *text;
+        const char *name;
+    } headings[] = {
+        {"Channel usage", "poly.usage-heading"},
+        {"Overflow by track", "poly.overflow-heading"},
+        {"Recent events", "poly.log-heading"},
+        {"No overflow recorded", "poly.overflow-empty"},
+    };
+    for (const auto &heading : headings) {
+        if (!nameLabelByText(panel, QString::fromLatin1(heading.text),
+                             QString::fromLatin1(heading.name), error))
+            return false;
     }
-    // The custom-painted channel grid is the only non-QLabel direct child of
-    // the usage box; locate it by its private class name once, then give it a
-    // stable semantic name.
-    for (QWidget *child : panel.findChildren<QWidget *>()) {
-        if (QLatin1String(child->metaObject()->className()) == QLatin1String("PolyChannelGrid")) {
-            nameChild(child, QStringLiteral("poly.channel-grid"));
-            if (QWidget *usageBox = child->parentWidget())
-                regions.append(childRegion(QStringLiteral("poly.usage-section"), panel, *usageBox));
-            break;
+    if (QWidget *overflowBox = table->parentWidget())
+        regions.append(childRegion(QStringLiteral("poly.overflow-section"), panel, *overflowBox));
+    for (int row = 0; row < table->rowCount(); ++row) {
+        QTableWidgetItem *item = table->item(row, 0);
+        if (!item)
+            continue;
+        const QRect rect = clippedItemRect(*table, table->visualItemRect(item));
+        if (rect.isValid() && !rect.isEmpty()) {
+            regions.append({QStringLiteral("poly.overflow-row.%1").arg(row),
+                            rect.translated(table->viewport()->mapTo(&panel, QPoint(0, 0)))});
         }
     }
-    if (auto *table = panel.findChild<QTableWidget *>()) {
-        if (QWidget *overflowBox = table->parentWidget())
-            regions.append(
-                childRegion(QStringLiteral("poly.overflow-section"), panel, *overflowBox));
-        for (int row = 0; row < table->rowCount(); ++row) {
-            QTableWidgetItem *item = table->item(row, 0);
-            if (!item)
-                continue;
-            const QRect rect = clippedItemRect(*table, table->visualItemRect(item));
-            if (rect.isValid() && !rect.isEmpty()) {
-                regions.append({QStringLiteral("poly.overflow-row.%1").arg(row),
-                                rect.translated(table->viewport()->mapTo(&panel, QPoint(0, 0)))});
-            }
+    for (int row = 0; row < log->count() && row < 3; ++row) {
+        QListWidgetItem *item = log->item(row);
+        const QRect rect = clippedItemRect(*log, log->visualItemRect(item));
+        if (rect.isValid() && !rect.isEmpty()) {
+            regions.append({QStringLiteral("poly.log-row.%1").arg(row),
+                            rect.translated(log->viewport()->mapTo(&panel, QPoint(0, 0)))});
         }
     }
-    if (auto *log = panel.findChild<QListWidget *>()) {
-        for (int row = 0; row < log->count() && row < 3; ++row) {
-            QListWidgetItem *item = log->item(row);
-            const QRect rect = clippedItemRect(*log, log->visualItemRect(item));
-            if (rect.isValid() && !rect.isEmpty()) {
-                regions.append({QStringLiteral("poly.log-row.%1").arg(row),
-                                rect.translated(log->viewport()->mapTo(&panel, QPoint(0, 0)))});
-            }
-        }
-    }
-    return regions;
+    return true;
 }
 
 // ---- Shell -----------------------------------------------------------------
 
 // The status polyphony meter is an unnamed permanent status-bar widget;
-// identify it through its "PCM" caption label.
-QWidget *polyMeter(QMainWindow &window)
+// identify it through its "PCM" caption label, which must exist exactly once.
+QWidget *polyMeter(QMainWindow &window, QString *error)
 {
-    for (QLabel *label : window.statusBar()->findChildren<QLabel *>()) {
-        if (label->text() == QStringLiteral("PCM"))
-            return label->parentWidget();
+    QStatusBar *statusBar = window.statusBar();
+    if (!statusBar) {
+        *error = QStringLiteral("the shell has no status bar");
+        return nullptr;
     }
-    return nullptr;
+    QLabel *caption = nullptr;
+    if (!uniqueLabel(*statusBar, QStringLiteral("PCM"), &caption, error)) {
+        *error = QStringLiteral("the status bar has no polyphony meter: %1").arg(*error);
+        return nullptr;
+    }
+    return caption->parentWidget();
 }
 
-void nameShellChildren(QMainWindow &window)
+// Names the shell's unnamed structural chrome in the test so widgetRegions()
+// freezes it; false with `error` when the text-identified polyphony meter is
+// missing.
+bool nameShellChildren(QMainWindow &window, QString *error)
 {
     if (QMenuBar *bar = window.menuBar())
         nameChild(bar, QStringLiteral("shell.menu-bar"));
@@ -406,14 +347,19 @@ void nameShellChildren(QMainWindow &window)
         if (QWidget *title = dock->titleBarWidget())
             nameChild(title, dockName + QStringLiteral(".title"));
     }
-    if (QWidget *meter = polyMeter(window))
-        nameChild(meter, QStringLiteral("shell.poly-meter"));
+    QWidget *meter = polyMeter(window, error);
+    if (!meter)
+        return false;
+    nameChild(meter, QStringLiteral("shell.poly-meter"));
     scopeIndicatorNames(window);
+    return true;
 }
 
-QList<checks::visual::Region> shellRegions(QMainWindow &window)
+// The shell's explicit subregions: tab-strip rects (the tab bar reports them
+// beyond the automatic child regions) and the meter's values and captions.
+// Captions are text-identified, so each must exist exactly once.
+bool appendShellRegions(QList<Region> &regions, QMainWindow &window, QString *error)
 {
-    QList<checks::visual::Region> regions;
     if (QTabWidget *tabs = window.findChild<QTabWidget *>()) {
         QTabBar *bar = tabs->tabBar();
         for (int index = 0; index < bar->count(); ++index) {
@@ -424,28 +370,53 @@ QList<checks::visual::Region> shellRegions(QMainWindow &window)
             }
         }
     }
-    if (QWidget *meter = polyMeter(window)) {
-        int valueIndex = 0;
-        for (FastLabel *label : meter->findChildren<FastLabel *>()) {
-            if (label->isVisible()) {
-                regions.append(childRegion(
-                    QStringLiteral("shell.poly-meter.value.%1").arg(valueIndex++), window, *label));
-            }
-        }
-        for (QLabel *label : meter->findChildren<QLabel *>()) {
-            const QString text = label->text();
-            QString name;
-            if (text == QStringLiteral("PCM"))
-                name = QStringLiteral("shell.poly-meter.pcm-caption");
-            else if (text == QStringLiteral("CGB"))
-                name = QStringLiteral("shell.poly-meter.cgb-caption");
-            else if (text == QStringLiteral("notes lost"))
-                name = QStringLiteral("shell.poly-meter.lost-caption");
-            if (!name.isEmpty() && label->isVisible())
-                regions.append(childRegion(name, window, *label));
+    QWidget *meter = polyMeter(window, error);
+    if (!meter)
+        return false;
+    int valueIndex = 0;
+    for (FastLabel *label : meter->findChildren<FastLabel *>()) {
+        if (label->isVisible()) {
+            regions.append(childRegion(
+                QStringLiteral("shell.poly-meter.value.%1").arg(valueIndex++), window, *label));
         }
     }
-    return regions;
+    const struct {
+        const char *text;
+        const char *name;
+    } captions[] = {
+        {"PCM", "shell.poly-meter.pcm-caption"},
+        {"CGB", "shell.poly-meter.cgb-caption"},
+        {"notes lost", "shell.poly-meter.lost-caption"},
+    };
+    for (const auto &caption : captions) {
+        QLabel *label = nullptr;
+        if (!uniqueLabel(*meter, QString::fromLatin1(caption.text), &label, error))
+            return false;
+        if (label->isVisible())
+            regions.append(childRegion(QString::fromLatin1(caption.name), window, *label));
+    }
+    return true;
+}
+
+// ---- Theme variants --------------------------------------------------------
+
+// Two frozen profiles only: the data column names the baseline id suffix, and
+// this one branch per profile selects the resolved theme. An unknown id stays
+// missing so the scenario fails instead of quietly re-testing vanilla.
+std::optional<themes::Theme> themeFor(const QString &themeId)
+{
+    if (themeId == QLatin1String("vanilla"))
+        return themes::vanilla();
+    if (themeId == QLatin1String("darkneutralhigh"))
+        return themes::darkNeutralHigh();
+    return std::nullopt;
+}
+
+void addThemeRows()
+{
+    QTest::addColumn<QString>("theme");
+    QTest::newRow("vanilla") << QStringLiteral("vanilla");
+    QTest::newRow("darkneutralhigh") << QStringLiteral("darkneutralhigh");
 }
 
 } // namespace
@@ -463,14 +434,14 @@ class VisualChromeTest final : public QObject
     void cleanup();
 
     void comparatorSelfTest();
-    void transportBarVanilla();
-    void transportBarDark();
-    void songListVanilla();
-    void songListDark();
+    void transportBar_data();
+    void transportBar();
+    void songList_data();
+    void songList();
     void shellVanilla();
     void shellLoaded();
-    void polyphonyPanelVanilla();
-    void polyphonyPanelDark();
+    void polyphonyPanel_data();
+    void polyphonyPanel();
 
   private:
     QApplication *app() const;
@@ -504,12 +475,29 @@ void VisualChromeTest::comparatorSelfTest()
     QVERIFY2(checks::visual::selfTest(&error), qPrintable(error));
 }
 
-void VisualChromeTest::transportBarVanilla()
+void VisualChromeTest::transportBar_data()
 {
-    themes::apply(*app(), themes::vanilla());
+    QTest::addColumn<QString>("theme");
+    QTest::addColumn<int>("playback");
+    // Both rows are the scenarios this suite already froze: the playing state
+    // belongs to the dark row, and now rides the data table beside the theme.
+    QTest::newRow("vanilla") << QStringLiteral("vanilla")
+                             << int(TransportBar::PlaybackState::Stopped);
+    QTest::newRow("darkneutralhigh")
+        << QStringLiteral("darkneutralhigh") << int(TransportBar::PlaybackState::Playing);
+}
+
+void VisualChromeTest::transportBar()
+{
+    QFETCH(QString, theme);
+    QFETCH(int, playback);
+    const auto selected = themeFor(theme);
+    QVERIFY2(selected.has_value(),
+             qPrintable(QStringLiteral("unknown theme id \"%1\"").arg(theme)));
+    themes::apply(*app(), *selected);
     TransportBar bar;
     bar.setSessionAvailable(true);
-    bar.setPlaybackState(TransportBar::PlaybackState::Stopped);
+    bar.setPlaybackState(static_cast<TransportBar::PlaybackState>(playback));
     bar.setFollowPlayhead(true);
     bar.setTimeText(QStringLiteral("1:23.4 / 4:56.7"));
     bar.setMasterVolume(96, true);
@@ -517,45 +505,30 @@ void VisualChromeTest::transportBarVanilla()
     bar.setScaleState(0, porydaw_scale::ScaleId::major, true, false);
     bar.resize(1100, qMax(24, bar.sizeHint().height()));
     showSettled(bar);
-    compareShown(QStringLiteral("transportbar/vanilla"), bar, transportRegions(bar));
+    compareShown(QStringLiteral("transportbar/%1").arg(theme), bar, transportRegions(bar));
 }
 
-void VisualChromeTest::transportBarDark()
+void VisualChromeTest::songList_data()
 {
-    themes::apply(*app(), themes::darkNeutralHigh());
-    TransportBar bar;
-    bar.setSessionAvailable(true);
-    bar.setPlaybackState(TransportBar::PlaybackState::Playing);
-    bar.setFollowPlayhead(true);
-    bar.setTimeText(QStringLiteral("1:23.4 / 4:56.7"));
-    bar.setMasterVolume(96, true);
-    bar.setOutputVolume(80);
-    bar.setScaleState(0, porydaw_scale::ScaleId::major, true, false);
-    bar.resize(1100, qMax(24, bar.sizeHint().height()));
-    showSettled(bar);
-    compareShown(QStringLiteral("transportbar/darkneutralhigh"), bar, transportRegions(bar));
+    addThemeRows();
 }
 
-void VisualChromeTest::songListVanilla()
+void VisualChromeTest::songList()
 {
-    themes::apply(*app(), themes::vanilla());
+    QFETCH(QString, theme);
+    const auto selected = themeFor(theme);
+    QVERIFY2(selected.has_value(),
+             qPrintable(QStringLiteral("unknown theme id \"%1\"").arg(theme)));
+    themes::apply(*app(), *selected);
     SongListPanel panel;
     panel.setSongs(visualSongs());
     panel.setCurrentSong(1);
     panel.resize(280, 480);
     showSettled(panel);
-    compareShown(QStringLiteral("songlist/vanilla"), panel, songListRegions(panel));
-}
-
-void VisualChromeTest::songListDark()
-{
-    themes::apply(*app(), themes::darkNeutralHigh());
-    SongListPanel panel;
-    panel.setSongs(visualSongs());
-    panel.setCurrentSong(1);
-    panel.resize(280, 480);
-    showSettled(panel);
-    compareShown(QStringLiteral("songlist/darkneutralhigh"), panel, songListRegions(panel));
+    QList<Region> regions;
+    QString error;
+    QVERIFY2(appendSongListRegions(regions, panel, &error), qPrintable(error));
+    compareShown(QStringLiteral("songlist/%1").arg(theme), panel, regions);
 }
 
 void VisualChromeTest::shellVanilla()
@@ -567,150 +540,113 @@ void VisualChromeTest::shellVanilla()
     // itself part of the frozen baseline.
     auto window = std::make_unique<MainWindow>();
     window->resize(1104, 684);
-    nameShellChildren(*window);
+    QString error;
+    QVERIFY2(nameShellChildren(*window, &error), qPrintable(error));
     showSettled(*window);
-    compareShown(QStringLiteral("shell/empty-vanilla"), *window, shellRegions(*window));
+    QList<Region> regions;
+    QVERIFY2(appendShellRegions(regions, *window, &error), qPrintable(error));
+    compareShown(QStringLiteral("shell/empty-vanilla"), *window, regions);
     window->close();
     QApplication::processEvents();
 }
 
 void VisualChromeTest::shellLoaded()
 {
-    const QString projectRoot = qEnvironmentVariable("PORYDAW_VISUAL_PROJECT_ROOT");
-    QVERIFY2(!projectRoot.isEmpty(),
-             "PORYDAW_VISUAL_PROJECT_ROOT must point at a staged decomp "
-             "project fixture root (the check catalog stages "
-             "decompProjectFiles + decompMidiFiles into {scratch} and exports "
-             "this variable); the loaded-shell baseline cannot be captured "
-             "without a real project");
     themes::apply(*app(), themes::vanilla());
-    auto window = std::make_unique<MainWindow>();
-    auto *workspace = window->findChild<WorkspaceUi *>();
-    QVERIFY(workspace);
-    workspace->requestProjectOpenAt(projectRoot);
-    QVERIFY(checks::async_wait::waitUntil(
-                [] { return true; },
-                [workspace] { return workspace->projectState().state == ProjectOpenState::Ready; },
-                30000, 1) == checks::async_wait::Result::Ready);
-    const auto name = SongName::create(QStringLiteral("mus_route101"));
-    QVERIFY(name);
-    workspace->requestSongOpen(*name);
-    SongTab *tab = workspace->songTabFor(*name);
-    QVERIFY(tab);
-    QVERIFY(checks::async_wait::waitUntil([] { return true; }, [tab] { return tab->isReady(); },
-                                          30000, 1) == checks::async_wait::Result::Ready);
-    window->resize(1104, 684);
-    nameShellChildren(*window);
-    showSettled(*window);
-    // The loaded song's list row is the real selection state: the async
-    // project/tab open leaves the browser unselected, so pin it through the
-    // production panel API once the tab is ready and the layout has settled.
-    auto *songList = window->findChild<SongListPanel *>();
-    QVERIFY(songList);
-    const SongInfo *loaded = nullptr;
-    for (const SongInfo &song : workspace->projectState().snapshot.songs()) {
-        if (song.label == name->value()) {
-            loaded = &song;
+    QString error;
+    checks::support::LoadedShell shell = checks::support::openLoadedShell(
+        qEnvironmentVariable("PORYDAW_VISUAL_PROJECT_ROOT"), &error);
+    QVERIFY2(shell.window, qPrintable(error));
+
+    // The loaded shell is captured at the same frozen size as the empty one,
+    // and only a settled show is compared: stage, name, show, compare.
+    shell.window->resize(1104, 684);
+    QVERIFY2(nameShellChildren(*shell.window, &error), qPrintable(error));
+    showSettled(*shell.window);
+    // The programmatic open leaves the browser unselected; the frozen baseline
+    // is the state a real session shows, so pin the loaded song as the current
+    // row through the production panel API. This must run after the window has
+    // shown and laid out — before that, the list's scroll-to-selection no-ops.
+    auto *songList = shell.window->findChild<SongListPanel *>();
+    auto *workspace = shell.window->findChild<WorkspaceUi *>();
+    QVERIFY2(songList && workspace, "the production shell lacks its panels");
+    int loadedSongId = -1;
+    for (const SongInfo &info : workspace->projectState().snapshot.songs())
+        if (info.label == QLatin1String("mus_route101")) {
+            loadedSongId = info.id;
             break;
         }
-    }
-    QVERIFY2(loaded, "loaded song is absent from the project snapshot");
-    songList->setCurrentSong(loaded->id);
+    QVERIFY2(loadedSongId >= 0, "the loaded song is absent from the project snapshot");
+    songList->setCurrentSong(loadedSongId);
     QApplication::processEvents();
-    // uiTick is a private slot but still a slot: invoke it through the meta
-    // object so the polyphony meter reflects the loaded song.
-    QVERIFY(QMetaObject::invokeMethod(window.get(), "uiTick"));
-    QApplication::processEvents();
+
+    QList<Region> regions;
+    QVERIFY2(appendShellRegions(regions, *shell.window, &error), qPrintable(error));
+    // The automatic named-descendant regions are read before the grab:
+    // compositing pumps events while it waits for a Quick frame, and every
+    // frozen bound must describe the grabbed image.
+    QList<Region> frozen = mergeRegions(widgetRegions(*shell.window), regions);
 
     // QWidget::grab() omits the embedded native Quick window — composite the
     // actual QQuickWindow framebuffer at its mapped container bounds so the
     // baseline freezes the real mixed surface, not a blank center.
-    QList<checks::visual::Region> regions = checks::visual::widgetRegions(*window);
-    regions.append(shellRegions(*window));
-    QImage composite = window->grab().toImage();
-    QVERIFY2(!composite.isNull(), "shell grab returned a null image");
-    auto *host = tab->findChild<SongTabQuickHost *>();
-    QVERIFY2(host && host->container(), "loaded tab has no embedded Quick host");
-    QWidget *container = host->container();
-    songview::TimelineQuickView *quick = tab->view().quickView();
+    auto *host = shell.tab->findChild<SongTabQuickHost *>();
+    QVERIFY2(host && host->container(), "the loaded tab has no embedded Quick host");
+    songview::TimelineQuickView *quick = shell.tab->view().quickView();
     QQuickWindow *quickWindow = quick ? quick->quickWindow() : nullptr;
-    QVERIFY2(quickWindow, "loaded tab exposes no Quick window");
-    QVERIFY2(checks::support::waitForQuickFrame(*quickWindow),
-             "embedded Quick window produced no frame");
-    const QImage quickImage = quickWindow->grabWindow();
-    QVERIFY2(!quickImage.isNull(), "Quick window grab returned a null image");
-    const QRect containerRect(container->mapTo(window.get(), QPoint(0, 0)), container->size());
-    regions.append({QStringLiteral("shell.quick-surface"), containerRect});
-    {
-        QPainter painter(&composite);
-        const QRectF deviceTarget =
-            QRectF(QPointF(containerRect.topLeft()) * composite.devicePixelRatio(),
-                   QSizeF(containerRect.size()) * composite.devicePixelRatio());
-        painter.drawImage(deviceTarget, quickImage, QRectF(quickImage.rect()));
-    }
+    QVERIFY2(quickWindow, "the loaded tab exposes no Quick window");
+    QRect containerBounds;
+    const QImage composite = checks::support::compositeQuickWindowIntoGrab(
+        *shell.window, *host->container(), *quickWindow, &containerBounds, &error);
+    QVERIFY2(!composite.isNull(), qPrintable(error));
+    frozen.append({QStringLiteral("shell.quick-surface"), containerBounds});
+
+    QVERIFY2(compare(QStringLiteral("shell/loaded-vanilla"), composite, frozen, &error),
+             qPrintable(error));
+
+    shell.window->close();
+    QApplication::processEvents();
+}
+
+void VisualChromeTest::polyphonyPanel_data()
+{
+    addThemeRows();
+}
+
+void VisualChromeTest::polyphonyPanel()
+{
+    QFETCH(QString, theme);
+    const auto selected = themeFor(theme);
+    QVERIFY2(selected.has_value(),
+             qPrintable(QStringLiteral("unknown theme id \"%1\"").arg(theme)));
+    themes::apply(*app(), *selected);
+    const auto timeline = polyTimeline();
+    QVERIFY(timeline);
+    PolyphonyPanel panel;
+    QStringList trackNames(16);
+    trackNames[2] = QStringLiteral("Brass");
+    panel.setTrackNames(trackNames);
+    QStringList voiceNames(128);
+    voiceNames[5] = QStringLiteral("voice_piano");
+    panel.setVoiceNames(voiceNames);
+    panel.setTimeline(timeline.get());
+    panel.updateSnapshot(polySnapshot());
+
+    panel.resize(380, 760);
+    showSettled(panel);
+    QTRY_VERIFY(!panel.wideLayoutActive());
     QString error;
-    QVERIFY2(
-        checks::visual::compare(QStringLiteral("shell/loaded-vanilla"), composite, regions, &error),
-        qPrintable(error));
-    window->close();
-    QApplication::processEvents();
-}
-
-void VisualChromeTest::polyphonyPanelVanilla()
-{
-    themes::apply(*app(), themes::vanilla());
-    const auto timeline = polyTimeline();
-    QVERIFY(timeline);
-    PolyphonyPanel panel;
-    QStringList trackNames(16);
-    trackNames[2] = QStringLiteral("Brass");
-    panel.setTrackNames(trackNames);
-    QStringList voiceNames(128);
-    voiceNames[5] = QStringLiteral("voice_piano");
-    panel.setVoiceNames(voiceNames);
-    panel.setTimeline(timeline.get());
-    panel.updateSnapshot(polySnapshot());
-
-    panel.resize(380, 760);
-    showSettled(panel);
-    QTRY_VERIFY(!panel.wideLayoutActive());
-    compareShown(QStringLiteral("polyphony/narrow-vanilla"), panel, polyphonyRegions(panel));
+    QList<Region> regions;
+    QVERIFY2(appendPolyphonyRegions(regions, panel, &error), qPrintable(error));
+    compareShown(QStringLiteral("polyphony/narrow-%1").arg(theme), panel, regions);
 
     panel.resize(900, 600);
     QApplication::processEvents();
     QTRY_VERIFY(panel.wideLayoutActive());
-    panel.clearFocus();
-    QApplication::processEvents();
-    compareShown(QStringLiteral("polyphony/wide-vanilla"), panel, polyphonyRegions(panel));
-}
-
-void VisualChromeTest::polyphonyPanelDark()
-{
-    themes::apply(*app(), themes::darkNeutralHigh());
-    const auto timeline = polyTimeline();
-    QVERIFY(timeline);
-    PolyphonyPanel panel;
-    QStringList trackNames(16);
-    trackNames[2] = QStringLiteral("Brass");
-    panel.setTrackNames(trackNames);
-    QStringList voiceNames(128);
-    voiceNames[5] = QStringLiteral("voice_piano");
-    panel.setVoiceNames(voiceNames);
-    panel.setTimeline(timeline.get());
-    panel.updateSnapshot(polySnapshot());
-
-    panel.resize(380, 760);
-    showSettled(panel);
-    QTRY_VERIFY(!panel.wideLayoutActive());
-    compareShown(QStringLiteral("polyphony/narrow-darkneutralhigh"), panel,
-                 polyphonyRegions(panel));
-
-    panel.resize(900, 600);
-    QApplication::processEvents();
-    QTRY_VERIFY(panel.wideLayoutActive());
-    panel.clearFocus();
-    QApplication::processEvents();
-    compareShown(QStringLiteral("polyphony/wide-darkneutralhigh"), panel, polyphonyRegions(panel));
+    parkFocus(panel);
+    regions.clear();
+    QVERIFY2(appendPolyphonyRegions(regions, panel, &error), qPrintable(error));
+    compareShown(QStringLiteral("polyphony/wide-%1").arg(theme), panel, regions);
 }
 
 int runVisualChromeCheck(QApplication &application, const QStringList &qtArguments)

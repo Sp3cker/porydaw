@@ -10,20 +10,15 @@
 // real QWidget surface.
 
 #include "checks/visual/visualbaseline.h"
+#include "checks/visual/visualfixture.h"
 
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDialog>
-#include <QDialogButtonBox>
-#include <QDir>
 #include <QFileDialog>
 #include <QList>
-#include <QPushButton>
-#include <QRect>
-#include <QSet>
 #include <QString>
-#include <QTabBar>
-#include <QWidget>
+#include <QTemporaryDir>
 #include <QtTest>
 
 #include <memory>
@@ -32,42 +27,54 @@
 
 namespace {
 
-// Move focus off any text field so a blinking caret never enters the raster;
-// mirrors the dialog suite's parkFocus.
-void parkFocus(QWidget &widget)
+// Every fixture kind this check freezes, each with its baseline id: the one
+// place kind numbers and frozen identifiers meet.
+struct FixtureKind {
+    int kind;
+    const char *id;
+};
+
+constexpr FixtureKind kFixtureKinds[] = {
+    {SgwWindowSettings, "windowfixture/settings"},
+    {SgwWindowSampleEditor, "windowfixture/sample-editor"},
+    {SgwWindowSf2Picker, "windowfixture/sf2-picker"},
+    {SgwWindowImportMidi, "windowfixture/import-midi"},
+    {SgwWindowNewVoicegroup, "windowfixture/new-voicegroup"},
+    {SgwWindowExportWav, "windowfixture/export-wav"},
+    {SgwWindowProgress, "windowfixture/progress"},
+    {SgwWindowOpenFile, "windowfixture/open-file"},
+    {SgwWindowSaveFile, "windowfixture/save-file"},
+    {SgwWindowDirectory, "windowfixture/directory"},
+    {SgwWindowConfirmation, "windowfixture/confirmation"},
+    {SgwWindowError, "windowfixture/error"},
+    {SgwWindowAbout, "windowfixture/about"},
+};
+
+// The frozen baseline id for `kind`; empty for a kind the table does not know,
+// which expectFixture turns into a loud failure.
+QString kindId(int kind)
 {
-    QWidget *anchor = widget.findChild<QTabBar *>();
-    if (!anchor)
-        if (auto *buttons = widget.findChild<QDialogButtonBox *>())
-            anchor = buttons->button(QDialogButtonBox::Cancel);
-    if (!anchor)
-        anchor = widget.findChild<QPushButton *>();
-    if (anchor && anchor->isVisible() && anchor->focusPolicy() != Qt::NoFocus)
-        anchor->setFocus(Qt::OtherFocusReason);
-    else if (QWidget *focused = QApplication::focusWidget())
-        if (focused == &widget || widget.isAncestorOf(focused))
-            focused->clearFocus();
-    QApplication::processEvents();
+    for (const FixtureKind &entry : kFixtureKinds)
+        if (entry.kind == kind)
+            return QString::fromLatin1(entry.id);
+    return {};
 }
 
-void showSettled(QWidget &widget)
-{
-    widget.show();
-    QApplication::processEvents();
-    parkFocus(widget);
-}
+// Directory the file dialogs list: empty by construction on every run, which
+// the caller's working directory is not. The test object owns the
+// QTemporaryDir and publishes its path here, because the configuration hook is
+// a plain function pointer and cannot capture the test object.
+QString g_emptyFixtureDirectoryPath;
 
-// A stable empty directory for the file dialogs: their listing must not
-// depend on the caller's working directory contents or timestamps.
-QString emptyFixtureDir()
+// Configure a file-dialog fixture for capture: the Qt fallback panel (the
+// native macOS one is not a QWidget surface) listing that empty directory.
+void configureFileDialog(QDialog &dialog)
 {
-    static const QString path = [] {
-        const QString dir =
-            QDir::temp().absoluteFilePath(QStringLiteral("porydaw-windowfixture-empty"));
-        QDir{}.mkpath(dir);
-        return dir;
-    }();
-    return path;
+    auto *file = qobject_cast<QFileDialog *>(&dialog);
+    QVERIFY2(file, qPrintable(QStringLiteral("fixture dialog %1 is not a QFileDialog")
+                                  .arg(QString::fromLatin1(dialog.metaObject()->className()))));
+    file->setOption(QFileDialog::DontUseNativeDialog, true);
+    file->setDirectory(g_emptyFixtureDirectoryPath);
 }
 
 } // namespace
@@ -98,115 +105,112 @@ class VisualWindowFixturesTest final : public QObject
     void aboutFixture();
 
   private:
-    // Build, show, and freeze one fixture kind under `id`. `configure` runs
-    // between creation and show for kind-specific setup (file dialogs).
-    void expectFixture(int kind, const QString &id,
-                       const std::function<void(QDialog &)> &configure = {});
+    // Build, show, and freeze one fixture kind. `configure` runs between
+    // creation and show for kind-specific setup (the file dialogs).
+    void expectFixture(int kind, void (*configure)(QDialog &) = nullptr);
+
+    // The file dialogs list this directory; it starts empty and disappears
+    // with the test object, so no run can see another run's listing.
+    QTemporaryDir m_emptyFixtureDirectory;
 };
 
 void VisualWindowFixturesTest::initTestCase()
 {
     checks::visual::prepare(*static_cast<QApplication *>(QCoreApplication::instance()));
+    QVERIFY2(m_emptyFixtureDirectory.isValid(), "could not create the empty fixture directory");
+    g_emptyFixtureDirectoryPath = m_emptyFixtureDirectory.path();
 }
 
-void VisualWindowFixturesTest::expectFixture(int kind, const QString &id,
-                                             const std::function<void(QDialog &)> &configure)
+void VisualWindowFixturesTest::expectFixture(int kind, void (*configure)(QDialog &))
 {
+    const QString id = kindId(kind);
+    QVERIFY2(!id.isEmpty(),
+             qPrintable(QStringLiteral("fixture kind %1 has no baseline id").arg(kind)));
+
     std::unique_ptr<QDialog> dialog(sgw_createWindowFixture(kind));
     QVERIFY2(dialog, qPrintable(QStringLiteral("fixture kind %1 returned null").arg(kind)));
     if (configure)
         configure(*dialog);
-    showSettled(*dialog);
+    // A first show sizes a dialog that never requested a size to its layout
+    // (clamped to its minimum), and the frozen baselines captured exactly that
+    // size. checks::visual::showSettled re-applies the size requested before
+    // the show, so request that same size here — an unpinned dialog would
+    // request Qt's 640x480 default and the captured surface would change.
+    if (!dialog->testAttribute(Qt::WA_Resized))
+        dialog->resize(dialog->sizeHint().expandedTo(dialog->minimumSize()));
+    checks::visual::showSettled(*dialog);
 
-    QList<checks::visual::Region> regions = checks::visual::widgetRegions(*dialog);
     // Dialogs with no named children (the mirror forms, progress, and the
-    // message boxes) still pin their whole surface under a stable region.
+    // message boxes) still pin their whole surface under a stable region;
+    // compareShown merges these over the automatic descendant regions.
+    QList<checks::visual::Region> regions;
     regions.append({QStringLiteral("fixture.surface"), dialog->rect()});
-    QString error;
-    QVERIFY2(checks::visual::compareWidget(id, *dialog, regions, &error), qPrintable(error));
-    dialog->close();
+    checks::visual::compareShown(id, *dialog, regions);
 }
 
 void VisualWindowFixturesTest::settingsFixture()
 {
-    expectFixture(SgwWindowSettings, QStringLiteral("windowfixture/settings"));
+    expectFixture(SgwWindowSettings);
 }
 
 void VisualWindowFixturesTest::sampleEditorFixture()
 {
-    expectFixture(SgwWindowSampleEditor, QStringLiteral("windowfixture/sample-editor"));
+    expectFixture(SgwWindowSampleEditor);
 }
 
 void VisualWindowFixturesTest::sf2PickerFixture()
 {
-    expectFixture(SgwWindowSf2Picker, QStringLiteral("windowfixture/sf2-picker"));
+    expectFixture(SgwWindowSf2Picker);
 }
 
 void VisualWindowFixturesTest::importMidiFixture()
 {
-    expectFixture(SgwWindowImportMidi, QStringLiteral("windowfixture/import-midi"));
+    expectFixture(SgwWindowImportMidi);
 }
 
 void VisualWindowFixturesTest::newVoicegroupFixture()
 {
-    expectFixture(SgwWindowNewVoicegroup, QStringLiteral("windowfixture/new-voicegroup"));
+    expectFixture(SgwWindowNewVoicegroup);
 }
 
 void VisualWindowFixturesTest::exportWavFixture()
 {
-    expectFixture(SgwWindowExportWav, QStringLiteral("windowfixture/export-wav"));
+    expectFixture(SgwWindowExportWav);
 }
 
 void VisualWindowFixturesTest::progressFixture()
 {
-    expectFixture(SgwWindowProgress, QStringLiteral("windowfixture/progress"));
+    expectFixture(SgwWindowProgress);
 }
 
 void VisualWindowFixturesTest::openFileFixture()
 {
-    expectFixture(SgwWindowOpenFile, QStringLiteral("windowfixture/open-file"),
-                  [](QDialog &dialog) {
-                      auto &file = static_cast<QFileDialog &>(dialog);
-                      file.setOption(QFileDialog::DontUseNativeDialog, true);
-                      // Pin the listing to a stable empty directory: the default working
-                      // directory's contents and timestamps change between runs.
-                      file.setDirectory(emptyFixtureDir());
-                  });
+    expectFixture(SgwWindowOpenFile, configureFileDialog);
 }
 
 void VisualWindowFixturesTest::saveFileFixture()
 {
-    expectFixture(SgwWindowSaveFile, QStringLiteral("windowfixture/save-file"),
-                  [](QDialog &dialog) {
-                      auto &file = static_cast<QFileDialog &>(dialog);
-                      file.setOption(QFileDialog::DontUseNativeDialog, true);
-                      file.setDirectory(emptyFixtureDir());
-                  });
+    expectFixture(SgwWindowSaveFile, configureFileDialog);
 }
 
 void VisualWindowFixturesTest::directoryFixture()
 {
-    expectFixture(SgwWindowDirectory, QStringLiteral("windowfixture/directory"),
-                  [](QDialog &dialog) {
-                      auto &file = static_cast<QFileDialog &>(dialog);
-                      file.setOption(QFileDialog::DontUseNativeDialog, true);
-                      file.setDirectory(emptyFixtureDir());
-                  });
+    expectFixture(SgwWindowDirectory, configureFileDialog);
 }
 
 void VisualWindowFixturesTest::confirmationFixture()
 {
-    expectFixture(SgwWindowConfirmation, QStringLiteral("windowfixture/confirmation"));
+    expectFixture(SgwWindowConfirmation);
 }
 
 void VisualWindowFixturesTest::errorFixture()
 {
-    expectFixture(SgwWindowError, QStringLiteral("windowfixture/error"));
+    expectFixture(SgwWindowError);
 }
 
 void VisualWindowFixturesTest::aboutFixture()
 {
-    expectFixture(SgwWindowAbout, QStringLiteral("windowfixture/about"));
+    expectFixture(SgwWindowAbout);
 }
 
 int runVisualWindowFixturesCheck(QApplication &, const QStringList &qtArguments)
