@@ -3,6 +3,9 @@ add_library(PorydawCore STATIC
     MidiFile.swift
     MidiSemantics.swift
     PlaybackTimeline.swift
+    SongDocument.swift
+    SongHistory.swift
+    NoteEditing.swift
 )
 
 set_target_properties(PorydawCore PROPERTIES

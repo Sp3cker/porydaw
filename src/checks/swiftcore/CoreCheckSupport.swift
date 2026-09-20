@@ -5,6 +5,13 @@ public typealias PdcCheckCallback = @convention(c) (
     UnsafeMutableRawPointer?, Int32, UnsafePointer<CChar>?, UnsafePointer<CChar>?
 ) -> Void
 
+
+/// Same-thread synchronous handoff of a CheckReport into MainActor-isolated
+/// suites; see pdcSuiteRun.
+private final class ReportBox: @unchecked Sendable {
+    let report: CheckReport
+    init(_ report: CheckReport) { self.report = report }
+}
 struct CheckReport {
     private final class State {
         let callback: PdcCheckCallback?
@@ -90,6 +97,19 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         runMusicalSemanticsSuite(report)
     case 3:
         runPlaybackSuite(report)
+    case 4:
+        // The envelope invokes this cdecl on the Qt main thread; the suite
+        // runs synchronously there, so the unchecked box states the
+        // same-thread reality the region checker cannot see.
+        let boxed = ReportBox(report)
+        MainActor.assumeIsolated {
+            runNoteEditsSuite(boxed.report)
+        }
+    case 5:
+        let boxedHistory = ReportBox(report)
+        MainActor.assumeIsolated {
+            runDocumentHistorySuite(boxedHistory.report)
+        }
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

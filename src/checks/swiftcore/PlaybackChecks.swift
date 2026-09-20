@@ -8,13 +8,20 @@ private let playbackSampleRate = 48_000.0
 private let playbackDivision: UInt16 = 24
 private let playbackSamplesPerTick: UInt64 = 1_000
 
+// Engine channel-status masks — Clang macros do not cross the Swift module
+// re-export, so they are restated with provenance: pinned poryaaaa
+// m4a_engine.h:23-32 (CHN_START 0x80, CHN_STOP 0x40, CHN_IEC 0x04,
+// CHN_ENV_MASK 0x03; CHN_ON is their union).
+private let playbackChnStart: UInt8 = 0x80
+private let playbackChnStop: UInt8 = 0x40
+private let playbackChnOn: UInt8 = 0x80 | 0x40 | 0x04 | 0x03
+
 private let exactSamplesID = "smfcheck/MidiSmfTest::tempoConversionSchedulesExactSamples"
 private let mappingID =
     "smfcheck/MidiSmfTest::engineTrackMappingAgreesAcrossProjections/document-and-timeline assertions"
 private let identitiesID = "noteidcheck/NoteIdentityCheckTest::timelineTransportsOnlyStampedNoteIds"
 private let loopPointsID = "loopcheck/LoopTest::synthesizedLoopSongHasExactLoopPoints"
-private let loopRenderID =
-    "loopcheck/LoopTest::loopWrapMatchesHardwareGoto[rows=pass-1-tied-note-sounds,pass-2-gate-carry-holds-across-wrap,gate-carry-releases-at-written-duration,pass-2-tied-note-stacks,pass-3-tied-note-stacks,loop-boundary-notes-play-without-looping]"
+private let loopRenderIDPrefix = "loopcheck/LoopTest::loopWrapMatchesHardwareGoto"
 private let primeID =
     "primecheck/PrimeTest::{unprimedTrackAuditionIsSilent,primeVoicesApplyTrackPrograms[rows=chase-applied-voice-not-overridden,later-voice-primed-at-load,voiceless-track-never-primed],primedTrackAuditionIsAudible,midSongChaseSuppliesAllPrograms}"
 private let controllerDefaultsID = "no-row/core/timedefaults.h exhaustive functions"
@@ -68,8 +75,7 @@ func runPlaybackSuite(_ report: CheckReport) {
                        cppID: loopPointsID, what: "loop-start sample")
     report.expectEqual(288 * playbackSamplesPerTick, loopTimeline.loopEndSample,
                        cppID: loopPointsID, what: "loop-end sample")
-    compareRender(path: loopPath, replacementPath: nil, frames: 310_000,
-                  replacementFrame: 0, looping: true, cppID: loopRenderID, report: report)
+    runLoopRows(timeline: loopTimeline, report: report)
 
     let primePath = URL(fileURLWithPath: fixtureRoot).appendingPathComponent("swiftcore-prime.mid").path
     guard writeFixture(primeSong(), path: primePath, cppID: primeID, report: report),
@@ -178,6 +184,81 @@ private func compareDecodedNoteIDs(path: String, report: CheckReport) {
                                what: "decoded event \(index) serialized NoteID")
         }
     }
+}
+
+private struct LoopCheckRow {
+    let name: String
+    let samplePosition: UInt64
+    let looping: Bool
+    let expectedKeys: [UInt8]
+}
+
+private func runLoopRows(timeline: PlaybackTimeline, report: CheckReport) {
+    let loopLength = (288 - 96) * playbackSamplesPerTick
+    let rows = [
+        LoopCheckRow(name: "pass-1-tied-note-sounds", samplePosition: 200_000,
+                     looping: true, expectedKeys: [67]),
+        LoopCheckRow(name: "pass-2-gate-carry-holds-across-wrap", samplePosition: 298_000,
+                     looping: true, expectedKeys: [60, 65, 67]),
+        LoopCheckRow(name: "gate-carry-releases-at-written-duration", samplePosition: 310_000,
+                     looping: true, expectedKeys: [60, 67]),
+        LoopCheckRow(name: "pass-2-tied-note-stacks", samplePosition: 200_000 + loopLength,
+                     looping: true, expectedKeys: [67, 67]),
+        LoopCheckRow(name: "pass-3-tied-note-stacks",
+                     samplePosition: 200_000 + 2 * loopLength,
+                     looping: true, expectedKeys: [67, 67, 67]),
+        LoopCheckRow(name: "loop-boundary-notes-play-without-looping",
+                     samplePosition: 298_000, looping: false, expectedKeys: [64, 65, 67]),
+    ]
+
+    for row in rows {
+        let cppID = "\(loopRenderIDPrefix)[\(row.name)]"
+        guard let engine = PlaybackCheckEngine() else {
+            report.fail(cppID, "engine initialization failed")
+            continue
+        }
+        var sequencer = Sequencer()
+        var rendered: UInt64 = 0
+        var left = [Float](repeating: 0, count: 512)
+        var right = [Float](repeating: 0, count: 512)
+        while rendered < row.samplePosition {
+            let count = Int(min(UInt64(left.count), row.samplePosition - rendered))
+            left.withUnsafeMutableBufferPointer { leftBuffer in
+                right.withUnsafeMutableBufferPointer { rightBuffer in
+                    sequencer.render(
+                        engine: engine.pointer, timeline: timeline,
+                        left: UnsafeMutableBufferPointer(start: leftBuffer.baseAddress,
+                                                         count: count),
+                        right: UnsafeMutableBufferPointer(start: rightBuffer.baseAddress,
+                                                          count: count),
+                        looping: row.looping, muteMask: 0)
+                }
+            }
+            rendered += UInt64(count)
+        }
+
+        let actualKeys = keyedOnKeys(engine.pointer)
+        report.expectEqual(
+            row.expectedKeys, actualKeys, cppID: cppID,
+            what: "sample=\(row.samplePosition) looping=\(row.looping) keyed-on MIDI keys")
+    }
+}
+
+private func keyedOnKeys(_ engine: UnsafeMutablePointer<M4AEngine>) -> [UInt8] {
+    var keys: [UInt8] = []
+    withUnsafePointer(to: &engine.pointee.pcmChannels) { storage in
+        let channels = UnsafeRawPointer(storage).assumingMemoryBound(to: M4APCMChannel.self)
+        let count = MemoryLayout.size(ofValue: storage.pointee) /
+            MemoryLayout<M4APCMChannel>.stride
+        for index in 0..<count {
+            let channel = channels[index]
+            if channel.status & playbackChnOn != 0 &&
+                channel.status & playbackChnStop == 0 {
+                keys.append(channel.midiKey)
+            }
+        }
+    }
+    return keys.sorted()
 }
 
 private func comparePrimeBehavior(path: String, timeline: PlaybackTimeline,

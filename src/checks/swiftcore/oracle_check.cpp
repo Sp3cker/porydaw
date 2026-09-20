@@ -13,6 +13,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <utility>
 #include <vector>
 
 #include "checks/playback/sustainvoicegroup.h"
@@ -20,6 +21,7 @@
 #include "core/mid2agbtables.h"
 #include "core/miditimeline.h"
 #include "core/smf.h"
+#include "core/songdocument.h"
 #include "core/timedefaults.h"
 #include "core/timelineplayer.h"
 #include "core/tracklimits.h"
@@ -213,6 +215,38 @@ extern "C" int64_t oracle_blank_song(uint8_t *output, size_t outputCapacity)
     const QByteArray bytes = SongRegistry::blankSong().write();
     copyBytes(bytes, output, outputCapacity);
     return bytes.size();
+}
+
+extern "C" int64_t oracle_document_summary(const uint8_t *input, size_t inputCount, char *output,
+                                           size_t outputCapacity)
+{
+    if ((!input && inputCount != 0) || inputCount > size_t(std::numeric_limits<qsizetype>::max()))
+        return -1;
+    SmfFile file;
+    QString error;
+    if (!SmfFile::read(QByteArray(reinterpret_cast<const char *>(input), qsizetype(inputCount)),
+                       &file, &error))
+        return -1;
+    SongDocument document;
+    SongInfo song;
+    if (!document.adoptSmf(std::move(file), song, &error))
+        return -1;
+
+    QStringList parts{QStringLiteral("tempo=%1").arg(document.tempoPoints().size())};
+    for (int track = 0; track < document.engineTrackCount(); ++track) {
+        for (const DocNote &note : document.notesForTrack(track)) {
+            parts.append(QStringLiteral("n=%1,%2,%3,%4,%5,%6")
+                             .arg(track)
+                             .arg(note.tick)
+                             .arg(note.duration)
+                             .arg(int(note.key))
+                             .arg(int(note.velocity))
+                             .arg(note.unterminated() ? 1 : 0));
+        }
+    }
+    const QByteArray summary = parts.join(QLatin1Char(';')).toUtf8();
+    copyBytes(summary, output, outputCapacity);
+    return summary.size();
 }
 
 extern "C" int64_t oracle_semantic_value(uint32_t operation, int64_t a, int64_t b, int64_t c,

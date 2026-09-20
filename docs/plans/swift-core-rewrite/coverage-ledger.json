@@ -1268,9 +1268,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::documentCrossingIdentities pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::documentCrossingIdentities",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift gestureAndIdentityHistory documentCrossingIdentities assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1282,9 +1286,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::documentDuplicateIdentities pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::documentDuplicateIdentities",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift insertionAndCollision and gestureAndIdentityHistory identity assertions",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1296,9 +1304,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::documentDuplicationOwnership pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::documentDuplicationOwnership",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift gestureAndIdentityHistory document ownership assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1310,9 +1322,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::documentGlobalMetadata pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::documentGlobalMetadata",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift adoptionAndPairing typed-tempo/global-metadata assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1324,9 +1340,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::documentLoadPublication pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::documentLoadPublication",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift gestureAndIdentityHistory publication assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1338,9 +1358,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::documentMergedOverlapPublication pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::documentMergedOverlapPublication",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift gestureAndIdentityHistory merged-overlap assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1352,9 +1376,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::documentPublicationNetZero pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::documentPublicationNetZero",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift insertionAndCollision and gestureAndIdentityHistory no-op assertions",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1366,9 +1394,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::documentRemapsAndRaw pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::documentRemapsAndRaw",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift gestureAndIdentityHistory remap assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1380,9 +1412,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::documentSavedIdentity pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::documentSavedIdentity",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift saveIdentity and confirmedBankOrdering identity assertions",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1394,9 +1430,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::documentTempoEmpty pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::documentTempoEmpty",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift saveIdentity empty-tempo assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1408,9 +1448,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::documentVelocityAtomic pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::documentVelocityAtomic",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift velocityEditing atomic batch assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1422,9 +1466,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::documentVelocityRejects pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::documentVelocityRejects",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift velocityEditing stale/invalid rejection assertions",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1478,7 +1526,7 @@
       "observableAssertions": "conductor/channel chunk split and 48 endTick; prefixed marker remains conductor with prefix; scoped non-marker text moves to channel; prefix events are dropped outside conductor marker exception; name-only chunk survives",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "swiftcore/midiCodec exact formatZeroCoercion/channel-prefix-routing cppId; whole canonical bytes and mapping summary",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift saveIdentity canonical format-one snapshot assertion; Task 1 codec parity retained",
       "status": "pending",
       "runEvidence": {
         "status": "controller-run-pending",
@@ -1495,9 +1543,13 @@
       "observableAssertions": "loops/tempo/name projections; detached tempo materialization; save/reload and undo bytes",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 document projection/save snapshot tests; playback assertions additionally mapped in Task 5",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift adoptionAndPairing typed-tempo projection assertion; playback remains Task 5",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1509,9 +1561,13 @@
       "observableAssertions": "loops/tempo/name projections; detached tempo materialization; save/reload and undo bytes",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 document projection/save snapshot tests; playback assertions additionally mapped in Task 5",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift saveIdentity canonical snapshot/undo assertion; playback remains Task 5",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1540,9 +1596,13 @@
       "observableAssertions": "loops/tempo/name projections; detached tempo materialization; save/reload and undo bytes",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 document projection/save snapshot tests; playback assertions additionally mapped in Task 5",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift saveIdentity marker-name projection assertion; playback remains Task 5",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1554,9 +1614,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::noteBatchCollisionRejects pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::noteBatchCollisionRejects",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift insertionAndCollision whole-batch rejection assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1568,9 +1632,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::noteEditingAbutting pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::noteEditingAbutting",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift insertionAndCollision oracle parity/abutment assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
       "noRowMarker": true,
@@ -1585,9 +1653,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::noteEditingBasic pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::noteEditingBasic",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize basic move/resize assertions",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
       "noRowMarker": true,
@@ -1602,9 +1674,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::noteEditingBatch pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::noteEditingBatch",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift insertionAndCollision batch identity assertions",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
       "noRowMarker": true,
@@ -1619,9 +1695,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::noteMoveBatch pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::noteMoveBatch",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize undo/redo batch assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
       "noRowMarker": true,
@@ -1636,9 +1716,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::noteMoveCollision pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::noteMoveCollision",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize trim/full-overlap and oracle assertions",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
       "noRowMarker": true,
@@ -1653,9 +1737,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::noteMoveCollisionRejects pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::noteMoveCollisionRejects",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize whole-operation collision rejection assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -1667,9 +1755,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::noteMoveMerge pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::noteMoveMerge",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize grouped redo assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
       "noRowMarker": true,
@@ -1684,9 +1776,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::noteMoveOverlap pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::noteMoveOverlap",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize stationary-tail assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
       "noRowMarker": true,
@@ -1701,9 +1797,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::noteMoveRejects pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::noteMoveRejects",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize no-op rejection assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
       "noRowMarker": true,
@@ -1718,9 +1818,13 @@
       "observableAssertions": "All observable assertions in EditCheckTest::noteResizeStopsAtNextSelectedStart pass for this case",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 Swift replacement comparison for editcheck/EditCheckTest::noteResizeStopsAtNextSelectedStart",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift movementAndResize leading/minimum-duration assertions",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -4131,9 +4235,13 @@
       "observableAssertions": "decoded IDs unassigned; document remints foreign and duplicate IDs",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 identity adoption checks retaining both function cppIds",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift adoptionAndPairing foreign-ID remint assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -4164,9 +4272,13 @@
       "observableAssertions": "decoded IDs unassigned; document remints foreign and duplicate IDs",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 identity adoption checks retaining both function cppIds",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift adoptionAndPairing unassigned decoded-ID assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -9051,9 +9163,13 @@
       "observableAssertions": "FIFO pairing is exact; unterminated notes remain linear-time and preserve records",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 production Swift note projection tests with separate failure suffixes for both baseline functions",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift adoptionAndPairing exact first-following pairing assertions",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
       "reconciliationNotes": "Scout classified this whole case as Task 1; document note pairing/identity assertions require Task 2. Task 1 codec sub-assertions are recorded as partial run evidence."
@@ -9206,11 +9322,15 @@
       "observableAssertions": "velocity-zero note-on remains 0x90; same-tick event ordering is stable; canonical bytes equal C++",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "swiftcore/midiCodec noteLifecycle fixture plus velocity-zero and same-tick cppId variants",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift adoptionAndPairing note lifecycle/status assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
-      "pendingGap": "Task 2 Swift document pairing assertions are not implemented.",
+      "pendingGap": "Controller verification of the Task 2 Swift document pairing assertion is pending.",
       "reconciliationNotes": "Scout classified this whole case as Task 1; document note pairing/identity assertions require Task 2. Task 1 codec sub-assertions are recorded as partial run evidence.",
       "partialRunEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
@@ -9307,9 +9427,13 @@
       "observableAssertions": "FIFO pairing is exact; unterminated notes remain linear-time and preserve records",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 production Swift note projection tests with separate failure suffixes for both baseline functions",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift adoptionAndPairing and movementAndResize unterminated-note assertions",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison",
       "reconciliationNotes": "Scout classified this whole case as Task 1; document note pairing/identity assertions require Task 2. Task 1 codec sub-assertions are recorded as partial run evidence."
@@ -10662,9 +10786,13 @@
       "observableAssertions": "atomic validation; clamped preview; completion ordering and revision; cancel clears transient state",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 SongDocument/gesture transaction tests retaining four function IDs",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift velocityEditing invalid-participant atomicity assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -10676,9 +10804,13 @@
       "observableAssertions": "atomic validation; clamped preview; completion ordering and revision; cancel clears transient state",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 SongDocument/gesture transaction tests retaining four function IDs",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift velocityEditing clamped relative-delta assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -10690,9 +10822,13 @@
       "observableAssertions": "atomic validation; clamped preview; completion ordering and revision; cancel clears transient state",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 SongDocument/gesture transaction tests retaining four function IDs",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift velocityEditing one-revision completion assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },
@@ -10704,9 +10840,13 @@
       "observableAssertions": "atomic validation; clamped preview; completion ordering and revision; cancel clears transient state",
       "classification": "in-scope core behavior",
       "dueTask": 2,
-      "swiftTargets": "Task 2 SongDocument/gesture transaction tests retaining four function IDs",
+      "swiftTargets": "src/checks/swiftcore/NoteChecks.swift velocityEditing undo/redo lifecycle assertion",
       "status": "pending",
-      "runEvidence": null,
+      "runEvidence": {
+        "status": "controller-run-pending",
+        "command": "deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory",
+        "assertionOwner": "Swift suites in src/checks/swiftcore/NoteChecks.swift"
+      },
       "exclusionReview": null,
       "pendingGap": "Awaiting Task 2 Swift comparison"
     },

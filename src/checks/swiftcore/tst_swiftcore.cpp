@@ -38,6 +38,16 @@ void SwiftCoreTest::playback()
     pdc_suite_run(PDC_SUITE_PLAYBACK, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::noteEdits()
+{
+    pdc_suite_run(PDC_SUITE_NOTE_EDITS, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::documentHistory()
+{
+    pdc_suite_run(PDC_SUITE_DOCUMENT_HISTORY, reportSwiftCheck, this);
+}
+
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);

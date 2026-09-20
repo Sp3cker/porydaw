@@ -57,6 +57,8 @@ int64_t oracle_codec_roundtrip(const uint8_t *input, size_t inputCount, uint8_t 
                                size_t summaryCapacity, size_t *summarySize, char *errorOut,
                                size_t errorCapacity, size_t *errorSize);
 int64_t oracle_blank_song(uint8_t *output, size_t outputCapacity);
+int64_t oracle_document_summary(const uint8_t *input, size_t inputCount, char *output,
+                                size_t outputCapacity);
 // Unknown operations return INT64_MIN from the value adapter and -1 from the
 // text adapter. The text adapter does not write output for an unknown operation.
 int64_t oracle_semantic_value(uint32_t operation, int64_t a, int64_t b, int64_t c, int64_t d);

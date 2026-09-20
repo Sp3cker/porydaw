@@ -1,0 +1,203 @@
+import Foundation
+
+public struct DocumentIdentity: Hashable, Sendable {
+    fileprivate let rawValue: UInt64
+}
+
+public struct HistoryGroup: Hashable, Sendable {
+    private let rawValue: UUID
+
+    public init() {
+        rawValue = UUID()
+    }
+}
+
+public enum BankHistoryDirection: Sendable {
+    case undo
+    case redo
+}
+
+@MainActor
+public protocol BankHistoryAction: AnyObject {
+    func apply(direction: BankHistoryDirection) async throws
+    func merged(with newer: any BankHistoryAction) -> (any BankHistoryAction)?
+}
+
+@MainActor
+public final class SongHistory {
+    public var canUndo: Bool { index > 0 }
+    public var canRedo: Bool { index < entries.count }
+    public var currentIdentity: DocumentIdentity {
+        guard index > 0 else { return baseIdentity }
+        return entries[index - 1].afterIdentity
+    }
+
+    private enum Entry {
+        case document(DocumentEntry)
+        case bank(BankEntry)
+
+        var afterIdentity: DocumentIdentity {
+            switch self {
+            case let .document(entry): entry.afterIdentity
+            case let .bank(entry): entry.identity
+            }
+        }
+    }
+
+    private struct DocumentEntry {
+        let before: SongState
+        var after: SongState
+        var afterIdentity: DocumentIdentity
+        let group: HistoryGroup?
+        let operation: HistoryOperation
+        var mergeSealed: Bool
+    }
+
+    private struct BankEntry {
+        var action: any BankHistoryAction
+        let identity: DocumentIdentity
+        var mergeSealed: Bool
+    }
+
+    private var entries: [Entry] = []
+    private var index = 0
+    private var nextIdentity: UInt64 = 2
+    private let baseIdentity = DocumentIdentity(rawValue: 1)
+    private var savedIdentity = DocumentIdentity(rawValue: 1)
+    private var restore: ((SongState) -> Void)?
+
+    public init() {}
+
+    public func markSaved(_ identity: DocumentIdentity) {
+        savedIdentity = identity
+        sealMergeBoundary()
+    }
+
+    public func recordConfirmedBank(_ action: any BankHistoryAction) {
+        let mayMerge = index == entries.count
+        discardRedo()
+        if mayMerge, index > 0, case var .bank(previous) = entries[index - 1],
+           !previous.mergeSealed, let merged = previous.action.merged(with: action) {
+            previous.action = merged
+            entries[index - 1] = .bank(previous)
+            return
+        }
+        entries.append(.bank(BankEntry(action: action, identity: currentIdentity,
+                                       mergeSealed: false)))
+        index += 1
+    }
+
+    @discardableResult
+    public func undoDocument() -> Bool {
+        guard index > 0, case let .document(entry) = entries[index - 1] else { return false }
+        index -= 1
+        restore?(entry.before)
+        return true
+    }
+
+    @discardableResult
+    public func redoDocument() -> Bool {
+        guard index < entries.count, case let .document(entry) = entries[index] else { return false }
+        index += 1
+        restore?(entry.after)
+        return true
+    }
+
+    @discardableResult
+    public func undo() async throws -> Bool {
+        guard index > 0 else { return false }
+        switch entries[index - 1] {
+        case let .document(entry):
+            index -= 1
+            restore?(entry.before)
+        case let .bank(entry):
+            try await entry.action.apply(direction: .undo)
+            index -= 1
+        }
+        return true
+    }
+
+    @discardableResult
+    public func redo() async throws -> Bool {
+        guard index < entries.count else { return false }
+        switch entries[index] {
+        case let .document(entry):
+            index += 1
+            restore?(entry.after)
+        case let .bank(entry):
+            try await entry.action.apply(direction: .redo)
+            index += 1
+        }
+        return true
+    }
+
+    internal func attachRestore(_ restore: @escaping (SongState) -> Void) {
+        self.restore = restore
+    }
+
+    internal func origin(for group: HistoryGroup?, operation: HistoryOperation) -> SongState? {
+        guard let group, index == entries.count, index > 0,
+              case let .document(entry) = entries[index - 1],
+              entry.group == group, entry.operation == operation, !entry.mergeSealed else {
+            return nil
+        }
+        return entry.before
+    }
+
+    internal func record(before: SongState, after: SongState, group: HistoryGroup?,
+                         operation: HistoryOperation) {
+        let mayMerge = group != nil && index == entries.count
+        discardRedo()
+        if mayMerge, let group, index > 0,
+           case var .document(previous) = entries[index - 1],
+           previous.group == group, previous.operation == operation, !previous.mergeSealed {
+            if after.isIdentical(to: previous.before) {
+                entries.removeLast()
+                index -= 1
+            } else {
+                previous.after = after
+                previous.afterIdentity = mintIdentity()
+                entries[index - 1] = .document(previous)
+            }
+            return
+        }
+        entries.append(.document(DocumentEntry(
+            before: before, after: after, afterIdentity: mintIdentity(),
+            group: group, operation: operation, mergeSealed: false)))
+        index += 1
+    }
+
+    internal var isDirty: Bool { currentIdentity != savedIdentity }
+
+    internal func sealMergeBoundary() {
+        guard index > 0 else { return }
+        switch entries[index - 1] {
+        case var .document(entry):
+            entry.mergeSealed = true
+            entries[index - 1] = .document(entry)
+        case var .bank(entry):
+            entry.mergeSealed = true
+            entries[index - 1] = .bank(entry)
+        }
+    }
+
+    private func discardRedo() {
+        guard index < entries.count else { return }
+        entries.removeSubrange(index...)
+    }
+
+    private func mintIdentity() -> DocumentIdentity {
+        let result = DocumentIdentity(rawValue: nextIdentity)
+        nextIdentity = nextIdentity == .max ? 1 : nextIdentity + 1
+        return result
+    }
+}
+
+internal enum HistoryOperation: Hashable {
+    case addNotes
+    case deleteNotes
+    case moveNotes([NoteID])
+    case moveNotesToPitches([NoteID])
+    case resizeNotes([NoteID], ResizeEdge)
+    case setVelocities
+}
