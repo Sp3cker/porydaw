@@ -1,46 +1,47 @@
 #include "oracle_check.h"
 
 #include <QByteArray>
-#include <QFile>
 #include <QString>
 #include <QStringList>
 
 #include <algorithm>
-#include <array>
 #include <bit>
 #include <cstring>
 #include <limits>
 #include <memory>
-#include <optional>
-#include <span>
 #include <utility>
-#include <vector>
 
 #include "checks/playback/sustainvoicegroup.h"
 #include "core/m4asemantics.h"
 #include "core/mid2agbtables.h"
-#include "core/miditimeline.h"
 #include "core/smf.h"
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
-#include "core/timelineplayer.h"
 #include "core/tracklimits.h"
 #include "core/velocitymodel.h"
 #include "project/songregistry.h"
 
-struct OraclePlaybackEngine {
+struct PdcPlaybackEngine {
     M4AEngine engine{};
     checks::SustainVoicegroup bank;
     bool initialized = false;
 
-    explicit OraclePlaybackEngine(double sampleRate)
+    explicit PdcPlaybackEngine(double sampleRate)
     {
+        ToneData &square = bank.voices[2];
+        square.type = VOICE_SQUARE_2;
+        square.key = 60;
+        square.wavePointer = reinterpret_cast<uint32_t *>(uintptr_t{2});
+        square.attack = 7;
+        square.decay = 0;
+        square.sustain = 15;
+        square.release = 7;
         initialized = m4a_engine_init(&engine, float(sampleRate));
         if (initialized)
             m4a_engine_set_voicegroup(&engine, bank.voices);
     }
 
-    ~OraclePlaybackEngine()
+    ~PdcPlaybackEngine()
     {
         if (initialized)
             m4a_engine_destroy(&engine);
@@ -348,244 +349,20 @@ extern "C" int64_t oracle_semantic_text(uint32_t operation, int64_t a, int64_t b
     return bytes->size();
 }
 
-namespace {
-
-void writePlaybackError(const QString &error, char *output, size_t capacity)
+extern "C" PdcPlaybackEngine *pdc_playback_engine_create(double sampleRate)
 {
-    if (!output || capacity == 0)
-        return;
-    const QByteArray bytes = error.toUtf8();
-    const size_t count = std::min(capacity - 1, size_t(bytes.size()));
-    std::memcpy(output, bytes.constData(), count);
-    output[count] = '\0';
-}
-
-std::unique_ptr<MidiTimeline> loadPlaybackTimeline(const char *path, double sampleRate,
-                                                   char *errorOut, size_t errorCapacity)
-{
-    if (!path) {
-        writePlaybackError(QStringLiteral("missing playback fixture path"), errorOut,
-                           errorCapacity);
-        return {};
-    }
-    QString error;
-    std::unique_ptr<MidiTimeline> timeline =
-        MidiTimeline::load(QFile::decodeName(path), sampleRate, &error);
-    if (!timeline)
-        writePlaybackError(error, errorOut, errorCapacity);
-    return timeline;
-}
-
-} // namespace
-
-extern "C" int64_t oracle_playback_project_file(const char *path, double sampleRate,
-                                                OraclePlaybackEvent *events, size_t eventCapacity,
-                                                OraclePlaybackData *data, char *errorOut,
-                                                size_t errorCapacity)
-{
-    if (errorOut && errorCapacity > 0)
-        errorOut[0] = '\0';
-    std::unique_ptr<MidiTimeline> timeline =
-        loadPlaybackTimeline(path, sampleRate, errorOut, errorCapacity);
-    if (!timeline)
-        return -1;
-
-    if (events) {
-        const size_t count = std::min(eventCapacity, timeline->events.size());
-        for (size_t index = 0; index < count; ++index) {
-            const TimelineEvent &event = timeline->events[index];
-            events[index] = OraclePlaybackEvent{
-                event.samplePos,
-                event.tick,
-                event.type,
-                event.track,
-                event.data0,
-                event.data1,
-                std::bit_cast<uint64_t>(event.noteId),
-            };
-        }
-    }
-    if (data) {
-        *data = OraclePlaybackData{
-            timeline->events.size(),
-            timeline->tempoMap.size(),
-            timeline->sampleRate,
-            timeline->lengthSamples,
-            timeline->loopStartSample,
-            timeline->loopEndSample,
-            timeline->ticksPerBeat,
-            timeline->lengthTicks,
-            timeline->loopStartTick,
-            timeline->loopEndTick,
-            uint32_t(timeline->usedTrackCount),
-            uint32_t(timeline->droppedTracks),
-            false,
-            timeline->extendedClocks,
-        };
-    }
-    return int64_t(timeline->events.size());
-}
-
-extern "C" bool oracle_playback_render_files(const char *path, const char *replacementPath,
-                                             double sampleRate, OraclePlaybackEngine *engine,
-                                             float *left, float *right, size_t frames,
-                                             size_t replacementFrame, bool looping,
-                                             uint32_t muteMask, char *errorOut,
-                                             size_t errorCapacity)
-{
-    if (!engine || !engine->initialized || !left || !right || replacementFrame > frames) {
-        writePlaybackError(QStringLiteral("invalid playback render arguments"), errorOut,
-                           errorCapacity);
-        return false;
-    }
-    std::unique_ptr<MidiTimeline> timeline =
-        loadPlaybackTimeline(path, sampleRate, errorOut, errorCapacity);
-    if (!timeline)
-        return false;
-    std::unique_ptr<MidiTimeline> replacement;
-    if (replacementPath) {
-        replacement = loadPlaybackTimeline(replacementPath, sampleRate, errorOut, errorCapacity);
-        if (!replacement)
-            return false;
-    }
-
-    TimelinePlayer player;
-    const size_t firstFrames = replacement ? replacementFrame : frames;
-    if (firstFrames > 0) {
-        player.render(&engine->engine, timeline.get(), std::span(left, firstFrames),
-                      std::span(right, firstFrames), looping, muteMask);
-    }
-    if (replacement) {
-        const uint64_t position = player.position();
-        player.replaceTimeline(position, replacement.get());
-        const size_t remaining = frames - firstFrames;
-        if (remaining > 0) {
-            player.render(&engine->engine, replacement.get(),
-                          std::span(left + firstFrames, remaining),
-                          std::span(right + firstFrames, remaining), looping, muteMask);
-        }
-    }
-    return true;
-}
-
-extern "C" bool oracle_playback_prepare_file(const char *path, double sampleRate,
-                                             OraclePlaybackEngine *engine, uint64_t position,
-                                             bool chase, bool prime, char *errorOut,
-                                             size_t errorCapacity)
-{
-    if (!engine || !engine->initialized) {
-        writePlaybackError(QStringLiteral("invalid playback engine"), errorOut, errorCapacity);
-        return false;
-    }
-    std::unique_ptr<MidiTimeline> timeline =
-        loadPlaybackTimeline(path, sampleRate, errorOut, errorCapacity);
-    if (!timeline)
-        return false;
-    if (chase)
-        TimelinePlayer::chase(&engine->engine, timeline.get(), position);
-    if (prime)
-        TimelinePlayer::primeVoices(&engine->engine, timeline.get(), position);
-    return true;
-}
-
-extern "C" OraclePlaybackEngine *oracle_playback_engine_create(double sampleRate)
-{
-    std::unique_ptr<OraclePlaybackEngine> engine =
-        std::make_unique<OraclePlaybackEngine>(sampleRate);
+    std::unique_ptr<PdcPlaybackEngine> engine = std::make_unique<PdcPlaybackEngine>(sampleRate);
     if (!engine->initialized)
         return nullptr;
     return engine.release();
 }
 
-extern "C" void oracle_playback_engine_destroy(OraclePlaybackEngine *engine)
+extern "C" void pdc_playback_engine_destroy(PdcPlaybackEngine *engine)
 {
     delete engine;
 }
 
-extern "C" void *oracle_playback_engine_pointer(OraclePlaybackEngine *engine)
+extern "C" void *pdc_playback_engine_pointer(PdcPlaybackEngine *engine)
 {
     return engine ? &engine->engine : nullptr;
-}
-
-extern "C" void oracle_playback_engine_set_features(OraclePlaybackEngine *engine, bool portamento,
-                                                    bool pwm)
-{
-    if (!engine)
-        return;
-    m4a_engine_set_portamento_enabled(&engine->engine, portamento);
-    m4a_engine_set_pwm_enabled(&engine->engine, pwm);
-}
-
-extern "C" void oracle_playback_engine_note_on(OraclePlaybackEngine *engine, uint8_t track,
-                                               uint8_t key, uint8_t velocity)
-{
-    if (engine)
-        m4a_engine_note_on(&engine->engine, track, key, velocity);
-}
-
-extern "C" bool oracle_playback_engine_renders_audibly(OraclePlaybackEngine *engine)
-{
-    if (!engine)
-        return false;
-    constexpr size_t kChunkFrames = 512;
-    constexpr size_t kMaximumFrames = 4096;
-    std::array<float, kChunkFrames> left{};
-    std::array<float, kChunkFrames> right{};
-    for (size_t rendered = 0; rendered < kMaximumFrames; rendered += kChunkFrames) {
-        m4a_engine_process(&engine->engine, left.data(), right.data(), int(kChunkFrames));
-        for (size_t frame = 0; frame < kChunkFrames; ++frame) {
-            if (left[frame] != 0.0f || right[frame] != 0.0f)
-                return true;
-        }
-    }
-    return false;
-}
-
-extern "C" int oracle_playback_engine_track_program(const OraclePlaybackEngine *engine, int track)
-{
-    if (!engine || track < 0 || track >= track_limits::kHardwareCapacity)
-        return std::numeric_limits<int>::min();
-    return engine->engine.tracks[track].currentProgram;
-}
-
-extern "C" bool oracle_playback_engine_track_has_voice(const OraclePlaybackEngine *engine,
-                                                       int track)
-{
-    if (!engine || track < 0 || track >= track_limits::kHardwareCapacity)
-        return false;
-    return engine->engine.tracks[track].currentVoice.wav != nullptr;
-}
-
-extern "C" int oracle_playback_engine_controller(const OraclePlaybackEngine *engine, int track,
-                                                 uint8_t controller)
-{
-    if (!engine || track < 0 || track >= track_limits::kHardwareCapacity)
-        return std::numeric_limits<int>::min();
-    const M4ATrack &value = engine->engine.tracks[track];
-    switch (controller) {
-    case CoreTimeDefaults::kCcModulation:
-        return value.mod;
-    case CoreTimeDefaults::kCcPortamento:
-        return value.portamentoDuration;
-    case CoreTimeDefaults::kCcVolume:
-        return value.rawVolume;
-    case CoreTimeDefaults::kCcPan:
-        return value.pan;
-    case CoreTimeDefaults::kCcBendRange:
-        return value.bendRange;
-    case CoreTimeDefaults::kCcLfoSpeed:
-        return value.lfoSpeed;
-    case CoreTimeDefaults::kCcModType:
-        return value.modT;
-    case CoreTimeDefaults::kCcPwmCycle:
-        return value.pwmPattern;
-    case CoreTimeDefaults::kCcFineTune:
-        return value.tune;
-    case CoreTimeDefaults::kCcPwmWidth:
-        return value.pwmSpeed;
-    case CoreTimeDefaults::kCcLfoDelay:
-        return value.lfoDelay;
-    default:
-        return std::numeric_limits<int>::min();
-    }
 }

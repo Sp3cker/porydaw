@@ -36,12 +36,14 @@ public struct LanePointMove: Equatable, Sendable {
 extension SongDocument {
     public var canAddTrack: Bool {
         let map = engineTracks
-        return !state.file.chunks.isEmpty && map.usedTrackCount < trackBudget && freeChannel() != nil
+        return !state.file.chunks.isEmpty && map.usedTrackCount < trackBudget && freeChannel(in: map) != nil
     }
 
     @discardableResult
     public func addTrack(voice: Int) -> Int? {
-        guard canAddTrack, let channel = freeChannel() else { return nil }
+        let map = engineTracks
+        guard !state.file.chunks.isEmpty, map.usedTrackCount < trackBudget,
+              let channel = freeChannel(in: map) else { return nil }
         let before = state
         var after = before
         let chunk = after.file.chunks.count
@@ -52,15 +54,18 @@ extension SongDocument {
                                    chunkMap: Array(before.file.chunks.indices).map(Optional.some))
         commit(before: before, after: after, group: nil, operation: .addTrack,
                trackRemap: remap)
-        return after.file.engineTracks().tracks[..<after.file.engineTracks().usedTrackCount]
-            .firstIndex { $0.midiChunk == chunk }
+        let updated = after.file.engineTracks()
+        return updated.tracks[..<updated.usedTrackCount].firstIndex { $0.midiChunk == chunk }
     }
 
     @discardableResult
     public func duplicateTrack(_ track: Int) -> Int? {
-        guard canAddTrack, let source = mapping(for: track), let channel = freeChannel() else {
-            return nil
-        }
+        let map = engineTracks
+        guard !state.file.chunks.isEmpty, map.usedTrackCount < trackBudget,
+              track >= 0, track < map.usedTrackCount,
+              let chunk = map.tracks[track].midiChunk,
+              let channel = freeChannel(in: map) else { return nil }
+        let source = (chunk: chunk, channel: map.tracks[track].channel)
         let before = state
         let sourceChunk = before.file.chunks[source.chunk]
         var events: [MidiEvent] = []
@@ -75,14 +80,14 @@ extension SongDocument {
         }
         guard !events.isEmpty else { return nil }
         var after = before
-        let chunk = after.file.chunks.count
+        let newChunkIndex = after.file.chunks.count
         after.file.chunks.append(MidiChunk(events: events, endTick: sourceChunk.endTick))
         let remap = makeTrackRemap(before: before.file, after: after.file,
                                    chunkMap: Array(before.file.chunks.indices).map(Optional.some))
         commit(before: before, after: after, group: nil, operation: .duplicateTrack,
                trackRemap: remap)
-        let map = after.file.engineTracks()
-        return map.tracks[..<map.usedTrackCount].firstIndex { $0.midiChunk == chunk }
+        let updatedMap = after.file.engineTracks()
+        return updatedMap.tracks[..<updatedMap.usedTrackCount].firstIndex { $0.midiChunk == newChunkIndex }
     }
 
     public func deleteTrack(_ track: Int) {
@@ -93,13 +98,15 @@ extension SongDocument {
         if mapping.chunk == 0 {
             after.file.chunks[0].events.removeAll { $0.isChannel }
         } else {
+            let roles = classifyEvents(in: before.file)
             let doomed = after.file.chunks[mapping.chunk]
-            var rescued: [MidiEvent] = doomed.events.filter { isTimeSignature($0) }
-            for marker in [false, true] {
-                if let location = loopMarker(end: marker, in: before.file),
-                   location.chunk == mapping.chunk {
-                    rescued.append(doomed.events[location.index])
-                }
+            let chunkRoles = roles.chunks[mapping.chunk]
+            var rescued = chunkRoles.timeSignatures.map { doomed.events[$0] }
+            // The C++ delete contract deliberately rescues only signatures and the
+            // winning loop markers; other conductor markers die with their chunk.
+            for location in [roles.loopStart, roles.loopEnd].compactMap({ $0 })
+                where location.chunk == mapping.chunk {
+                rescued.append(doomed.events[location.index])
             }
             after.file.chunks.remove(at: mapping.chunk)
             chunkMap[mapping.chunk] = nil
@@ -119,9 +126,9 @@ extension SongDocument {
         var after = before
         var globals: [MidiEvent] = []
         if source.chunk == 0 || destination.chunk == 0 {
-            globals = conductorGlobals(in: after.file.chunks[0])
-            let globalSet = Set(globals.map(eventFingerprint))
-            after.file.chunks[0].events.removeAll { globalSet.contains(eventFingerprint($0)) }
+            let globalIndices = classifyEvents(in: before.file).chunks[0].conductorGlobals
+            globals = globalIndices.map { after.file.chunks[0].events[$0] }
+            for index in globalIndices.reversed() { after.file.chunks[0].events.remove(at: index) }
         }
         let moved = after.file.chunks.remove(at: source.chunk)
         after.file.chunks.insert(moved, at: destination.chunk)
@@ -147,7 +154,7 @@ extension SongDocument {
         guard !MidiFile.textIsMarker(name) else { return }
         let before = state
         var after = before
-        let locations = trackNameLocations(in: after.file.chunks[mapping.chunk])
+        let locations = classifyEvents(in: before.file).chunks[mapping.chunk].trackNames
         if name.isEmpty {
             for index in locations.reversed() { after.file.chunks[mapping.chunk].events.remove(at: index) }
         } else if let first = locations.first {
@@ -166,14 +173,15 @@ extension SongDocument {
         }
         commit(before: before, after: after, group: nil, operation: .renameTrack)
     }
-
-    public func setTrackEnd(chunk: Int, tick: Tick) {
+    /// Sets the stored end tick of a raw SMF chunk, not an engine-track index.
+    public func setChunkEnd(_ chunk: Int, tick: Tick) {
         guard state.file.chunks.indices.contains(chunk) else { return }
         let before = state
         var after = before
-        let minimum = after.file.chunks[chunk].events.last?.tick ?? 0
+        var minimum: Tick = 0
+        for event in after.file.chunks[chunk].events { minimum = max(minimum, event.tick) }
         after.file.chunks[chunk].endTick = max(tick, minimum)
-        commit(before: before, after: after, group: nil, operation: .setTrackEnd)
+        commit(before: before, after: after, group: nil, operation: .setChunkEnd)
     }
 
     public func setConfig(_ config: SongConfig) {
@@ -259,10 +267,7 @@ extension SongDocument {
         for index in valid.sorted(by: >) { after.file.chunks[chunk].events.remove(at: index) }
         if let event { Self.insert(event, into: &after.file.chunks[chunk]) }
         after.tempo = editedTempo(before.tempo, tempo)
-        let remap = makeTrackRemap(before: before.file, after: after.file,
-                                   chunkMap: Array(before.file.chunks.indices).map(Optional.some))
-        commit(before: before, after: after, group: nil, operation: .editRawAndTempo,
-               trackRemap: remap.isIdentity ? nil : remap)
+        commit(before: before, after: after, group: nil, operation: .editRawAndTempo)
     }
 
     public func setLoop(end: Bool, tick: Int64?) {
@@ -271,7 +276,8 @@ extension SongDocument {
         var after = before
         var marker: MidiEvent
         var chunk = 0
-        if let location = loopMarker(end: end, in: before.file) {
+        let roles = classifyEvents(in: before.file)
+        if let location = end ? roles.loopEnd : roles.loopStart {
             chunk = location.chunk
             marker = after.file.chunks[chunk].events.remove(at: location.index)
         } else {
@@ -312,8 +318,9 @@ extension SongDocument {
         guard from != to else { return }
         let before = state
         var after = before
-        var moved: [(chunk: Int, event: MidiEvent)] = []
+        var movedAny = false
         for chunk in after.file.chunks.indices {
+            var moved: [MidiEvent] = []
             for index in after.file.chunks[chunk].events.indices.reversed() {
                 let event = after.file.chunks[chunk].events[index]
                 guard isTimeSignature(event), event.tick == from || event.tick == to else { continue }
@@ -321,12 +328,15 @@ extension SongDocument {
                 if event.tick == from {
                     var copy = event
                     copy.tick = to
-                    moved.append((chunk, copy))
+                    moved.append(copy)
                 }
             }
+            for event in moved.reversed() {
+                Self.insert(event, into: &after.file.chunks[chunk])
+                movedAny = true
+            }
         }
-        guard !moved.isEmpty else { return }
-        if let item = moved.first { Self.insert(item.event, into: &after.file.chunks[item.chunk]) }
+        guard movedAny else { return }
         commit(before: before, after: after, group: nil, operation: .moveTimeSignature)
     }
 
@@ -366,10 +376,11 @@ extension SongDocument {
         guard let plan = planLaneMoves(existing: existing, requests: moves) else { return }
         if case let .controller(controller) = lane,
            Xcmd.descriptor(forLane: controller) != nil {
-            let events = xcmdEvents(chunk: mapping.chunk, stream: UInt8(track))
+            let stream = UInt8(truncatingIfNeeded: track)
+            let events = xcmdEvents(chunk: mapping.chunk, track: track)
             let writes = plan.writes.map {
                 Xcmd.PointWrite(tick: $0.tick, lane: controller, value: $0.value,
-                                stream: UInt8(track), channel: mapping.channel)
+                                stream: stream, channel: mapping.channel)
             }
             guard let patch = Xcmd.rewrite(events,
                 removing: plan.removeIndices.map { UInt64($0) }, writing: writes) else { return }
@@ -392,8 +403,11 @@ extension SongDocument {
     public func deleteLanePoints(track: Int, lane: Lane, points: [LanePoint]) {
         guard let mapping = mapping(for: track), !points.isEmpty else { return }
         if case let .controller(controller) = lane, Xcmd.descriptor(forLane: controller) != nil {
-            let events = xcmdEvents(chunk: mapping.chunk, stream: UInt8(track))
-            guard let patch = Xcmd.rewrite(events, removing: points.map { UInt64($0.eventIndex) },
+            let localPoints = points.filter { $0.chunk == mapping.chunk }
+            guard !localPoints.isEmpty else { return }
+            let stream = UInt8(truncatingIfNeeded: track)
+            let events = Xcmd.traffic(in: state.file.chunks[mapping.chunk], stream: stream)
+            guard let patch = Xcmd.rewrite(events, removing: localPoints.map { UInt64($0.eventIndex) },
                                            writing: []) else { return }
             applyXcmdPatch(patch, chunk: mapping.chunk, operation: .deleteLanePoints)
             return
@@ -413,19 +427,14 @@ extension SongDocument {
         let map = state.file.engineTracks()
         var streamByChunk: [Int: UInt8] = [:]
         for track in 0..<map.usedTrackCount {
-            if let chunk = map.tracks[track].midiChunk { streamByChunk[chunk] = UInt8(track) }
+            if let chunk = map.tracks[track].midiChunk {
+                streamByChunk[chunk] = UInt8(truncatingIfNeeded: track)
+            }
         }
         for chunk in copy.chunks.indices {
-            let originals = copy.chunks[chunk].events
-            let stream = streamByChunk[chunk] ?? UInt8(chunk & 0x0F)
-            var traffic: [Xcmd.Event] = []
-            for (index, event) in originals.enumerated() {
-                guard case let .channel(status, controller, value) = event.payload,
-                      status >> 4 == 0xB else { continue }
-                traffic.append(Xcmd.Event(index: UInt64(index), tick: event.tick, stream: stream,
-                    controller: controller, value: value, channel: status & 0x0F))
-            }
-            let patch = Xcmd.canonicalizeForExport(traffic)
+            let stream = streamByChunk[chunk] ?? UInt8(truncatingIfNeeded: chunk)
+            let patch = Xcmd.canonicalizeForExport(Xcmd.traffic(in: copy.chunks[chunk],
+                                                                stream: stream))
             for identity in patch.removeEvents.sorted(by: >)
                 where identity <= UInt64(Int.max) &&
                     copy.chunks[chunk].events.indices.contains(Int(identity)) {
@@ -452,19 +461,26 @@ private extension TrackRemap {
 @MainActor
 private extension SongDocument {
     struct LaneMovePlan { var removeIndices: [Int]; var writes: [LaneWrite] }
+    struct ChunkEventRoles {
+        var trackNames: [Int] = []
+        var conductorGlobals: [Int] = []
+        var timeSignatures: [Int] = []
+    }
+    struct ClassifiedEvents {
+        var chunks: [ChunkEventRoles]
+        var loopStart: (chunk: Int, index: Int)?
+        var loopEnd: (chunk: Int, index: Int)?
+    }
 
-    func freeChannel() -> UInt8? {
+    func freeChannel(in map: EngineTrackMap? = nil) -> UInt8? {
         var used = Array(repeating: false, count: 16)
-        let map = engineTracks
+        let map = map ?? engineTracks
         for track in map.tracks.prefix(map.usedTrackCount) { used[Int(track.channel)] = true }
         return used.firstIndex(of: false).map(UInt8.init)
     }
 
     func commitRaw(before: SongState, after: SongState, operation: HistoryOperation) {
-        let remap = makeTrackRemap(before: before.file, after: after.file,
-                                   chunkMap: Array(before.file.chunks.indices).map(Optional.some))
-        commit(before: before, after: after, group: nil, operation: operation,
-               trackRemap: remap.isIdentity ? nil : remap)
+        commit(before: before, after: after, group: nil, operation: operation)
     }
 
     func makeTrackRemap(before: MidiFile, after: MidiFile, chunkMap: [Int?]) -> TrackRemap {
@@ -499,8 +515,9 @@ private extension SongDocument {
         return result
     }
 
-    func loopMarker(end: Bool, in file: MidiFile) -> (chunk: Int, index: Int)? {
-        let byte: UInt8 = end ? 0x5D : 0x5B
+    func classifyEvents(in file: MidiFile) -> ClassifiedEvents {
+        var result = ClassifiedEvents(
+            chunks: Array(repeating: ChunkEventRoles(), count: file.chunks.count))
         for (chunkIndex, chunk) in file.chunks.enumerated() {
             var nameSeen = false
             var prefix: UInt8?
@@ -511,72 +528,44 @@ private extension SongDocument {
                 }
                 if event.isChannel { prefix = nil }
                 guard case let .meta(type, data) = event.payload else { continue }
-                if type == 0x03, prefix == nil, !nameSeen { nameSeen = true; continue }
+                if type == 0x03, prefix == nil {
+                    result.chunks[chunkIndex].trackNames.append(index)
+                    if !nameSeen { nameSeen = true; continue }
+                }
+                if isTimeSignature(event) {
+                    result.chunks[chunkIndex].timeSignatures.append(index)
+                    result.chunks[chunkIndex].conductorGlobals.append(index)
+                } else if MidiFile.metaIsMarker(event) {
+                    result.chunks[chunkIndex].conductorGlobals.append(index)
+                }
+                guard (0x01...0x07).contains(type) else { continue }
                 let text = String(bytes: data.prefix(32), encoding: .isoLatin1)?
                     .trimmingCharacters(in: .whitespacesAndNewlines)
-                if (0x01...0x07).contains(type), text?.utf8.first == byte, text?.count == 1 {
-                    return (chunkIndex, index)
+                if text == "[", result.loopStart == nil {
+                    result.loopStart = (chunkIndex, index)
+                } else if text == "]", result.loopEnd == nil {
+                    result.loopEnd = (chunkIndex, index)
                 }
             }
         }
-        return nil
-    }
-
-    func conductorGlobals(in chunk: MidiChunk) -> [MidiEvent] {
-        var result: [MidiEvent] = []
-        var nameSeen = false
-        var prefix: UInt8?
-        for event in chunk.events {
-            if case let .meta(type, data) = event.payload, type == 0x20 {
-                prefix = data.first.map { $0 & 0x0F }
-                continue
-            }
-            if event.isChannel { prefix = nil }
-            guard case let .meta(type, _) = event.payload else { continue }
-            if type == 0x03, prefix == nil, !nameSeen { nameSeen = true; continue }
-            if isTimeSignature(event) || MidiFile.metaIsMarker(event) { result.append(event) }
-        }
         return result
     }
 
-    func trackNameLocations(in chunk: MidiChunk) -> [Int] {
-        var result: [Int] = []
-        var prefix: UInt8?
-        for (index, event) in chunk.events.enumerated() {
-            if case let .meta(type, data) = event.payload, type == 0x20 {
-                prefix = data.first.map { $0 & 0x0F }
-                continue
-            }
-            if event.isChannel { prefix = nil }
-            if case let .meta(type, _) = event.payload, type == 0x03, prefix == nil {
-                result.append(index)
-            }
-        }
-        return result
-    }
-
-    func xcmdEvents(chunk: Int, stream: UInt8) -> [Xcmd.Event] {
-        var result: [Xcmd.Event] = []
-        for (index, event) in state.file.chunks[chunk].events.enumerated() {
-            guard case let .channel(status, controller, value) = event.payload,
-                  status >> 4 == 0xB else { continue }
-            result.append(Xcmd.Event(index: UInt64(index), tick: event.tick, stream: stream,
-                                     controller: controller, value: value,
-                                     channel: status & 0x0F))
-        }
-        return result
+    func xcmdEvents(chunk: Int, track: Int) -> [Xcmd.Event] {
+        Xcmd.traffic(in: state.file.chunks[chunk], stream: UInt8(truncatingIfNeeded: track))
     }
 
     func rewriteXcmdLane(track: Int, mapping: (chunk: Int, channel: UInt8), controller: UInt8,
                          begin: Tick, end: Tick, points: [LaneWrite]) {
-        let events = xcmdEvents(chunk: mapping.chunk, stream: UInt8(track))
+        let stream = UInt8(truncatingIfNeeded: track)
+        let events = xcmdEvents(chunk: mapping.chunk, track: track)
         let projection = Xcmd.project(events)
         let removals = projection.points.filter {
             $0.lane == controller && $0.tick >= begin && $0.tick <= end
         }.map(\.index)
         let writes = points.map {
             Xcmd.PointWrite(tick: $0.tick, lane: controller, value: $0.value,
-                            stream: UInt8(track), channel: mapping.channel)
+                            stream: stream, channel: mapping.channel)
         }
         guard let patch = Xcmd.rewrite(events, removing: removals, writing: writes) else { return }
         applyXcmdPatch(patch, chunk: mapping.chunk, operation: .writeLane)
@@ -654,13 +643,6 @@ private func isTempo(_ event: MidiEvent) -> Bool { event.metaType == 0x51 }
 private func isTimeSignature(_ event: MidiEvent) -> Bool {
     guard case let .meta(type, data) = event.payload else { return false }
     return type == 0x58 && data.count >= 2
-}
-private func eventPinnedBefore(_ lhs: MidiEvent, _ rhs: MidiEvent) -> Bool {
-    guard lhs.isChannel, rhs.isChannel else { return false }
-    return (lhs.typeNibble >= 0xB && rhs.typeNibble <= 0x9) || (lhs.isNoteEnd && rhs.isNoteOn)
-}
-private func eventFingerprint(_ event: MidiEvent) -> String {
-    "\(event.tick):\(event.status):\(event.metaType ?? 0):\(event.blob ?? [])"
 }
 private func laneMatches(_ event: MidiEvent, lane: Lane, channel: UInt8) -> Bool {
     guard case let .channel(status, data0, _) = event.payload, status & 0x0F == channel else {

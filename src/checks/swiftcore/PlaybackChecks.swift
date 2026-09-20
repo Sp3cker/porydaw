@@ -10,31 +10,39 @@ private let playbackSamplesPerTick: UInt64 = 1_000
 
 // Engine channel-status masks — Clang macros do not cross the Swift module
 // re-export, so they are restated with provenance: pinned poryaaaa
-// m4a_engine.h:23-32 (CHN_START 0x80, CHN_STOP 0x40, CHN_IEC 0x04,
-// CHN_ENV_MASK 0x03; CHN_ON is their union).
-private let playbackChnStart: UInt8 = 0x80
+// m4a_engine.h:23-32 (CHN_STOP 0x40, CHN_IEC 0x04, CHN_ENV_MASK 0x03;
+// CHN_ON is CHN_START 0x80 plus their union).
 private let playbackChnStop: UInt8 = 0x40
 private let playbackChnOn: UInt8 = 0x80 | 0x40 | 0x04 | 0x03
 
 private let exactSamplesID = "smfcheck/MidiSmfTest::tempoConversionSchedulesExactSamples"
-private let mappingID =
-    "smfcheck/MidiSmfTest::engineTrackMappingAgreesAcrossProjections/document-and-timeline assertions"
+private let mappingID = "smfcheck/MidiSmfTest::engineTrackMappingAgreesAcrossProjections"
 private let identitiesID = "noteidcheck/NoteIdentityCheckTest::timelineTransportsOnlyStampedNoteIds"
 private let loopPointsID = "loopcheck/LoopTest::synthesizedLoopSongHasExactLoopPoints"
 private let loopRenderIDPrefix = "loopcheck/LoopTest::loopWrapMatchesHardwareGoto"
-private let primeID =
-    "primecheck/PrimeTest::{unprimedTrackAuditionIsSilent,primeVoicesApplyTrackPrograms[rows=chase-applied-voice-not-overridden,later-voice-primed-at-load,voiceless-track-never-primed],primedTrackAuditionIsAudible,midSongChaseSuppliesAllPrograms}"
+private let primeUnprimedID = "primecheck/PrimeTest::unprimedTrackAuditionIsSilent"
+private let primeProgramIDPrefix = "primecheck/PrimeTest::primeVoicesApplyTrackPrograms"
+private let primeAudibleID = "primecheck/PrimeTest::primedTrackAuditionIsAudible"
+private let primeMidSongID = "primecheck/PrimeTest::midSongChaseSuppliesAllPrograms"
 private let controllerDefaultsID = "no-row/core/timedefaults.h exhaustive functions"
-private let replacementID =
-    "transportcheck/TransportTest::{timelineHandoffOwnership,seekPublishesWithoutBlocking,stopCancelsPendingSeek,updateTimelineCarriesPendingSeek,liveTimelineReplacementDoesNotBlock,rebuildKeepsSoundingCgbSongNote,rebuildKeepsCgbNotePreview}"
+private let handoffID = "transportcheck/TransportTest::timelineHandoffOwnership"
+private let seekID = "transportcheck/TransportTest::seekPublishesWithoutBlocking"
+private let stopSeekID = "transportcheck/TransportTest::stopCancelsPendingSeek"
+private let updateSeekID = "transportcheck/TransportTest::updateTimelineCarriesPendingSeek"
+private let liveReplacementID =
+    "transportcheck/TransportTest::liveTimelineReplacementDoesNotBlock"
+private let cgbSongReplacementID =
+    "transportcheck/TransportTest::rebuildKeepsSoundingCgbSongNote"
+private let cgbPreviewReplacementID =
+    "transportcheck/TransportTest::rebuildKeepsCgbNotePreview"
 
 private final class PlaybackCheckEngine {
     let handle: OpaquePointer
     let pointer: UnsafeMutablePointer<M4AEngine>
 
     init?() {
-        guard let handle = oracle_playback_engine_create(playbackSampleRate),
-              let rawPointer = oracle_playback_engine_pointer(handle) else {
+        guard let handle = pdc_playback_engine_create(playbackSampleRate),
+              let rawPointer = pdc_playback_engine_pointer(handle) else {
             return nil
         }
         self.handle = handle
@@ -42,7 +50,7 @@ private final class PlaybackCheckEngine {
     }
 
     deinit {
-        oracle_playback_engine_destroy(handle)
+        pdc_playback_engine_destroy(handle)
     }
 }
 
@@ -54,21 +62,22 @@ func runPlaybackSuite(_ report: CheckReport) {
 
     let projectFixture = URL(fileURLWithPath: fixtureRoot)
         .appendingPathComponent("sound/songs/midi/mus_route101.mid").path
-    compareProjection(path: projectFixture, cppID: exactSamplesID, report: report)
+    checkProjectFixture(path: projectFixture, report: report)
+    checkExactSamples(report)
 
     let projectionPath = URL(fileURLWithPath: fixtureRoot)
         .appendingPathComponent("swiftcore-projection.mid").path
-    guard writeFixture(projectionSong(), path: projectionPath, cppID: exactSamplesID,
-                       report: report) else { return }
-    compareProjection(path: projectionPath, cppID: exactSamplesID, report: report)
-    compareProjection(path: projectionPath, cppID: mappingID, report: report)
-    compareDecodedNoteIDs(path: projectionPath, report: report)
+    guard writeFixture(projectionSong(), path: projectionPath, cppID: mappingID, report: report),
+          let projectionTimeline = loadSwiftTimeline(
+              path: projectionPath, cppID: mappingID, report: report) else { return }
+    checkEngineTrackMapping(projectionTimeline, report: report)
+    checkNoteIdentities(report)
 
     let loopPath = URL(fileURLWithPath: fixtureRoot).appendingPathComponent("swiftcore-loop.mid").path
     guard writeFixture(loopSong(), path: loopPath, cppID: loopPointsID, report: report),
           let loopTimeline = loadSwiftTimeline(path: loopPath, cppID: loopPointsID,
                                                report: report) else { return }
-    compareProjection(path: loopPath, cppID: loopPointsID, report: report)
+
     report.expect(loopTimeline.hasLoop, cppID: loopPointsID,
                   message: "loop fixture did not produce a loop")
     report.expectEqual(96 * playbackSamplesPerTick, loopTimeline.loopStartSample,
@@ -78,10 +87,10 @@ func runPlaybackSuite(_ report: CheckReport) {
     runLoopRows(timeline: loopTimeline, report: report)
 
     let primePath = URL(fileURLWithPath: fixtureRoot).appendingPathComponent("swiftcore-prime.mid").path
-    guard writeFixture(primeSong(), path: primePath, cppID: primeID, report: report),
-          let primeTimeline = loadSwiftTimeline(path: primePath, cppID: primeID,
+    guard writeFixture(primeSong(), path: primePath, cppID: primeUnprimedID, report: report),
+          let primeTimeline = loadSwiftTimeline(path: primePath, cppID: primeUnprimedID,
                                                 report: report) else { return }
-    comparePrimeBehavior(path: primePath, timeline: primeTimeline, report: report)
+    checkPrimeBehavior(timeline: primeTimeline, report: report)
 
     let defaultPath = URL(fileURLWithPath: fixtureRoot)
         .appendingPathComponent("swiftcore-controller-default.mid").path
@@ -94,96 +103,109 @@ func runPlaybackSuite(_ report: CheckReport) {
     let replacementPath = URL(fileURLWithPath: fixtureRoot)
         .appendingPathComponent("swiftcore-replace-updated.mid").path
     guard writeFixture(replacementSong(replacement: false), path: originalPath,
-                       cppID: replacementID, report: report),
+                       cppID: liveReplacementID, report: report),
           writeFixture(replacementSong(replacement: true), path: replacementPath,
-                       cppID: replacementID, report: report) else { return }
-    compareRender(path: originalPath, replacementPath: replacementPath, frames: 16_000,
-                  replacementFrame: 5_000, looping: false, cppID: replacementID,
-                  report: report)
+                       cppID: liveReplacementID, report: report),
+          let original = loadSwiftTimeline(path: originalPath, cppID: liveReplacementID,
+                                           report: report),
+          let replacement = loadSwiftTimeline(path: replacementPath, cppID: liveReplacementID,
+                                              report: report) else { return }
+    checkReplacementRows(original: original, replacement: replacement, report: report)
 }
 
-private func compareProjection(path: String, cppID: String, report: CheckReport) {
-    guard let swift = loadSwiftTimeline(path: path, cppID: cppID, report: report) else { return }
-    var oracleData = OraclePlaybackData()
-    var error = [CChar](repeating: 0, count: 512)
-    let count = path.withCString { pathPointer in
-        error.withUnsafeMutableBufferPointer {
-            oracle_playback_project_file(pathPointer, playbackSampleRate, nil, 0,
-                                         &oracleData, $0.baseAddress, $0.count)
-        }
-    }
-    guard count >= 0 else {
-        report.fail(cppID, "C++ projection failed: \(cString(error))")
-        return
-    }
-    var oracleEvents = [OraclePlaybackEvent](repeating: OraclePlaybackEvent(), count: Int(count))
-    let copied = path.withCString { pathPointer in
-        oracleEvents.withUnsafeMutableBufferPointer { events in
-            error.withUnsafeMutableBufferPointer {
-                oracle_playback_project_file(pathPointer, playbackSampleRate,
-                                             events.baseAddress, events.count, &oracleData,
-                                             $0.baseAddress, $0.count)
-            }
-        }
-    }
-    report.expectEqual(count, copied, cppID: cppID, what: "projection sizing/copy")
-    report.expectEqual(Int(oracleData.eventCount), swift.events.count, cppID: cppID,
-                       what: "event count")
-    report.expectEqual(Int(oracleData.tempoPointCount), swift.tempoMap.count, cppID: cppID,
-                       what: "tempo-point count")
-    report.expectEqual(oracleData.sampleRate, swift.sampleRate, cppID: cppID,
-                       what: "sample rate")
-    report.expectEqual(oracleData.lengthSamples, swift.lengthSamples, cppID: cppID,
-                       what: "length samples")
-    report.expectEqual(oracleData.loopStartSample, swift.loopStartSample, cppID: cppID,
-                       what: "loop-start sample")
-    report.expectEqual(oracleData.loopEndSample, swift.loopEndSample, cppID: cppID,
-                       what: "loop-end sample")
-    report.expectEqual(oracleData.ticksPerBeat, swift.ticksPerBeat, cppID: cppID,
-                       what: "ticks per beat")
-    report.expectEqual(oracleData.lengthTicks, swift.lengthTicks, cppID: cppID,
-                       what: "length ticks")
-    report.expectEqual(oracleData.loopStartTick, swift.loopStartTick, cppID: cppID,
-                       what: "loop-start tick")
-    report.expectEqual(oracleData.loopEndTick, swift.loopEndTick, cppID: cppID,
-                       what: "loop-end tick")
-    report.expectEqual(Int(oracleData.usedTrackCount), swift.usedTrackCount, cppID: cppID,
-                       what: "used-track count")
-    report.expectEqual(Int(oracleData.droppedTracks), swift.droppedTracks, cppID: cppID,
-                       what: "dropped-track count")
-    report.expectEqual(oracleData.exactGate, swift.settings.exactGate, cppID: cppID,
-                       what: "exact-gate setting")
-    report.expectEqual(oracleData.extendedClocks, swift.settings.extendedClocks, cppID: cppID,
-                       what: "extended-clocks setting")
-
-    guard oracleEvents.count == swift.events.count else { return }
-    for index in oracleEvents.indices {
-        let expected = oracleEvents[index]
-        let actual = swift.events[index]
-        let expectedTuple = "(\(expected.sample),\(expected.tick),\(expected.type),\(expected.track),\(expected.data0),\(expected.data1),\(expected.noteID))"
-        let actualTuple = "(\(actual.sample),\(actual.tick),\(actual.type),\(actual.track),\(actual.data0),\(actual.data1),\(actual.noteID.rawValue))"
-        report.expect(expected.sample == actual.sample && expected.tick == actual.tick &&
-                      expected.type == actual.type && expected.track == actual.track &&
-                      expected.data0 == actual.data0 && expected.data1 == actual.data1 &&
-                      expected.noteID == actual.noteID.rawValue,
-                      cppID: cppID,
-                      message: "event \(index): expected=\(expectedTuple) actual=\(actualTuple)")
-    }
+private func checkProjectFixture(path: String, report: CheckReport) {
+    guard let timeline = loadSwiftTimeline(path: path, cppID: exactSamplesID,
+                                           report: report) else { return }
+    report.expect(!timeline.events.isEmpty, cppID: exactSamplesID,
+                  message: "project fixture produced no playback events")
+    report.expectEqual(playbackSampleRate, timeline.sampleRate, cppID: exactSamplesID,
+                       what: "project fixture sample rate")
+    report.expect(timeline.usedTrackCount > 0 &&
+                  timeline.usedTrackCount <= TrackLimits.hardwareCapacity,
+                  cppID: exactSamplesID,
+                  message: "project fixture engine-track count is out of range")
+    report.expect(zip(timeline.events, timeline.events.dropFirst())
+        .allSatisfy { $0.0.sample <= $0.1.sample },
+        cppID: exactSamplesID, message: "project fixture events are not sample ordered")
+    report.expectEqual(timeline.events.last?.sample, Optional(timeline.lengthSamples),
+                       cppID: exactSamplesID, what: "project fixture terminal sample")
 }
 
-private func compareDecodedNoteIDs(path: String, report: CheckReport) {
-    guard let timeline = loadSwiftTimeline(path: path, cppID: identitiesID, report: report) else {
-        return
+private func checkExactSamples(_ report: CheckReport) {
+    let timeline = PlaybackTimeline.build(file: exactTempoSong(), sampleRate: 44_100)
+    let expected: [(Tick, UInt64)] = [
+        (0, 0), (1, 230), (2, 505), (3, 781), (9, 2_435),
+    ]
+    let tolerance = 0.5 / 229.6875 + 1e-12
+    for (tick, sample) in expected {
+        report.expectEqual(sample, timeline.sample(for: tick), cppID: exactSamplesID,
+                           what: "sample at tick \(tick)")
+        report.expect(abs(timeline.tick(for: sample) - Double(tick)) <= tolerance,
+                      cppID: exactSamplesID,
+                      message: "tick inverse at sample \(sample) exceeded half-sample tolerance")
     }
+
+    let tempos = timeline.events.filter { $0.type == playbackTempoEventType && $0.tick == 1 }
+    report.expectEqual([UInt64(230), 230], tempos.map(\.sample), cppID: exactSamplesID,
+                       what: "same-tick tempo samples")
+    report.expectEqual([150, 100],
+                       tempos.map { Int($0.data0) | Int($0.data1) << 7 },
+                       cppID: exactSamplesID, what: "same-tick tempo order")
+    let authoritative = PlaybackTimeline.build(
+        file: exactTempoSong(),
+        tempo: [TempoPoint(tick: 1, microsecondsPerQuarterNote: 600_000)],
+        sampleRate: 44_100)
+    let authoritativeTempos = authoritative.events.filter {
+        $0.type == playbackTempoEventType && $0.tick == 1
+    }
+    report.expectEqual(1, authoritativeTempos.count, cppID: exactSamplesID,
+                       what: "last-wins authoritative tempo count")
+    report.expectEqual([100],
+                       authoritativeTempos.map { Int($0.data0) | Int($0.data1) << 7 },
+                       cppID: exactSamplesID, what: "last-wins authoritative tempo")
+    let noteOn = timeline.events.first { $0.type == 0x9 }
+    report.expectEqual(Optional(UInt64(505)), noteOn?.sample, cppID: exactSamplesID,
+                       what: "note-on exact sample")
+    report.expectEqual(Optional(UInt8(0)), noteOn?.track, cppID: exactSamplesID,
+                       what: "note-on engine track")
+}
+
+private func checkEngineTrackMapping(_ timeline: PlaybackTimeline, report: CheckReport) {
+    report.expectEqual(16, timeline.usedTrackCount, cppID: mappingID,
+                       what: "used engine tracks")
+    report.expectEqual(2, timeline.droppedTracks, cppID: mappingID,
+                       what: "dropped channel chunks")
+    report.expectEqual(51, timeline.events.count, cppID: mappingID,
+                       what: "tempo and mapped channel event count")
+    report.expect(timeline.tracks.allSatisfy { $0.used }, cppID: mappingID,
+                  message: "a mapped engine track was unused")
+    report.expectEqual(Array(repeating: 1, count: 16), timeline.tracks.map(\.noteCount),
+                       cppID: mappingID, what: "per-track note counts")
+    report.expectEqual(Array(0..<16), timeline.tracks.map(\.firstProgram),
+                       cppID: mappingID, what: "per-track first programs")
+
     let noteOns = timeline.events.filter { $0.type == 0x9 }
-    report.expect(!noteOns.isEmpty, cppID: identitiesID,
-                  message: "identity fixture has no note-ons")
-    for (index, event) in timeline.events.enumerated() {
-        if event.type == 0x9 {
-            report.expectEqual(UInt64(0), event.noteID.rawValue, cppID: identitiesID,
-                               what: "decoded event \(index) serialized NoteID")
-        }
-    }
+    report.expectEqual(Array(UInt8(0)...UInt8(15)), noteOns.map(\.track),
+                       cppID: mappingID, what: "note-on engine tracks")
+    report.expectEqual(Array(UInt8(48)...UInt8(63)), noteOns.map(\.data0),
+                       cppID: mappingID, what: "note-on keys from retained chunks")
+}
+
+private func checkNoteIdentities(_ report: CheckReport) {
+    let file = MidiFile(division: playbackDivision, chunks: [
+        MidiChunk(events: [
+            .channel(tick: 24, status: 0x90, data0: 60, data1: 100, noteID: NoteID(1)),
+            .channel(tick: 24, status: 0x90, data0: 60, data1: 100, noteID: NoteID(2)),
+            .channel(tick: 48, status: 0x80, data0: 60),
+        ], endTick: 48),
+    ])
+    let timeline = PlaybackTimeline.build(file: file, sampleRate: playbackSampleRate)
+    let noteOns = timeline.events.filter { $0.type == 0x9 && $0.tick == 24 }
+    report.expectEqual([UInt64(1), 2], noteOns.map(\.noteID.rawValue),
+                       cppID: identitiesID, what: "stamped note-on identities")
+    let noteOff = timeline.events.first { $0.type == 0x8 && $0.tick == 48 }
+    report.expectEqual(Optional(UInt64(0)), noteOff?.noteID.rawValue, cppID: identitiesID,
+                       what: "ordinary note-off identity")
 }
 
 private struct LoopCheckRow {
@@ -261,67 +283,77 @@ private func keyedOnKeys(_ engine: UnsafeMutablePointer<M4AEngine>) -> [UInt8] {
     return keys.sorted()
 }
 
-private func comparePrimeBehavior(path: String, timeline: PlaybackTimeline,
-                                  report: CheckReport) {
-    guard let cppUnprimed = PlaybackCheckEngine(), let swiftUnprimed = PlaybackCheckEngine() else {
-        report.fail(primeID, "unprimed engine initialization failed")
+private func checkPrimeBehavior(timeline: PlaybackTimeline, report: CheckReport) {
+    guard let unprimed = PlaybackCheckEngine() else {
+        report.fail(primeUnprimedID, "unprimed engine initialization failed")
         return
     }
-    guard prepareOracle(path: path, engine: cppUnprimed, position: 0,
-                        chase: true, prime: false, cppID: primeID, report: report) else { return }
-    Sequencer.chase(engine: swiftUnprimed.pointer, timeline: timeline, position: 0)
-    oracle_playback_engine_note_on(cppUnprimed.handle, 1, 60, 127)
-    oracle_playback_engine_note_on(swiftUnprimed.handle, 1, 60, 127)
-    let cppUnprimedAudible = oracle_playback_engine_renders_audibly(cppUnprimed.handle)
-    let swiftUnprimedAudible = oracle_playback_engine_renders_audibly(swiftUnprimed.handle)
-    report.expectEqual(false, cppUnprimedAudible, cppID: primeID,
-                       what: "unprimed C++ audition")
-    report.expectEqual(cppUnprimedAudible, swiftUnprimedAudible, cppID: primeID,
-                       what: "unprimed Swift audition")
+    Sequencer.chase(engine: unprimed.pointer, timeline: timeline, position: 0)
+    m4a_engine_note_on(unprimed.pointer, 1, 60, 127)
+    report.expectEqual(false, rendersAudibly(unprimed.pointer), cppID: primeUnprimedID,
+                       what: "unprimed later-voice track audition")
 
-    guard let cppPrimed = PlaybackCheckEngine(), let swiftPrimed = PlaybackCheckEngine() else {
-        report.fail(primeID, "primed engine initialization failed")
+    guard let primed = PlaybackCheckEngine() else {
+        report.fail(primeAudibleID, "primed engine initialization failed")
         return
     }
-    guard prepareOracle(path: path, engine: cppPrimed, position: 0,
-                        chase: true, prime: true, cppID: primeID, report: report) else { return }
-    Sequencer.chase(engine: swiftPrimed.pointer, timeline: timeline, position: 0)
-    Sequencer.primeVoices(engine: swiftPrimed.pointer, timeline: timeline, position: 0)
-    compareEngineTracks(cpp: cppPrimed, swift: swiftPrimed, tracks: 0..<3,
-                        label: "primed", report: report)
-    oracle_playback_engine_note_on(cppPrimed.handle, 1, 60, 127)
-    oracle_playback_engine_note_on(swiftPrimed.handle, 1, 60, 127)
-    let cppPrimedAudible = oracle_playback_engine_renders_audibly(cppPrimed.handle)
-    let swiftPrimedAudible = oracle_playback_engine_renders_audibly(swiftPrimed.handle)
-    report.expectEqual(true, cppPrimedAudible, cppID: primeID, what: "primed C++ audition")
-    report.expectEqual(cppPrimedAudible, swiftPrimedAudible, cppID: primeID,
-                       what: "primed Swift audition")
+    Sequencer.chase(engine: primed.pointer, timeline: timeline, position: 0)
+    Sequencer.primeVoices(engine: primed.pointer, timeline: timeline, position: 0)
+    let programRows: [(String, Int, UInt8?, Bool)] = [
+        ("chase-applied-voice-not-overridden", 0, 5, true),
+        ("later-voice-primed-at-load", 1, 7, true),
+        ("voiceless-track-never-primed", 2, nil, false),
+    ]
+    for (name, trackIndex, expectedProgram, expectedVoice) in programRows {
+        let cppID = "\(primeProgramIDPrefix)[\(name)]"
+        let track = engineTrack(primed.pointer, index: trackIndex)
+        if let expectedProgram {
+            report.expectEqual(expectedProgram, track.currentProgram, cppID: cppID,
+                               what: "track \(trackIndex) program")
+        }
+        report.expectEqual(expectedVoice, track.currentVoice.wav != nil, cppID: cppID,
+                           what: "track \(trackIndex) voice presence")
+    }
+    m4a_engine_note_on(primed.pointer, 1, 60, 127)
+    report.expectEqual(true, rendersAudibly(primed.pointer), cppID: primeAudibleID,
+                       what: "primed later-voice track audition")
 
-    guard let cppMidSong = PlaybackCheckEngine(), let swiftMidSong = PlaybackCheckEngine() else {
-        report.fail(primeID, "mid-song engine initialization failed")
+    guard let midSong = PlaybackCheckEngine() else {
+        report.fail(primeMidSongID, "mid-song engine initialization failed")
         return
     }
     let position = 100 * playbackSamplesPerTick
-    guard prepareOracle(path: path, engine: cppMidSong, position: position,
-                        chase: true, prime: true, cppID: primeID, report: report) else { return }
-    Sequencer.chase(engine: swiftMidSong.pointer, timeline: timeline, position: position)
-    Sequencer.primeVoices(engine: swiftMidSong.pointer, timeline: timeline, position: position)
-    compareEngineTracks(cpp: cppMidSong, swift: swiftMidSong, tracks: 0..<2,
-                        label: "mid-song", report: report)
+    Sequencer.chase(engine: midSong.pointer, timeline: timeline, position: position)
+    Sequencer.primeVoices(engine: midSong.pointer, timeline: timeline, position: position)
+    let expectedPrograms: [UInt8] = [9, 7]
+    for trackIndex in expectedPrograms.indices {
+        let track = engineTrack(midSong.pointer, index: trackIndex)
+        report.expectEqual(expectedPrograms[trackIndex], track.currentProgram,
+                           cppID: primeMidSongID, what: "track \(trackIndex) program")
+        report.expect(track.currentVoice.wav != nil, cppID: primeMidSongID,
+                      message: "mid-song track \(trackIndex) has no voice")
+    }
 }
 
-private func compareEngineTracks(cpp: PlaybackCheckEngine, swift: PlaybackCheckEngine,
-                                 tracks: Range<Int>, label: String, report: CheckReport) {
-    for track in tracks {
-        let expectedProgram = oracle_playback_engine_track_program(cpp.handle, Int32(track))
-        let actualProgram = oracle_playback_engine_track_program(swift.handle, Int32(track))
-        report.expectEqual(expectedProgram, actualProgram, cppID: primeID,
-                           what: "\(label) track \(track) program")
-        let expectedVoice = oracle_playback_engine_track_has_voice(cpp.handle, Int32(track))
-        let actualVoice = oracle_playback_engine_track_has_voice(swift.handle, Int32(track))
-        report.expectEqual(expectedVoice, actualVoice, cppID: primeID,
-                           what: "\(label) track \(track) voice presence")
+private func engineTrack(_ engine: UnsafeMutablePointer<M4AEngine>, index: Int) -> M4ATrack {
+    withUnsafePointer(to: &engine.pointee.tracks) { storage in
+        UnsafeRawPointer(storage).assumingMemoryBound(to: M4ATrack.self)[index]
     }
+}
+
+private func rendersAudibly(_ engine: UnsafeMutablePointer<M4AEngine>) -> Bool {
+    var left = [Float](repeating: 0, count: 512)
+    var right = [Float](repeating: 0, count: 512)
+    for _ in 0..<8 {
+        let audible = left.withUnsafeMutableBufferPointer { leftBuffer in
+            right.withUnsafeMutableBufferPointer { rightBuffer in
+                m4a_engine_process(engine, leftBuffer.baseAddress, rightBuffer.baseAddress, 512)
+                return zip(leftBuffer, rightBuffer).contains { $0.0 != 0 || $0.1 != 0 }
+            }
+        }
+        if audible { return true }
+    }
+    return false
 }
 
 private func compareControllerDefaults(fixtureRoot: String, defaultPath: String,
@@ -352,12 +384,12 @@ private func compareControllerDefaults(fixtureRoot: String, defaultPath: String,
                 report.fail(controllerDefaultsID, "controller engine initialization failed")
                 return
             }
-            oracle_playback_engine_set_features(engine.handle, true, true)
+            m4a_engine_set_portamento_enabled(engine.pointer, true)
+            m4a_engine_set_pwm_enabled(engine.pointer, true)
             guard prepareSwift(path: nonDefaultPath, native: native, engine: engine,
                                position: playbackSamplesPerTick, chase: true, prime: false,
                                report: report) else { return }
-            let applied = oracle_playback_engine_controller(engine.handle, 0,
-                                                            controller.controller)
+            let applied = controllerField(engine.pointer, controller: controller.controller)
             report.expectEqual(expectedControllerField(controller.controller, nonDefault), applied,
                                cppID: controllerDefaultsID,
                                what: "\(native ? "native" : "Swift") CC \(controller.controller) non-default")
@@ -365,8 +397,7 @@ private func compareControllerDefaults(fixtureRoot: String, defaultPath: String,
             guard prepareSwift(path: defaultPath, native: native, engine: engine,
                                position: playbackSamplesPerTick, chase: true, prime: false,
                                report: report) else { return }
-            let restored = oracle_playback_engine_controller(engine.handle, 0,
-                                                             controller.controller)
+            let restored = controllerField(engine.pointer, controller: controller.controller)
             report.expectEqual(expectedControllerField(controller.controller, controller.value),
                                restored, cppID: controllerDefaultsID,
                                what: "\(native ? "native" : "Swift") CC \(controller.controller) default")
@@ -374,8 +405,7 @@ private func compareControllerDefaults(fixtureRoot: String, defaultPath: String,
             guard prepareSwift(path: overridePath, native: native, engine: engine,
                                position: 13 * playbackSamplesPerTick, chase: true, prime: false,
                                report: report) else { return }
-            let overridden = oracle_playback_engine_controller(engine.handle, 0,
-                                                               controller.controller)
+            let overridden = controllerField(engine.pointer, controller: controller.controller)
             report.expectEqual(expectedControllerField(controller.controller, overrideValue),
                                overridden, cppID: controllerDefaultsID,
                                what: "\(native ? "native" : "Swift") CC \(controller.controller) pre-seek")
@@ -383,94 +413,148 @@ private func compareControllerDefaults(fixtureRoot: String, defaultPath: String,
     }
 }
 
-private func compareRender(path: String, replacementPath: String?, frames: Int,
-                           replacementFrame: Int, looping: Bool, cppID: String,
-                           report: CheckReport) {
-    guard let oracleEngine = PlaybackCheckEngine(), let swiftEngine = PlaybackCheckEngine(),
-          let timeline = loadSwiftTimeline(path: path, cppID: cppID, report: report) else {
-        report.fail(cppID, "render engine initialization failed")
-        return
+private func controllerField(_ engine: UnsafeMutablePointer<M4AEngine>,
+                             controller: UInt8) -> Int32 {
+    let track = engineTrack(engine, index: 0)
+    switch controller {
+    case TimeDefaults.ccModulation:
+        return Int32(track.mod)
+    case TimeDefaults.ccPortamento:
+        return Int32(track.portamentoDuration)
+    case TimeDefaults.ccVolume:
+        return Int32(track.rawVolume)
+    case TimeDefaults.ccPan:
+        return Int32(track.pan)
+    case TimeDefaults.ccBendRange:
+        return Int32(track.bendRange)
+    case TimeDefaults.ccLFOSpeed:
+        return Int32(track.lfoSpeed)
+    case TimeDefaults.ccModulationType:
+        return Int32(track.modT)
+    case TimeDefaults.ccPWMCycle:
+        return Int32(track.pwmPattern)
+    case TimeDefaults.ccFineTune:
+        return Int32(track.tune)
+    case TimeDefaults.ccPWMWidth:
+        return Int32(track.pwmSpeed)
+    case TimeDefaults.ccLFODelay:
+        return Int32(track.lfoDelay)
+    default:
+        return .min
     }
-    let replacement = replacementPath.flatMap {
-        loadSwiftTimeline(path: $0, cppID: cppID, report: report)
-    }
-    if replacementPath != nil && replacement == nil { return }
-
-    var oracleLeft = [Float](repeating: 0, count: frames)
-    var oracleRight = [Float](repeating: 0, count: frames)
-    var error = [CChar](repeating: 0, count: 512)
-    let oracleRendered = withOptionalCString(replacementPath) { replacementPointer in
-        path.withCString { pathPointer in
-            oracleLeft.withUnsafeMutableBufferPointer { left in
-                oracleRight.withUnsafeMutableBufferPointer { right in
-                    error.withUnsafeMutableBufferPointer {
-                        oracle_playback_render_files(
-                            pathPointer, replacementPointer, playbackSampleRate,
-                            oracleEngine.handle, left.baseAddress, right.baseAddress,
-                            frames, replacementFrame, looping, 0, $0.baseAddress, $0.count)
-                    }
-                }
-            }
-        }
-    }
-    guard oracleRendered else {
-        report.fail(cppID, "C++ render failed: \(cString(error))")
-        return
-    }
-
-    var swiftLeft = [Float](repeating: 0, count: frames)
-    var swiftRight = [Float](repeating: 0, count: frames)
-    var sequencer = Sequencer()
-    let firstFrames = replacement == nil ? frames : replacementFrame
-    swiftLeft.withUnsafeMutableBufferPointer { left in
-        swiftRight.withUnsafeMutableBufferPointer { right in
-            if firstFrames > 0 {
-                sequencer.render(engine: swiftEngine.pointer, timeline: timeline,
-                                 left: UnsafeMutableBufferPointer(start: left.baseAddress,
-                                                                  count: firstFrames),
-                                 right: UnsafeMutableBufferPointer(start: right.baseAddress,
-                                                                   count: firstFrames),
-                                 looping: looping, muteMask: 0)
-            }
-            if let replacement {
-                let position = sequencer.position
-                sequencer.replaceTimeline(position, timeline: replacement)
-                let remaining = frames - firstFrames
-                if remaining > 0 {
-                    sequencer.render(
-                        engine: swiftEngine.pointer, timeline: replacement,
-                        left: UnsafeMutableBufferPointer(
-                            start: left.baseAddress?.advanced(by: firstFrames), count: remaining),
-                        right: UnsafeMutableBufferPointer(
-                            start: right.baseAddress?.advanced(by: firstFrames), count: remaining),
-                        looping: looping, muteMask: 0)
-                }
-            }
-        }
-    }
-    for frame in 0..<frames {
-        if oracleLeft[frame].bitPattern != swiftLeft[frame].bitPattern ||
-            oracleRight[frame].bitPattern != swiftRight[frame].bitPattern {
-            report.fail(cppID,
-                        "PCM frame \(frame): expected=(\(oracleLeft[frame]),\(oracleRight[frame])) actual=(\(swiftLeft[frame]),\(swiftRight[frame]))")
-            return
-        }
-    }
-    report.pass(cppID)
 }
 
-private func prepareOracle(path: String, engine: PlaybackCheckEngine, position: UInt64,
-                           chase: Bool, prime: Bool, cppID: String,
-                           report: CheckReport) -> Bool {
-    var error = [CChar](repeating: 0, count: 512)
-    let prepared = path.withCString { pathPointer in
-        error.withUnsafeMutableBufferPointer {
-            oracle_playback_prepare_file(pathPointer, playbackSampleRate, engine.handle,
-                                         position, chase, prime, $0.baseAddress, $0.count)
+private func checkReplacementRows(original: PlaybackTimeline, replacement: PlaybackTimeline,
+                                  report: CheckReport) {
+    guard let handoffEngine = PlaybackCheckEngine() else {
+        report.fail(handoffID, "handoff engine initialization failed")
+        return
+    }
+    var handoff = Sequencer()
+    renderFrames(&handoff, engine: handoffEngine.pointer, timeline: original, frames: 5_000)
+    let handoffPosition = handoff.position
+    handoff.replaceTimeline(handoffPosition, timeline: replacement)
+    renderFrames(&handoff, engine: handoffEngine.pointer, timeline: replacement, frames: 4_000)
+    report.expectEqual([UInt8(60), 67], keyedOnKeys(handoffEngine.pointer), cppID: handoffID,
+                       what: "replacement source keyed-on notes")
+
+    var seek = Sequencer()
+    seek.seek(12_000, timeline: original)
+    report.expectEqual(UInt64(12_000), seek.position, cppID: seekID,
+                       what: "published seek position")
+
+    var stopped = Sequencer()
+    stopped.seek(12_000, timeline: original)
+    stopped.reset()
+    report.expectEqual(UInt64(0), stopped.position, cppID: stopSeekID,
+                       what: "reset position after pending seek")
+
+    var carried = Sequencer()
+    carried.seek(5_000, timeline: original)
+    carried.replaceTimeline(carried.position, timeline: replacement)
+    report.expectEqual(UInt64(5_000), carried.position, cppID: updateSeekID,
+                       what: "replacement position after seek")
+
+    guard let liveEngine = PlaybackCheckEngine() else {
+        report.fail(liveReplacementID, "live replacement engine initialization failed")
+        return
+    }
+    var live = Sequencer()
+    renderFrames(&live, engine: liveEngine.pointer, timeline: original, frames: 5_000)
+    live.replaceTimeline(live.position, timeline: replacement)
+    renderFrames(&live, engine: liveEngine.pointer, timeline: replacement, frames: 4_000)
+    report.expectEqual(UInt64(9_000), live.position, cppID: liveReplacementID,
+                       what: "position after live replacement")
+    report.expectEqual([UInt8(60), 67], keyedOnKeys(liveEngine.pointer),
+                       cppID: liveReplacementID, what: "live replacement keyed-on notes")
+
+    let cgbOriginal = PlaybackTimeline.build(
+        file: replacementSong(replacement: false, program: 2), sampleRate: playbackSampleRate)
+    let cgbReplacement = PlaybackTimeline.build(
+        file: replacementSong(replacement: true, program: 2), sampleRate: playbackSampleRate)
+    guard let cgbSongEngine = PlaybackCheckEngine() else {
+        report.fail(cgbSongReplacementID, "CGB song engine initialization failed")
+        return
+    }
+    var cgbSong = Sequencer()
+    renderFrames(&cgbSong, engine: cgbSongEngine.pointer, timeline: cgbOriginal, frames: 1)
+    cgbSong.replaceTimeline(cgbSong.position, timeline: cgbReplacement)
+    report.expectEqual([UInt8(60)], keyedOnCgbKeys(cgbSongEngine.pointer),
+                       cppID: cgbSongReplacementID,
+                       what: "sounding CGB song notes after replacement")
+
+    guard let cgbPreviewEngine = PlaybackCheckEngine() else {
+        report.fail(cgbPreviewReplacementID, "CGB preview engine initialization failed")
+        return
+    }
+    Sequencer.chase(engine: cgbPreviewEngine.pointer, timeline: cgbOriginal, position: 0)
+    m4a_engine_note_on(cgbPreviewEngine.pointer, 0, 60, 127)
+    var cgbPreview = Sequencer()
+    cgbPreview.replaceTimeline(0, timeline: cgbReplacement)
+    report.expectEqual([UInt8(60)], keyedOnCgbKeys(cgbPreviewEngine.pointer),
+                       cppID: cgbPreviewReplacementID,
+                       what: "CGB preview notes after replacement")
+    m4a_engine_note_off(cgbPreviewEngine.pointer, 0, 60)
+    report.expectEqual([UInt8](), keyedOnCgbKeys(cgbPreviewEngine.pointer),
+                       cppID: cgbPreviewReplacementID, what: "released CGB preview notes")
+}
+
+private func renderFrames(_ sequencer: inout Sequencer,
+                          engine: UnsafeMutablePointer<M4AEngine>,
+                          timeline: PlaybackTimeline, frames: UInt64) {
+    var rendered: UInt64 = 0
+    var left = [Float](repeating: 0, count: 512)
+    var right = [Float](repeating: 0, count: 512)
+    while rendered < frames {
+        let count = Int(min(UInt64(left.count), frames - rendered))
+        left.withUnsafeMutableBufferPointer { leftBuffer in
+            right.withUnsafeMutableBufferPointer { rightBuffer in
+                sequencer.render(
+                    engine: engine, timeline: timeline,
+                    left: UnsafeMutableBufferPointer(start: leftBuffer.baseAddress, count: count),
+                    right: UnsafeMutableBufferPointer(start: rightBuffer.baseAddress, count: count),
+                    looping: false, muteMask: 0)
+            }
+        }
+        rendered += UInt64(count)
+    }
+}
+
+private func keyedOnCgbKeys(_ engine: UnsafeMutablePointer<M4AEngine>) -> [UInt8] {
+    var keys: [UInt8] = []
+    withUnsafePointer(to: &engine.pointee.cgbChannels) { storage in
+        let channels = UnsafeRawPointer(storage).assumingMemoryBound(to: M4ACGBChannel.self)
+        let count = MemoryLayout.size(ofValue: storage.pointee) /
+            MemoryLayout<M4ACGBChannel>.stride
+        for index in 0..<count {
+            let channel = channels[index]
+            if channel.status & playbackChnOn != 0 &&
+                channel.status & playbackChnStop == 0 {
+                keys.append(channel.midiKey)
+            }
         }
     }
-    if !prepared { report.fail(cppID, "C++ prepare failed: \(cString(error))") }
-    return prepared
+    return keys.sorted()
 }
 
 private func prepareSwift(path: String, native: Bool, engine: PlaybackCheckEngine,
@@ -522,6 +606,21 @@ private func writeFixture(_ file: MidiFile, path: String, cppID: String,
         report.fail(cppID, "cannot write fixture \(path): \(error)")
         return false
     }
+}
+
+private func exactTempoSong() -> MidiFile {
+    MidiFile(division: 96, chunks: [
+        MidiChunk(events: [
+            .meta(tick: 1, type: 0x51, data: [0x06, 0x1A, 0x80]),
+            .meta(tick: 1, type: 0x51, data: [0x09, 0x27, 0xC0]),
+            .meta(tick: 3, type: 0x01, data: Array("[".utf8)),
+            .meta(tick: 9, type: 0x01, data: Array("]".utf8)),
+        ], endTick: 9),
+        MidiChunk(events: [
+            .channel(tick: 2, status: 0x90, data0: 60, data1: 100),
+            .channel(tick: 4, status: 0x80, data0: 60),
+        ], endTick: 4),
+    ])
 }
 
 private func projectionSong() -> MidiFile {
@@ -602,9 +701,9 @@ private func controllerSong(controller: (UInt8, UInt8)?, tick: Tick) -> MidiFile
     ])
 }
 
-private func replacementSong(replacement: Bool) -> MidiFile {
+private func replacementSong(replacement: Bool, program: UInt8 = 0) -> MidiFile {
     var events = [
-        MidiEvent.channel(tick: 0, status: 0xC0, data0: 0),
+        MidiEvent.channel(tick: 0, status: 0xC0, data0: program),
         .channel(tick: 0, status: 0x90, data0: 60, data1: 100),
         .channel(tick: 24, status: 0x80, data0: 60),
     ]
@@ -636,8 +735,3 @@ private func cString(_ bytes: [CChar]) -> String {
     }
 }
 
-private func withOptionalCString<Result>(_ string: String?,
-                                         _ body: (UnsafePointer<CChar>?) -> Result) -> Result {
-    guard let string else { return body(nil) }
-    return string.withCString(body)
-}

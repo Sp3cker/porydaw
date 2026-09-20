@@ -3525,7 +3525,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent fixed Swift expectation."
     },
     {
       "cppId": "loopcheck/LoopTest::loopWrapMatchesHardwareGoto[loop-boundary-notes-play-without-looping]",
@@ -3539,7 +3540,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent fixed Swift expectation."
     },
     {
       "cppId": "loopcheck/LoopTest::loopWrapMatchesHardwareGoto[pass-1-tied-note-sounds]",
@@ -3553,7 +3555,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent fixed Swift expectation."
     },
     {
       "cppId": "loopcheck/LoopTest::loopWrapMatchesHardwareGoto[pass-2-gate-carry-holds-across-wrap]",
@@ -3567,7 +3570,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent fixed Swift expectation."
     },
     {
       "cppId": "loopcheck/LoopTest::loopWrapMatchesHardwareGoto[pass-2-tied-note-stacks]",
@@ -3581,7 +3585,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent fixed Swift expectation."
     },
     {
       "cppId": "loopcheck/LoopTest::loopWrapMatchesHardwareGoto[pass-3-tied-note-stacks]",
@@ -3595,7 +3600,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent fixed Swift expectation."
     },
     {
       "cppId": "loopcheck/LoopTest::synthesizedLoopSongHasExactLoopPoints",
@@ -3609,7 +3615,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to independent fixed loop-point expectations."
     },
     {
       "cppId": "mainwindow-routing-input/MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus",
@@ -4368,7 +4375,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to independent stamped and unassigned NoteID expectations."
     },
     {
       "cppId": "onboardcheck/OnboardingTest::compilesThroughMid2agb[blank]",
@@ -5207,7 +5215,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to independent fixed program and voice expectations."
     },
     {
       "cppId": "primecheck/PrimeTest::primeVoicesApplyTrackPrograms[chase-applied-voice-not-overridden]",
@@ -5221,7 +5230,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to independent fixed program and voice expectations."
     },
     {
       "cppId": "primecheck/PrimeTest::primeVoicesApplyTrackPrograms[later-voice-primed-at-load]",
@@ -5235,7 +5245,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to independent fixed program and voice expectations."
     },
     {
       "cppId": "primecheck/PrimeTest::primeVoicesApplyTrackPrograms[voiceless-track-never-primed]",
@@ -5249,7 +5260,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to independent fixed program and voice expectations."
     },
     {
       "cppId": "primecheck/PrimeTest::primedTrackAuditionIsAudible",
@@ -5263,7 +5275,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent audibility expectation."
     },
     {
       "cppId": "primecheck/PrimeTest::unprimedTrackAuditionIsSilent",
@@ -5277,7 +5290,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ playback oracle parity; the unchanged cppId now maps to an independent silence expectation."
     },
     {
       "cppId": "production-startup/catalog-suite[case-names-pending]",
@@ -9454,12 +9468,12 @@
       "observableAssertions": "metadata-only chunks consume no slot; first 16 channel chunks map in file order; overflow chunks count as dropped; first event channel is retained",
       "classification": "in-scope core behavior",
       "dueTask": 5,
-      "swiftTargets": "swiftcore/midiCodec mapping summary compared against C++ under exact cppId",
+      "swiftTargets": "swiftcore/playback independent fixed engine-track mapping expectations under the exact cppId",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Task 5 document/timeline engine projection assertions are not implemented.",
-      "reconciliationNotes": "Scout classified this as Task 1; the source assertion is playback timeline/engine projection behavior due Task 5, while stored MIDI bytes remain lossless.",
+      "pendingGap": "Awaiting Task 5 controller verification.",
+      "reconciliationNotes": "Scout classified this as Task 1; the source assertion is playback timeline/engine projection behavior due Task 5, while stored MIDI bytes remain lossless. Retired the C++ projection oracle parity; the unchanged cppId now maps to independent fixed engine-track expectations.",
       "partialRunEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt midiCodec musicalSemantics + --filter smfcheck --filter velocity-model",
         "revision": "working tree post-voicefix",
@@ -9684,12 +9698,12 @@
       "observableAssertions": "exact samples 0,230,505,781,2435; last same-tick tempo wins in document projection; loop sample positions exact",
       "classification": "in-scope core behavior",
       "dueTask": 5,
-      "swiftTargets": "Task 5 PlaybackTimeline exact-sample comparison using this cppId",
+      "swiftTargets": "Task 5 PlaybackTimeline independent exact-sample and inverse-tolerance expectations under this cppId",
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison",
-      "reconciliationNotes": "Scout classified this as Task 1; the source assertion is playback timeline/engine projection behavior due Task 5, while stored MIDI bytes remain lossless."
+      "pendingGap": "Awaiting Task 5 controller verification",
+      "reconciliationNotes": "Scout classified this as Task 1; the source assertion is playback timeline/engine projection behavior due Task 5, while stored MIDI bytes remain lossless. Retired the C++ projection oracle parity; the unchanged cppId now maps to independent fixed sample positions and inverse-tolerance expectations."
     },
     {
       "cppId": "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
@@ -10767,7 +10781,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ PCM parity; the unchanged cppId now maps to independent position and keyed-on-note expectations after live replacement."
     },
     {
       "cppId": "transportcheck/TransportTest::pausePreservesSuppressorAdaptation",
@@ -10837,7 +10852,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ PCM parity; the unchanged cppId now maps to independent CGB preview continuity and release expectations."
     },
     {
       "cppId": "transportcheck/TransportTest::rebuildKeepsSoundingCgbSongNote",
@@ -10851,7 +10867,8 @@
       "status": "pending",
       "runEvidence": null,
       "exclusionReview": null,
-      "pendingGap": "Awaiting Task 5 Swift comparison"
+      "pendingGap": "Awaiting Task 5 Swift comparison",
+      "reconciliationNotes": "Retired Task 5 C++ PCM parity; the unchanged cppId now maps to an independent sounding CGB-note continuity expectation."
     },
     {
       "cppId": "transportcheck/TransportTest::restartProducesAudioWithSuppression",

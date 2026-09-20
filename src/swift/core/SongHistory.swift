@@ -207,7 +207,7 @@ internal enum HistoryOperation: Hashable {
     case deleteTrack
     case moveTrack
     case renameTrack
-    case setTrackEnd
+    case setChunkEnd
     case setConfig
     case insertRawEvent
     case modifyRawEvent

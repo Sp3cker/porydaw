@@ -296,7 +296,8 @@ private func setterSlot(_ event: MidiEvent) -> Int? {
     let channel = Int(status & 0x0F)
     switch type {
     case 0xB:
-        if [0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x1D, 0x1E, 0x1F].contains(data0) {
+        if (0x0C...0x11).contains(data0) || data0 == Xcmd.selectorController ||
+            data0 == Xcmd.payloadController || data0 == Xcmd.alternatePayloadController {
             return nil
         }
         return Int(type) << 12 | channel << 7 | Int(data0)

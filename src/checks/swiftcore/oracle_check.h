@@ -67,58 +67,12 @@ int64_t oracle_semantic_text(uint32_t operation, int64_t a, int64_t b, char *out
 void oracle_check_set_fixture_root(const char *path);
 const char *oracle_check_fixture_root(void);
 
-typedef struct OraclePlaybackEvent {
-    uint64_t sample;
-    uint32_t tick;
-    uint8_t type;
-    uint8_t track;
-    uint8_t data0;
-    uint8_t data1;
-    uint64_t noteID;
-} OraclePlaybackEvent;
+// Native engine fixture boundary only; playback assertions live in Swift.
+typedef struct PdcPlaybackEngine PdcPlaybackEngine;
 
-typedef struct OraclePlaybackData {
-    size_t eventCount;
-    size_t tempoPointCount;
-    double sampleRate;
-    uint64_t lengthSamples;
-    uint64_t loopStartSample;
-    uint64_t loopEndSample;
-    uint32_t ticksPerBeat;
-    uint32_t lengthTicks;
-    uint32_t loopStartTick;
-    uint32_t loopEndTick;
-    uint32_t usedTrackCount;
-    uint32_t droppedTracks;
-    bool exactGate;
-    bool extendedClocks;
-} OraclePlaybackData;
-
-typedef struct OraclePlaybackEngine OraclePlaybackEngine;
-
-int64_t oracle_playback_project_file(const char *path, double sampleRate,
-                                     OraclePlaybackEvent *events, size_t eventCapacity,
-                                     OraclePlaybackData *data, char *errorOut,
-                                     size_t errorCapacity);
-bool oracle_playback_render_files(const char *path, const char *replacementPath, double sampleRate,
-                                  OraclePlaybackEngine *engine, float *left, float *right,
-                                  size_t frames, size_t replacementFrame, bool looping,
-                                  uint32_t muteMask, char *errorOut, size_t errorCapacity);
-bool oracle_playback_prepare_file(const char *path, double sampleRate, OraclePlaybackEngine *engine,
-                                  uint64_t position, bool chase, bool prime, char *errorOut,
-                                  size_t errorCapacity);
-
-OraclePlaybackEngine *oracle_playback_engine_create(double sampleRate);
-void oracle_playback_engine_destroy(OraclePlaybackEngine *engine);
-void *oracle_playback_engine_pointer(OraclePlaybackEngine *engine);
-void oracle_playback_engine_set_features(OraclePlaybackEngine *engine, bool portamento, bool pwm);
-void oracle_playback_engine_note_on(OraclePlaybackEngine *engine, uint8_t track, uint8_t key,
-                                    uint8_t velocity);
-bool oracle_playback_engine_renders_audibly(OraclePlaybackEngine *engine);
-int oracle_playback_engine_track_program(const OraclePlaybackEngine *engine, int track);
-bool oracle_playback_engine_track_has_voice(const OraclePlaybackEngine *engine, int track);
-int oracle_playback_engine_controller(const OraclePlaybackEngine *engine, int track,
-                                      uint8_t controller);
+PdcPlaybackEngine *pdc_playback_engine_create(double sampleRate);
+void pdc_playback_engine_destroy(PdcPlaybackEngine *engine);
+void *pdc_playback_engine_pointer(PdcPlaybackEngine *engine);
 
 #ifdef __cplusplus
 }

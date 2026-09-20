@@ -206,15 +206,8 @@ public final class SongDocument {
         guard let mapping = mapping(for: track) else { return [] }
         if case let .controller(controller) = lane,
            Xcmd.descriptor(forLane: controller) != nil {
-            var traffic: [Xcmd.Event] = []
-            traffic.reserveCapacity(state.file.chunks[mapping.chunk].events.count)
-            for (index, event) in state.file.chunks[mapping.chunk].events.enumerated() {
-                guard case let .channel(status, data0, data1) = event.payload,
-                      status >> 4 == 0xB else { continue }
-                traffic.append(Xcmd.Event(index: UInt64(index), tick: event.tick,
-                                          stream: UInt8(track), controller: data0,
-                                          value: data1, channel: status & 0x0F))
-            }
+            let traffic = Xcmd.traffic(in: state.file.chunks[mapping.chunk],
+                                       stream: UInt8(truncatingIfNeeded: track))
             return Xcmd.project(traffic).points.compactMap { point in
                 guard point.lane == controller, point.index <= UInt64(Int.max) else { return nil }
                 return LanePoint(chunk: mapping.chunk, eventIndex: Int(point.index),
@@ -310,7 +303,7 @@ public final class SongDocument {
         }
         while index > chunk.events.startIndex,
               chunk.events[index - 1].tick == event.tick,
-              pinnedBefore(event, chunk.events[index - 1]) {
+              eventPinnedBefore(event, chunk.events[index - 1]) {
             index -= 1
         }
         chunk.events.insert(event, at: index)
@@ -401,7 +394,7 @@ public final class SongDocument {
     }
 }
 
-private func pinnedBefore(_ lhs: MidiEvent, _ rhs: MidiEvent) -> Bool {
+internal func eventPinnedBefore(_ lhs: MidiEvent, _ rhs: MidiEvent) -> Bool {
     guard lhs.isChannel, rhs.isChannel else { return false }
     if lhs.typeNibble >= 0xB, rhs.typeNibble <= 0x9 { return true }
     return lhs.isNoteEnd && rhs.isNoteOn

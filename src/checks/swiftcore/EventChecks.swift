@@ -64,10 +64,10 @@ private func trackEditing(_ report: CheckReport) {
         report.fail("editcheck/EditCheckTest::trackDuplicate", "track duplication failed")
         return
     }
-    report.expectEqual(document.notes(in: 0).map { "\($0.tick):\($0.pitch):\($0.duration)" },
+    report.expectEqual(["8:60:4"],
                        document.notes(in: copy).map { "\($0.tick):\($0.pitch):\($0.duration)" },
                        cppID: "editcheck/EditCheckTest::trackDuplicate",
-                       what: "duplicate preserves musical notes")
+                       what: "duplicate preserves the fixture's literal note")
     report.expect(document.notes(in: 0).first?.id != document.notes(in: copy).first?.id,
                   cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
                   message: "duplicate remints note identities")
@@ -79,6 +79,7 @@ private func trackEditing(_ report: CheckReport) {
     report.expect(document.rawChunks[0].events.contains { MidiFile.metaIsMarker($0) },
                   cppID: "editcheck/EditCheckTest::trackMarkerName",
                   message: "conductor marker remains in chunk zero")
+    let chunksBeforeChunkZeroDelete = document.rawChunks.count
     document.deleteTrack(0)
     report.expect(document.rawChunks[0].events.contains { event in
         event.metaType == 0x58 && event.tick == 2
@@ -88,6 +89,9 @@ private func trackEditing(_ report: CheckReport) {
         event.tick == 16 && MidiFile.metaIsMarker(event)
     }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
     message: "winning loop marker is rescued")
+    report.expectEqual(chunksBeforeChunkZeroDelete, document.rawChunks.count,
+                       cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                       what: "deleting the chunk-zero track retains the conductor chunk")
 
     let revision = document.revision
     document.renameTrack(0, to: "  Bass  ")
@@ -98,6 +102,18 @@ private func trackEditing(_ report: CheckReport) {
     report.expectEqual(revision + 1, document.revision,
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "loop-marker-shaped name is rejected")
+
+    let budgetLimited = SongDocument(file: file, trackBudget: 2)
+    report.expect(budgetLimited.addTrack(voice: 1) == nil,
+                  cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                  message: "configured track budget rejects an added track")
+    let ceilingFile = MidiFile(chunks: (0..<16).map {
+        MidiChunk(events: [.channel(status: 0xC0 | UInt8($0), data0: 0)])
+    })
+    let ceiling = SongDocument(file: ceilingFile)
+    report.expect(ceiling.addTrack(voice: 1) == nil,
+                  cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                  message: "hardware track ceiling rejects a seventeenth track")
 }
 
 @MainActor
@@ -132,6 +148,10 @@ private func rawTempoAndSignatureEditing(_ report: CheckReport) {
         .first(where: { $0.isSystemExclusive })?.blob,
         cppID: "editcheck/EditCheckTest::rawEventMutate",
         what: "opaque bytes are stored without normalization")
+    document.setChunkEnd(0, tick: 1)
+    report.expectEqual(Tick(11), document.rawChunks[0].endTick,
+                       cppID: "editcheck/EditCheckTest::rawEventMutate",
+                       what: "chunk end clamps to its last event tick")
     let beforeTempoRaw = document.revision
     document.insertRawEvent(chunk: 0, event: .meta(type: 0x51, data: [1, 2, 3]))
     report.expectEqual(beforeTempoRaw, document.revision,
@@ -171,6 +191,20 @@ private func rawTempoAndSignatureEditing(_ report: CheckReport) {
     report.expect(!document.timeSignatures.contains { $0.tick == 24 },
                   cppID: "editcheck/EditCheckTest::songTimeSignature",
                   message: "signature deletion removes destination")
+    let crossChunk = SongDocument(file: MidiFile(chunks: [
+        MidiChunk(events: [
+            .meta(tick: 20, type: 0x58, data: [3, 2, 0x18, 8]),
+            .meta(tick: 24, type: 0x58, data: [4, 2, 0x18, 8]),
+        ]),
+        MidiChunk(events: [
+            .meta(tick: 20, type: 0x58, data: [5, 2, 0x18, 8]),
+        ]),
+    ]))
+    crossChunk.moveTimeSignature(from: 20, to: 24)
+    report.expectEqual([3, 5], crossChunk.timeSignatures.filter { $0.tick == 24 }
+        .map { Int($0.numerator) }.sorted(),
+        cppID: "editcheck/EditCheckTest::songTimeSignature",
+        what: "move preserves every cross-chunk source signature")
 }
 
 @MainActor
@@ -194,6 +228,18 @@ private func laneEditing(_ report: CheckReport) {
         .map { "\($0.tick):\($0.value)" },
         cppID: "automation-domain/laneMoveDestinationCollision",
         what: "lane move relocates the selected identity")
+    let xcmdDocument = SongDocument(file: MidiFile(chunks: [MidiChunk(events: [
+        .channel(status: 0xC0, data0: 1),
+        .channel(tick: 2, status: 0xB0, data0: 0x1E, data1: 0x08),
+        .channel(tick: 3, status: 0xB0, data0: 0x1D, data1: 40),
+    ])]))
+    let foreign = LanePoint(chunk: 99, eventIndex: 2, tick: 3, value: 40)
+    let beforeForeignDelete = xcmdDocument.rawChunks
+    xcmdDocument.deleteLanePoints(track: 0, lane: .controller(Xcmd.echoVolumeLane),
+                                  points: [foreign])
+    report.expectEqual(beforeForeignDelete, xcmdDocument.rawChunks,
+                       cppID: "automation-domain/laneDeleteForeignChunk",
+                       what: "foreign-chunk XCMD point cannot delete a local event")
 }
 
 private func xcmdProjection(_ report: CheckReport) {
@@ -242,6 +288,26 @@ private func xcmdRewrite(_ report: CheckReport) {
         Xcmd.PointWrite(tick: 5, lane: 0x77, value: 1, stream: 0, channel: 0),
     ]) == nil, cppID: "xcmdcheck/XcmdTest::unknownLaneRejectedAndDuplicatesCollapse",
     message: "unknown lane rejects the rewrite")
+    let dangling = [
+        Xcmd.Event(index: 0, tick: 4, stream: 0, controller: 0x1E, value: 0x08),
+    ]
+    report.expect(Xcmd.rewrite(dangling, removing: [], writing: [
+        Xcmd.PointWrite(tick: 4, lane: 0xFB, value: 20, stream: 0, channel: 0),
+    ]) == nil, cppID: "xcmdcheck/XcmdTest::danglingKnownSelectorProjectsOpaque",
+    message: "write inside a dangling selector rejects")
+    let stray = [
+        Xcmd.Event(index: 0, tick: 4, stream: 0, controller: 0x1D, value: 7),
+    ]
+    report.expect(Xcmd.rewrite(stray, removing: [], writing: [
+        Xcmd.PointWrite(tick: 4, lane: 0xFB, value: 20, stream: 0, channel: 0),
+    ]) == nil, cppID: "xcmdcheck/XcmdTest::writeInsideStrayRunSpanRejected",
+    message: "write inside a stray payload run rejects")
+    let inSpan = Xcmd.rewrite(events, removing: [], writing: [
+        Xcmd.PointWrite(tick: 2, lane: 0xFB, value: 50, stream: 0, channel: 0),
+    ])
+    report.expectEqual([UInt8(0x08), 50, 0x08, 35], inSpan?.inserts.map(\.value),
+                       cppID: "xcmdcheck/XcmdTest::inSpanWriteRebuildsAffectedEpoch",
+                       what: "in-span write rebuilds canonical pairs")
 }
 
 @MainActor
@@ -289,6 +355,8 @@ private func xcmdReconciliation(_ report: CheckReport) {
     what: "saved bytes contain canonical selector-payload pairs")
 }
 
+// These import rows retain their onboardcheck cppIds as an oracle-lineage
+// exception: the C++ importer exposes them only through the onboarding workflow.
 private func importAnalysis(_ report: CheckReport) {
     let file = MidiFile(division: 25, chunks: [MidiChunk(), MidiChunk(events: [
         .channel(status: 0xB0, data0: 0x1E, data1: 0x08),
