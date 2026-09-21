@@ -613,7 +613,7 @@ Item {
             // the actual cursor position carried by the group's own hover
             // point.
             onCanceled: {
-                cellHint.settleReleaseFromGlobal(cellHint.point.globalPosition)
+                cellHint.settleRelease(cellHint.point.scenePosition)
                 page.resetPointerState()
             }
             onDoubleClicked: (mouse) => {

@@ -26,7 +26,7 @@ HoverHandler {
     property bool gestureOwning: false
     // Whether the drag owner's actual final position is inside `source`. A
     // drag group settles this from real release coordinates via
-    // settleRelease()/settleReleaseFromGlobal(); a frozen hover membership
+    // settleRelease(); a frozen hover membership
     // never keeps ownership after an outside release.
     property bool releaseInside: true
 
@@ -65,7 +65,18 @@ HoverHandler {
     // Pointer scope changes reclaim or clear. Launching a grab is not
     // itself enough: a group only retains while its existing owner really
     // holds it, per the caller's gestureOwning binding.
-    onHoveredChanged: sync()
+    onHoveredChanged: {
+        // A real re-entry ends the previous outside-release suppression.
+        if (hovered)
+            releaseInside = true
+        sync()
+    }
+    // An implicit grab can leave hovered true across an outside release.
+    // Only a newly delivered inside position rearms that suppressed source.
+    onPointChanged: {
+        if (!releaseInside && !gestureOwning && hovered)
+            settleRelease(point.scenePosition)
+    }
     onGestureOwningChanged: {
         if (gestureOwning) {
             if (hovered)
@@ -103,12 +114,6 @@ HoverHandler {
             return
         releaseInside = source.contains(
                     source.mapFromItem(null, scenePosition.x, scenePosition.y))
-        sync()
-    }
-    function settleReleaseFromGlobal(globalPosition) {
-        if (!source)
-            return
-        releaseInside = source.contains(source.mapFromGlobal(globalPosition))
         sync()
     }
 
