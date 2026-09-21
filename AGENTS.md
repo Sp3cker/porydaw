@@ -109,8 +109,8 @@ deno task verify --filter rollcheck --verbose
 deno task format [--check] [files...]
 ```
 
-There is no `deno task build`. Pick `build:app` or `build:checks`.
 `deno task checks` and `deno task verify` both build the checks before running them.
+Swift LSP (sourcekit-lsp) has no background indexing: run `deno task lsp:swift` after CMake reconfigures or Swift edits — stale references/rename lie silently, and rename needs `timeout >= 120` cold. References empty while hover works means the server predates the index: kill the `sourcekit-lsp` processes; the next query cold-starts.
 
 ### Windows toolchain and launch
 

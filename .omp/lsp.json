@@ -1,0 +1,1 @@
+{"servers":{"sourcekit-lsp":{"args":["--compilation-db-search-path","build"],"rootMarkers":["Package.swift","*.xcodeproj","*.xcworkspace","project.yml",".swiftpm","CMakeLists.txt"]}}}
