@@ -153,6 +153,7 @@ Item {
                         Text {
                             objectName: "automationParameterTabText"
                             text: tab.text
+                            textFormat: Text.PlainText
                             font: tab.font
                             fontSizeMode: Text.HorizontalFit
                             minimumPixelSize: Math.round(root.pageModel.baseFontPx / 2)
@@ -164,6 +165,7 @@ Item {
                             objectName: "automationParameterEventCount"
                             opacity: tab.checked && tab.model.eventCount > 0 ? 0.7 : 0
                             text: tab.model.eventCount === 1 ? qsTr("1 event") : qsTr("%1 events").arg(tab.model.eventCount)
+                            textFormat: Text.PlainText
                             font: Qt.font(root.pageModel.captionFont)
                             color: root.pagePalette.secondaryText
                         }
@@ -171,6 +173,7 @@ Item {
                             objectName: tab.tempoParameter ? "automationTempoTapDraft" : ""
                             visible: tab.tempoParameter && root.pageModel.tapTempoTapCount > 0
                             text: root.pageModel.tapTempoTapCount >= 2 ? qsTr("%1 BPM").arg(root.pageModel.tapTempoDraftBpm) : "..."
+                            textFormat: Text.PlainText
                             font: Qt.font(root.pageModel.captionFont)
                             color: root.pagePalette.secondaryText
                         }

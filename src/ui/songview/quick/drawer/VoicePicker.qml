@@ -212,6 +212,7 @@ FocusScope {
                     color: row.ListView.isCurrentItem ? card.appearance.pressedText : card.appearance.text
                     font: card.appearance.font
                     text: row.model.label
+                    textFormat: Text.PlainText
                     elide: Text.ElideRight
                     renderType: Text.NativeRendering
                 }
