@@ -47,6 +47,13 @@ Historical source supersedes both scout rounds: left/right presses outside selec
 
 Scouts' direct binary/ctest commands are discovery notes, not approved verification commands. Controller runs `deno task verify --filter swiftcore --verbose`, `deno task verify --filter swiftqtml --verbose`, and `deno task verify:qml --filter editorqml-drawer --verbose`. Existing tap-tempo tests exist; the follow-up claim that the entire family is absent must be reconciled against `AutomationPageChecks.swift` before adding checks. Source-based preserved claims are not runtime proof.
 
+## Ownership audit
+
+- Restored drawer transactions, selection, gesture policy, velocity mapping, picker policy and mouse-hint decisions are Swift-owned. Live audio now uses the Swift device/render/controller stack and calls `Sequencer` directly, without a Swift → C ABI → Swift round trip.
+- The new audio path adapts external miniaudio/poryaaaa operations. Keysplit facts are copied from typed external `ToneData` while the bank lease is alive; the Swift lookup owns the mapping and checks the library's voicegroup bound. This is not permission to call a first-party native resolver.
+- Project discovery, registration, source parsing, persistence and bank editing still have preexisting first-party C++ owners behind `ProjectService`. The existing window shell also retains shortcut definitions/matching, dirty-state coordination, context-menu construction and palette derivation. These are outstanding first-party owners, not approved library-adapter exemptions; this audit does not certify a C++-free application.
+- Numeric-field Space priority is blocked: Qt 6.11 `QQuickTextInput::event` accepts printable `ShortcutOverride` before QML handlers, and the current Swift bridge exposes no scoped event-filter interface. Real window-shortcut probes and native input reproduce the failure. Two independent reviews rejected `QInternal::EventNotifyCallback` as an internal process-global workaround violating the scoped-host contract. No global hook, synthetic forwarding or new C++ was added.
+
 ## Verified acceptance checkpoints
 
 - Automation restoration and selection commands: independent historical SPEC/QUALITY review passed. Regressions reproduced empty-clipboard Paste availability and lost command notifications after detach/reattach; both pass after the fixes. `deno task verify --filter swiftcore --filter swiftqtml --verbose` passed. The cohesive projection owner remains an accepted size exception; no line-count-only extraction.
