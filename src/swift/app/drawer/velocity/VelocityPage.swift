@@ -14,6 +14,11 @@ import QtBridge
 // existing document/grid/playhead publications, and cancels it synchronously
 // before the document owners retire.
 //
+// Split: the static content computation (`VelocityScene.swift`) and the
+// plot-relative maths (`VelocityProjection.swift`) are pure value layers this
+// page feeds from its session and its live gesture/hover state; orchestration,
+// published state, reuse caches and every apply path stay here.
+//
 
 // MARK: - Page vocabulary
 
@@ -202,7 +207,8 @@ public final class VelocityPage: EditorDrawerPage {
     /// lane's real-input cases: the grid's own summary is only as fresh as its
     /// last publication, and this page owns the live selection projection.
     public func selectedNoteIdText() -> String {
-        selectedTrackNotes().map { velocityNoteText($0.id) }.joined(separator: ",")
+        VelocityScene.selectedTrackNotes(session).map { velocityNoteText($0.id) }
+            .joined(separator: ",")
     }
     @QtIgnored public var hasPrompt: Bool { prompt != nil }
     @QtIgnored public var frozenPreview: [NoteID: UInt8] { gesture?.preview ?? [:] }
@@ -341,7 +347,7 @@ public final class VelocityPage: EditorDrawerPage {
             cancelSectionInteraction()
         }
         if promptRevisionMismatch(session) { cancelPrompt() }
-        if gesture?.kind == .paint { paintCandidates = selectedTrackNotes() }
+        if gesture?.kind == .paint { paintCandidates = VelocityScene.selectedTrackNotes(session) }
         rebuildContent()
     }
 
@@ -352,19 +358,23 @@ public final class VelocityPage: EditorDrawerPage {
     public func refreshEditCursor() {
         guard let session, !playing else { return }
         contextTick = session.editCursor
-        let presented = presentationContext()
+        let presented = VelocityScene.presentation(session, playing: false,
+                                                   contextTick: contextTick)
         let next = VelocityContextKey(context: presented, playing: false)
         guard lastContextKey != next else { return }
         rebuildContent()
     }
 
-    /// Camera-only publication: the same notes at new plot positions.
+    /// Camera-only publication: the same notes at new plot positions. Nothing
+    /// that feeds the value axis changed, so the build derives the same axis and
+    /// the page publishes exactly the rows it published before.
     @QtIgnored
     public func refreshCamera() {
         guard session != nil else { return }
-        publishHandles(projectHandles())
-        publishGrid()
-        publishBands()
+        let snapshot = buildScene()
+        publishHandles(snapshot.handles)
+        publishGrid(snapshot)
+        publishBands(snapshot)
         publishTransient()
     }
 
@@ -386,7 +396,7 @@ public final class VelocityPage: EditorDrawerPage {
         playheadPresentationCount &+= 1
         let effective = playing ? resolvedTick : session.editCursor
         contextTick = resolvedTick
-        let next = contextKey(at: effective, playing: playing)
+        let next = VelocityScene.contextKey(session, at: effective, playing: playing)
         presentedContextTick = resolvedTick
         presentedContextSlot = next.slot
         presentedPlaying = playing
@@ -440,7 +450,7 @@ public final class VelocityPage: EditorDrawerPage {
                 : axis.rulerVelocityAt(y: y, labelHeight: axis.geometry.labelHeight)
             guard velocity >= 1 else { return true }
             beginGesture(kind: .relative, x: x, y: y, detentUnlock: unlock,
-                         notes: selectedTrackNotes(), modifiers: modifiers)
+                         notes: VelocityScene.selectedTrackNotes(session), modifiers: modifiers)
             guard gesture != nil else { return true }
             for note in gesture!.notes { gesture?.preview[note.noteID] = UInt8(velocity) }
             finishGesture(commit: !gesture!.preview.isEmpty)
@@ -455,7 +465,10 @@ public final class VelocityPage: EditorDrawerPage {
             if button == VelocityQtButton.right {
                 beginGesture(kind: .pendingBand, x: x, y: y, detentUnlock: false, notes: [],
                              modifiers: modifiers)
-                if let hit = hitTest(x: x, y: y, includeStems: true) { pressedNote = hit }
+                if let hit = projection.hitTest(x: x, y: y, includeStems: true,
+                                                handles: publishedHandles) {
+                    pressedNote = hit
+                }
                 if let pressed = pressedNote, !isControl(modifiers),
                    !selectionBeforePress.contains(pressed)
                 {
@@ -468,11 +481,12 @@ public final class VelocityPage: EditorDrawerPage {
             if isShift(modifiers) {
                 guard !contextUnsupported else { return true }
                 beginGesture(kind: .ramp, x: x, y: y, detentUnlock: unlock,
-                             notes: selectedTrackNotes(), modifiers: modifiers)
+                             notes: VelocityScene.selectedTrackNotes(session), modifiers: modifiers)
                 updateRampPreview(x: x, y: y)
                 return true
             }
-            let hit = hitTest(x: x, y: y, includeStems: true)
+            let hit = projection.hitTest(x: x, y: y, includeStems: true,
+                                         handles: publishedHandles)
             pressedNote = hit
             if hit == nil {
                 guard !contextUnsupported else { return true }
@@ -493,7 +507,7 @@ public final class VelocityPage: EditorDrawerPage {
             // to freeze one.
             guard !contextUnsupported else { return true }
             beginGesture(kind: .relative, x: x, y: y, detentUnlock: unlock,
-                         notes: selectedTrackNotes(), modifiers: modifiers)
+                         notes: VelocityScene.selectedTrackNotes(session), modifiers: modifiers)
         }
         return true
     }
@@ -631,7 +645,7 @@ public final class VelocityPage: EditorDrawerPage {
     @discardableResult
     public func openSelectedVelocityPrompt() -> Bool {
         guard let session, !contextUnsupported else { return false }
-        let notes = selectedTrackNotes()
+        let notes = VelocityScene.selectedTrackNotes(session)
         guard !notes.isEmpty else { return false }
         cancelGesture()
         let ids = notes.map(\.id)
@@ -755,7 +769,7 @@ public final class VelocityPage: EditorDrawerPage {
 
     private func beginGesture(kind: VelocityGestureKind, x: Double, y: Double,
                               detentUnlock: Bool, notes: [Note], modifiers: Int) {
-        paintCandidates = kind == .paint ? selectedTrackNotes() : []
+        paintCandidates = kind == .paint ? VelocityScene.selectedTrackNotes(session) : []
         gesture = VelocityGestureState(
             kind: kind, revision: session?.document.revision ?? 0,
             track: session?.selectedTrack ?? -1, notes: freeze(notes), axis: axis,
@@ -766,7 +780,7 @@ public final class VelocityPage: EditorDrawerPage {
     }
 
     private func freeze(_ notes: [Note]) -> [VelocityFrozenNote] {
-        let resolve = contextResolver()
+        let resolve = VelocityScene.contextResolver(session)
         return notes.map { freeze($0, map: resolve($0.tick, Int($0.pitch)).map) }
     }
 
@@ -841,9 +855,9 @@ public final class VelocityPage: EditorDrawerPage {
         guard gesture != nil else { return }
         let radius = geometry.hitRadius
         let deltaX = toX - fromX
-        let resolve = contextResolver()
+        let resolve = VelocityScene.contextResolver(session)
         for note in paintCandidates where gesture?.frozenNote(note.id) == nil {
-            let x = xForDisplayTick(Double(note.tick))
+            let x = projection.xForDisplayTick(Double(note.tick))
             let inSpan = deltaX == 0
                 ? abs(x - toX) <= radius
                 : (x >= min(fromX, toX) - radius && x <= max(fromX, toX) + radius)
@@ -854,7 +868,9 @@ public final class VelocityPage: EditorDrawerPage {
         guard !gesture!.notes.isEmpty else { return }
         let updates = VelocityGesturePolicy.paint(
             axis: gesture!.axis, detentUnlock: gesture!.detentUnlock,
-            candidates: gesture!.notes.map { (note: $0, x: xForDisplayTick(Double($0.tick))) },
+            candidates: gesture!.notes.map {
+                (note: $0, x: projection.xForDisplayTick(Double($0.tick)))
+            },
             from: (fromX, fromY), to: (toX, toY), hitRadius: radius)
         guard !updates.isEmpty else { return }
         for update in updates { gesture?.preview[update.noteID] = UInt8(update.velocity) }
@@ -885,69 +901,11 @@ public final class VelocityPage: EditorDrawerPage {
     }
 
     private func updateHover(x: Double, y: Double) {
-        let hit = hitTest(x: x, y: y, includeStems: false)
+        let hit = projection.hitTest(x: x, y: y, includeStems: false,
+                                     handles: publishedHandles)
         guard hit != hovered else { return }
         hovered = hit
         refreshAxisAndHandles()
-    }
-
-    // MARK: Selection and context
-
-    private func trackNotes() -> [Note] {
-        guard let session, let track = session.selectedTrack else { return [] }
-        return session.projectionCache.notes(in: track)
-    }
-
-    /// Primary-track targets retain the session's selection insertion order.
-    private func selectedTrackNotes() -> [Note] {
-        guard let session, let track = session.selectedTrack else { return [] }
-        return session.selectedNoteOrder.compactMap { session.projectionCache.note($0, in: track) }
-    }
-
-    private func voiceMap(for note: Note) -> VelocityMap {
-        resolvedContext(at: note.tick, key: Int(note.pitch)).map
-    }
-
-    /// The exact context at one tick, before any selection compatibility rule.
-    private func contextResolver() -> (Tick, Int?) -> VelocityVoiceContext {
-        guard let session else { return { _, _ in VelocityVoiceContext(status: .unresolvedVoice) } }
-        let track = session.selectedTrack ?? -1
-        guard track >= 0, track < session.timeline.tracks.count else {
-            return { _, _ in VelocityVoiceContext(status: .unresolvedVoice) }
-        }
-        let firstProgram = session.timeline.tracks[track].firstProgram
-        let changes = session.projectionCache.lanePoints(track: track, lane: .voice)
-        let slots = session.bankSlots
-        return { tick, key in
-            VelocityContextPolicy.resolve(firstProgram: firstProgram, tick: tick,
-                                          voiceChanges: changes, slots: slots, key: key)
-        }
-    }
-
-    private func resolvedContext(at tick: Tick, key: Int? = nil) -> VelocityVoiceContext {
-        contextResolver()(tick, key)
-    }
-
-    private func contextKey(at tick: Tick, playing: Bool) -> VelocityContextKey {
-        VelocityContextKey(context: resolvedContext(at: tick), playing: playing)
-    }
-
-    /// The context the ruler presents: the shared playhead's rounded tick while
-    /// transport is playing, the edit cursor while stopped.
-    private func effectiveContextTick() -> Tick {
-        guard let session else { return 0 }
-        return playing ? contextTick : session.editCursor
-    }
-
-    /// `VelocityArea::currentContext`: no selection resolves the context at the
-    /// effective tick; a selection resolves per note, keeps an intrinsic map only
-    /// when every selected note resolves to the same PSG voice, and falls back to
-    /// the continuous domain when their maps disagree.
-    private func presentationContext() -> VelocityVoiceContext {
-        VelocityContextPolicy.presentation(
-            selectedNotes: selectedTrackNotes(),
-            effectiveTick: effectiveContextTick(),
-            resolve: contextResolver())
     }
 
     // MARK: Content rebuild
@@ -959,7 +917,8 @@ public final class VelocityPage: EditorDrawerPage {
         contentBuildCount &+= 1
         geometry = VelocityNodeGeometry(baseFontPx: baseFontPx,
                                         devicePixelRatio: devicePixelRatio)
-        let presented = presentationContext()
+        let presented = VelocityScene.presentation(session, playing: playing,
+                                                   contextTick: contextTick)
         resolvedContextValue = presented
         lastContextKey = VelocityContextKey(context: presented, playing: playing)
         contextUnsupported = !presented.editable
@@ -967,176 +926,114 @@ public final class VelocityPage: EditorDrawerPage {
         contextSlot = presented.slot
         contextVoiceName = presented.map.voiceName
         setPublished(&detentsAvailable, presented.status == .resolved && presented.map.isPSG)
-        refreshAxisAndHandles()
-        publishGrid()
-        publishBands()
+        let snapshot = buildScene()
+        refreshAxisAndHandles(snapshot)
+        publishGrid(snapshot)
+        publishBands(snapshot)
         publishTransient()
     }
 
-    /// Hover updates the axis and handle rows without rebuilding static content.
-    private func refreshAxisAndHandles() {
-        rebuildAxis()
-        publishHandles(projectHandles())
-        publishAxis()
+    /// Hover and detent changes republish the ruler and handle rows: a content
+    /// rebuild hands its own build in, the hover-only paths build one.
+    private func refreshAxisAndHandles(_ snapshot: VelocitySceneSnapshot? = nil) {
+        let built = snapshot ?? buildScene()
+        rebuildAxis(built)
+        publishHandles(built.handles)
+        publishAxis(built)
         publishReadout()
     }
 
-    private func rebuildAxis() {
-        var activeValues: [UInt8] = []
-        var mapped = resolvedContextValue.map
-        if let hovered, let session, let track = session.selectedTrack,
-           let note = session.projectionCache.note(hovered, in: track) {
-            activeValues.append(gesture?.preview[note.id] ?? note.velocity)
-            mapped = voiceMap(for: note)
-        } else {
-            for note in selectedTrackNotes() {
-                activeValues.append(gesture?.preview[note.id] ?? note.velocity)
-            }
-        }
-        var axisGeometry = VelocityAxisGeometry()
-        axisGeometry.height = plotHeight
-        axisGeometry.verticalInset = geometry.verticalInset
-        axisGeometry.labelWidth = max(0, rulerWidth - geometry.pixel)
-        axisGeometry.labelSideInset = geometry.labelSideInset
-        axisGeometry.labelColumnGap = geometry.labelColumnGap
-        axisGeometry.labelHeight = max(geometry.densityD1, plotHeight / 8)
-        axisGeometry.continuousDensityD1 = geometry.densityD1
-        axisGeometry.continuousDensityD2 = geometry.densityD2
-        axisGeometry.continuousDensityD3 = geometry.densityD3
-        axisGeometry.continuousDensityD4 = geometry.densityD4
-        axis = VelocityAxisModel(map: mapped, geometry: axisGeometry, activeValues: activeValues)
+    /// Applies one build's value axis to the page's published axis values.
+    private func rebuildAxis(_ snapshot: VelocitySceneSnapshot) {
+        axis = snapshot.axis
         setPublished(&axisMode, axis.mode.rawValue)
         setPublished(&axisGraduationsVisible, axis.mode == .intrinsic && detentsEnabled)
         setPublished(&axisAccessibleDescription, axis.accessibleDescription)
     }
 
-    private func xForDisplayTick(_ tick: Double) -> Double {
-        guard let session else { return 0 }
-        return session.camera.displayX(tick: tick, origin: 0, dpr: devicePixelRatio)
+    // MARK: Scene input
+
+    /// The page's one static scene build, from the live session and the page's
+    /// own state. The cached label typography and the published handle lookup are
+    /// the page's `@MainActor` objects, so they travel as build parameters.
+    private func buildScene() -> VelocitySceneSnapshot {
+        VelocitySceneSnapshot.build(sceneInput(reuseGeometry: handleReuseGeometry()),
+                                    typography: typography, previousHandles: handlesByID)
     }
 
+    /// The primary track's note rows, projected against the published axis: the
+    /// scoped build a live gesture uses, so motion never rebuilds static content.
     private func projectHandles() -> [VelocityHandle] {
-        let selected = session?.selectedNotes ?? []
-        let notes = trackNotes()
-        let resolve = contextResolver()
-        let track = session?.selectedTrack ?? 0
-        let trackColor = PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(track)]
-        let trackChannels = PaletteMath.channels(trackColor)
-        let stemColor = PaletteMath.hex(
-            PaletteMath.mixTowardOklab(
-                PaletteMath.oklab(r: trackChannels.r, g: trackChannels.g, b: trackChannels.b),
-                PaletteMath.oklab(r: 0, g: 0, b: 0), 1.0 / 3.0))
-        let selectedCount = notes.filter { selected.contains($0.id) }.count
-        let dimUnselected = selectedCount > 1
-        let geometryKey = HandleGeometryKey(geometry: geometry, track: track,
-                                            dpr: devicePixelRatio, intrinsic: axis.mode == .intrinsic)
-        let reuseGeometry = handleGeometryKey == geometryKey
-        handleGeometryKey = geometryKey
-        var result: [VelocityHandle] = []
-        result.reserveCapacity(notes.count)
-        for note in notes {
-            let frozen = gesture?.frozenNote(note.id)
-            let map = frozen?.map ?? resolve(note.tick, Int(note.pitch)).map
-            let previewValue = gesture?.preview[note.id]
-            let displayed = previewValue.map(Int.init) ?? Int(note.velocity)
-            let isSelected = selected.contains(note.id)
-            let x = xForDisplayTick(Double(note.tick))
-            let endTick = Double(note.tick) + Double(note.duration)
-            let endX = xForDisplayTick(endTick)
-            let y = yForNote(map: map, velocity: displayed,
-                             detentUnlock: !detentsEnabled || (gesture?.detentUnlock ?? false))
-            let level = map.level(of: displayed) ?? -1
-            let previous = handlesByID[note.id]
-            if reuseGeometry, let previous,
-               previous.tick == Double(note.tick), previous.endTick == endTick,
-               previous.x == x, previous.endX == endX, previous.y == y,
-               previous.value == displayed, previous.level == level,
-               previous.selected == isSelected, previous.hovered == (hovered == note.id),
-               previous.preview == (previewValue != nil),
-               previous.dimmed == (dimUnselected && !isSelected) {
-                result.append(previous)
-                continue
-            }
-            let handle = VelocityHandle()
-            handle.noteID = note.id
-            handle.noteIdText = previous?.noteIdText ?? velocityNoteText(note.id)
-            handle.tick = Double(note.tick)
-            handle.endTick = endTick
-            handle.x = x
-            handle.endX = endX
-            handle.value = displayed
-            handle.y = y
-            handle.selected = isSelected
-            handle.hovered = hovered == note.id
-            handle.preview = previewValue != nil
-            handle.dimmed = dimUnselected && !isSelected
-            handle.level = level
-            if reuseGeometry, let previous, previous.level == level, previous.value == displayed {
-                handle.label = previous.label
-            } else {
-                handle.label = axis.mode == .intrinsic && level >= 0
-                    ? "Vol \(level + 1)" : "\(displayed)"
-            }
-            handle.hitRadius = geometry.hitRadius
-            handle.stemWidth = (isSelected ? geometry.selectedStemDipWidth
-                                           : geometry.stemDipWidth) / devicePixelRatio
-            handle.nodeRadius = geometry.nodePaintRadius
-            handle.outlineRadius = geometry.nodePaintRadius + geometry.nodeOutlineDipWidth / 2
-            handle.outlineWidth = geometry.nodeOutlineDipWidth / devicePixelRatio
-            handle.ringRadius = geometry.selectedNodeRingRadius
-                + geometry.selectedNodeRingDipWidth / 2
-            handle.ringWidth = geometry.selectedNodeRingDipWidth / devicePixelRatio
-            handle.fillColor = isSelected || !dimUnselected ? trackColor : palette.outline
-            handle.stemColor = isSelected ? palette.selectionRing : stemColor
-            handle.ringColor = palette.selectionRing
-            handle.outlineColor = palette.noteBorder
-            handle.primitiveName = "velocityNode"
-            result.append(handle)
-        }
-        return result
+        VelocitySceneSnapshot.buildHandleRows(sceneInput(reuseGeometry: handleReuseGeometry()),
+                                              axis: axis, previousHandles: handlesByID)
     }
 
-    private func yForNote(map: VelocityMap, velocity: Int, detentUnlock: Bool) -> Double {
-        if detentUnlock { return axis.velocityToY(velocity) }
-        guard let level = map.level(of: velocity) else { return axis.velocityToY(velocity) }
-        return axis.levelToY(level, map: map)
+    /// The handle-reuse decision: geometry, track, DPR and axis mode form one
+    /// key, and an unchanged key reuses the previous handle objects in place.
+    private func handleReuseGeometry() -> Bool {
+        let key = HandleGeometryKey(geometry: geometry, track: session?.selectedTrack ?? 0,
+                                    dpr: devicePixelRatio, intrinsic: axis.mode == .intrinsic)
+        let reuse = handleGeometryKey == key
+        handleGeometryKey = key
+        return reuse
     }
 
-    private func hitTest(x: Double, y: Double, includeStems: Bool) -> NoteID? {
-        let radius = geometry.hitRadius
-        var best: NoteID?
-        var bestCircle = false
-        var bestSelected = false
-        var bestDistance = 0.0
-        var bestOrder = 0
-        var order = 0
-        for handle in publishedHandles {
-            let dx = handle.x - x
-            let dy = handle.y - y
-            let distance = dx * dx + dy * dy
-            let circleHit = distance <= radius * radius
-            let stemHit = includeStems
-                && x >= handle.x - geometry.durationLineHorizontalSlop
-                && x <= handle.endX + geometry.durationLineHorizontalSlop
-                && abs(y - handle.y) <= geometry.durationLineVerticalRadius
-            if circleHit || stemHit {
-                let better = best == nil
-                    || (circleHit && !bestCircle)
-                    || (circleHit == bestCircle && handle.selected && !bestSelected)
-                    || (circleHit == bestCircle && handle.selected == bestSelected
-                        && (distance < bestDistance
-                            || (distance == bestDistance && order > bestOrder)))
-                if better {
-                    best = handle.noteID
-                    bestCircle = circleHit
-                    bestSelected = handle.selected
-                    bestDistance = distance
-                    bestOrder = order
-                }
-            }
-            order += 1
-        }
-        return best
+    /// Everything one scene build reads, as values: the session's document facts,
+    /// the page's live interaction snapshot and its cached grid metrics.
+    private func sceneInput(reuseGeometry: Bool) -> VelocitySceneInput {
+        let session = self.session
+        return VelocitySceneInput(
+            camera: session?.camera,
+            context: resolvedContextValue,
+            notes: VelocityScene.trackNotes(session),
+            selectedNotes: VelocityScene.selectedTrackNotes(session),
+            selectedNoteIDs: session?.selectedNotes ?? [],
+            track: session?.selectedTrack ?? 0,
+            source: VelocityScene.contextSource(session),
+            interaction: interactionSnapshot(),
+            geometry: geometry,
+            plotWidth: plotWidth,
+            plotHeight: plotHeight,
+            rulerWidth: rulerWidth,
+            devicePixelRatio: devicePixelRatio,
+            baseFontPx: baseFontPx,
+            metrics: session.map { gridMetrics($0) },
+            palette: scenePalette(),
+            reuseGeometry: reuseGeometry)
+    }
+
+    /// The page's live gesture and hover facts, frozen for one build.
+    private func interactionSnapshot() -> VelocityInteractionSnapshot {
+        VelocityInteractionSnapshot(
+            frozenNotes: gesture?.notes ?? [],
+            preview: gesture?.preview ?? [:],
+            detentUnlock: gesture?.detentUnlock ?? false,
+            relativeActivated: gesture?.relativeActivated ?? false,
+            hovered: hovered,
+            detentsEnabled: detentsEnabled)
+    }
+
+    /// The palette colours a scene build draws with, as values.
+    private func scenePalette() -> VelocityScenePalette {
+        VelocityScenePalette(
+            gridLineSub1: palette.gridLineSub1,
+            gridLineSub2: palette.gridLineSub2,
+            gridLineSub3: palette.gridLineSub3,
+            gridLineBar: palette.gridLineBar,
+            gridLineBeat: palette.gridLineBeat,
+            gridLineBeatFine: palette.gridLineBeatFine,
+            separator: palette.separator,
+            primaryText: palette.primaryText,
+            selectionRing: palette.selectionRing,
+            outline: palette.outline,
+            noteBorder: palette.noteBorder)
+    }
+
+    /// The page's own projection for hit tests and gesture maths: the shared
+    /// camera at the page's DPR against the published value axis.
+    private var projection: VelocityProjection {
+        VelocityProjection(camera: session?.camera, geometry: geometry,
+                           devicePixelRatio: devicePixelRatio, axis: axis)
     }
 
     // MARK: Publication
@@ -1189,85 +1086,13 @@ public final class VelocityPage: EditorDrawerPage {
         return true
     }
 
-    private func publishAxis() {
-        let relativeGesture = (gesture?.relativeActivated ?? false)
-            || publishedHandles.filter(\.selected).count > 1 || hovered != nil
-        let separatorX = max(0, rulerWidth - geometry.pixel)
-        // The ruler now spans the whole gutter (track headers plus the
-        // keyboard column); the label column keeps its keyboard-column width,
-        // anchored to the separator the ticks draw against.
-        let labelColumnWidth = fontPx(baseFontPx, 13.0 / 3.0) - geometry.pixel
-        let labelRight = max(geometry.labelSideInset, separatorX - geometry.labelSideInset)
-        let labelLeft = max(geometry.labelSideInset, labelRight - labelColumnWidth)
-        let labelWidth = max(0, labelRight - labelLeft)
-        let labelHeight = max(0, axis.geometry.labelHeight)
-        let labelColor = palette.primaryText
-        let selectedColor = palette.selectionRing
-        var ticks: [SceneRect] = []
-        var graduations: [SceneRect] = []
-        var markers: [SceneRect] = []
-        var labels: [SceneText] = []
-        if axis.mode == .intrinsic && detentsEnabled {
-            for graduation in axis.graduations {
-                let width = graduation.active ? 1.5 : geometry.pixel
-                graduations.append(SceneRect(
-                    x: separatorX - geometry.tickLabelLength, y: graduation.y - width / 2,
-                    width: geometry.tickLabelLength, height: width,
-                    fillColor: graduation.active ? selectedColor : labelColor,
-                    primitiveName: "velocityGraduation"))
-                let emphasized = graduation.active
-                    && (relativeGesture || !graduation.labelVisible)
-                guard (!relativeGesture && graduation.labelVisible) || emphasized else {
-                    continue
-                }
-                labels.append(SceneText(
-                    rect: (labelLeft, graduation.y - labelHeight / 2, labelWidth, labelHeight),
-                    text: graduation.text, color: labelColor,
-                    font: fontMap(emphasized: emphasized), horizontal: 0x2))
-            }
-        } else {
-            for tick in axis.ticks {
-                let length = axis.hasLabel(tick.velocity) ? geometry.tickLabelLength
-                                                          : geometry.tickShortLength
-                ticks.append(SceneRect(
-                    x: separatorX - length, y: tick.y - geometry.pixel / 2, width: length,
-                    height: geometry.pixel, fillColor: labelColor,
-                    primitiveName: "velocityTick"))
-            }
-            if !relativeGesture {
-                for label in axis.labels {
-                    labels.append(SceneText(
-                        rect: (labelLeft, label.y - labelHeight / 2, labelWidth, labelHeight),
-                        text: label.text, color: labelColor,
-                        font: fontMap(emphasized: false), horizontal: 0x2))
-                }
-            }
-            for marker in axis.markers {
-                markers.append(SceneRect(
-                    x: separatorX - geometry.markerLength, y: marker.y - 0.75,
-                    width: geometry.markerLength, height: 1.5, fillColor: selectedColor,
-                    primitiveName: "velocityMarker"))
-                guard relativeGesture else { continue }
-                labels.append(SceneText(
-                    rect: (labelLeft, marker.y - labelHeight / 2, labelWidth, labelHeight),
-                    text: "\(marker.velocity)", color: labelColor,
-                    font: fontMap(emphasized: true), horizontal: 0x2))
-            }
-        }
-        syncRects(axisTicks, ticks)
-        syncRects(axisGraduations, graduations)
-        syncRects(axisMarkers, markers)
-        syncTexts(axisLabels, labels)
-    }
-
-    private func fontMap(emphasized: Bool) -> [String: QVariantSettable] {
-        guard let typography else {
-            return ["family": "Atkinson Hyperlegible Next",
-                    "pixelSize": Int(baseFontPx),
-                    "weight": emphasized ? 600 : 400,
-                    "letterSpacing": 0.0]
-        }
-        return typography.fontMap(emphasized ? .bold : .keyLabel)
+    /// Publishes one build's ruler rows: the ticks, graduations, markers and
+    /// labels `VelocityScene` derived for the presented axis.
+    private func publishAxis(_ snapshot: VelocitySceneSnapshot) {
+        syncRects(axisTicks, snapshot.axisTicks)
+        syncRects(axisGraduations, snapshot.axisGraduations)
+        syncRects(axisMarkers, snapshot.axisMarkers)
+        syncTexts(axisLabels, snapshot.axisLabels)
     }
 
     private var typography: GridTypography? {
@@ -1275,8 +1100,8 @@ public final class VelocityPage: EditorDrawerPage {
         let key = TypographyKey(baseFontPx: baseFontPx, devicePixelRatio: devicePixelRatio,
                                rowHeight: session.camera.snapshot.keyHeight)
         if let typographyCache, typographyCache.key == key { return typographyCache.value }
-        let value = GridTypography(fonts: GridTypography.fonts(metrics: gridMetrics(session)),
-                                   rowHeight: key.rowHeight)
+        let value = VelocityScene.typography(metrics: gridMetrics(session),
+                                             rowHeight: key.rowHeight)
         typographyCache = (key, value)
         return value
     }
@@ -1285,101 +1110,22 @@ public final class VelocityPage: EditorDrawerPage {
         let key = MetricsKey(revision: session.document.revision, font: baseFontPx,
                              dpr: devicePixelRatio, width: plotWidth, height: plotHeight)
         if let metricsCache, metricsCache.key == key { return metricsCache.value }
-        let value = GridMetrics(baseFontPx: baseFontPx, dpr: devicePixelRatio, width: plotWidth,
-                                height: plotHeight, timeAxis: timeAxis(session))
+        let value = VelocityScene.gridMetrics(baseFontPx: baseFontPx,
+                                              devicePixelRatio: devicePixelRatio,
+                                              width: plotWidth, height: plotHeight,
+                                              timeAxis: VelocityScene.timeAxis(session))
         metricsCache = (key, value)
         return value
     }
 
-    /// The roll's own time axis, built from the same document facts the grid
-    /// uses, so the velocity band's grid is the roll's grid.
-    private func timeAxis(_ session: DocumentSession) -> TimeAxis {
-        session.projectionCache.timeAxis
+    /// Publishes one build's time-grid rows.
+    private func publishGrid(_ snapshot: VelocitySceneSnapshot) {
+        syncRects(gridLines, snapshot.grid)
     }
 
-    /// The vertical grid over the visible plot: `composeBandedGrid`'s
-    /// subdivisions plus the beat, fine-beat and bar lines.
-    private func publishGrid() {
-        guard let session, plotHeight > 0, plotWidth > rulerWidth else {
-            syncRects(gridLines, [])
-            return
-        }
-        let camera = session.camera
-        let metrics = gridMetrics(session)
-        let physicalPixel = max(geometry.pixel, 0.0001)
-        let roundingMargin = physicalPixel / 2
-        let beginTick = camera.tickAtContentX(-roundingMargin)
-        let endTick = camera.tickAtContentX(plotWidth - physicalPixel + roundingMargin) + 1
-        guard endTick > beginTick else {
-            syncRects(gridLines, [])
-            return
-        }
-        let range = (begin: Tick(max(0, beginTick.rounded(.down))),
-                     end: Tick(max(1, endTick.rounded(.up))))
-        let stroke = metrics.gridLineStroke
-        var rects: [SceneRect] = []
-        metrics.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
-            let x = camera.displayX(tick: Double(tick), origin: 0, dpr: devicePixelRatio)
-            let color = level == 1 ? palette.gridLineSub1
-                : level == 2 ? palette.gridLineSub2 : palette.gridLineSub3
-            rects.append(SceneRect(x: x - stroke / 2, y: 0, width: stroke, height: plotHeight,
-                                   fillColor: color, primitiveName: "velocityGrid"))
-        }
-        var segment = metrics.timeAxis.segmentAt(range.begin)
-        var finest = metrics.visibleGridTicks(in: segment, camera: camera) == 1
-        metrics.timeAxis.forEachGridLine(from: range.begin, to: range.end) { tick, isBar, _, _ in
-            if tick >= segment.next {
-                segment = metrics.timeAxis.segmentAt(tick)
-                finest = metrics.visibleGridTicks(in: segment, camera: camera) == 1
-            }
-            let x = camera.displayX(tick: Double(tick), origin: 0, dpr: devicePixelRatio)
-            rects.append(SceneRect(
-                x: x - stroke / 2, y: 0, width: stroke, height: plotHeight,
-                fillColor: isBar ? palette.gridLineBar
-                    : finest ? palette.gridLineBeatFine : palette.gridLineBeat,
-                primitiveName: "velocityGrid"))
-        }
-        syncRects(gridLines, rects)
-    }
-
-    /// PSG level bands: one horizontal boundary per level inside each voice
-    /// context section whose map resolves exactly to a PSG voice. A section
-    /// whose map is unknown draws no level line rather than a guessed layout.
-    private func publishBands() {
-        guard let session, plotHeight > 0, plotWidth > rulerWidth else {
-            syncRects(psgBands, [])
-            return
-        }
-        let camera = session.camera
-        let color = palette.separator
-        let first = Tick(max(0, camera.tickAtContentX(0).rounded(.down)))
-        let last = max(Tick(first + 1), Tick(camera.tickAtContentX(plotWidth).rounded(.up)))
-        var sectionTick = first
-        var rects: [SceneRect] = []
-        var guardCounter = 0
-        let resolve = contextResolver()
-        while sectionTick < last, guardCounter < 4096 {
-            guardCounter += 1
-            let context = resolve(sectionTick, nil)
-            let sectionEnd = min(last, context.endTick ?? last)
-            if sectionEnd <= sectionTick { break }
-            if context.status == .resolved, context.map.isPSG, context.map.levelCount > 1 {
-                let left = min(max(xForDisplayTick(Double(sectionTick)), 0), plotWidth)
-                let right = min(max(xForDisplayTick(Double(sectionEnd)), 0), plotWidth)
-                if right > left {
-                    let sectionMap = context.map
-                    for level in 0..<(context.map.levelCount - 1) {
-                        let y = axis.levelBoundaryToY(level, map: sectionMap)
-                        rects.append(SceneRect(
-                            x: left, y: y - geometry.gridLineStroke / 2, width: right - left,
-                            height: geometry.gridLineStroke, fillColor: color,
-                            primitiveName: "velocityBand"))
-                    }
-                }
-            }
-            sectionTick = sectionEnd
-        }
-        syncRects(psgBands, rects)
+    /// Publishes one build's PSG level-band rows.
+    private func publishBands(_ snapshot: VelocitySceneSnapshot) {
+        syncRects(psgBands, snapshot.bands)
     }
 
     /// The gesture's transient rendering: the ramp line and the band reticle.
@@ -1409,42 +1155,28 @@ public final class VelocityPage: EditorDrawerPage {
                                        primitiveName: "velocityBandFill"))
                 let dash = 4 * geometry.pixel
                 let gap = 2 * geometry.pixel
-                appendDashed(&rects, horizontal: true, fixed: minY, from: minX, to: maxX,
-                             dash: dash, gap: gap)
-                appendDashed(&rects, horizontal: true, fixed: maxY, from: minX, to: maxX,
-                             dash: dash, gap: gap)
-                appendDashed(&rects, horizontal: false, fixed: minX, from: minY, to: maxY,
-                             dash: dash, gap: gap)
-                appendDashed(&rects, horizontal: false, fixed: maxX, from: minY, to: maxY,
-                             dash: dash, gap: gap)
+                VelocityScene.appendDashed(&rects, horizontal: true, fixed: minY, from: minX,
+                                           to: maxX, dash: dash, gap: gap,
+                                           physicalPixel: geometry.pixel,
+                                           color: palette.selectionEdge)
+                VelocityScene.appendDashed(&rects, horizontal: true, fixed: maxY, from: minX,
+                                           to: maxX, dash: dash, gap: gap,
+                                           physicalPixel: geometry.pixel,
+                                           color: palette.selectionEdge)
+                VelocityScene.appendDashed(&rects, horizontal: false, fixed: minX, from: minY,
+                                           to: maxY, dash: dash, gap: gap,
+                                           physicalPixel: geometry.pixel,
+                                           color: palette.selectionEdge)
+                VelocityScene.appendDashed(&rects, horizontal: false, fixed: maxX, from: minY,
+                                           to: maxY, dash: dash, gap: gap,
+                                           physicalPixel: geometry.pixel,
+                                           color: palette.selectionEdge)
             case .relative, .paint, .pan:
                 break
             }
         }
         syncRects(transientRects, rects)
         publishReadout()
-    }
-
-    private func appendDashed(_ rects: inout [SceneRect], horizontal: Bool, fixed: Double,
-                              from: Double, to: Double, dash: Double, gap: Double) {
-        let period = dash + gap
-        guard period > 0, to > from else { return }
-        var position = from
-        while position < to {
-            let end = min(position + dash, to)
-            if horizontal {
-                rects.append(SceneRect(x: position, y: fixed - geometry.pixel / 2,
-                                       width: end - position, height: geometry.pixel,
-                                       fillColor: palette.selectionEdge,
-                                       primitiveName: "velocityBandEdge"))
-            } else {
-                rects.append(SceneRect(x: fixed - geometry.pixel / 2, y: position,
-                                       width: geometry.pixel, height: end - position,
-                                       fillColor: palette.selectionEdge,
-                                       primitiveName: "velocityBandEdge"))
-            }
-            position += period
-        }
     }
 
     /// The readout: the hovered or dragged value plus the selection count. An
