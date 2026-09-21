@@ -240,6 +240,7 @@ qt_add_resources(porydaw_app "swift_roll_qml"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swiftroll"
     FILES
         src/ui/songview/quick/swiftroll/PianoRollCanvas.qml
+        src/ui/songview/quick/swiftroll/EditorSurface.qml
         src/ui/songview/quick/swiftroll/SwiftRollOverlay.qml
         src/ui/songview/quick/swiftroll/TimelineQuickItem.qml
 )

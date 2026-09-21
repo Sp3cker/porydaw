@@ -25,6 +25,14 @@ private enum QtFact {
     static let controlModifier = 0x0400_0000
 }
 
+public enum QtScrollPhase: Int {
+    case noScroll = 0
+    case begin = 1
+    case update = 2
+    case end = 3
+    case momentum = 4
+}
+
 @MainActor
 @QtBridgeable
 public final class PianoGrid {
@@ -36,11 +44,15 @@ public final class PianoGrid {
     @QtIgnored var onCommandAvailabilityChanged: (() -> Void)?
     @QtIgnored private var lastCommandAvailability: [Bool] = []
     @QtIgnored private var keyboardAuditionKey: Int?
-    @QtIgnored private var viewportScrollX = 0.0
-    @QtIgnored var viewportScrollY = 0.0
-    @QtIgnored private var horizontalZoom = 1.0
-    @QtIgnored private var verticalZoom = 1.0
     @QtIgnored var onAudition: ((Int, Int, Int) -> Void)?
+    @QtIgnored private var didApplyInitialHome = false
+    @QtIgnored private var contentEndTick = GridMetrics.songLengthTicks
+    @QtIgnored private var staticSceneDirty = true
+    @QtIgnored private var staticCameraSnapshot: EditorCamera.Snapshot?
+    @QtIgnored private var staticProjection: PitchProjection?
+    @QtIgnored private var staticBaseFontPx = 0.0
+    @QtIgnored private var staticDevicePixelRatio = 0.0
+    @QtIgnored private var staticContentEndTick = GridMetrics.songLengthTicks
 
     @QtTracked public var scene = GridScene()
     @QtTracked public var palette = GridPalette()
@@ -52,16 +64,14 @@ public final class PianoGrid {
     @QtTracked public var devicePixelRatio = 1.0
     @QtTracked public var beatWidth = 35.0
     @QtTracked public var rowHeight = 13.0
-    @QtTracked public var gridWidth = 0.0
-    @QtTracked public var gridHeight = 0.0
-    @QtTracked public var leadPadWidth = 48.0
+    @QtTracked public var cameraScrollX = 0.0
+    @QtTracked public var cameraScrollY = 0.0
+    @QtTracked public var cameraMaxVScroll = 0.0
     @QtTracked public var keyboardWidth = 56.0
     @QtTracked public var rulerHeight = 0.0
-    @QtTracked public var initialScrollY = 0.0
     @QtTracked public var ticksPerBeat = GridMetrics.ticksPerBeat
     @QtTracked public var snapTicks = 6
     @QtTracked public var visibleGridTicks = 12
-    @QtTracked public var beatCount = 16
     @QtIgnored public private(set) var activeNoteId: UInt64 = 0
     @QtTracked public var cursorKind = 0
     @QtTracked public var statusText = ""
@@ -99,7 +109,7 @@ public final class PianoGrid {
         let initialTrack = min(max(0, session.selectedTrack ?? 0), max(0, count - 1))
         session.selectedTrack = count == 0 ? nil : initialTrack
         trackIndex = initialTrack
-        editCursorTick = Int(session.camera.tick)
+        editCursorTick = Int(session.editCursor)
         refreshFromSession()
     }
 
@@ -122,14 +132,22 @@ public final class PianoGrid {
             trackIndex = valid
             notes = session.document.notes(in: valid).map { note in
                 GridNote(noteId: note.id, tick: Int(note.tick),
-                         duration: Int(note.isUnterminated ? max(1, Tick(metrics.snapTicks))
-                                                         : max(1, note.duration)),
+                         duration: Int(note.isUnterminated
+                             ? max(1, Tick(metrics.snapTicks(camera: session.camera)))
+                             : max(1, note.duration)),
                          pitch: Int(note.pitch), track: note.track,
                          velocity: Int(note.velocity), ghost: false)
             }
         }
         appliedRevisionText = String(session.document.revision)
-        editCursorTick = Int(session.camera.tick)
+        editCursorTick = Int(session.editCursor)
+        updateTimeAxis()
+        staticSceneDirty = true
+        refreshNotes()
+    }
+
+    @QtIgnored
+    public func refreshCamera() {
         updateTimeAxis()
         refreshNotes()
     }
@@ -139,58 +157,103 @@ public final class PianoGrid {
         guard index >= 0, index < count, index != trackIndex else { return }
         stopAudition()
         session.selectedTrack = index
-        session.camera.track = index
         refreshFromSession()
     }
 
     public func configureViewport(width: Double, height: Double,
                                   fontPx: Double, dpr: Double) {
+        let oldFont = metrics.baseFontPx
+        let newFont = max(1, fontPx)
         let preservedScale = metrics.snapScale
         let preservedTriplet = metrics.tripletGrid
-        metrics = GridMetrics(baseFontPx: max(1, fontPx), dpr: max(0.1, dpr),
-                              width: max(0, width), height: max(0, height),
-                              timeAxis: metrics.timeAxis)
-        metrics.beatWidth *= horizontalZoom
-        metrics.rowHeight *= verticalZoom
+        metrics = GridMetrics(
+            baseFontPx: newFont, dpr: max(0.1, dpr),
+            width: max(0, width), height: max(0, height),
+            timeAxis: metrics.timeAxis)
         metrics.snapScale = preservedScale
         metrics.tripletGrid = preservedTriplet
         baseFontPx = metrics.baseFontPx
         devicePixelRatio = metrics.dpr
-        updateTypography()
-        recomputeGridWidth()
-        initialScrollY = defaultVerticalScroll()
-        publishGeometry()
-        rebuildScene()
-        publishOutputs()
-    }
-
-    public func setViewportScroll(x: Double, y: Double) {
-        viewportScrollX = max(0, x)
-        viewportScrollY = max(0, y)
-        rebuildScene()
-    }
-
-    public func zoomBy(delta: Double, vertical: Bool) {
-        guard delta != 0 else { return }
-        let factor = pow(1.0015, delta)
-        if vertical {
-            verticalZoom = min(4.0, max(0.5, verticalZoom * factor))
-            metrics.rowHeight = fontPx(metrics.baseFontPx, verticalZoom)
-        } else {
-            horizontalZoom = min(4.0, max(0.5, horizontalZoom * factor))
-            metrics.beatWidth = fontPx(metrics.baseFontPx, (8.0 / 3.0) * horizontalZoom)
-        }
         _ = updateTypography()
-        recomputeGridWidth()
-        publishGeometry()
-        rebuildScene()
-        publishOutputs()
+
+        let oldLimits = GridCameraPolicy.limits(baseFontPx: oldFont)
+        let newLimits = GridCameraPolicy.limits(baseFontPx: newFont)
+        session.mutateCamera { camera in
+            let priorScale = camera.snapshot
+            let scaledPixelsPerBeat =
+                priorScale.pixelsPerBeat
+                    * newLimits.defaultPixelsPerBeat / oldLimits.defaultPixelsPerBeat
+            let scaledKeyHeight =
+                priorScale.keyHeight
+                    * newLimits.defaultKeyHeight / oldLimits.defaultKeyHeight
+            camera.updateLimits(newLimits)
+            if newFont != oldFont {
+                _ = camera.setTimeZoom(scaledPixelsPerBeat)
+                _ = camera.setKeyHeight(scaledKeyHeight)
+            }
+            camera.updateViewport(width: max(0, width), rollHeight: max(0, height))
+            camera.updateTimeDomain(
+                ticksPerBeat: UInt32(max(1, session.document.ticksPerBeat)),
+                lengthTicks: UInt64(session.timeline.lengthTicks))
+            if !didApplyInitialHome, height > 0 {
+                _ = camera.setVScroll(defaultVerticalScroll(camera: camera))
+                didApplyInitialHome = true
+            }
+        }
+        refreshCamera()
+    }
+
+    public func resetCameraScroll() {
+        session.mutateCamera { camera in
+            _ = camera.setHScroll(camera.snapshot.minHScroll)
+            _ = camera.setVScroll(defaultVerticalScroll(camera: camera))
+        }
+    }
+
+    public func setCameraHScroll(value: Double) {
+        session.mutateCamera { _ = $0.setHScroll(value) }
+    }
+
+    public func setCameraVScroll(value: Double) {
+        session.mutateCamera { _ = $0.setVScroll(value) }
+    }
+
+    public func handleWheel(angleDeltaX: Double, angleDeltaY: Double,
+                            pixelDeltaX: Double, pixelDeltaY: Double,
+                            modifiers: Int, phase: Int, overGutter: Bool,
+                            anchorX: Double, anchorY: Double) {
+        guard let phase = QtScrollPhase(rawValue: phase) else {
+            preconditionFailure("Unsupported Qt scroll phase: \(phase)")
+        }
+        let isPixel = pixelDeltaX != 0 || pixelDeltaY != 0
+        let dx = isPixel ? pixelDeltaX : angleDeltaX
+        let dy = isPixel ? pixelDeltaY : angleDeltaY
+        let d = dy != 0 ? dy : dx
+        let weightedDy = dy * (isPixel ? 5 : 1)
+        if modifiers & QtFact.controlModifier != 0 {
+            guard phase != .momentum else { return }
+            session.mutateCamera {
+                _ = $0.zoomKeyHeight(factor: exp2(weightedDy / 1200), anchorY: anchorY)
+            }
+        } else if modifiers & QtFact.shiftModifier != 0 {
+            session.mutateCamera { _ = $0.scrollByPx(-d) }
+        } else if dy == 0, dx != 0 {
+            session.mutateCamera { _ = $0.scrollByPx(-dx) }
+        } else if overGutter {
+            session.mutateCamera { _ = $0.scrollRollBy(-dy / 2) }
+        } else {
+            guard phase != .momentum else { return }
+            session.mutateCamera {
+                _ = $0.zoomAroundContentX(
+                    factor: pow(1.0015, weightedDy), anchorContentX: anchorX)
+            }
+        }
     }
 
     public func setEditCursorTick(tick: Int) {
         editCursorTick = max(0, tick)
-        session.camera.tick = TimeDefaults.tick(from: Double(editCursorTick))
-        rebuildScene()
+        session.editCursor = TimeDefaults.tick(from: Double(editCursorTick))
+        refreshNotes()
     }
 
     public func reloadVisuals() {
@@ -239,22 +302,23 @@ public final class PianoGrid {
             metrics.tripletGrid.toggle()
             tripletGrid = metrics.tripletGrid
         default:
-            _ = commands.execute(command, snapTicks: Tick(metrics.snapTicks),
-                                 editCursor: TimeDefaults.tick(from: Double(editCursorTick)),
-                                 nextSubdivision: { [metrics] tick in
-                                     let stride = UInt32(max(1, metrics.snapTicks))
-                                     return TimeDefaults.shiftTickClamped(tick,
-                                         by: Int64(stride - tick % stride))
-                                 })
+            let grid = UInt32(max(1, metrics.snapTicks(camera: session.camera)))
+            _ = commands.execute(
+                command, snapTicks: Tick(grid),
+                editCursor: TimeDefaults.tick(from: Double(editCursorTick)),
+                nextSubdivision: { tick in
+                    TimeDefaults.shiftTickClamped(
+                        tick, by: Int64(grid - tick % grid))
+                })
         }
-        session.camera.tick = TimeDefaults.tick(from: Double(editCursorTick))
+        session.editCursor = TimeDefaults.tick(from: Double(editCursorTick))
         refreshFromSession()
     }
 
     public func beginPointer(x: Double, y: Double, modifiers: Int) {
         guard gesture == nil else { return }
-        let pressTick = metrics.tickAtContentX(x)
-        let pressKey = metrics.yToPitch(y)
+        let pressTick = session.camera.tickAtContentX(x)
+        let pressKey = pitch(atY: y)
         guard pressKey >= 0 else { return }
         if let hit = hitNote(x: x, y: y) {
             let note = notes[hit.index]
@@ -282,13 +346,15 @@ public final class PianoGrid {
 
     public func updatePointer(x: Double, y: Double) {
         guard let gesture, !gesture.isRight else { return }
-        self.gesture = gesture.updated(x: x, y: y, metrics: metrics)
+        self.gesture = gesture.updated(
+            x: x, y: y, metrics: metrics, camera: session.camera)
         refreshNotes()
     }
 
     public func endPointer(x: Double, y: Double) {
         guard let gesture, !gesture.isRight else { return }
-        self.gesture = gesture.updated(x: x, y: y, metrics: metrics)
+        self.gesture = gesture.updated(
+            x: x, y: y, metrics: metrics, camera: session.camera)
         commitGesture()
         self.gesture = nil
         activeNoteId = 0
@@ -306,14 +372,16 @@ public final class PianoGrid {
 
     public func updateRightPointer(x: Double, y: Double) {
         guard let gesture, gesture.isRight else { return }
-        self.gesture = gesture.updated(x: x, y: y, metrics: metrics)
+        self.gesture = gesture.updated(
+            x: x, y: y, metrics: metrics, camera: session.camera)
         if case .band = self.gesture { applyBandSelection() }
         refreshNotes()
     }
 
     public func endRightPointer(x: Double, y: Double) {
         guard let gesture, gesture.isRight else { return }
-        let updated = gesture.updated(x: x, y: y, metrics: metrics)
+        let updated = gesture.updated(
+            x: x, y: y, metrics: metrics, camera: session.camera)
         if case .pendingMenu = updated {
             contextMenuRequested(x: x, y: y)
         } else {
@@ -335,7 +403,7 @@ public final class PianoGrid {
     }
 
     public func updateHover(x: Double, y: Double) {
-        let key = metrics.yToPitch(y)
+        let key = pitch(atY: y)
         let next = key >= 0 ? key : -1
         guard next != hoverKey else { return }
         hoverKey = next
@@ -353,7 +421,7 @@ public final class PianoGrid {
     }
 
     public func updateKeyboardPointer(y: Double) {
-        let key = metrics.yToPitch(y)
+        let key = pitch(atY: y)
         guard key >= 0, key <= 127, key != keyboardAuditionKey else { return }
         stopAudition()
         keyboardAuditionKey = key
@@ -366,7 +434,8 @@ public final class PianoGrid {
         stopAudition()
     }
 
-    func handleEscape() -> Bool {
+    @QtIgnored
+    public func handleEscape() -> Bool {
         // Production Escape (editkeyrouting.cpp:409-418): an active gesture
         // cancels with its rollback/audition teardown; idle Escape clears the
         // ephemeral note selection and is consumed even though this surface
@@ -429,8 +498,9 @@ public final class PianoGrid {
         let ids = Array(session.selectedNotes)
         switch gesture {
         case .pendingDraw(let state):
-            addNote(tick: metrics.snapTickDown(state.pressTick),
-                    duration: metrics.snapTicks, pitch: state.pressKey)
+            addNote(
+                tick: metrics.snapTickDown(state.pressTick, camera: session.camera),
+                duration: metrics.snapTicks(camera: session.camera), pitch: state.pressKey)
         case .draw(let state):
             addNote(tick: state.tick, duration: state.duration, pitch: state.key)
         case .move(let state):
@@ -463,9 +533,11 @@ public final class PianoGrid {
         var covered = Set<NoteID>()
         for note in notes {
             let displayed = displayedNote(note)
-            let rect = metrics.noteRect(x0: metrics.displayX(Double(displayed.tick)),
-                                        x1: metrics.displayX(Double(displayed.end)),
-                                        pitch: displayed.pitch)
+            let rect = metrics.noteRect(
+                camera: session.camera,
+                x0: session.camera.displayX(tick: Double(displayed.tick), origin: 0, dpr: metrics.dpr),
+                x1: session.camera.displayX(tick: Double(displayed.end), origin: 0, dpr: metrics.dpr),
+                pitch: displayed.pitch)
             if rect.x < band.x + band.w, rect.x + rect.w > band.x,
                rect.y < band.y + band.h, rect.y + rect.h > band.y {
                 covered.insert(note.noteId)
@@ -490,58 +562,77 @@ public final class PianoGrid {
 
     @QtIgnored
     private func sceneInput() -> GridSceneInput {
-        GridSceneInput(metrics: metrics, palette: palette, gridWidth: gridWidth,
-                       rulerHeight: rulerHeight, typography: typography,
-                       fontSpec: { self.fontSpec($0) }, notes: notes,
-                       displayedNote: { self.displayedNote($0) },
-                       isSelected: { self.session.selectedNotes.contains($0) },
-                       drawPreview: drawPreview, lastVelocity: lastVelocity,
-                       hoverKey: hoverKey, viewportScrollX: viewportScrollX,
-                       viewportScrollY: viewportScrollY, selectionBand: selectionBand)
+        GridSceneInput(
+            metrics: metrics, palette: palette, camera: session.camera,
+            contentEndTick: contentEndTick, rulerHeight: rulerHeight,
+            typography: typography, fontSpec: { self.fontSpec($0) }, notes: notes,
+            displayedNote: { self.displayedNote($0) },
+            isSelected: { self.session.selectedNotes.contains($0) },
+            drawPreview: drawPreview, lastVelocity: lastVelocity,
+            hoverKey: hoverKey, selectionBand: selectionBand)
     }
 
     @QtIgnored
     private func rebuildScene() {
         let input = sceneInput()
         scene.rebuildStatic(input)
+        recordStaticInputs()
+        staticSceneDirty = false
         scene.rebuildNotes(input)
     }
 
     @QtIgnored
     private func refreshNotes() {
-        let previousWidth = gridWidth
-        let measured = recomputeGeometry()
+        recomputeContentEndTick()
+        if updateTypography() { staticSceneDirty = true }
+        if staticInputsChanged() { staticSceneDirty = true }
         let input = sceneInput()
-        if measured || gridWidth != previousWidth { scene.rebuildStatic(input) }
+        if staticSceneDirty {
+            scene.rebuildStatic(input)
+            recordStaticInputs()
+            staticSceneDirty = false
+        }
         scene.rebuildNotes(input)
         publishOutputs()
     }
 
     @QtIgnored
-    private func recomputeGridWidth() {
-        var end = max(Int(session.timeline.lengthTicks), GridMetrics.songLengthTicks)
-        for note in notes { end = max(end, note.tick + note.duration) }
-        if let preview = drawPreview { end = max(end, preview.tick + preview.duration) }
-        gridWidth = metrics.leadPadWidth + Double(end) * metrics.pxPerTick
-            + metrics.viewportWidth
+    private func staticInputsChanged() -> Bool {
+        staticCameraSnapshot != session.camera.snapshot
+            || staticProjection != session.camera.projection
+            || staticBaseFontPx != metrics.baseFontPx
+            || staticDevicePixelRatio != metrics.dpr
+            || staticContentEndTick != contentEndTick
     }
 
     @QtIgnored
-    private func recomputeGeometry() -> Bool {
-        recomputeGridWidth()
-        return updateTypography()
+    private func recordStaticInputs() {
+        staticCameraSnapshot = session.camera.snapshot
+        staticProjection = session.camera.projection
+        staticBaseFontPx = metrics.baseFontPx
+        staticDevicePixelRatio = metrics.dpr
+        staticContentEndTick = contentEndTick
+    }
+
+    @QtIgnored
+    private func recomputeContentEndTick() {
+        var end = max(Int(session.timeline.lengthTicks), GridMetrics.songLengthTicks)
+        for note in notes { end = max(end, note.tick + note.duration) }
+        if let preview = drawPreview { end = max(end, preview.tick + preview.duration) }
+        contentEndTick = end
     }
 
     @discardableResult
     @QtIgnored
     private func updateTypography() -> Bool {
+        let cameraRowHeight = session.camera.snapshot.keyHeight
         let key = (fontPx: metrics.baseFontPx, dpr: metrics.dpr,
-                   rowHeight: metrics.rowHeight)
+                   rowHeight: cameraRowHeight)
         if let current = typographyKey,
            current.fontPx == key.fontPx && current.dpr == key.dpr
             && current.rowHeight == key.rowHeight { return false }
         measurementFonts = GridTypography.fonts(metrics: metrics)
-        let measured = GridTypography(fonts: measurementFonts, rowHeight: metrics.rowHeight)
+        let measured = GridTypography(fonts: measurementFonts, rowHeight: cameraRowHeight)
         typography = measured
         typographyKey = key
         rulerHeight = measured.boldHeight + 1 + measured.rulerHeight + 1
@@ -555,25 +646,36 @@ public final class PianoGrid {
 
     @QtIgnored
     private func publishGeometry() {
-        beatWidth = metrics.beatWidth
-        rowHeight = metrics.rowHeight
+        let snapshot = session.camera.snapshot
+        beatWidth = snapshot.pixelsPerBeat
+        rowHeight = snapshot.keyHeight
+        cameraScrollX = snapshot.scrollX
+        cameraScrollY = snapshot.scrollY
+        cameraMaxVScroll = snapshot.maxVScroll
         keyboardWidth = metrics.keyboardWidth
-        leadPadWidth = metrics.leadPadWidth
-        gridHeight = metrics.gridHeight
-        ticksPerBeat = metrics.documentTicksPerBeat
-        snapTicks = metrics.snapTicks
-        visibleGridTicks = metrics.visibleGridTicks
-        beatCount = max(16, Int(ceil(Double(session.timeline.lengthTicks)
-                                     / Double(max(1, ticksPerBeat)))))
+        ticksPerBeat = Int(max(1, session.document.ticksPerBeat))
+        snapTicks = metrics.snapTicks(camera: session.camera)
+        visibleGridTicks = metrics.visibleGridTicks(camera: session.camera)
     }
 
     @QtIgnored
-    private func defaultVerticalScroll() -> Double {
+    private func defaultVerticalScroll(camera: EditorCamera) -> Double {
         let pitches = notes.map(\.pitch)
         let middle = pitches.isEmpty ? 60 : (pitches.min()! + pitches.max()!) / 2
-        let centerRow = 127 - middle
-        return max(0, Double(centerRow) * metrics.rowHeight
-                   - max(metrics.initialViewportHeight, metrics.viewportHeight) / 2)
+        guard let pitch = camera.projection.nearestVisiblePitch(to: middle) else { return 0 }
+        let centerRow = camera.projection.row(forPitch: pitch)
+        return max(
+            0, Double(centerRow) * camera.snapshot.keyHeight
+                - max(fontPx(metrics.baseFontPx, 50.0 / 3.0),
+                      camera.snapshot.rollHeight) / 2)
+    }
+
+    @QtIgnored
+    private func pitch(atY y: Double) -> Int {
+        let snapshot = session.camera.snapshot
+        return session.camera.projection.pitch(
+            atY: y, keyHeight: snapshot.keyHeight,
+            scrollY: snapshot.scrollY, dpr: metrics.dpr) ?? -1
     }
 
     @QtIgnored
@@ -604,9 +706,12 @@ public final class PianoGrid {
     @QtIgnored
     private func hitZone(x: Double, y: Double, note: GridNote) -> (HitZone, Bool) {
         let reach = metrics.edgeGripReach
-        let rect = metrics.noteRect(x0: metrics.displayX(Double(note.tick)),
-                                    x1: metrics.displayX(Double(note.tick + note.duration)),
-                                    pitch: note.pitch)
+        let rect = metrics.noteRect(
+            camera: session.camera,
+            x0: session.camera.displayX(tick: Double(note.tick), origin: 0, dpr: metrics.dpr),
+            x1: session.camera.displayX(
+                tick: Double(note.tick + note.duration), origin: 0, dpr: metrics.dpr),
+            pitch: note.pitch)
         guard y >= rect.y, y < rect.y + rect.h else { return (.none, false) }
         let right = rect.x + rect.w
         let inside = x >= rect.x && x < right
@@ -650,7 +755,7 @@ public final class PianoGrid {
         if let gesture {
             switch gesture {
             case .pendingDraw(let state):
-                statusText = "Pending draw at tick \(metrics.snapTick(state.pressTick))"
+                statusText = "Pending draw at tick \(metrics.snapTick(state.pressTick, camera: session.camera))"
             case .draw(let state):
                 statusText = "Drawing — tick \(state.tick), duration \(state.duration), pitch \(state.key)"
             case .move(let state):

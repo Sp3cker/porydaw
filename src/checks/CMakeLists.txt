@@ -103,6 +103,7 @@ if(APPLE)
         swiftcore/EventChecks.swift
         swiftcore/TimeChecks.swift
         swiftcore/EditorCameraChecks.swift
+        swiftcore/EditorGridCameraChecks.swift
         swiftcore/SessionChecks.swift
     )
     set_target_properties(swift_core_check PROPERTIES

@@ -172,8 +172,6 @@ void SwiftRollGatedTest::chromeRasterParity()
         gridcheck::visualDescendant(root, QStringLiteral("timelineQuickRollPlot"));
     QQuickItem *const gutter =
         gridcheck::visualDescendant(root, QStringLiteral("timelineQuickRollGutter"));
-    QQuickItem *const viewport =
-        gridcheck::visualDescendant(root, QStringLiteral("swiftRollViewport"));
     QQuickItem *const surface =
         gridcheck::visualDescendant(root, QStringLiteral("pianoGridSurface"));
     QQuickItem *const rows =
@@ -186,7 +184,6 @@ void SwiftRollGatedTest::chromeRasterParity()
         gridcheck::visualDescendant(root, QStringLiteral("timelineQuickPianoHoverChip"));
     QVERIFY(plot != nullptr);
     QVERIFY(gutter != nullptr);
-    QVERIFY(viewport != nullptr);
     QVERIFY(surface != nullptr);
     QVERIFY(rows != nullptr);
     QVERIFY(time != nullptr);
@@ -210,10 +207,16 @@ void SwiftRollGatedTest::chromeRasterParity()
 
     const QColor natural = themes::color(themes::Role::song_view_piano_roll_background);
     const QColor accidental = themes::color(themes::Role::song_view_piano_roll_accidental_lane);
-    const qreal naturalY = rowCenter(kNaturalPitch, rowHeight);
-    const qreal accidentalY = rowCenter(kAccidentalPitch, rowHeight);
-    const qreal visibleLeft = viewport->property("contentX").toDouble() + plot->width() * 0.10;
-    const qreal visibleRight = viewport->property("contentX").toDouble() + plot->width() * 0.90;
+    const qreal cameraScrollX = grid->property("cameraScrollX").toDouble();
+    const qreal cameraScrollY = grid->property("cameraScrollY").toDouble();
+    QVERIFY(std::isfinite(cameraScrollX));
+    QVERIFY(std::isfinite(cameraScrollY));
+    const qreal naturalY = rowCenter(kNaturalPitch, rowHeight) - cameraScrollY;
+    const qreal accidentalY = rowCenter(kAccidentalPitch, rowHeight) - cameraScrollY;
+    const qreal visibleContentLeft = cameraScrollX + plot->width() * 0.10;
+    const qreal visibleContentRight = cameraScrollX + plot->width() * 0.90;
+    const qreal visibleLeft = visibleContentLeft - cameraScrollX;
+    const qreal visibleRight = visibleContentRight - cameraScrollX;
 
     const auto rowProbes = findUncoveredRows(image, *surface, visibleLeft, visibleRight, naturalY,
                                              accidentalY, natural, accidental);
@@ -232,7 +235,7 @@ void SwiftRollGatedTest::chromeRasterParity()
     QVERIFY(gridcheck::colorsNear(gridcheck::pixelAt(image, naturalKey), expectedNaturalKey));
     QVERIFY(gridcheck::colorsNear(gridcheck::pixelAt(image, accidentalKey), expectedAccidentalKey));
 
-    const qreal cBoundary = (127.0 - kNaturalPitch + 1.0) * rowHeight;
+    const qreal cBoundary = (127.0 - kNaturalPitch + 1.0) * rowHeight - cameraScrollY;
     const QColor separator = themes::color(themes::Role::song_view_piano_keyboard_separator);
     const QPointF gutterBoundary = gutter->mapToScene(QPointF(keyboardWidth * 0.25, cBoundary));
     const QPointF rollBoundary(rowProbes->natural.x(),
@@ -270,21 +273,20 @@ void SwiftRollGatedTest::chromeRasterParity()
     QVERIFY2(beatProbes.has_value(),
              "no visible beat line composited the relative-alpha grid role over both rows");
 
-    const qreal initialScrollY = viewport->property("contentY").toDouble();
-    const qreal maximumScrollY =
-        (std::max)(0.0, viewport->property("contentHeight").toDouble() - viewport->height());
+    const qreal initialScrollY = grid->property("cameraScrollY").toDouble();
+    const qreal maximumScrollY = grid->property("cameraMaxVScroll").toDouble();
     const int wheelAngle = initialScrollY < maximumScrollY - 1.0 ? -120 : 120;
-    sendVerticalWheel(*view, *plot, wheelAngle);
+    sendVerticalWheel(*view, *gutter, wheelAngle);
     QTRY_VERIFY_WITH_TIMEOUT(
-        std::abs(viewport->property("contentY").toDouble() - initialScrollY) > 0.5, 5'000);
+        std::abs(grid->property("cameraScrollY").toDouble() - initialScrollY) > 0.5, 5'000);
 
     const auto leavePointer =
         qScopeGuard([&] { QTest::mouseMove(view, plotScene.center().toPoint()); });
-    const qreal scrolledY = viewport->property("contentY").toDouble();
+    const qreal scrolledY = grid->property("cameraScrollY").toDouble();
     const int hoverRow = std::clamp(qFloor((scrolledY + plot->height() * 0.5) / rowHeight), 0, 127);
     const int hoverPitch = 127 - hoverRow;
-    const qreal hoverContentY = (hoverRow + 0.5) * rowHeight;
-    const QPointF hoverCenter = gutter->mapToScene(QPointF(keyboardWidth * 0.5, hoverContentY));
+    const qreal hoverViewportY = (hoverRow + 0.5) * rowHeight - scrolledY;
+    const QPointF hoverCenter = gutter->mapToScene(QPointF(keyboardWidth * 0.5, hoverViewportY));
     QTest::mouseMove(view, hoverCenter.toPoint());
     QTRY_VERIFY_WITH_TIMEOUT(grid->property("hoverKey").toInt() == hoverPitch && chip->isVisible(),
                              5'000);

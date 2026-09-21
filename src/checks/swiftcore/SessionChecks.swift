@@ -496,7 +496,8 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
 
     // 4. Session-only state verification
     let preDirty = session.document.isDirty
-    session.camera = SessionCamera(tick: 48, track: 1)
+    session.editCursor = 48
+    session.mutateCamera { _ = $0.setHScroll(12.5) }
     session.selectedTrack = 1
     session.mutedTracks = [1]
     session.soloedTracks = [1]
@@ -830,6 +831,8 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
         report.fail("project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
                     "valid identity no longer resolved after rejection cases: \(error)")
     }
+
+    runEditorGridCameraChecks(report, session: session)
 
     // 8. Close lifecycle.
     do {

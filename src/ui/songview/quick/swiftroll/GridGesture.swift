@@ -75,56 +75,58 @@ enum GridGesture {
                 oppositeTick: oppositeTick, leading: leading))
     }
 
-    func updated(x: Double, y: Double, metrics: GridMetrics) -> GridGesture {
+    func updated(x: Double, y: Double, metrics: GridMetrics,
+                 camera: EditorCamera) -> GridGesture {
+        func pitch(_ y: Double) -> Int {
+            camera.projection.pitch(
+                atY: y, keyHeight: camera.snapshot.keyHeight,
+                scrollY: camera.snapshot.scrollY, dpr: metrics.dpr) ?? -1
+        }
         switch self {
         case .pendingDraw(var state):
-            let key = metrics.yToPitch(y)
+            let key = pitch(y)
             if key >= 0 { state.pressKey = key }
             guard abs(x - state.pressX) >= metrics.drawThreshold else {
                 return .pendingDraw(state)
             }
-            let anchor = metrics.snapTickDown(state.pressTick)
+            let anchor = metrics.snapTickDown(state.pressTick, camera: camera)
             let draw = Draw(
                 anchorTick: anchor, tick: anchor,
-                duration: metrics.snapTicks, key: state.pressKey)
-            return GridGesture.draw(draw).updated(x: x, y: y, metrics: metrics)
+                duration: metrics.snapTicks(camera: camera), key: state.pressKey)
+            return GridGesture.draw(draw).updated(
+                x: x, y: y, metrics: metrics, camera: camera)
         case .draw(var state):
-            let tick = metrics.tickAtContentX(x)
-            let grid = metrics.snapTicks
+            let tick = camera.tickAtContentX(x)
+            let grid = metrics.snapTicks(camera: camera)
             if tick >= Double(state.anchorTick) {
                 state.tick = state.anchorTick
-                state.duration =
-                    max(
-                        state.anchorTick + grid,
-                        metrics.snapTickUp(tick)) - state.anchorTick
+                state.duration = max(
+                    state.anchorTick + grid,
+                    metrics.snapTickUp(tick, camera: camera)) - state.anchorTick
             } else {
-                state.tick = metrics.snapTickDown(tick)
+                state.tick = metrics.snapTickDown(tick, camera: camera)
                 state.duration = state.anchorTick + grid - state.tick
             }
-            let key = metrics.yToPitch(y)
+            let key = pitch(y)
             if key >= 0 { state.key = key }
             return .draw(state)
         case .move(var state):
-            let tick = metrics.tickAtContentX(x)
-            state.dTick =
-                Int(
-                    ((tick - state.pressTick)
-                        / Double(metrics.snapTicks)).rounded())
-                * metrics.snapTicks
-            let key = metrics.yToPitch(y)
+            let tick = camera.tickAtContentX(x)
+            let grid = metrics.snapTicks(camera: camera)
+            state.dTick = Int(((tick - state.pressTick) / Double(grid)).rounded()) * grid
+            let key = pitch(y)
             if key >= 0 { state.dKey = key - state.pressKey }
             return .move(state)
         case .resize(var state):
-            let tick = metrics.tickAtContentX(x)
+            let tick = camera.tickAtContentX(x)
             let desired = Double(state.gripTick) + (tick - state.pressTick)
-            let snapped =
-                state.leading
+            let snapped = state.leading
                 ? min(
-                    metrics.snapTick(desired),
-                    metrics.snapTickDown(Double(state.oppositeTick) - 1.0))
+                    metrics.snapTick(desired, camera: camera),
+                    metrics.snapTickDown(Double(state.oppositeTick) - 1.0, camera: camera))
                 : max(
-                    metrics.snapTick(desired),
-                    metrics.snapTickUp(Double(state.oppositeTick) + 1.0))
+                    metrics.snapTick(desired, camera: camera),
+                    metrics.snapTickUp(Double(state.oppositeTick) + 1.0, camera: camera))
             state.delta =
                 abs(desired - Double(state.gripTick)) < abs(desired - Double(snapped))
                 ? 0 : snapped - state.gripTick
@@ -133,10 +135,8 @@ enum GridGesture {
             guard abs(x - state.pressX) + abs(y - state.pressY) >= state.threshold else {
                 return .pendingMenu(state)
             }
-            return .band(
-                Band(
-                    pressX: state.pressX, pressY: state.pressY,
-                    curX: x, curY: y))
+            return .band(Band(
+                pressX: state.pressX, pressY: state.pressY, curX: x, curY: y))
         case .band(var state):
             state.curX = x
             state.curY = y

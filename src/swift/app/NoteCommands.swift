@@ -135,15 +135,15 @@ final class NoteCommands {
 
         // Publish the destination before the document callback refreshes the grid.
         // Restore it if the atomic paste rejects or has no useful content.
-        let priorCursor = session.camera.tick
-        session.camera.tick = anticipatedCursor
+        let priorCursor = session.editCursor
+        session.editCursor = anticipatedCursor
         guard let result = ClipboardSemantics.paste(
             clip, at: editCursor, selectedTrack: track, into: session.document)
         else {
-            session.camera.tick = priorCursor
+            session.editCursor = priorCursor
             return
         }
-        session.camera.tick = result.nextCursor
+        session.editCursor = result.nextCursor
         if clip.span == 0 {
             session.selectedNotes = Set(result.insertedNoteIDs)
         }

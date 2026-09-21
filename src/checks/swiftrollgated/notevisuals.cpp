@@ -264,11 +264,8 @@ void SwiftRollGatedTest::noteRasterParity()
         gridcheck::visualDescendant(root, QStringLiteral("timelineQuickRollPlot"));
     QQuickItem *const fills =
         gridcheck::visualDescendant(root, QStringLiteral("timelineQuickPianoNoteFills"));
-    QQuickItem *const viewport =
-        gridcheck::visualDescendant(root, QStringLiteral("swiftRollViewport"));
     QVERIFY(plot != nullptr);
     QVERIFY(fills != nullptr);
-    QVERIFY(viewport != nullptr);
     const QRectF plotScene = plot->mapRectToScene(plot->boundingRect());
     QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(fills, plotScene) > 0, 5'000);
 
@@ -349,20 +346,14 @@ void SwiftRollGatedTest::noteRasterParity()
                                       Q_ARG(double, dpr)));
     QTRY_COMPARE_WITH_TIMEOUT(grid->property("baseFontPx").toDouble(), smallFontPx, 5'000);
 
-    // configureViewport changes the content geometry, but the production
-    // Flickable only performs its one-time note centering at startup. Place
-    // this deliberately small viewport at the newly published camera origin
-    // before asking which note rectangles are actually visible.
-    QTRY_VERIFY_WITH_TIMEOUT(qAbs(viewport->property("contentHeight").toDouble() -
-                                  grid->property("gridHeight").toDouble()) < 0.01,
-                             5'000);
+    // Re-home through the production camera operation after the font/DPR push,
+    // then prove its published vertical bound is the projected row height.
+    QVERIFY(QMetaObject::invokeMethod(grid, "resetCameraScroll"));
     const double maxSmallScrollY =
-        (std::max)(0.0, viewport->property("contentHeight").toDouble() - viewport->height());
-    const double smallScrollY =
-        std::clamp(grid->property("initialScrollY").toDouble(), 0.0, maxSmallScrollY);
-    QVERIFY(viewport->setProperty("contentY", smallScrollY));
-    QTRY_VERIFY_WITH_TIMEOUT(qAbs(viewport->property("contentY").toDouble() - smallScrollY) < 0.01,
-                             5'000);
+        (std::max)(0.0, 128.0 * grid->property("rowHeight").toDouble() - plot->height());
+    QTRY_VERIFY_WITH_TIMEOUT(
+        qAbs(grid->property("cameraMaxVScroll").toDouble() - maxSmallScrollY) < 0.01, 5'000);
+    const double smallScrollY = grid->property("cameraScrollY").toDouble();
     const QRectF smallPlotScene = plot->mapRectToScene(plot->boundingRect());
     QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(fills, smallPlotScene) > 0, 5'000);
 
@@ -383,11 +374,11 @@ void SwiftRollGatedTest::noteRasterParity()
         const QString smallSetupFailure =
             QStringLiteral("the public small-font viewport did not expose a selected note whose "
                            "physical black border should thin without vanishing: font=%1 dpr=%2 "
-                           "rowHeight=%3 contentY=%4 targetY=%5 plot=(%6,%7 %8x%9) notes=%10")
+                           "rowHeight=%3 cameraScrollY=%4 targetY=%5 plot=(%6,%7 %8x%9) notes=%10")
                 .arg(grid->property("baseFontPx").toDouble())
                 .arg(smallImage.devicePixelRatio())
                 .arg(grid->property("rowHeight").toDouble())
-                .arg(viewport->property("contentY").toDouble())
+                .arg(grid->property("cameraScrollY").toDouble())
                 .arg(smallScrollY)
                 .arg(smallPlotScene.x())
                 .arg(smallPlotScene.y())

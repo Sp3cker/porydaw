@@ -256,6 +256,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
             presenter.onCommandAvailabilityChanged = { [weak self] in
                 self?.gridCommandAvailabilityChanged()
             }
+            replacement.onCameraChange = { [weak presenter] _ in
+                presenter?.refreshCamera()
+            }
             replacement.onPlayback = { [weak self] timeline in
                 do {
                     try self?.audio?.publish(timeline)

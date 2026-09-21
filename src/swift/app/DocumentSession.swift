@@ -3,16 +3,6 @@ import PorydawCore
 
 // MARK: - Public session types
 
-/// Session-only camera. Stored, never dirties, never enters history.
-public struct SessionCamera: Equatable, Sendable {
-    public var tick: Tick
-    public var track: Int
-
-    public init(tick: Tick = 0, track: Int = 0) {
-        self.tick = tick
-        self.track = track
-    }
-}
 
 /// What the session publishes after reconciling a document change.
 public struct SessionChange: Sendable {
@@ -51,7 +41,8 @@ public final class DocumentSession {
     /// Session-only state. Direct sets push no history and never dirty.
     public var selectedNotes: Set<NoteID> = []
     public var selectedTrack: Int?
-    public var camera = SessionCamera()
+    public var editCursor: Tick = 0
+    public private(set) var camera: EditorCamera
     public var mutedTracks: Set<Int> = []
     public var soloedTracks: Set<Int> = []
 
@@ -60,6 +51,8 @@ public final class DocumentSession {
     public var onChange: ((SessionChange) -> Void)?
     /// Immutable playback publication for Task 7 to bind.
     public var onPlayback: ((PlaybackTimeline) -> Void)?
+    /// Presentation-only camera publication. ApplicationSession is the sole subscriber.
+    public var onCameraChange: ((EditorCamera.Snapshot) -> Void)?
 
     private let service: ProjectService
     private let inbox = BankResultInbox()
@@ -80,10 +73,32 @@ public final class DocumentSession {
         self.bankLoadName = loadName
         self.previousBankVoices = slots.map(\.voice)
         self.sampleRate = sampleRate
-        self.timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
+        let timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
+        self.timeline = timeline
+        let limits = GridCameraPolicy.limits(baseFontPx: GridCameraPolicy.seedBaseFontPx)
+        self.camera = EditorCamera(
+            ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
+            lengthTicks: UInt64(timeline.lengthTicks),
+            viewportWidth: 0,
+            rollHeight: 0,
+            limits: limits)
         document.onChange = { [weak self] change in
             self?.handleDocumentChange(change)
         }
+    }
+
+    /// Applies one presentation-only camera mutation and publishes exactly once
+    /// when either the numeric snapshot or pitch projection changes.
+    @discardableResult
+    public func mutateCamera(_ body: (inout EditorCamera) -> Void) -> Bool {
+        let oldSnapshot = camera.snapshot
+        let oldProjection = camera.projection
+        body(&camera)
+        guard camera.snapshot != oldSnapshot || camera.projection != oldProjection else {
+            return false
+        }
+        onCameraChange?(camera.snapshot)
+        return true
     }
 
     /// Opens a song through the service, adopts it as the document (tempo
@@ -188,6 +203,7 @@ public final class DocumentSession {
         guard !bankPersistenceInFlight, !document.history.bankTransitionInFlight else { return false }
         onChange = nil
         onPlayback = nil
+        onCameraChange = nil
         document.onChange = nil
         await service.close()
         isClosed = true
@@ -230,6 +246,9 @@ public final class DocumentSession {
             selectedTrack = nil
         }
         timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
+        camera.updateTimeDomain(
+            ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
+            lengthTicks: UInt64(timeline.lengthTicks))
         onPlayback?(timeline)
         onChange?(SessionChange(revision: change.revision, trackRemap: change.trackRemap))
     }

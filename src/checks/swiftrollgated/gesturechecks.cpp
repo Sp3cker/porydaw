@@ -118,10 +118,9 @@ class GridFixture final
         m_plot = gridcheck::visualDescendant(m_root, QStringLiteral("timelineQuickRollPlot"));
         m_input = gridcheck::visualDescendant(m_root, QStringLiteral("swiftRollInput"));
         m_surface = gridcheck::visualDescendant(m_root, QStringLiteral("pianoGridSurface"));
-        m_viewport = gridcheck::visualDescendant(m_root, QStringLiteral("swiftRollViewport"));
         m_fills =
             gridcheck::visualDescendant(m_root, QStringLiteral("timelineQuickPianoNoteFills"));
-        if (!m_root || !m_grid || !m_plot || !m_input || !m_surface || !m_viewport || !m_fills) {
+        if (!m_root || !m_grid || !m_plot || !m_input || !m_surface || !m_fills) {
             *error = QStringLiteral("the production grid scene is missing an input or render item");
             return false;
         }
@@ -139,7 +138,6 @@ class GridFixture final
     QObject *grid() const { return m_grid; }
     QQuickItem *input() const { return m_input; }
     QQuickItem *surface() const { return m_surface; }
-    QQuickItem *viewport() const { return m_viewport; }
     QQuickItem *fills() const { return m_fills; }
     QString songLabel() const { return m_songLabel; }
 
@@ -155,8 +153,9 @@ class GridFixture final
     {
         const double pixelsPerTick =
             m_grid->property("beatWidth").toDouble() / m_grid->property("ticksPerBeat").toInt();
-        const double x = m_grid->property("leadPadWidth").toDouble() + tick * pixelsPerTick;
-        const double y = (127.0 - pitch + 0.5) * m_grid->property("rowHeight").toDouble();
+        const double x = tick * pixelsPerTick - m_grid->property("cameraScrollX").toDouble();
+        const double y = (127.0 - pitch + 0.5) * m_grid->property("rowHeight").toDouble() -
+                         m_grid->property("cameraScrollY").toDouble();
         return m_surface->mapToScene(QPointF(x, y)).toPoint();
     }
 
@@ -169,18 +168,14 @@ class GridFixture final
         const double rowHeight = m_grid->property("rowHeight").toDouble();
         const double pixelsPerTick =
             m_grid->property("beatWidth").toDouble() / m_grid->property("ticksPerBeat").toInt();
-        const double lead = m_grid->property("leadPadWidth").toDouble();
-        const double contentX = m_viewport->property("contentX").toDouble();
-        const double contentY = m_viewport->property("contentY").toDouble();
-        const int firstTick =
-            int(std::ceil(((contentX + 24.0 - lead) / pixelsPerTick) / grid)) * grid;
+        const double scrollX = m_grid->property("cameraScrollX").toDouble();
+        const double scrollY = m_grid->property("cameraScrollY").toDouble();
+        const int firstTick = int(std::ceil(((scrollX + 24.0) / pixelsPerTick) / grid)) * grid;
         const int lastTick =
-            int(std::floor(((contentX + m_viewport->width() - 24.0 - lead) / pixelsPerTick) /
-                           grid)) *
-            grid;
-        const int firstRow = std::clamp(int(std::ceil(contentY / rowHeight)) + 2, 0, 127);
+            int(std::floor(((scrollX + m_plot->width() - 24.0) / pixelsPerTick) / grid)) * grid;
+        const int firstRow = std::clamp(int(std::ceil(scrollY / rowHeight)) + 2, 0, 127);
         const int lastRow =
-            std::clamp(int(std::floor((contentY + m_viewport->height()) / rowHeight)) - 2, 0, 127);
+            std::clamp(int(std::floor((scrollY + m_plot->height()) / rowHeight)) - 2, 0, 127);
         for (int row = firstRow; row <= lastRow; ++row) {
             const int pitch = 127 - row;
             for (int tick = (std::max)(0, firstTick); tick + spanInSnaps * grid <= lastTick;
@@ -226,7 +221,6 @@ class GridFixture final
     QQuickItem *m_plot = nullptr;
     QQuickItem *m_input = nullptr;
     QQuickItem *m_surface = nullptr;
-    QQuickItem *m_viewport = nullptr;
     QQuickItem *m_fills = nullptr;
 };
 
