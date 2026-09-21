@@ -204,10 +204,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
 
   private:
     friend class AutomationPage;
-    friend class songview::TimelineQuickView;
 
-    void rebuildQuickScene(songview::TimelineQuickScene &scene,
-                           songview::AutomationRefreshSet refresh);
     void requestQuickUpdate(songview::AutomationRefreshSet dirty) const;
     void requestSelectionQuickUpdate() const;
     void requestHoverQuickUpdate() const;

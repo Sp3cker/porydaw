@@ -5,17 +5,7 @@ Item {
     id: layer
 
     required property var chrome
-    required property rect automationBandRect
-    required property bool automationBandVisible
     required property font controlFont
-
-    // Hiding the automation page cancels a pending value prompt: the page
-    // hide path from the drawer plan.
-    onAutomationBandVisibleChanged: {
-        if (!automationBandVisible)
-            promptState.requestCancel()
-    }
-
 
     anchors.fill: parent
 
@@ -305,20 +295,18 @@ Item {
 
     // Inline node value prompt (drawer plan Cleanup phase 2): one Rectangle
     // and TextInput, no QtQuick.Controls and no modal window.
-    // AutomationCanvas owns the pending edit and the document revision, so
-    // this surface only mirrors the published prompt and reports the
+    // The automation canvas owns the pending edit and the document revision,
+    // so this surface only mirrors the published prompt and reports the
     // displayed value through the chrome invokables.
     Rectangle {
         id: valuePrompt
 
         objectName: "drawerValuePrompt"
 
-        // Published band rectangles are canonical viewport coordinates:
-        // the Quick window is the full viewport, so centering is direct.
-        x: layer.automationBandRect.x
-           + Math.max(0, (layer.automationBandRect.width - width) / 2)
-        y: layer.automationBandRect.y
-           + Math.max(0, (layer.automationBandRect.height - height) / 2)
+        // The layer fills the Quick window, which is the full canonical
+        // viewport, so centering is direct.
+        x: Math.max(0, (layer.width - width) / 2)
+        y: Math.max(0, (layer.height - height) / 2)
         z: 10
         visible: layer.chrome.valuePromptVisible
         color: layer.chrome.barBackground
@@ -358,7 +346,7 @@ Item {
         readonly property real fieldInsetH: 6
         readonly property real fieldInsetV: 3
         readonly property real maximumWidth:
-            Math.max(0, layer.automationBandRect.width - 2 * edgeMargin)
+            Math.max(0, layer.width - 2 * edgeMargin)
         readonly property real promptFieldMinWidth:
             Math.max(promptFontMetrics.advanceWidth(
                          String(layer.chrome.valuePromptMinimum)),

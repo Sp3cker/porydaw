@@ -296,7 +296,6 @@ class TimelineQuickView final : public QObject
 
     void requestUpdate(PianoRollQuickDirtySet dirty);
     void requestTimelineUpdate(TimelineQuickDirtySet dirty);
-    void requestAutomationUpdate(AutomationRefreshSet dirty);
 
   signals:
     void hoverChromeChanged();
@@ -354,7 +353,6 @@ class TimelineQuickView final : public QObject
     void syncOtherEvents(bool horizontalPan);
     void syncVelocity(bool horizontalPan);
     void syncVoiceChanges(TimelineQuickDirtySet dirty, bool horizontalPan);
-    void syncAutomation(AutomationRefreshSet refresh);
     void updateLayer(TimelineQuickLayer layer);
 
     void rebuildGridRows();
@@ -441,7 +439,6 @@ class TimelineQuickView final : public QObject
     Tick m_hoverTick = 0;
     PianoRollQuickDirtySet m_pendingDirty = {PianoRollQuickDirty::None};
     TimelineQuickDirtySet m_pendingTimelineDirty = {TimelineQuickDirty::None};
-    AutomationRefreshSet m_pendingAutomationRefresh = {AutomationRefresh::None};
     QTimer m_flushTimer;
     std::vector<TimelineQuickTextModel::Record> m_noteTextRecords;
     std::vector<TimelineQuickTextModel::Record> m_loadingTextRecords;

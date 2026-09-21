@@ -215,14 +215,6 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         std::pair{TimelineQuickLayer::VoiceChangesMarkers, "timelineQuickVoiceChangesMarkers"},
         std::pair{TimelineQuickLayer::VoiceChangesTransient, "timelineQuickVoiceChangesTransient"},
         std::pair{TimelineQuickLayer::VoiceChangesHover, "timelineQuickVoiceChangesHover"},
-        std::pair{TimelineQuickLayer::AutomationGutterChrome,
-                  "timelineQuickAutomationGutterChrome"},
-        std::pair{TimelineQuickLayer::AutomationGrid, "timelineQuickAutomationGrid"},
-        std::pair{TimelineQuickLayer::AutomationCurves, "timelineQuickAutomationCurves"},
-        std::pair{TimelineQuickLayer::AutomationNodes, "timelineQuickAutomationNodes"},
-        std::pair{TimelineQuickLayer::AutomationSelection, "timelineQuickAutomationSelection"},
-        std::pair{TimelineQuickLayer::AutomationTransient, "timelineQuickAutomationTransient"},
-        std::pair{TimelineQuickLayer::AutomationHover, "timelineQuickAutomationHover"},
     };
     static_assert(layers.size() == static_cast<std::size_t>(TimelineQuickLayer::Count));
     for (const auto &[layer, name] : layers) {
@@ -713,7 +705,6 @@ void TimelineQuickView::setBandLayout(TimelineBandLayout layout)
 
     PianoRollQuickDirtySet pianoDirty = PianoRollQuickDirty::None;
     TimelineQuickDirtySet timelineDirty = TimelineQuickDirty::None;
-    AutomationRefreshSet automationRefresh = AutomationRefresh::None;
 
     // Accumulate the size-dependent dirty domains first so the synchronous
     // publication below precedes every dirty request: a scene rebuild, which
@@ -730,8 +721,6 @@ void TimelineQuickView::setBandLayout(TimelineBandLayout layout)
     }
     if (becameVisibleOrChangedSize(m_bandLayout, layout, TimelineBand::OtherEvents))
         timelineDirty |= TimelineQuickDirty::OtherEvents;
-    if (becameVisibleOrChangedSize(m_bandLayout, layout, TimelineBand::Automation))
-        automationRefresh |= AutomationRefresh::All;
     if (becameVisibleOrChangedSize(m_bandLayout, layout, TimelineBand::Velocity))
         timelineDirty |= TimelineQuickDirty::Velocity;
     if (becameVisibleOrChangedSize(m_bandLayout, layout, TimelineBand::VoiceChanges))
@@ -747,7 +736,6 @@ void TimelineQuickView::setBandLayout(TimelineBandLayout layout)
 
     requestUpdate(pianoDirty);
     requestTimelineUpdate(timelineDirty);
-    requestAutomationUpdate(automationRefresh);
 }
 
 void TimelineQuickView::refreshBandLayout()
@@ -919,7 +907,6 @@ void TimelineQuickView::syncAppearance()
     }
     requestUpdate(PianoRollQuickDirty::All);
     requestTimelineUpdate(TimelineQuickDirty::All);
-    requestAutomationUpdate(AutomationRefresh::All);
 #ifdef Q_OS_MACOS
     if (m_swiftRollMount)
         m_swiftRollMount->applyHostPalette();
@@ -956,14 +943,6 @@ void TimelineQuickView::requestTimelineUpdate(TimelineQuickDirtySet dirty)
     m_flushTimer.start();
 }
 
-void TimelineQuickView::requestAutomationUpdate(AutomationRefreshSet dirty)
-{
-    if (dirty == AutomationRefresh::None)
-        return;
-    m_pendingAutomationRefresh |= dirty;
-    m_flushTimer.start();
-}
-
 void TimelineQuickView::flushUpdate()
 {
     if (!m_view)
@@ -973,8 +952,6 @@ void TimelineQuickView::flushUpdate()
         std::exchange(m_pendingDirty, PianoRollQuickDirty::None);
     const TimelineQuickDirtySet timelineDirty =
         std::exchange(m_pendingTimelineDirty, TimelineQuickDirty::None);
-    const AutomationRefreshSet automationRefresh =
-        std::exchange(m_pendingAutomationRefresh, AutomationRefresh::None);
     if (pianoDirty != PianoRollQuickDirty::None)
         syncPianoRoll(pianoDirty);
     const bool panRequested = timelineDirty.testFlag(TimelineQuickDirty::HorizontalPan);
@@ -982,8 +959,6 @@ void TimelineQuickView::flushUpdate()
         syncRuler(panRequested && !timelineDirty.testFlag(TimelineQuickDirty::Ruler));
     if (panRequested || timelineDirty.testFlag(TimelineQuickDirty::OtherEvents))
         syncOtherEvents(panRequested && !timelineDirty.testFlag(TimelineQuickDirty::OtherEvents));
-    if (automationRefresh != AutomationRefresh::None)
-        syncAutomation(automationRefresh);
     if (panRequested || timelineDirty.testFlag(TimelineQuickDirty::Velocity))
         syncVelocity(panRequested && !timelineDirty.testFlag(TimelineQuickDirty::Velocity));
     if (panRequested || (timelineDirty & (TimelineQuickDirty::VoiceChanges |
@@ -1058,25 +1033,6 @@ void TimelineQuickView::syncVoiceChanges(TimelineQuickDirtySet dirty, bool horiz
         m_voiceChanges->rebuildQuickHover(*m_scene);
         updateLayer(TimelineQuickLayer::VoiceChangesHover);
     }
-}
-
-void TimelineQuickView::syncAutomation(AutomationRefreshSet refresh)
-{
-    if (refresh == AutomationRefresh::None || !m_automation || !m_automation->canvas())
-        return;
-    m_automation->canvas()->rebuildQuickScene(*m_scene, refresh);
-    if (refresh.testFlag(AutomationRefresh::Content))
-        updateLayer(TimelineQuickLayer::AutomationGutterChrome);
-    if (refresh & (AutomationRefresh::Content | AutomationRefresh::HorizontalPan)) {
-        updateLayer(TimelineQuickLayer::AutomationGrid);
-        updateLayer(TimelineQuickLayer::AutomationCurves);
-        updateLayer(TimelineQuickLayer::AutomationNodes);
-        updateLayer(TimelineQuickLayer::AutomationSelection);
-    }
-    if (refresh.testFlag(AutomationRefresh::Transient))
-        updateLayer(TimelineQuickLayer::AutomationTransient);
-    if (refresh.testFlag(AutomationRefresh::Hover))
-        updateLayer(TimelineQuickLayer::AutomationHover);
 }
 
 } // namespace songview

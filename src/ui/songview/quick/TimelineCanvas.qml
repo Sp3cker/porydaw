@@ -9,21 +9,18 @@ Item {
     property rect velocityBandRect: Qt.rect(0, 0, 0, 0)
     property rect voiceChangesBandRect: Qt.rect(0, 0, 0, 0)
     property rect otherEventsBandRect: Qt.rect(0, 0, 0, 0)
-    property rect automationBandRect: Qt.rect(0, 0, 0, 0)
     property rect trackHeadersBandRect: Qt.rect(0, 0, 0, 0)
     property bool rulerBandVisible: false
     property bool rollBandVisible: false
     property bool velocityBandVisible: false
     property bool voiceChangesBandVisible: false
     property bool otherEventsBandVisible: false
-    property bool automationBandVisible: false
     property bool trackHeadersBandVisible: false
     property rect rulerBandPlotRect: Qt.rect(0, 0, 0, 0)
     property rect rollBandPlotRect: Qt.rect(0, 0, 0, 0)
     property rect velocityBandPlotRect: Qt.rect(0, 0, 0, 0)
     property rect voiceChangesBandPlotRect: Qt.rect(0, 0, 0, 0)
     property rect otherEventsBandPlotRect: Qt.rect(0, 0, 0, 0)
-    property rect automationBandPlotRect: Qt.rect(0, 0, 0, 0)
     property rect trackHeadersBandPlotRect: Qt.rect(0, 0, 0, 0)
     property rect eventListBandRect: Qt.rect(0, 0, 0, 0)
     property bool eventListBandVisible: false
@@ -297,89 +294,6 @@ Item {
     }
 
     TimelineSceneBand {
-        id: automationBand
-
-        bandRect: root.automationBandRect
-        plotRect: root.automationBandPlotRect
-        bandVisible: root.automationBandVisible
-        bandName: "timelineQuickAutomation"
-        plotInputName: "timelineAutomationInput"
-        gutterInputName: "timelineAutomationGutterInput"
-        z: 1
-
-        TimelineSceneLayer {
-            parent: automationBand.gutterSide
-            objectName: "timelineQuickAutomationGutterChrome"
-            sceneLayer: TimelineQuickItem.AutomationGutterChrome
-            z: 0.5
-        }
-
-
-        // The parameter selector owns the gutter above the old input item:
-        // nine real labels activate the shared plot's single painted
-        // parameter without touching song data or shared selection.
-        AutomationTabs {
-            parent: automationBand.gutterSide
-            objectName: "automationParameterTabs"
-            anchors.fill: parent
-            canvas: automationCanvas
-            sceneRoot: root
-            z: 3
-        }
-        TimelineSceneLayer {
-            parent: automationBand.plotSide
-            objectName: "timelineQuickAutomationGrid"
-            sceneLayer: TimelineQuickItem.AutomationGrid
-            z: 0
-        }
-        TimelineSceneLayer {
-            parent: automationBand.plotSide
-            objectName: "timelineQuickAutomationCurves"
-            sceneLayer: TimelineQuickItem.AutomationCurves
-            z: 1
-        }
-        TimelineSceneLayer {
-            parent: automationBand.plotSide
-            objectName: "timelineQuickAutomationNodes"
-            sceneLayer: TimelineQuickItem.AutomationNodes
-            z: 2
-        }
-        TimelineSceneLayer {
-            parent: automationBand.plotSide
-            objectName: "timelineQuickAutomationSelection"
-            sceneLayer: TimelineQuickItem.AutomationSelection
-            z: 3
-        }
-        TimelineSceneLayer {
-            parent: automationBand.plotSide
-            objectName: "timelineQuickAutomationTransient"
-            sceneLayer: TimelineQuickItem.AutomationTransient
-            z: 4
-        }
-        TimelineSceneLayer {
-            parent: automationBand.plotSide
-            objectName: "timelineQuickAutomationHover"
-            sceneLayer: TimelineQuickItem.AutomationHover
-            z: 5
-        }
-        TimelineTextLayer {
-            parent: automationBand.plotSide
-            textModel: timelineScene.automationLaneTextModel
-            z: 6
-        }
-        TimelineTextLayer {
-            parent: automationBand.plotSide
-            textModel: timelineScene.automationHoverTextModel
-            z: 7
-        }
-        TimelineTextLayer {
-            parent: automationBand.plotSide
-            textModel: timelineScene.automationTransientTextModel
-            z: 8
-        }
-    }
-
-    TimelineSceneBand {
         id: velocityBand
 
         bandRect: root.velocityBandRect
@@ -570,7 +484,6 @@ Item {
         readonly property var sceneBands: [
             { visible: root.rulerBandVisible, rect: root.rulerBandRect, plotRect: root.rulerBandPlotRect },
             { visible: root.rollBandVisible, rect: root.rollBandRect, plotRect: root.rollBandPlotRect },
-            { visible: root.automationBandVisible, rect: root.automationBandRect, plotRect: root.automationBandPlotRect },
             { visible: root.velocityBandVisible, rect: root.velocityBandRect, plotRect: root.velocityBandPlotRect },
             { visible: root.voiceChangesBandVisible, rect: root.voiceChangesBandRect, plotRect: root.voiceChangesBandPlotRect },
             { visible: root.otherEventsBandVisible, rect: root.otherEventsBandRect, plotRect: root.otherEventsBandPlotRect }
@@ -724,8 +637,6 @@ Item {
         id: drawerChromeLayer
         anchors.fill: parent
         chrome: drawerChrome
-        automationBandRect: root.automationBandRect
-        automationBandVisible: root.automationBandVisible
         controlFont: root.rulerFont
         z: 20
     }
