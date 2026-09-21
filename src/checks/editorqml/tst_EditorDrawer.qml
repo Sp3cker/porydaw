@@ -1667,12 +1667,16 @@ TestCase {
         var saved = false
         target.grabToImage(function(result) { saved = result.saveToFile(url) })
         tryVerify(function() { return saved }, 5000, pane + " rendered a PNG")
+        // The record names the production component it captured and the exact
+        // logical size it covered: the drawn root the grab held is the pane's own
+        // identity, so a record whose root is another pane's is refused.
         return bootstrap.writeProfileMetadata(pane, page.Screen.devicePixelRatio,
                                               pane === "voice-picker"
                                               ? testCase.voiceModel().baseFontPx
                                           : pane === "automation-tabs"
                                               ? testCase.automationModel().baseFontPx
                                               : testCase.velocityModel().baseFontPx,
+                                              String(target.objectName),
                                               target.width, target.height,
                                               origin.x, origin.y,
                                               target.width, target.height)
