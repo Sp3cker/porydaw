@@ -1,8 +1,8 @@
 // The Automation drawer page: the parameter selector in the shared gutter, the
 // value axis, the step/ramp curve with its ghost pins, the nodes and the origin
 // phantom, the explicit time selection, the range band, the live gesture
-// transient, the hover/preview value labels, the context readout, the tap-tempo
-// panel and the page's two modal surfaces.
+// transient, the hover/preview value labels, the context readout, inline tempo
+// tapping and the page's two modal surfaces.
 //
 // Swift owns every value (AutomationPage.swift): the shared camera projection,
 // the parameter catalog and row facts, the explicit selection, the frozen
@@ -17,28 +17,26 @@
 // camera projects into. Bare Space is never claimed here, so the window
 // transport keeps it; only the value prompt's text field consumes text keys.
 //
-// Cursor policy: `cursorKind` publishes the production shape set. Production's
-// pencil tool uses a bundled pixmap cursor; this product registers no cursor
-// image resource and QML's `cursorShape` carries no pixmap, so the pencil tool
-// draws the standard cross cursor instead. That substitution is named here
-// rather than hidden.
+// The original pencil pixmap is painted in the window's unclipped overlay;
+// only a visible, loaded overlay suppresses the native cursor.
 //
 // Modal surfaces: `AutomationPrompt` and `AutomationMenu` compose into the
 // container's one modal layer (`EditorDrawer.qml`'s `drawerModalLayer`), which
 // the container hands this page as its optional `modalHost` after loading, and
-// into the page itself when a composition mounts the page without one. The
-// tap-tempo panel is the page's own local surface: production keeps the plot
-// live while a session accumulates, so it takes only its own input.
+// into the page itself when a composition mounts the page without one.
 pragma ComponentBehavior: Bound
 
 import QtQuick
 import "../swiftroll"
+import ".." as Shared
 
 FocusScope {
     id: page
 
     objectName: "automationPage"
 
+    property var hintService: null
+    property bool hintScopeAllowed: true
     required property QtObject applicationSession
 
     /// The page's Swift owner for the current document, and the neutral empty
@@ -94,6 +92,9 @@ FocusScope {
         readonly property var selectionRects: []
         readonly property var previewRects: []
         readonly property var menuRows: []
+        readonly property var menuChildRows: []
+        readonly property int menuRowCount: 0
+        readonly property int menuChildRowCount: 0
         readonly property bool bandVisible: false
         readonly property var bandRect: ({ "x": 0, "y": 0, "width": 0, "height": 0 })
         readonly property bool hoverVisible: false
@@ -159,7 +160,9 @@ FocusScope {
 
     /// The shared plot origin: the gutter the roll draws at and the container
     /// publishes as `plotOrigin`.
-    readonly property real plotOrigin: page.gridModel ? page.gridModel.keyboardWidth : 0
+    readonly property real plotOrigin: page.gridModel
+                                       ? (page.gridModel.trackHeaderWidth || 0)
+                                         + page.gridModel.keyboardWidth : 0
     readonly property real plotWidth: Math.max(page.width - page.plotOrigin, 0)
     /// This page's own base-font seed, for the window before a document is
     /// presented.
@@ -212,7 +215,6 @@ FocusScope {
 
     function cursorFor(kind) {
         switch (kind) {
-        case 1: return Qt.CrossCursor
         case 2: return Qt.SizeVerCursor
         case 3: return Qt.SizeHorCursor
         case 4: return Qt.ClosedHandCursor
@@ -245,312 +247,13 @@ FocusScope {
         // The production selector is a scrollable two-column grid whose
         // Tempo row spans both columns. The scroll position follows the active
         // and focused tab, exactly as the production `ensureVisible` does.
-        Flickable {
-            id: tabScroller
-
-            objectName: "automationTabsScroller"
+        Shared.AutomationTabs {
             anchors.fill: parent
-            interactive: false
-            clip: true
-            contentWidth: width
-            contentHeight: Math.ceil(Math.max(0, page.selectorTabCount - 1) / 2)
-                           * page.tabRowHeight + page.tabRowHeight + 3 * page.tabStroke
-
-            function ensureVisible(item) {
-                if (!item)
-                    return
-                var top = item.y
-                var bottom = top + item.height
-                if (top < contentY)
-                    contentY = top
-                else if (bottom > contentY + height)
-                    contentY = bottom - height
-            }
-
-            Repeater {
-                model: page.pageModel.tabs
-
-                delegate: Item {
-                    id: tab
-
-                    required property var model
-
-                    readonly property bool tempoTab: tab.model.tempo
-                    readonly property int cellColumn: tab.tempoTab ? 0 : tab.model.index % 2
-                    readonly property int cellRow: tab.tempoTab
-                                                   ? Math.ceil(Math.max(0, page.selectorTabCount - 1)
-                                                               / 2)
-                                                   : Math.floor(tab.model.index / 2)
-
-                    objectName: "automationParameterTab" + tab.model.index
-                    x: tab.cellColumn * (page.plotOrigin / 2)
-                    y: page.tabStroke + tab.cellRow * page.tabRowHeight
-                    width: tab.tempoTab ? page.plotOrigin : page.plotOrigin / 2
-                    height: page.tabRowHeight
-                    activeFocusOnTab: true
-
-                    function activate() {
-                        if (!tab.model.available)
-                            return
-                        page.pageModel.activateParameter(tab.model.index)
-                    }
-
-                    function press(modifiers) {
-                        if (!tab.model.available)
-                            return
-                        if (modifiers & Qt.ControlModifier) {
-                            page.pageModel.toggleGhostParameter(tab.model.index)
-                            return
-                        }
-                        page.pageModel.activateParameter(tab.model.index)
-                    }
-
-                    Keys.onReturnPressed: (event) => {
-                        tab.activate()
-                        event.accepted = true
-                    }
-                    Keys.onEnterPressed: (event) => {
-                        tab.activate()
-                        event.accepted = true
-                    }
-                    // Only plain Return/Enter are claimed: bare Space stays the
-                    // window's transport shortcut.
-                    Keys.onShortcutOverride: (event) => event.accepted =
-                        event.key === Qt.Key_Return || event.key === Qt.Key_Enter
-                    onActiveFocusChanged: if (activeFocus) tabScroller.ensureVisible(tab)
-                    onModelChanged: if (tab.model.active) tabScroller.ensureVisible(tab)
-
-                    Accessible.role: Accessible.Button
-                    Accessible.name: tab.model.label
-                    Accessible.checkable: true
-                    Accessible.checked: tab.model.active
-                    Accessible.focusable: true
-                    Accessible.description: (tab.tempoTab ? qsTr("Song-global tempo parameter")
-                                                          : qsTr("Track automation parameter"))
-                                            + (tab.model.included
-                                               ? qsTr("; included in shared selection")
-                                               : qsTr("; not in shared selection"))
-                                            + (tab.model.ghosted
-                                               ? qsTr("; shown as ghost nodes") : "")
-                                            + (tab.model.active && tab.model.eventCount > 0
-                                               ? qsTr("; %1 events").arg(tab.model.eventCount)
-                                               : "")
-                    Accessible.onPressAction: tab.activate()
-
-                    // Active, ghosted, selection-included and focused states keep
-                    // their own indicators, exactly as the production selector
-                    // publishes them.
-                    Rectangle {
-                        anchors.fill: parent
-                        color: tab.model.active ? page.gridPalette.selectionRing
-                                                : tabHover.hovered
-                                                  ? page.gridPalette.selectionFill
-                                                  : page.gridPalette.chromeBackground
-
-                        Rectangle {
-                            visible: tab.model.ghosted
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.bottom: parent.bottom
-                            anchors.margins: page.tabStroke
-                            height: page.tabStroke
-                            color: page.gridPalette.outline
-                        }
-
-                        Rectangle {
-                            visible: tab.model.included && !tab.model.active
-                            anchors.top: parent.top
-                            anchors.right: parent.right
-                            anchors.bottom: parent.bottom
-                            anchors.topMargin: page.tabStroke
-                            anchors.rightMargin: page.tabStroke
-                            anchors.bottomMargin: page.tabStroke
-                            width: page.tabPip
-                            color: page.gridPalette.selectionRing
-                        }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            anchors.margins: page.tabStroke
-                            color: "transparent"
-                            border.width: page.tabStroke
-                            border.color: tab.activeFocus ? page.gridPalette.primaryText
-                                                          : "transparent"
-                        }
-                    }
-
-                    // The event pip, the label and the active row's event count
-                    // and tap-tempo readout.
-                    Row {
-                        anchors.fill: parent
-                        anchors.leftMargin: page.tabInset
-                        anchors.rightMargin: page.tabInset + (tab.tempoTab
-                                                               ? tapControl.width + page.tabInset
-                                                               : 0)
-                        spacing: page.tabInset
-
-                        Rectangle {
-                            visible: tab.model.eventCount > 0
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: page.tabPip
-                            height: page.tabPip
-                            radius: width / 2
-                            color: page.gridPalette.primaryText
-                            Accessible.ignored: true
-                        }
-
-                        Text {
-                            objectName: "automationParameterTabText"
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: Math.max(1, parent.width - page.tabPip - page.tabInset
-                                               - countLabel.width - draftLabel.width)
-                            text: tab.model.label
-                            color: tab.model.active ? page.gridPalette.primaryText
-                                                    : page.gridPalette.secondaryText
-                            font: Qt.font(page.pageModel.titleFont)
-                            textFormat: Text.PlainText
-                            renderType: Text.NativeRendering
-                            fontSizeMode: Text.HorizontalFit
-                            minimumPixelSize: Math.max(1, Math.round(page.baseFontPx / 2))
-                            elide: Text.ElideRight
-                            maximumLineCount: 1
-                            clip: true
-                            Accessible.ignored: true
-                        }
-
-                        Text {
-                            id: countLabel
-
-                            objectName: "automationParameterEventCount"
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: tab.model.active && tab.model.eventCount > 0
-                            text: tab.model.eventCount === 1 ? qsTr("1 event")
-                                                             : qsTr("%1 events")
-                                                               .arg(tab.model.eventCount)
-                            color: page.gridPalette.secondaryText
-                            font: Qt.font(page.pageModel.captionFont)
-                            textFormat: Text.PlainText
-                            renderType: Text.NativeRendering
-                            Accessible.ignored: true
-                        }
-
-                        Text {
-                            id: draftLabel
-
-                            objectName: tab.tempoTab ? "automationTempoTapDraft" : ""
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: tab.tempoTab && page.pageModel.tapTempoTapCount > 0
-                            text: page.pageModel.tapTempoTapCount >= 2
-                                  ? "%1 BPM".arg(page.pageModel.tapTempoDraftBpm) : "…"
-                            color: page.gridPalette.secondaryText
-                            font: Qt.font(page.pageModel.captionFont)
-                            textFormat: Text.PlainText
-                            renderType: Text.NativeRendering
-                            Accessible.ignored: true
-                        }
-                    }
-
-                    // The Tempo row's own Tap control: a press registers a tap at
-                    // that event boundary and never activates the parameter row.
-                    Rectangle {
-                        id: tapControl
-
-                        objectName: tab.tempoTab ? "automationTempoTapButton" : ""
-                        visible: tab.tempoTab
-                        // Above the tab's own press area: a tap registers a tap
-                        // and never activates the parameter row.
-                        z: 1
-                        anchors.right: parent.right
-                        anchors.rightMargin: page.tabInset
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: tapLabel.implicitWidth + 2 * page.tabInset
-                        height: page.tabRowHeight - 2 * page.tabStroke
-                        color: tapControlPress.pressed ? page.gridPalette.selectionRing
-                                                       : page.gridPalette.chromeBackground
-                        border.width: page.tabStroke
-                        border.color: page.gridPalette.outline
-                        activeFocusOnTab: true
-
-                        function tap() {
-                            page.pageModel.tapTempoTap()
-                        }
-
-                        Text {
-                            id: tapLabel
-
-                            anchors.centerIn: parent
-                            text: qsTr("Tap")
-                            color: page.gridPalette.primaryText
-                            font: Qt.font(page.pageModel.captionFont)
-                            textFormat: Text.PlainText
-                            renderType: Text.NativeRendering
-                            Accessible.ignored: true
-                        }
-
-                        Keys.onReturnPressed: (event) => {
-                            tapControl.tap()
-                            event.accepted = true
-                        }
-                        Keys.onEnterPressed: (event) => {
-                            tapControl.tap()
-                            event.accepted = true
-                        }
-                        // Plain nonrepeating Return/Enter registers a tap; bare
-                        // Space remains the transport shortcut.
-                        Keys.onShortcutOverride: (event) => event.accepted =
-                            (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
-                            && !event.isAutoRepeat
-
-                        Accessible.role: Accessible.Button
-                        Accessible.name: qsTr("Tap tempo")
-                        Accessible.description:
-                            page.pageModel.tapTempoTapCount >= 2
-                                ? qsTr("Draft tempo: %1 BPM")
-                                  .arg(page.pageModel.tapTempoDraftBpm)
-                                : page.pageModel.tapTempoTapCount > 0
-                                  ? qsTr("Listening for tempo taps")
-                                  : qsTr("Tap repeatedly to set the song tempo")
-                        Accessible.focusable: true
-                        Accessible.onPressAction: tapControl.tap()
-
-                        MouseArea {
-                            id: tapControlPress
-
-                            anchors.fill: parent
-                            acceptedButtons: Qt.LeftButton
-                            onPressed: tapControl.tap()
-                        }
-                    }
-
-                    // One press area for both buttons, exactly as the production
-                    // selector's own handler splits them: the left button activates
-                    // or toggles the ghost, and the right button is the context
-                    // request that opens the captured lane menu for this tab at the
-                    // press's own position in the page's coordinate space.
-                    MouseArea {
-                        id: tabPress
-
-                        objectName: "automationParameterTabPress" + tab.model.index
-                        anchors.fill: parent
-                        acceptedButtons: Qt.LeftButton | Qt.RightButton
-                        onPressed: (mouse) => {
-                            tab.forceActiveFocus()
-                            if (mouse.button === Qt.RightButton) {
-                                var origin = tab.mapToItem(page, mouse.x, mouse.y)
-                                page.pageModel.openParameterMenu(tab.model.index, origin.x,
-                                                                 origin.y)
-                            } else {
-                                tab.press(mouse.modifiers)
-                            }
-                            mouse.accepted = true
-                        }
-                    }
-
-                    HoverHandler {
-                        id: tabHover
-                    }
-                }
-            }
+            pageModel: page.pageModel
+            sceneRoot: page
+            pagePalette: page.gridPalette
+            hintService: page.hintService
+            hintScopeAllowed: page.hintScopeAllowed
         }
 
         Accessible.role: Accessible.Column
@@ -570,6 +273,13 @@ FocusScope {
         height: page.height
         clip: true
         activeFocusOnTab: true
+        Binding {
+            target: page.model
+            property: "plotFocused"
+            value: plot.activeFocus && page.visible
+            when: page.model !== null
+            restoreMode: Binding.RestoreNone
+        }
 
         Rectangle {
             anchors.fill: parent
@@ -808,11 +518,14 @@ FocusScope {
             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
             hoverEnabled: true
             preventStealing: true
-            cursorShape: page.cursorFor(page.pageModel ? page.pageModel.cursorKind : 0)
+            cursorShape: pencilCursor.visible ? Qt.BlankCursor
+                : page.cursorFor(page.pageModel ? page.pageModel.cursorKind : 0)
 
-            onPressed: (mouse) => mouse.accepted =
-                page.pageModel.pointerPress(mouse.x, mouse.y, page.plotSurface, mouse.button,
-                                            mouse.modifiers)
+            onPressed: mouse => {
+                plot.forceActiveFocus(Qt.MouseFocusReason)
+                mouse.accepted = page.pageModel.pointerPress(
+                    mouse.x, mouse.y, page.plotSurface, mouse.button, mouse.modifiers)
+            }
             onDoubleClicked: (mouse) => {
                 if (mouse.button === Qt.LeftButton)
                     page.pageModel.pointerDoubleClick(mouse.x, mouse.y)
@@ -849,6 +562,28 @@ FocusScope {
         Accessible.focusable: true
     }
 
+    Image {
+        id: pencilCursor
+        objectName: "automationPencilCursor"
+        parent: page.Window.window ? page.Window.window.contentItem : page
+        readonly property point pointer: plotInput.mapToItem(parent, plotInput.mouseX, plotInput.mouseY)
+        x: pointer.x
+        y: pointer.y - 15
+        width: 16
+        height: 16
+        source: "qrc:/cursors/pencil.png"
+        sourceSize.width: Math.round(16 * page.Screen.devicePixelRatio)
+        sourceSize.height: Math.round(16 * page.Screen.devicePixelRatio)
+        smooth: false
+        z: 10000
+        visible: page.visible && page.Window.window !== null && page.Window.window.active
+            && status === Image.Ready && page.pageModel.isPencilMode
+            && page.pageModel.cursorKind <= 1 && !page.pageModel.menuOpen && !page.pageModel.promptOpen
+            && (plotInput.containsMouse || plotInput.pressed)
+            && pointer.x >= 0 && pointer.y >= 0 && pointer.x < parent.width && pointer.y < parent.height
+        Accessible.ignored: true
+    }
+
     // ---- modal and local surfaces -------------------------------------------
 
     // The page owns modality for its two modal surfaces; each renders the flag
@@ -860,7 +595,6 @@ FocusScope {
 
         function onMenuOpenChanged() { page.syncModals() }
         function onPromptOpenChanged() { page.syncModals() }
-        function onTapTempoActiveChanged() { page.syncModals() }
     }
 
     /// The container's one unclipped modal layer, when the container hosts this
@@ -869,7 +603,6 @@ FocusScope {
     property var modalHost: null
     property var menu: null
     property var prompt: null
-    property var tapTempo: null
 
     Component {
         id: menuComponent
@@ -887,24 +620,15 @@ FocusScope {
         }
     }
 
-    Component {
-        id: tapTempoComponent
-
-        TapTempo {}
-    }
 
     function syncModals() {
         if (page.menu !== null) {
-            page.menu.model = page.model
+            page.menu.model = page.pageModel
             page.menu.showing = page.pageModel ? page.pageModel.menuOpen : false
         }
         if (page.prompt !== null) {
-            page.prompt.model = page.model
+            page.prompt.model = page.pageModel
             page.prompt.showing = page.pageModel ? page.pageModel.promptOpen : false
-        }
-        if (page.tapTempo !== null) {
-            page.tapTempo.model = page.model
-            page.tapTempo.showing = page.pageModel ? page.pageModel.tapTempoActive : false
         }
     }
 
@@ -917,7 +641,7 @@ FocusScope {
     function createModals() {
         var host = page.modalHost !== null && page.modalHost !== undefined ? page.modalHost : page
         if (page.menu === null) {
-            page.menu = menuComponent.createObject(host, {"model": page.model,
+            page.menu = menuComponent.createObject(host, {"model": page.pageModel,
                                                           "pageItem": page})
         } else if (page.menu.parent !== host) {
             // The container hands its modal layer over after the page completes,
@@ -926,14 +650,11 @@ FocusScope {
             page.menu.parent = host
         }
         if (page.prompt === null) {
-            page.prompt = promptComponent.createObject(host, {"model": page.model,
+            page.prompt = promptComponent.createObject(host, {"model": page.pageModel,
                                                               "pageItem": page})
         } else if (page.prompt.parent !== host) {
             page.prompt.parent = host
         }
-        if (page.tapTempo === null)
-            page.tapTempo = tapTempoComponent.createObject(page, {"model": page.model,
-                                                                  "hostPage": page})
         page.syncModals()
     }
 

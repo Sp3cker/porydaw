@@ -265,6 +265,7 @@ private func savedMidiCompilesAfterDocumentSave(_ report: CheckReport, fixtureRo
                         userInfo: [NSLocalizedDescriptionKey:
                             "saved document session did not close cleanly"])
                 }
+                await service.close()
             } catch {
                 if let openedSession {
                     _ = await openedSession.close()
@@ -287,12 +288,141 @@ private func savedMidiCompilesAfterDocumentSave(_ report: CheckReport, fixtureRo
                        what: "actual mid2agb exit result for the persisted edited MIDI and flags")
 }
 
+@MainActor
+private func mouseHintOwnershipChecks(_ report: CheckReport) {
+    let id = "swiftcore/MouseHints::sourceOwnership"
+    let hints = MouseHints()
+    let first = hints.allocateSourceToken()
+    let second = hints.allocateSourceToken()
+    hints.claim(sourceToken: first, profile: 15)
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "inactive windows reject hint claims")
+    hints.setWindowActive(active: true)
+    hints.claim(sourceToken: first, profile: 15)
+    let nodeHint = hints.text
+    hints.claim(sourceToken: second, profile: 15)
+    hints.clear(sourceToken: first)
+    report.expectEqual(nodeHint, hints.text, cppID: id,
+                       what: "replaced source cannot clear an identical-profile new owner")
+    hints.claim(sourceToken: first, profile: 0)
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "empty profile replaces and clears prior visible hint")
+    hints.clear(sourceToken: second)
+    hints.claim(sourceToken: first, profile: 26)
+    report.expect(hints.text != nodeHint, cppID: id,
+                  message: "replacing the node profile changes the presented instructions")
+    hints.clear(sourceToken: first)
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "current source lifecycle clear removes hint")
+    hints.claim(sourceToken: second, profile: 21)
+    hints.setWindowActive(active: false)
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "window deactivation clears an owned hint")
+    hints.setWindowActive(active: true)
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "reactivation never resurrects cached ownership")
+    hints.claim(sourceToken: second, profile: 21)
+    hints.claim(sourceToken: first, profile: -1)
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "unknown profile clears rather than retaining unrelated instructions")
+}
+
+@MainActor
+private func editorSelectionCommandChecks(_ report: CheckReport, suite: DocumentSession,
+                                          service: ProjectService) {
+    let id = "swiftcore/ApplicationSession::selectionCommandRouting"
+    let document = SongDocument(file: makeMidiFixture(), config: suite.document.state.config,
+                                source: suite.document.source, trackBudget: suite.document.trackBudget)
+    let session = DocumentSession(document: document, service: service,
+                                  lease: suite.bankLease, slots: suite.bankSlots,
+                                  dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
+    let grid = PianoGrid(session: session)
+    let page = AutomationPage()
+    page.attach(session: session, palette: GridPalette())
+    defer { page.detach() }
+    session.onChange = { [weak page] _ in page?.refreshFromDocument() }
+    let router = EditorCommandRouter(session: session, grid: grid, automation: page)
+    let lane = AutomationParameter.controlChange(track: 0, controller: TimeDefaults.ccPan)
+    document.writeLane(track: 0, lane: .controller(TimeDefaults.ccPan), from: 0,
+                       through: TimeDefaults.noTick,
+                       points: [LaneWrite(tick: 24, value: 30), LaneWrite(tick: 72, value: 90)])
+    guard let selectedNote = document.notes(in: 0).first else {
+        report.fail(id, "fixture has no note to verify range precedence")
+        return
+    }
+    session.addSelectedNote(selectedNote.id)
+    page.selectRange(from: 24, to: 48, lanes: [lane])
+    let revision = document.revision
+    report.expect(router.isAvailable(.delete) && router.isAvailable(.copy)
+                  && router.isAvailable(.cut), cppID: id,
+                  message: "automation range owns semantic edit availability")
+    report.expectEqual(EditKeyDecision.execute.rawValue,
+                       router.route(.delete, autoRepeat: true).rawValue,
+                       cppID: id, what: "range Delete retains canonical repeat execution")
+    report.expectEqual(revision, document.revision, cppID: id,
+                       what: "availability and key arbitration never mutate the document")
+    report.expectEqual(EditKeyDecision.consume.rawValue,
+                       router.route(.transposeUp, autoRepeat: false).rawValue,
+                       cppID: id, what: "lane-scoped transpose consumes without falling through to notes")
+    router.perform(.transposeUp)
+    report.expectEqual(revision, document.revision, cppID: id,
+                       what: "lane transpose does not mutate a simultaneous note selection")
+    router.perform(.delete)
+    report.expectEqual([Tick(72)], document.lanePoints(
+        track: 0, lane: .controller(TimeDefaults.ccPan)).map(\.tick),
+        cppID: id, what: "range Delete removes only points in the selected interval")
+    report.expect(document.note(selectedNote.id) != nil, cppID: id,
+                  message: "time selection deletion leaves simultaneously selected notes intact")
+    let afterDelete = document.revision
+    router.perform(.delete)
+    report.expectEqual(afterDelete, document.revision, cppID: id,
+                       what: "empty selected range deletion never falls through to notes")
+    report.expect(document.note(selectedNote.id) != nil, cppID: id,
+                  message: "empty range still owns the operation target")
+    router.perform(.clearTimeSelection)
+    report.expect(page.selection == nil, cppID: id,
+                  message: "canonical clear-selection command clears the automation range")
+    report.expectEqual(EditKeyDecision.execute.rawValue,
+                       router.route(.delete, autoRepeat: false).rawValue,
+                       cppID: id, what: "note selection becomes the target after range clear")
+    router.perform(.delete)
+    report.expect(document.note(selectedNote.id) == nil, cppID: id,
+                  message: "shared note deletion remains reachable after range clear")
+
+    // Track-scoped ranges include notes, not just the plotted automation lane.
+    page.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 48, endTick: 73), scope: .tracks([0])))
+    router.perform(.delete)
+    report.expect(!document.notes(in: 0).contains(where: { $0.tick == 48 })
+                  && document.lanePoints(track: 0, lane: .controller(TimeDefaults.ccPan)).isEmpty,
+                  cppID: id, message: "track range deletes both its notes and automation points")
+    report.expect(document.notes(in: 0).contains(where: { $0.tick == 96 }), cppID: id,
+                  message: "track range leaves outside notes intact")
+
+    page.clearTimeSelection()
+    guard let remaining = document.notes(in: 0).first else {
+        report.fail(id, "outside note required for pointer arbitration")
+        return
+    }
+    session.addSelectedNote(remaining.id)
+    grid.beginRightPointer(x: 0, y: 0)
+    let beforeGestureCommand = document.revision
+    report.expectEqual(EditKeyDecision.consume.rawValue,
+                       router.route(.delete, autoRepeat: false).rawValue,
+                       cppID: id, what: "a live pointer gesture consumes semantic deletion")
+    router.perform(.delete)
+    report.expectEqual(beforeGestureCommand, document.revision, cppID: id,
+                       what: "direct activation cannot bypass pointer gesture arbitration")
+    grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
+}
+
 // MARK: - Project Session Suite
 
 @MainActor
 internal func runProjectSessionSuite(_ report: CheckReport) {
     runEditorCameraChecks(report)
     runEditorDrawerChecks(report)
+    mouseHintOwnershipChecks(report)
 
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
         report.fail("project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
@@ -411,9 +541,19 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
 
     // Presenter callbacks publication setup
     var publishedChangeCount = 0
+    var publishedPlaybackCount = 0
+    var publishedChanges: [SessionChange] = []
+    var publicationObserver: ((SessionChange) -> Void)?
     var lastPublishedTimeline: PlaybackTimeline?
-    session.onChange = { _ in publishedChangeCount += 1 }
-    session.onPlayback = { timeline in lastPublishedTimeline = timeline }
+    session.onChange = { change in
+        publishedChangeCount += 1
+        publishedChanges.append(change)
+        publicationObserver?(change)
+    }
+    session.onPlayback = { timeline in
+        publishedPlaybackCount += 1
+        lastPublishedTimeline = timeline
+    }
 
     // Edit tempo to 150 BPM (400_000 us/quarter note)
     let tempo150 = TempoPoint(tick: 0, microsecondsPerQuarterNote: 400_000)
@@ -495,21 +635,95 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
                     "undo/redo cycle threw: \(error)")
     }
 
-    // 4. Session-only state verification
+    // 4. Session-only state publication and isolation
+    let statePublicationID = "swiftcore/DocumentSession::sessionStatePublication"
+    let preRevision = session.document.revision
     let preDirty = session.document.isDirty
+    let preIdentity = session.document.history.currentIdentity
+    let preCanUndo = session.document.history.canUndo
+    let preCanRedo = session.document.history.canRedo
+    let prePlaybackCount = publishedPlaybackCount
+
+    var publicationStart = publishedChangeCount
     session.editCursor = 48
-    session.mutateCamera { _ = $0.setHScroll(12.5) }
-    session.selectedTrack = 1
+    report.expect(
+        publishedChangeCount == publicationStart + 1
+            && publishedChanges.last?.domains == [.cursor]
+            && publishedChanges.last?.revision == preRevision
+            && publishedChanges.last?.trackRemap == nil,
+        cppID: statePublicationID,
+        message: "cursor-only mutation publishes exactly the cursor domain")
+    publicationStart = publishedChangeCount
+    session.editCursor = 48
+    report.expectEqual(publicationStart, publishedChangeCount,
+                       cppID: statePublicationID,
+                       what: "equal cursor assignment publishes nothing")
+
+    publicationStart = publishedChangeCount
+    session.mutedTracks = [1]
+    report.expect(
+        publishedChangeCount == publicationStart + 1
+            && publishedChanges.last?.domains == [.mixState],
+        cppID: statePublicationID,
+        message: "mute mutation publishes exactly the mix-state domain")
+    publicationStart = publishedChangeCount
+    session.soloedTracks = [1]
+    report.expect(
+        publishedChangeCount == publicationStart + 1
+            && publishedChanges.last?.domains == [.mixState],
+        cppID: statePublicationID,
+        message: "solo mutation publishes exactly the mix-state domain")
+    publicationStart = publishedChangeCount
     session.mutedTracks = [1]
     session.soloedTracks = [1]
-    report.expectEqual(preDirty, session.document.isDirty,
-                       cppID: "project-identity/ProjectIdentityTest::savedRecipe_dedupOrderSelection",
-                       what: "session-only camera/track/mute/solo mutations never dirty document")
+    report.expectEqual(publicationStart, publishedChangeCount,
+                       cppID: statePublicationID,
+                       what: "equal mute and solo assignments publish nothing")
+
+    var observedCompletedBatch = false
+    publicationObserver = { change in
+        observedCompletedBatch =
+            change.domains == [.selection, .cursor, .mixState]
+            && session.editCursor == 96
+            && session.selectedTrack == 0
+            && session.mutedTracks == [0]
+    }
+    publicationStart = publishedChangeCount
+    do {
+        let _: Void = try session.withStateChanges {
+            session.withStateChanges {
+                session.editCursor = 96
+                session.selectedTrack = 0
+            }
+            session.mutedTracks = [0]
+            throw RunBlockingError.timeout
+        }
+        report.fail(statePublicationID, "throwing batch unexpectedly returned")
+    } catch RunBlockingError.timeout {
+        // Expected: the defer must publish the completed state before propagation.
+    } catch {
+        report.fail(statePublicationID, "throwing batch propagated an unexpected error")
+    }
+    publicationObserver = nil
+    report.expect(publishedChangeCount == publicationStart + 1 && observedCompletedBatch,
+                  cppID: statePublicationID,
+                  message: "nested throwing batch publishes completed state exactly once")
+
+    session.mutateCamera { _ = $0.setHScroll(12.5) }
+    report.expect(
+        session.document.revision == preRevision
+            && session.document.isDirty == preDirty
+            && session.document.history.currentIdentity == preIdentity
+            && session.document.history.canUndo == preCanUndo
+            && session.document.history.canRedo == preCanRedo
+            && publishedPlaybackCount == prePlaybackCount,
+        cppID: statePublicationID,
+        message: "session-only changes preserve revision, dirty/history, and playback publication")
 
     // Selection reconciliation
     let note1 = session.document.notes(in: 0).last?.id ?? NoteID(0)
     if note1.isAssigned {
-        session.selectedNotes.insert(note1)
+        session.addSelectedNote(note1)
         session.document.deleteNotes([note1])
         report.expectEqual(false, session.selectedNotes.contains(note1),
                            cppID: "swiftcore/DocumentSession::selectionPrunesDeletedNotes",
@@ -838,32 +1052,77 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     runVelocityPageChecks(report, session: session, service: service)
     runVoiceChangesPageChecks(report, session: session, service: service)
     runAutomationPageChecks(report, session: session, service: service)
+    editorSelectionCommandChecks(report, suite: session, service: service)
+    runTrackHeadersChecks(report, session: session, service: service)
+    runTrackHeadersInputChecks(report, session: session, service: service)
 
-    // 8. Close lifecycle.
+    // 8. Document close preserves the project; the service owns worker shutdown.
+    let lifetimeID = "swiftcore/ProjectService::documentClosePreservesProjectLifetime"
     do {
-        try runBlocking {
+        let firstDocumentClosed = try runBlocking {
             await session.close()
         }
+        report.expectEqual(true, firstDocumentClosed,
+                           cppID: lifetimeID,
+                           what: "first document closes cleanly")
     } catch {
-        report.fail("project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
-                    "session close timed out: \(error)")
+        report.fail(lifetimeID, "first document close timed out: \(error)")
     }
     report.expectEqual(true, session.isClosed,
-                       cppID: "project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
-                       what: "session marks isClosed after worker shutdown joins")
+                       cppID: lifetimeID,
+                       what: "first document marks isClosed without closing its project service")
+
+    do {
+        let labels = try runBlocking {
+            try await service.songLabels()
+        }
+        report.expect(labels.contains("mus_session_test") &&
+                      labels.contains("mus_session_test2"),
+                      cppID: lifetimeID,
+                      message: "project song labels remain available after document close")
+    } catch {
+        report.fail(lifetimeID,
+                    "project service became unavailable after document close: \(error)")
+    }
+
+    do {
+        let (secondLabel, secondDocumentClosed) = try runBlocking {
+            let secondSession = try await DocumentSession.open(
+                service: service, label: "mus_session_test2", sampleRate: 48_000)
+            let label = secondSession.document.source.label
+            let closed = await secondSession.close()
+            return (label, closed)
+        }
+        report.expectEqual("mus_session_test2", secondLabel,
+                           cppID: lifetimeID,
+                           what: "same project service opens a second document without reopening")
+        report.expectEqual(true, secondDocumentClosed,
+                           cppID: lifetimeID,
+                           what: "second document closes cleanly")
+    } catch {
+        report.fail(lifetimeID,
+                    "same project service could not open and close the second document: \(error)")
+    }
+
+    do {
+        try runBlocking {
+            await service.close()
+        }
+    } catch {
+        report.fail(lifetimeID, "explicit project service close timed out: \(error)")
+    }
     do {
         _ = try runBlocking {
-            try await session.applyBankEdit(slot: 0, value: BankVoice(), expected: nil)
+            try await service.songLabels()
         }
-        report.fail("project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
-                    "operation on closed session must throw")
+        report.fail(lifetimeID, "explicit project service close must stop the worker")
     } catch let error as ProjectServiceError {
         report.expectEqual(ProjectServiceError.serviceClosed, error,
-                           cppID: "project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
-                           what: "closed session reports the typed serviceClosed error")
+                           cppID: lifetimeID,
+                           what: "explicit project service close owns worker shutdown")
     } catch {
-        report.fail("project-io-mutations/ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins",
-                    "closed operation returned unexpected error: \(error)")
+        report.fail(lifetimeID,
+                    "closed project service returned unexpected error: \(error)")
     }
 }
 
@@ -915,6 +1174,8 @@ internal func runBankHistorySuite(_ report: CheckReport) {
 
     let oldLease = session.bankLease
     let oldToken = oldLease.bankToken
+    var bankPublications: [SessionChange] = []
+    session.onChange = { bankPublications.append($0) }
 
     // 1. Direct scalar edit to slot 0
     let originalVoice = session.bankSlots[0].voice!
@@ -927,6 +1188,7 @@ internal func runBankHistorySuite(_ report: CheckReport) {
 
 
     do {
+        bankPublications.removeAll(keepingCapacity: true)
         let result = try runBlocking {
             try await session.applyBankEdit(slot: 0, value: editedVoice, expected: originalVoice)
         }
@@ -942,22 +1204,39 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         report.expectEqual(oldToken, oldLease.bankToken,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "superseded lease retains its bank token and stays valid")
+        report.expect(
+            bankPublications.count == 1
+                && bankPublications[0].domains == [.bank, .dirty, .history],
+            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+            message: "bank edit publishes bank, dirty, and history exactly once")
 
         // Undo scalar edit
+        bankPublications.removeAll(keepingCapacity: true)
         _ = try runBlocking {
             try await session.undo()
         }
         report.expectEqual(originalSlots, session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "undo restores the complete original bank view")
+        report.expect(
+            bankPublications.count == 1
+                && bankPublications[0].domains == [.bank, .dirty, .history],
+            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+            message: "bank undo publishes bank, dirty, and history exactly once")
 
         // Redo scalar edit
+        bankPublications.removeAll(keepingCapacity: true)
         _ = try runBlocking {
             try await session.redo()
         }
         report.expectEqual(scalarEditedSlots, session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "redo restores the scalar edit without changing other slots")
+        report.expect(
+            bankPublications.count == 1
+                && bankPublications[0].domains == [.bank, .dirty, .history],
+            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+            message: "bank redo publishes bank, dirty, and history exactly once")
     } catch {
         report.fail("vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                     "scalar edit or undo/redo threw: \(error)")
@@ -1167,6 +1446,7 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         let unifiedBankPath = projectDir + "/" + session.bankLease.sourcePath
         let midiBeforeUnifiedSave = bytes(at: unifiedMidiPath)
         let bankBeforeUnifiedSave = bytes(at: unifiedBankPath)
+        bankPublications.removeAll(keepingCapacity: true)
         try runBlocking {
             try await session.save()
         }
@@ -1176,6 +1456,11 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         report.expectEqual(false, session.bankDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "unified save marks the bank clean")
+        report.expect(
+            bankPublications.count == 1
+                && bankPublications[0].domains == [.bank, .dirty, .history],
+            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+            message: "unified bank save publishes bank, dirty, and history exactly once")
         report.expect(bytes(at: unifiedMidiPath) != midiBeforeUnifiedSave,
                       cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                       message: "unified save changes persisted MIDI bytes")

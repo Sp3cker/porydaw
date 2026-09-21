@@ -1,0 +1,5 @@
+module PorydawAudioDeviceNative {
+    header "@PORYAAAA_DIR@/third_party/miniaudio.h"
+    header "@PORYAAAA_DIR@/plugin/voicegroup_loader.h"
+    export *
+}

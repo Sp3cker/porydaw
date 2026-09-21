@@ -36,6 +36,8 @@ FocusScope {
     objectName: "voiceChangesPage"
 
     required property QtObject applicationSession
+    property var hintService: null
+    property bool hintScopeAllowed: true
 
     /// The page's Swift owner for the current document, and the neutral empty
     /// model while there is none: `voiceChangesPage()` fails once no document is
@@ -128,7 +130,9 @@ FocusScope {
 
     /// The shared plot origin: the gutter the roll draws at and the container
     /// publishes as `plotOrigin`.
-    readonly property real plotOrigin: page.gridModel ? page.gridModel.keyboardWidth : 0
+    readonly property real plotOrigin: page.gridModel
+                                       ? (page.gridModel.trackHeaderWidth || 0)
+                                         + page.gridModel.keyboardWidth : 0
     readonly property real plotWidth: Math.max(page.width - page.plotOrigin, 0)
     readonly property real seedBaseFontPx: 13
     readonly property real baseFontPx: page.gridModel ? page.gridModel.baseFontPx
@@ -157,6 +161,15 @@ FocusScope {
     Component.onCompleted: {
         page.pushBodyFacts()
         page.createModals()
+    }
+    Component.onDestruction: {
+        if (page.picker !== null) {
+            if (page.picker.model)
+                page.picker.model.releasePickerAudition()
+            page.picker.destroy()
+        }
+        if (page.menu !== null)
+            page.menu.destroy()
     }
 
     // The shared clock reaches this page in Swift: `ApplicationSession` fans the
@@ -464,6 +477,8 @@ FocusScope {
             page.menu.showing = page.pageModel ? page.pageModel.menuOpen : false
         }
         if (page.picker !== null) {
+            if (page.picker.model && page.picker.model !== page.model)
+                page.picker.model.releasePickerAudition()
             page.picker.model = page.model
             page.picker.showing = page.pageModel ? page.pageModel.pickerOpen : false
         }
@@ -488,6 +503,7 @@ FocusScope {
         id: pickerComponent
 
         VoicePicker {
+            hintService: page.hintService
             onClosed: page.focusOrigin()
         }
     }

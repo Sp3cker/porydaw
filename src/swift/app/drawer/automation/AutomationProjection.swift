@@ -329,9 +329,7 @@ public struct AutomationPlotBounds: Equatable, Sendable {
 }
 
 /// The snapping lattice: the shared visible grid for a coarse pointer position,
-/// the document clock lattice for a fine (Alt) one. `Grid::snapTick` is the
-/// production rule, and the clock stride is the one document fact the Voice
-/// Changes page already derives (`VoiceLanePolicy.clockTicks`).
+/// and the shared document clock lattice for a fine (Alt) one.
 public struct AutomationSnapPolicy {
     private let metrics: GridMetrics
     public let clockTicks: Tick
@@ -356,13 +354,13 @@ public struct AutomationSnapPolicy {
                           TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
                                        denomPow2: $0.denominatorPower)
                       })),
-                  clockTicks: VoiceLanePolicy.clockTicks(
+                  clockTicks: TimelineSnapPolicy.clockTicks(
                       division: document.ticksPerBeat,
                       extendedClocks: document.state.config.extendedClocks))
     }
 
     public func snap(_ tick: Double, fine: Bool, camera: EditorCamera) -> Tick {
-        fine ? VoiceLanePolicy.fineSnap(tick, clockTicks: clockTicks)
+        fine ? TimelineSnapPolicy.fineSnap(tick, clockTicks: clockTicks)
              : Tick(metrics.snapTick(tick, camera: camera))
     }
 
@@ -491,9 +489,12 @@ public struct AutomationLaneSnapshot: Equatable, Sendable {
     /// Every written occurrence, in document order, with its stable handle.
     public let sources: [AutomationSourcePoint]
     public let songEndTick: Tick
+    private var occurrenceGroups: [Tick: [AutomationSourcePoint]] = [:]
+    private var displayed: [AutomationLaneDisplayPoint] = []
 
     @MainActor
-    public init(parameter: AutomationParameter, in document: SongDocument, songEndTick: Tick) {
+    public init(parameter: AutomationParameter, in document: SongDocument, songEndTick: Tick,
+                lanePoints: [LanePoint]? = nil) {
         self.revision = document.revision
         self.parameter = parameter
         self.metadata = AutomationParameterMetadata(parameter: parameter)
@@ -514,7 +515,7 @@ public struct AutomationLaneSnapshot: Equatable, Sendable {
                 sources = []
                 return
             }
-            sources = document.lanePoints(track: track, lane: lane).map { point in
+            sources = (lanePoints ?? document.lanePoints(track: track, lane: lane)).map { point in
                 AutomationSourcePoint(
                     identity: AutomationPointIdentity(
                         revision: document.revision, parameter: parameter, tick: point.tick,
@@ -522,14 +523,16 @@ public struct AutomationLaneSnapshot: Equatable, Sendable {
                     tick: point.tick, value: point.value, lanePoint: point, tempoPoint: nil)
             }
         }
+        occurrenceGroups = Dictionary(grouping: sources, by: \.tick)
+        displayed = makeDisplaySeries()
     }
 
     /// Every occurrence at one tick: the tie group a move or delete acts on.
     public func occurrences(at tick: Tick) -> [AutomationSourcePoint] {
-        sources.filter { $0.tick == tick }
+        occurrenceGroups[tick] ?? []
     }
 
-    public var occupiedTicks: Set<Tick> { Set(sources.map(\.tick)) }
+    public var occupiedTicks: Set<Tick> { Set(occurrenceGroups.keys) }
 
     /// The implicit pre-roll held value: a parameter with an engine default and
     /// no written point at tick zero reads as holding that default from tick 0.
@@ -546,7 +549,7 @@ public struct AutomationLaneSnapshot: Equatable, Sendable {
         metadata.projectsTickZero && !occupyingTickZero
     }
 
-    private var occupyingTickZero: Bool { sources.contains { $0.tick == 0 } }
+    private var occupyingTickZero: Bool { occurrenceGroups[0] != nil }
 
     /// The written-event count: the projected tick-zero node and the lead-in are
     /// not events.
@@ -555,7 +558,9 @@ public struct AutomationLaneSnapshot: Equatable, Sendable {
     /// The displayed points, in tick order: the projected engine-default
     /// tick-zero node, then the written occurrences with the last at a tick
     /// winning.
-    public var displaySeries: [AutomationLaneDisplayPoint] {
+    public var displaySeries: [AutomationLaneDisplayPoint] { displayed }
+
+    private func makeDisplaySeries() -> [AutomationLaneDisplayPoint] {
         var series: [AutomationLaneDisplayPoint] = []
         if projectedTickZero, let value = metadata.defaultValue {
             let clamped = metadata.clamp(value)
@@ -641,15 +646,25 @@ public struct AutomationProjection {
     public let geometry: AutomationPlotGeometry
     public let snapPolicy: AutomationSnapPolicy
     public let songEndTick: Tick
+    public let displayMaximum: Int?
+
+    public static func displayMaximum(snapshot: AutomationLaneSnapshot, range: Int?) -> Int? {
+        guard snapshot.metadata.zoomable else { return nil }
+        let range = range ?? Int(AutomationCatalog.defaultRange(snapshot.parameter.controller ?? 0))
+        guard range == 0 else { return range }
+        let maximum = snapshot.displaySeries.map(\.value).max() ?? 0
+        return Int(AutomationCatalog.autoRange(maximum: maximum))
+    }
 
     public init(camera: EditorCamera, bounds: AutomationPlotBounds,
                 geometry: AutomationPlotGeometry, snapPolicy: AutomationSnapPolicy,
-                songEndTick: Tick) {
+                songEndTick: Tick, displayMaximum: Int? = nil) {
         self.camera = camera
         self.bounds = bounds
         self.geometry = geometry
         self.snapPolicy = snapPolicy
         self.songEndTick = songEndTick
+        self.displayMaximum = displayMaximum
     }
 
     // MARK: Time
@@ -724,7 +739,7 @@ public struct AutomationProjection {
         let top = geometry.valuePlotPadding
         let bottom = max(top, bounds.height - geometry.valuePlotPadding)
         let clamped = Double(metadata.clamp(value))
-        let span = max(1, metadata.maximum - metadata.minimum)
+        let span = max(1, (displayMaximum ?? metadata.maximum) - metadata.minimum)
         return bottom - (clamped - Double(metadata.minimum)) * (bottom - top) / Double(span)
     }
 
@@ -732,7 +747,7 @@ public struct AutomationProjection {
         let top = geometry.valuePlotPadding
         let bottom = max(top, bounds.height - geometry.valuePlotPadding)
         let clamped = min(max(y, top), bottom)
-        let span = Double(metadata.maximum - metadata.minimum)
+        let span = Double((displayMaximum ?? metadata.maximum) - metadata.minimum)
         let exact = Double(metadata.minimum)
             + (bottom - clamped) * span / max(1.0, bottom - top)
         return metadata.clamp(Int(exact.rounded()))
@@ -807,10 +822,11 @@ public struct AutomationProjection {
     /// The highlighted scale labels: maximum, minimum, and — only when the
     /// parameter has a neutral value — the neutral one, all at curve-true Y.
     public func scaleLabels(metadata: AutomationParameterMetadata) -> [AutomationScaleLabel] {
+        let maximum = displayMaximum ?? metadata.maximum
         var labels: [AutomationScaleLabel] = [
-            AutomationScaleLabel(role: .maximum, value: metadata.maximum,
-                                 text: metadata.valueText(metadata.maximum),
-                                 y: y(metadata.maximum, metadata: metadata)),
+            AutomationScaleLabel(role: .maximum, value: maximum,
+                                 text: metadata.valueText(maximum),
+                                 y: y(maximum, metadata: metadata)),
             AutomationScaleLabel(role: .minimum, value: metadata.minimum,
                                  text: metadata.valueText(metadata.minimum),
                                  y: y(metadata.minimum, metadata: metadata)),
@@ -844,9 +860,8 @@ public struct AutomationLaneProjection: Equatable, Sendable {
     /// lead-in is not a display point, so it never reaches the hover readout —
     /// exactly as the lane adapters publish it.
     public func heldValue(at tick: Tick) -> Int? {
-        var held: Int?
-        for point in points where point.tick <= tick { held = point.value }
-        return held
+        let index = automationPartitionIndex(points) { $0.tick <= tick }
+        return index > 0 ? points[index - 1].value : nil
     }
 
     /// The nearest display point within `radius` pixels. Ties resolve to the
@@ -869,9 +884,9 @@ public struct AutomationLaneProjection: Equatable, Sendable {
     /// `originPhantomAt`: the rightmost node strictly left of the plot origin,
     /// presented at the origin.
     public var originPhantom: AutomationOriginPhantom? {
-        var phantom: AutomationProjectedPoint?
-        for point in points where point.x < 0 { phantom = point }
-        return phantom.map { AutomationOriginPhantom(parameter: parameter, point: $0) }
+        let index = automationPartitionIndex(points) { $0.x < 0 }
+        guard index > 0 else { return nil }
+        return AutomationOriginPhantom(parameter: parameter, point: points[index - 1])
     }
 }
 
@@ -931,7 +946,8 @@ public struct AutomationRowStack: Equatable, Sendable {
     @MainActor
     public static func build(document: SongDocument, primaryTrack: Int?,
                              selection: AutomationTimeSelection?,
-                             ready: Bool, songEndTick: Tick) -> AutomationRowStack {
+                             ready: Bool, songEndTick: Tick,
+                             snapshot: ((AutomationParameter) -> AutomationLaneSnapshot)? = nil) -> AutomationRowStack {
         let usedTracks = Set(0..<document.engineTracks.usedTrackCount)
         let range: TimeRange? = selection.map {
             TimeRange(startTick: min($0.range.startTick, $0.range.endTick),
@@ -953,8 +969,8 @@ public struct AutomationRowStack: Equatable, Sendable {
         if let track = primaryTrack, track >= 0, track < TrackLimits.hardwareCapacity {
             for parameter in AutomationCatalog.parameters(track: track) {
                 guard !parameter.isTempo else { continue }
-                let laneSnapshot = AutomationLaneSnapshot(parameter: parameter, in: document,
-                                                          songEndTick: songEndTick)
+                let laneSnapshot = snapshot?(parameter) ?? AutomationLaneSnapshot(
+                    parameter: parameter, in: document, songEndTick: songEndTick)
                 let ticks = laneSnapshot.sources.map(\.tick)
                 let coversNodes = ready && (selection?.covers(parameter,
                                                               usedTracks: usedTracks) ?? false)
@@ -970,3 +986,16 @@ public struct AutomationRowStack: Equatable, Sendable {
         return AutomationRowStack(rows: rows, visibleRowCount: visible, activeTickRange: range)
     }
 }
+
+/// First element outside a sorted prefix. Equal ticks remain in occurrence order.
+func automationPartitionIndex<Element>(_ values: [Element],
+                                       before: (Element) -> Bool) -> Int {
+    var low = 0
+    var high = values.count
+    while low < high {
+        let middle = low + (high - low) / 2
+        if before(values[middle]) { low = middle + 1 } else { high = middle }
+    }
+    return low
+}
+

@@ -38,14 +38,8 @@ import PorydawCore
 //   voice span rebuilds no static content, while crossing a span updates the
 //   readout once.
 //
-// Blocked capability: production's picker rows audition the voice they name on
-// a held press (`SongView::auditionVoice` → `AudioEngine::previewVoice`). The
-// authorized Swift surface exposes only `NativeAudio.previewNote(track:key:
-// velocity:)`, which sounds the selected track's current voice and cannot select
-// a program, so this suite covers the picker's selection and transaction paths
-// and records audition as the page's one residual gap (`auditionCapability`).
-// The page's own header comment carries the exact blocked legacy cases and the
-// smallest native entry point that would unblock them.
+// Audition checks observe the typed owner callback and document history; native
+// audio integration is verified separately on the production workspace.
 
 private let projectionID = "swiftcore/VoiceChangesPage::markerProjection"
 private let labelID = "swiftcore/VoiceChangesPage::slotLabelsAndBlankSlots"
@@ -131,7 +125,7 @@ private struct VoiceChangesFixture {
                                       dirty: false, loadName: suite.bankLoadName,
                                       sampleRate: 48_000)
         session.selectedTrack = 0
-        session.selectedNotes = []
+        session.clearSelectedNotes()
         session.editCursor = 0
         self.session = session
         self.document = document
@@ -139,11 +133,16 @@ private struct VoiceChangesFixture {
         page.attach(session: session, palette: GridPalette())
         page.configureBody(width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
                            baseFontPx: baseFontPx, dragDistance: 10)
-        // The session's own publication fan-out, exactly as `ApplicationSession`
-        // installs it: a document change refreshes the page, and a camera-only
-        // mutation re-projects it. A session property that publishes nothing
-        // (`selectedTrack`, `editCursor`) is driven by the case itself.
-        session.onChange = { [weak page] _ in page?.refreshFromDocument() }
+        // Mirror the workspace's domain routing: cursor publication updates only
+        // the stopped readout; document-derived domains rebuild content.
+        session.onChange = { [weak page] change in
+            let content: SessionChangeDomains = [.document, .selection, .bank]
+            if !change.domains.intersection(content).isEmpty {
+                page?.refreshFromDocument()
+            } else if change.domains.contains(.cursor) {
+                page?.refreshEditCursor()
+            }
+        }
         session.onCameraChange = { [weak page] _ in page?.refreshCamera() }
     }
 
@@ -387,7 +386,6 @@ private func slotLabels(_ report: CheckReport, session: DocumentSession,
     report.expectEqual(String(format: "%03d", blankIndex), marker.label, cppID: labelID,
                        what: "a blank slot's marker label is its program number")
     fixture.session.editCursor = 48
-    fixture.page.refreshFromDocument()
     report.expect(fixture.page.contextBlank, cppID: labelID,
                   message: "the context readout publishes the blank truth too")
     report.expectEqual(blankIndex, fixture.page.contextSlot, cppID: labelID,
@@ -422,15 +420,21 @@ private func currentVoiceContext(_ report: CheckReport, suite: DocumentSession,
     report.expectEqual(nil, VoiceLanePolicy.endTick(after: 120, points: points), cppID: contextID,
                        what: "the last span runs to the song's end")
 
-    // Stopped: the context follows the edit cursor.
+    // Cursor-only publication updates the stopped readout, not static content
+    // or document/history state.
+    let cursorBuilds = page.contentBuildCount
+    let cursorDocument = fixture.snapshot
     fixture.session.editCursor = 60
-    page.refreshFromDocument()
     report.expectEqual(programs[1], page.contextSlot, cppID: contextID,
-                       what: "the stopped context resolves at the edit cursor")
+                       what: "the stopped context resolves at the published edit cursor")
     report.expectEqual(VoiceLanePolicy.label(slot: programs[1],
                                              view: fixture.session.bankSlots[programs[1]]),
                        page.readoutText, cppID: contextID,
                        what: "the readout names the edit cursor's program")
+    report.expectEqual(cursorBuilds, page.contentBuildCount, cppID: contextID,
+                       what: "cursor-only publication rebuilds no marker content")
+    report.expectEqual(cursorDocument, fixture.snapshot, cppID: contextID,
+                       what: "cursor-only publication changes no document or history state")
 
     // Playing: the same document resolves at the rounded shared-playhead tick.
     page.refreshPlayhead(tick: 8, playing: true)
@@ -448,10 +452,12 @@ private func currentVoiceContext(_ report: CheckReport, suite: DocumentSession,
     page.refreshPlayhead(tick: 96, playing: false)
     report.expectEqual(programs[1], page.contextSlot, cppID: contextID,
                        what: "the stopped context returns to the edit cursor")
+    let laterCursorBuilds = page.contentBuildCount
     fixture.session.editCursor = 130
-    page.refreshFromDocument()
     report.expectEqual(programs[2], page.contextSlot, cppID: contextID,
                        what: "a moved edit cursor re-resolves the stopped context")
+    report.expectEqual(laterCursorBuilds, page.contentBuildCount, cppID: contextID,
+                       what: "a later cursor-only publication remains readout-only")
 
     // A track switch re-derives the projection against the new track's lane.
     fixture.session.selectedTrack = 1
@@ -742,6 +748,31 @@ private func markerDragTransactions(_ report: CheckReport, suite: DocumentSessio
     let fixture = VoiceChangesFixture(suite: suite, service: service, programs: programs)
     let page = fixture.page
     let baseline = fixture.snapshot
+
+    // Crossing/tied markers can propagate stair placement beyond the moved
+    // label. A camera redraw must agree with the incremental drag projection.
+    _ = page.pointerPress(x: fixture.markerX(48), y: 10, surface: 1,
+                          button: 1, modifiers: 0)
+    for tick in [Tick(120), 180, 0, 48, 96] {
+        _ = page.pointerMove(x: fixture.markerX(tick), y: 10, buttons: 1)
+        let incremental = page.publishedMarkers
+        page.refreshCamera()
+        let redrawn = page.publishedMarkers
+        report.expectEqual(incremental.map(\.identity), redrawn.map(\.identity),
+                           cppID: moveID, what: "drag and redraw preserve tied marker order")
+        report.expectEqual(incremental.map(\.label), redrawn.map(\.label),
+                           cppID: moveID, what: "drag and redraw agree on label elision")
+        for (before, after) in zip(incremental, redrawn) {
+            for component in ["x", "y", "width", "height"] {
+                report.expectEqual(before.labelRect[component] as? Double,
+                                   after.labelRect[component] as? Double, cppID: moveID,
+                                   what: "drag and redraw agree on label \(component)")
+            }
+            report.expectEqual(before.offscreen, after.offscreen, cppID: moveID,
+                               what: "drag and redraw agree on offscreen labels")
+        }
+    }
+    page.cancelSectionInteraction()
 
     // Below the activation distance: a press and a release commit nothing.
     let startX = fixture.markerX(48)
@@ -1200,30 +1231,30 @@ private func altFineClockLattice(_ report: CheckReport, suite: DocumentSession,
                                  service: ProjectService, programs: [Int]) {
     // `SongDocument::ticksPerClock`: one clock is `division / (24 * (extended ? 2 : 1))`
     // ticks, floored at one.
-    report.expectEqual(1, VoiceLanePolicy.clockTicks(division: 24, extendedClocks: false),
+    report.expectEqual(1, TimelineSnapPolicy.clockTicks(division: 24, extendedClocks: false),
                        cppID: fineSnapID,
                        what: "a 24-tick division names one tick per clock")
-    report.expectEqual(4, VoiceLanePolicy.clockTicks(division: 96, extendedClocks: false),
+    report.expectEqual(4, TimelineSnapPolicy.clockTicks(division: 96, extendedClocks: false),
                        cppID: fineSnapID,
                        what: "a 96-tick division names four ticks per clock")
-    report.expectEqual(2, VoiceLanePolicy.clockTicks(division: 96, extendedClocks: true),
+    report.expectEqual(2, TimelineSnapPolicy.clockTicks(division: 96, extendedClocks: true),
                        cppID: fineSnapID,
                        what: "extended clocks halve the ticks per clock")
-    report.expectEqual(1, VoiceLanePolicy.clockTicks(division: 1, extendedClocks: false),
+    report.expectEqual(1, TimelineSnapPolicy.clockTicks(division: 1, extendedClocks: false),
                        cppID: fineSnapID, what: "the clock stride never falls below one tick")
 
     // `Grid::snapTick(tick, fine: true)`: the absolute clock lattice, rounded
     // half-up, clamped to the song's tick domain.
-    report.expectEqual(4, VoiceLanePolicy.fineSnap(5.9, clockTicks: 4), cppID: fineSnapID,
+    report.expectEqual(4, TimelineSnapPolicy.fineSnap(5.9, clockTicks: 4), cppID: fineSnapID,
                        what: "a position inside a clock cell snaps to its floor")
-    report.expectEqual(8, VoiceLanePolicy.fineSnap(6, clockTicks: 4), cppID: fineSnapID,
+    report.expectEqual(8, TimelineSnapPolicy.fineSnap(6, clockTicks: 4), cppID: fineSnapID,
                        what: "an exact tie rounds up, as the legacy lattice does")
-    report.expectEqual(8, VoiceLanePolicy.fineSnap(6.1, clockTicks: 4), cppID: fineSnapID,
+    report.expectEqual(8, TimelineSnapPolicy.fineSnap(6.1, clockTicks: 4), cppID: fineSnapID,
                        what: "a position past the midpoint snaps up")
-    report.expectEqual(0, VoiceLanePolicy.fineSnap(-3, clockTicks: 4), cppID: fineSnapID,
+    report.expectEqual(0, TimelineSnapPolicy.fineSnap(-3, clockTicks: 4), cppID: fineSnapID,
                        what: "the lattice is anchored at zero")
     report.expectEqual(TimeDefaults.maxTick,
-                       VoiceLanePolicy.fineSnap(Double(TimeDefaults.maxTick), clockTicks: 4),
+                       TimelineSnapPolicy.fineSnap(Double(TimeDefaults.maxTick), clockTicks: 4),
                        cppID: fineSnapID, what: "the lattice clamps to the song's tick domain")
 
     // The page's own drag: with the alt modifier the preview snaps on the clock
@@ -1231,7 +1262,7 @@ private func altFineClockLattice(_ report: CheckReport, suite: DocumentSession,
     let fixture = VoiceChangesFixture(suite: suite, service: service, programs: programs,
                                       division: 96)
     let page = fixture.page
-    let clock = VoiceLanePolicy.clockTicks(
+    let clock = TimelineSnapPolicy.clockTicks(
         division: fixture.document.ticksPerBeat,
         extendedClocks: fixture.document.state.config.extendedClocks)
     report.expect(clock >= 1, cppID: fineSnapID,
@@ -1242,13 +1273,13 @@ private func altFineClockLattice(_ report: CheckReport, suite: DocumentSession,
     let altX = startX + 60
     _ = page.pointerMove(x: altX, y: 10, buttons: 1, modifiers: VoiceModifier.alt)
     let raw = fixture.session.camera.tickAtContentX(altX)
-    report.expectEqual(VoiceLanePolicy.fineSnap(raw, clockTicks: clock), page.dragPreviewTick,
+    report.expectEqual(TimelineSnapPolicy.fineSnap(raw, clockTicks: clock), page.dragPreviewTick,
                        cppID: fineSnapID,
                        what: "the alt drag previews the legacy clock lattice")
     report.expect((page.dragPreviewTick ?? 1) % Tick(clock) == 0, cppID: fineSnapID,
                   message: "the alt preview lands on the clock lattice itself")
     _ = page.pointerRelease(x: altX, y: 10, button: 1)
-    report.expectEqual(VoiceLanePolicy.fineSnap(raw, clockTicks: clock),
+    report.expectEqual(TimelineSnapPolicy.fineSnap(raw, clockTicks: clock),
                        fixture.lanePoints().first { $0.value == dragged.value }?.tick,
                        cppID: fineSnapID,
                        what: "the released alt drag commits the clock-lattice tick")
@@ -1346,7 +1377,6 @@ private func blankSlotCommit(_ report: CheckReport, suite: DocumentSession,
                        what: "the committed blank slot's label stays its program number")
 
     fixture.session.editCursor = 96
-    page.refreshFromDocument()
     report.expect(fixture.page.contextBlank, cppID: collisionID,
                   message: "the readout publishes the blank truth for that context")
     report.expectEqual(String(format: "%03d", blankIndex), fixture.page.readoutText,
@@ -1361,19 +1391,80 @@ private func auditionCapability(_ report: CheckReport, suite: DocumentSession,
                                 service: ProjectService, programs: [Int]) {
     let fixture = VoiceChangesFixture(suite: suite, service: service, programs: programs)
     let page = fixture.page
-    report.expect(!page.auditionAvailable, cppID: auditionID,
-                  message: "the page publishes voice audition as unavailable")
-    report.expect(page.auditionDiagnostic.lowercased().contains("audition"), cppID: auditionID,
-                  message: "the capability diagnostic names the missing audition")
-    report.expect(page.auditionDiagnostic.lowercased().contains("preview"), cppID: auditionID,
-                  message: "the capability diagnostic names the missing native preview")
-    _ = page.pointerDoubleClick(x: fixture.markerX(96), y: 10)
-    report.expect(!page.auditionAvailable, cppID: auditionID,
-                  message: "opening the picker does not advertise an audition")
-    report.expect(page.pickerProgram >= 0, cppID: auditionID,
-                  message: "the picker's own selection state stands without a sounding row")
+    var calls: [[UInt8]] = []
+    page.onAuditionVoice = { calls.append([$0, $1, $2]) }
     let baseline = fixture.snapshot
+    let first = UInt8(programs[0])
+    let second = UInt8(programs[1])
+
+    func hold(_ program: Int) {
+        guard let row = page.pickerRowPrograms.firstIndex(of: program) else {
+            report.fail(auditionID, "the audition program is absent from the picker")
+            return
+        }
+        page.pressAndHoldPickerRow(index: row)
+    }
+    _ = page.pointerDoubleClick(x: fixture.markerX(96), y: 10)
+    hold(programs[0])
+    hold(programs[0])
+    hold(programs[1])
+    page.releasePickerAudition()
+    page.releasePickerAudition()
+    report.expectEqual([[first, 60, 112], [first, 60, 0],
+                        [first, 60, 112], [first, 60, 0],
+                        [second, 60, 112], [second, 60, 0]], calls,
+                       cppID: auditionID, what: "held program replacement releases once before the next note")
+
+    calls.removeAll()
+    hold(programs[0])
+    page.setPickerFilter(text: "__no_voice_can_match__")
+    page.cancelPicker()
+    report.expectEqual([[first, 60, 112], [first, 60, 0]], calls,
+                       cppID: auditionID, what: "filter invalidation releases the sounding program")
+
+    calls.removeAll()
+    _ = page.pointerDoubleClick(x: fixture.markerX(48), y: 10)
+    hold(programs[1])
     _ = page.acceptPicker()
-    report.expect(fixture.snapshot != baseline, cppID: auditionID,
-                  message: "the picker's only committed effect is the slot it selects")
+    report.expectEqual([[second, 60, 112], [second, 60, 0]], calls,
+                       cppID: auditionID, what: "same-value acceptance releases without a musical edit")
+    report.expectEqual(baseline, fixture.snapshot, cppID: auditionID,
+                       what: "audition, filtering and same-value acceptance leave document/history unchanged")
+
+    calls.removeAll()
+    _ = page.pointerDoubleClick(x: fixture.markerX(96), y: 10)
+    hold(programs[0])
+    _ = page.pointerDoubleClick(x: fixture.markerX(48), y: 10)
+    hold(programs[1])
+    page.onAuditionVoice = nil
+    report.expectEqual([[first, 60, 112], [first, 60, 0],
+                        [second, 60, 112], [second, 60, 0]], calls,
+                       cppID: auditionID, what: "picker and callback replacement release through the old owner")
+    report.expect(!page.auditionAvailable, cppID: auditionID,
+                  message: "removing the real callback removes audition availability")
+
+    calls.removeAll()
+    page.onAuditionVoice = { calls.append([$0, $1, $2]) }
+    hold(programs[0])
+    fixture.session.selectedTrack = 1
+    page.releasePickerAudition()
+    report.expectEqual([[first, 60, 112], [first, 60, 0]], calls,
+                       cppID: auditionID, what: "stale track cancellation releases without a duplicate note-off")
+    fixture.session.selectedTrack = 0
+    _ = page.pointerDoubleClick(x: fixture.markerX(96), y: 10)
+    calls.removeAll()
+    hold(programs[1])
+    page.cancelSectionInteraction()
+    report.expectEqual([[second, 60, 112], [second, 60, 0]], calls,
+                       cppID: auditionID, what: "workspace cancellation releases its held voice")
+    _ = page.pointerDoubleClick(x: fixture.markerX(96), y: 10)
+
+    calls.removeAll()
+    page.onAuditionVoice = { calls.append([$0, $1, $2]) }
+    hold(programs[0])
+    page.detach()
+    report.expectEqual([[first, 60, 112], [first, 60, 0]], calls,
+                       cppID: auditionID, what: "document teardown releases the final held program")
+    report.expectEqual(baseline, fixture.snapshot, cppID: auditionID,
+                       what: "picker replacement and teardown write no musical state")
 }

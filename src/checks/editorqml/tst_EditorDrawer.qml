@@ -207,6 +207,7 @@ TestCase {
         // are waited down to their drawn closed state, so the next case starts
         // from the settled composition instead of a pass behind it.
         bootstrap.cancelInput()
+        bootstrap.stopObservingVoiceAudition()
         testCase.awaitVoiceModal("voicePicker", false)
         testCase.awaitVoiceModal("voiceChangeMenu", false)
         testCase.awaitVoiceModal("automationPrompt", false)
@@ -264,6 +265,8 @@ TestCase {
     function body(kind) { return findChild(testCase.drawer(), "drawerBody_" + testCase.keyName(kind)) }
     function pageItem(kind) { return testCase.body(kind).item }
     function rollInput() { return findChild(testCase.surface, "swiftRollInput") }
+    function hintStatus() { return findChild(testCase.surface, "mouseHintStatus") }
+    function editorHeight() { return testCase.hintStatus().mapToItem(testCase.surface, 0, 0).y }
     function rollBand() { return findChild(testCase.surface, "swiftRollBand") }
 
     // ---- the shared playhead ------------------------------------------------
@@ -445,11 +448,23 @@ TestCase {
             var container = testCase.drawer()
             var band = testCase.rollBand()
             var bar = testCase.bar()
-            if (!presenter || !container || !band || !bar)
+            var status = testCase.hintStatus()
+            if (!presenter || !container || !band || !bar || !status)
                 return false
             if (container.height !== presenter.height)
                 return false
-            if (band.height !== testCase.surface.height - presenter.height)
+            var rollOrigin = band.mapToItem(testCase.surface, 0, 0)
+            var drawerOrigin = container.mapToItem(testCase.surface, 0, 0)
+            var statusOrigin = status.mapToItem(testCase.surface, 0, 0)
+            if (!status.visible || status.height <= 0
+                || rollOrigin.x !== 0 || rollOrigin.y !== 0
+                || drawerOrigin.x !== 0 || statusOrigin.x !== 0
+                || band.width !== testCase.surface.width
+                || container.width !== testCase.surface.width
+                || status.width !== testCase.surface.width
+                || band.height !== drawerOrigin.y
+                || drawerOrigin.y + container.height !== statusOrigin.y
+                || statusOrigin.y + status.height !== testCase.surface.height)
                 return false
             if (bar.visible !== presenter.barVisible)
                 return false
@@ -734,13 +749,15 @@ TestCase {
             compare(testCase.body(kind).item, null, what + ": no page is hosted")
         }
 
-        compare(testCase.presenter().plotOrigin, testCase.surface.gridModel.keyboardWidth,
-                "the plot origin is the grid's gutter")
+        compare(testCase.presenter().plotOrigin, testCase.surface.timelineSplitX,
+                "the plot origin includes the headers and keyboard")
         compare(testCase.presenter().plotWidth,
-                testCase.surface.width - testCase.surface.gridModel.keyboardWidth,
+                testCase.surface.width - testCase.surface.timelineSplitX,
                 "the plot width is the rest of the surface")
-        compare(testCase.rollBand().height, testCase.surface.height, "the roll keeps the surface")
-        compare(testCase.rollInput().height, testCase.surface.height, "the roll input keeps the surface")
+        compare(testCase.rollBand().height, testCase.editorHeight(),
+                "the roll fills the editor above the persistent status strip")
+        compare(testCase.rollInput().height, testCase.editorHeight(),
+                "the roll input fills the editor above the persistent status strip")
     }
 
     // Three real pages host through the production seam: chrome and stacking
@@ -799,8 +816,8 @@ TestCase {
             rects[what] = testCase.renderedRect(loader)
             aggregate += state.handleHeight + state.bodyHeight
         }
-        compare(presenter.plotOrigin, testCase.surface.gridModel.keyboardWidth,
-                "the container publishes the grid's gutter")
+        compare(presenter.plotOrigin, testCase.surface.timelineSplitX,
+                "the container publishes the combined gutter")
         fuzzyCompare(presenter.height, aggregate, 0.01, "the container fits its sections and bar")
 
         verify(rects.velocity.y + rects.velocity.height <= rects.voiceChanges.y + 0.01,
@@ -883,7 +900,7 @@ TestCase {
         compare(testCase.section(kind).visible, false, "the click hides the section")
         compare(presenter.height, barRow, "a hidden section releases its height")
         testCase.awaitRenderedLayout()
-        compare(testCase.rollInput().height, testCase.surface.height - barRow,
+        compare(testCase.rollInput().height, testCase.editorHeight() - barRow,
                 "the roll grows by the released height")
         compare(testCase.grip(kind).visible, false, "no handle while hidden")
         compare(testCase.body(kind).visible, false, "no body while hidden")
@@ -910,7 +927,7 @@ TestCase {
         testCase.awaitRenderedLayout()
         fuzzyCompare(testCase.section(kind).bodyHeight, stored, 0.01,
                      "re-showing restores the same body height")
-        fuzzyCompare(testCase.rollInput().height, testCase.surface.height - openHeight, 0.01,
+        fuzzyCompare(testCase.rollInput().height, testCase.editorHeight() - openHeight, 0.01,
                      "the roll gives the height back")
     }
 
@@ -937,7 +954,7 @@ TestCase {
         fuzzyCompare(testCase.section(kind).bodyHeight, stored + 40, 1,
                      "the drag grows the body by its delta")
         fuzzyCompare(presenter.height, openHeight + 40, 1, "the container grows with the body")
-        verify(presenter.height <= host, "the container stays inside the host")
+        verify(presenter.height <= testCase.editorHeight(), "the container stays above the status strip")
 
         testCase.dragGripTo(kind, testCase.dragSceneY + 600)
         var floorHeight = testCase.section(kind).bodyHeight
@@ -974,7 +991,8 @@ TestCase {
         // Dragging far up fills the host and stops there.
         testCase.pressGrip(kind)
         testCase.dragGripTo(kind, testCase.dragSceneY - 4000)
-        fuzzyCompare(presenter.height, host, 0.01, "the container clamps at the host")
+        fuzzyCompare(presenter.height, testCase.editorHeight(), 0.01,
+                     "the container clamps above the status strip")
         var ceiling = testCase.section(kind).bodyHeight
         testCase.dragGripTo(kind, testCase.dragSceneY - 200)
         fuzzyCompare(testCase.section(kind).bodyHeight, ceiling, 0.01,
@@ -998,7 +1016,7 @@ TestCase {
 
         // The host shrink re-clamps the drawn body and keeps the stored height.
         testCase.surface.height = host - 250
-        verify(presenter.height <= testCase.surface.height + 0.01,
+        verify(presenter.height <= testCase.editorHeight() + 0.01,
                "the container follows the host shrink")
         verify(testCase.section(kind).bodyHeight < applied, "the shrink re-clamps the drawn body")
         testCase.surface.height = host
@@ -1023,7 +1041,7 @@ TestCase {
                                          "activePage": "voiceChanges" })
 
         var presenter = testCase.presenter()
-        var host = testCase.surface.height
+        var host = testCase.editorHeight()
         var voiceKind = testCase.voiceChangesKind
         var automationKind = testCase.automationKind
         var voiceStart = testCase.section(voiceKind).bodyHeight
@@ -1315,12 +1333,15 @@ TestCase {
         var rollPlot = findChild(testCase.surface, "timelineQuickRollPlot")
         verify(rollClip !== null && rollPlot !== null, "the composition mounted the roll segment")
         testCase.awaitPlayheadVisibility("sharedPlayheadRollClip", true)
-        testCase.verifySurfaceRect(rollClip, rollPlot.x, rollPlot.y, rollPlot.width, rollPlot.height,
+        var plotOrigin = rollPlot.mapToItem(testCase.surface, 0, 0)
+        testCase.verifySurfaceRect(rollClip, plotOrigin.x, plotOrigin.y,
+                                   rollPlot.width, rollPlot.height,
                                    "the roll segment clips to the plot column")
         fuzzyCompare(testCase.playheadSurfaceX("sharedPlayheadRollClip"),
                      origin + playhead.contentX, 0.01,
                      "the roll line is the published projection from the shared origin")
-        verify(rollClip.x >= grid.keyboardWidth - 0.01, "no segment covers the keyboard gutter")
+        verify(rollClip.x >= testCase.surface.timelineSplitX - 0.01,
+               "no segment covers the headers or keyboard")
 
         // A second published position moves the drawn segment with it.
         var firstX = testCase.playheadSurfaceX("sharedPlayheadRollClip")
@@ -1393,7 +1414,7 @@ TestCase {
                 && Math.abs(drawn.x + line.x - (origin + presenter.contentX)) < 0.01
         }, 2000, "the drawn segment catches up with the last published position")
         testCase.awaitRenderedLayout()
-        compare(rollClip.x >= grid.keyboardWidth - 0.01, true,
+        compare(rollClip.x >= testCase.surface.timelineSplitX - 0.01, true,
                 "the last position still never covers the gutter")
     }
 
@@ -1681,6 +1702,8 @@ TestCase {
                      ? findChild(testCase.surface, "drawerModalLayer")
                    : pane === "automation-tabs"
                      ? testCase.pageItem(testCase.automationKind)
+                   : pane === "track-headers"
+                     ? findChild(testCase.surface, "timelineQuickTrackHeaders")
                    : page
         if (!target)
             return false
@@ -1708,6 +1731,7 @@ TestCase {
             tryVerify(function() {
                 return findChild(automationPage, "automationPlot") !== null
             }, 2000, "the profile composition drew the automation plot")
+            testCase.verifyAutomationLabelsFitGutter()
         }
         if (pane === "voice-picker") {
             var voice = testCase.voiceModel()
@@ -1734,6 +1758,8 @@ TestCase {
                                               ? testCase.voiceModel().baseFontPx
                                           : pane === "automation-tabs"
                                               ? testCase.automationModel().baseFontPx
+                                          : pane === "track-headers"
+                                              ? testCase.surface.gridModel.baseFontPx
                                               : testCase.velocityModel().baseFontPx,
                                               String(target.objectName),
                                               target.width, target.height,
@@ -1741,7 +1767,117 @@ TestCase {
                                               target.width, target.height)
     }
 
+    // The legacy fixture includes top chrome that EditorSurface does not host.
+    // Reuse its band-local bounds at its original height, never its checked-in PNG.
+    function captureTrackHeadersProfile() {
+        var source = bootstrap.trackHeaderReferenceJson()
+        verify(source.length > 0, "the checked-in track-header geometry is readable")
+        var reference = JSON.parse(source)
+        compare(reference.environment.fontPx, bootstrap.profileFontPx)
+        compare(reference.image.dpr, bootstrap.profileDpr)
+        var bandBounds = reference.regions.filter(function(region) {
+            return region.name === "track-headers.band"
+        })[0]
+        var rowBounds = reference.regions.filter(function(region) {
+            return region.name === "track-headers.rows"
+        })[0]
+        verify(bandBounds && rowBounds, "the reference names the band and row viewport")
+        var band = findChild(testCase.surface, "timelineQuickTrackHeaders")
+        var rows = findChild(band, "timelineTrackHeaderRows")
+        verify(band && rows, "the mounted production band retains its automation identities")
+        var originalHeight = testCase.surface.height
+        try {
+            // The drawer measures its own height against the surface it draws
+            // in, and a section's stored height can still resolve after the
+            // resize, so the band's height is re-aimed by its own residual
+            // until it holds the reference height across an event-loop turn.
+            for (var attempt = 0; attempt < 6; ++attempt) {
+                testCase.surface.height += bandBounds.h - band.height
+                testCase.surface.configureViewport()
+                tryCompare(band, "height", bandBounds.h)
+                wait(0)
+                if (band.height === bandBounds.h)
+                    break
+            }
+            compare(band.height, bandBounds.h,
+                    "the band settled at the reference height")
+            fuzzyCompare(band.width, Math.round(bootstrap.profileFontPx * 17.5), 0.01,
+                         "headers retain their font-relative width (210 at 12, 280 at 16)")
+            fuzzyCompare(band.width, bandBounds.w, 0.01, "band width matches the checked-in region")
+            var origin = band.mapToItem(testCase.surface, 0, 0)
+            fuzzyCompare(origin.x, bandBounds.x, 0.01, "the band starts at the left edge")
+            fuzzyCompare(origin.y, 0, 0.01, "the surface starts below the legacy top chrome")
+            // The rows region includes the scrollbar, not just the narrower row delegates.
+            var viewport = rows.parent.parent.parent
+            var rowOrigin = viewport.mapToItem(band, 0, 0)
+            fuzzyCompare(rowOrigin.x, rowBounds.x - bandBounds.x, 0.01)
+            fuzzyCompare(rowOrigin.y, rowBounds.y - bandBounds.y, 0.01)
+            fuzzyCompare(viewport.width, rowBounds.w, 0.01)
+            fuzzyCompare(viewport.height, rowBounds.h, 0.01)
+            tryVerify(function() { return rows.count > 1 }, 2000,
+                      "the song draws track rows and its add-track row")
+            for (var i = 0; i < rows.count; ++i) {
+                var row = rows.itemAt(i)
+                verify(row, "every header row is instantiated")
+                fuzzyCompare(row.width + testCase.surface.headersModel.scrollbarWidth,
+                             rowBounds.w, 0.01, "each row fills the width beside the scrollbar")
+            }
+            testCase.auditVisibleTextInk(band, "track headers")
+            return testCase.captureProfilePane("track-headers")
+        } finally {
+            testCase.surface.height = originalHeight
+            testCase.surface.configureViewport()
+        }
+    }
+
     // ---- production page cases ----------------------------------------------
+
+    function test_quickSurfacePublishesAndRendersHeaders() {
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+        testCase.resetChrome(bootstrap.preferencesUrl("track-header-surface"))
+        var band = findChild(testCase.surface, "timelineQuickTrackHeaders")
+        var input = findChild(band, "timelineTrackHeadersInput")
+        var rows = findChild(band, "timelineTrackHeaderRows")
+        var scrollbar = findChild(band, "timelineTrackHeaderScrollBar")
+        verify(band && input && rows && scrollbar, "the production header surface is mounted")
+        verify(band.visible && input.visible, "the header band and its input are visible")
+        testCase.verifySurfaceRect(band, 0, 0, testCase.surface.headersModel.trackHeaderWidth,
+                                   testCase.rollBand().height, "the mounted header band")
+        fuzzyCompare(input.width + scrollbar.width, band.width, 0.01)
+        fuzzyCompare(input.height, band.height, 0.01)
+        fuzzyCompare(scrollbar.x, input.width, 0.01)
+        tryVerify(function() { return rows.count > 1 }, 2000, "the song publishes its header rows")
+        compare(testCase.surface.headersModel.contentHeight,
+                rows.count * testCase.surface.headersModel.rowHeight)
+        waitForRendering(band)
+        var image = grabImage(testCase.surface)
+        var row = rows.itemAt(0)
+        var region = testCase.regionOf(image, testCase.surface, row)
+        var fill = testCase.channelsOf(row.baseColor)
+        var outline = testCase.channelsOf(testCase.surface.headersModel.appearance.buttonOutline)
+        verify(fill.join(",") !== outline.join(","), "the row fill differs from its separator")
+        compare(testCase.nearestPixel(image, region, fill).distance, 0,
+                "the production row fill reaches the rendered image")
+        compare(testCase.nearestPixel(image, region, outline).distance, 0,
+                "the separator reaches the rendered image with distinct pixels")
+    }
+
+    function test_hoveringHeadersDoesNotCreateTooltip() {
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+        testCase.resetChrome(bootstrap.preferencesUrl("track-header-hover"))
+        var band = findChild(testCase.surface, "timelineQuickTrackHeaders")
+        var rows = findChild(band, "timelineTrackHeaderRows")
+        var input = findChild(band, "timelineTrackHeadersInput")
+        verify(rows && input, "the production header rows accept pointer input")
+        tryVerify(function() { return rows.count > 1 }, 2000)
+        var row = rows.itemAt(0)
+        var point = row.mapToItem(input, row.titleRect.x + row.titleRect.width / 2,
+                                 row.titleRect.y + row.titleRect.height / 2)
+        mouseMove(input, point.x, point.y)
+        wait(0)
+        compare(findChild(testCase.surface, "timelineTrackHeaderToolTip"), null,
+                "hovering a header title does not create a tooltip")
+    }
 
     // The production page mounts through the real presenter and renders its own
     // composition: the shared gutter splits ruler and plot, every note of the
@@ -1758,7 +1894,7 @@ TestCase {
         var ruler = testCase.velocityRuler()
         var plot = testCase.velocityPlot()
         verify(ruler && plot, "the page composed its ruler and plot")
-        fuzzyCompare(ruler.width, testCase.surface.gridModel.keyboardWidth, 0.01,
+        fuzzyCompare(ruler.width, testCase.surface.timelineSplitX, 0.01,
                      "the ruler is the shared gutter column")
         fuzzyCompare(plot.x, ruler.width, 0.01, "the plot starts at the shared origin")
         fuzzyCompare(plot.width, page.width - ruler.width, 0.01,
@@ -1771,23 +1907,38 @@ TestCase {
         verify(testCase.collectByName(ruler, "velocityTick", []).length
                    + testCase.collectByName(ruler, "velocityGraduation", []).length > 0,
                "the ruler rendered its value ladder")
-        var detent = findChild(page, "velocityDetent")
-        verify(detent, "the page composed its detent control")
-        compare(detent.Accessible.role, Accessible.Button, "the detent control is a button")
+        var detent = findChild(testCase.drawer(), "drawerDetent")
+        verify(detent, "the drawer composed its original detent control")
+        compare(detent.Accessible.role, Accessible.CheckBox, "the original detent control is a checkbox")
         compare(detent.Accessible.checkable, true, "the detent control is checkable")
         compare(detent.Accessible.checked, testCase.velocityModel().detentsEnabled,
                 "the detent control shows the page's own preference")
-        var detentTexts = testCase.collectAllTexts(detent, [])
-        verify(detentTexts.length > 0, "the detent control labels itself")
-        for (var di = 0; di < detentTexts.length; ++di) {
-            verify(detentTexts[di].color.a > 0,
-                   "the detent control carries opaque ink ('" + detentTexts[di].text + "')")
-        }
-        if (testCase.isEffectivelyVisible(detent)) {
-            compare(String(detentTexts[0].text).length > 0, true,
-                    "the detent control draws its label ('" + detentTexts[0].text + "')")
+        if (testCase.isEffectivelyVisible(detent) && detent.enabled) {
+            var enabledBefore = testCase.velocityModel().detentsEnabled
+            mouseClick(detent, detent.width / 2, detent.height / 2, Qt.LeftButton)
+            compare(testCase.velocityModel().detentsEnabled, !enabledBefore,
+                    "the drawer control toggles the velocity preference")
+            mouseClick(detent, detent.width / 2, detent.height / 2, Qt.LeftButton)
+            compare(testCase.velocityModel().detentsEnabled, enabledBefore)
         }
         testCase.auditVisibleTextInk(page, "velocity page")
+    }
+
+    function test_productionDrawerBlankBarFocus() {
+        if (testCase.containerPhase) skip("production composition only")
+        var location = bootstrap.preferencesUrl("drawer-blank-focus")
+        testCase.mountProductionVelocity(location)
+        testCase.focusControl(testCase.rollInput())
+        var before = testCase.snapshotStore(location)
+        var revision = bootstrap.automationDocumentRevision()
+        var bar = testCase.bar()
+        mouseClick(bar, bar.width - 3, bar.height / 2, Qt.LeftButton)
+        tryVerify(function() { return testCase.drawer().activeFocus }, 1000,
+                  "blank drawer chrome takes focus from the roll")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "blank chrome does not execute a document command")
+        testCase.compareSnapshots(testCase.snapshotStore(location), before,
+                                  "blank chrome changes no section preference")
     }
 
     // Real pointer input on the drawn nodes: a selection click, then a vertical
@@ -1863,8 +2014,7 @@ TestCase {
         compare(field.text, String(before), "the prompt opened with the captured value")
         keyClick(Qt.Key_9)
         wait(0)
-        compare(model.promptDraft, "9", "typing replaced the selected draft (field '"
-                + field.text + "', draft '" + model.promptDraft + "')")
+        compare(field.text, "9", "typing replaced the selected numeric text")
         compare(testCase.noteVelocity(noteId), before, "typing committed nothing")
         keyClick(Qt.Key_Return)
         tryVerify(function() { return !model.promptOpen }, 1000, "Enter accepted the prompt")
@@ -1893,6 +2043,68 @@ TestCase {
         tryVerify(function() { return !model.promptOpen }, 1000,
                   "an outside press dismissed the prompt")
         compare(testCase.noteVelocity(noteId), accepted, "the outside dismissal wrote nothing")
+    }
+
+    function test_productionVelocityNumericInput() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionVelocity(bootstrap.preferencesUrl("velocity-numeric-input"))
+        testCase.clickNode(testCase.velocityNodes()[0])
+        var noteId = testCase.selectedNoteId()
+        var before = testCase.noteVelocity(noteId)
+        session.performGridCommand(bootstrap.setVelocityCommand())
+        var model = testCase.velocityModel()
+        tryVerify(function() { return model.promptOpen }, 1000)
+        var field = findChild(testCase.surface, "noteVelocityInput")
+        var accept = findChild(testCase.surface, "noteVelocityAccept")
+        var cancel = findChild(testCase.surface, "noteVelocityCancel")
+        verify(field && accept && cancel, "the original numeric form is drawn")
+        tryVerify(function() { return field.activeFocus }, 1000)
+        keyClick(Qt.Key_5)
+        keyClick(Qt.Key_0)
+        keyClick(Qt.Key_Tab)
+        compare(accept.activeFocus, true)
+        compare(field.text, "50")
+        keyClick(Qt.Key_Tab)
+        compare(cancel.activeFocus, true)
+        keyClick(Qt.Key_Tab)
+        compare(field.activeFocus, true)
+        var reverse = [cancel, accept, field]
+        for (var i = 0; i < reverse.length; ++i) {
+            keyClick(Qt.Key_Backtab, Qt.ShiftModifier)
+            compare(reverse[i].activeFocus, true)
+        }
+        keyClick(Qt.Key_Up)
+        compare(field.text, "51")
+        keyClick(Qt.Key_Down, Qt.ControlModifier)
+        compare(field.text, "41")
+        keyClick(Qt.Key_PageUp)
+        compare(field.text, "51")
+        keyClick(Qt.Key_PageDown)
+        compare(field.text, "41")
+        mouseWheel(field, field.width / 2, field.height / 2, 0, 60, Qt.NoButton)
+        compare(field.text, "41", "a half-notch is retained, not rounded")
+        mouseWheel(field, field.width / 2, field.height / 2, 0, 60, Qt.NoButton)
+        tryCompare(field, "text", "42", 1000)
+        mouseWheel(field, field.width / 2, field.height / 2, 0, 120,
+                   Qt.NoButton, Qt.ControlModifier)
+        tryCompare(field, "text", "52", 1000, "Control wheel steps by ten")
+        var threshold = field.parent.appearance.dragThreshold
+        var x = field.width / 2
+        var y = field.height / 2
+        mousePress(field, x, y, Qt.LeftButton)
+        mouseMove(field, x, y - threshold + 1, -1, Qt.LeftButton)
+        compare(field.text, "52", "motion below the scrub threshold writes nothing")
+        mouseMove(field, x, y - threshold - 30, -1, Qt.LeftButton)
+        mouseRelease(field, x, y - threshold - 30, Qt.LeftButton)
+        tryCompare(field, "text", "67", 1000, "normal scrub accumulates half a step per pixel")
+        mousePress(field, x, y, Qt.LeftButton, Qt.ShiftModifier)
+        mouseMove(field, x, y - threshold - 30, -1, Qt.LeftButton, Qt.ShiftModifier)
+        mouseRelease(field, x, y - threshold - 30, Qt.LeftButton, Qt.ShiftModifier)
+        tryCompare(field, "text", "73", 1000, "Shift scrub accumulates one fifth step per pixel")
+        compare(testCase.noteVelocity(noteId), before, "numeric interaction remains a draft")
+        keyClick(Qt.Key_Return)
+        tryVerify(function() { return !model.promptOpen }, 1000)
+        compare(testCase.noteVelocity(noteId), 73, "acceptance commits the scrubbed draft")
     }
 
     // Hiding the section cancels the page's live gesture without a write, and a
@@ -2050,14 +2262,18 @@ TestCase {
         var root = findChild(testCase.surface, "automationMenu")
         if (!root || root.visible !== true)
             return []
-        return testCase.collectByPrefix(root, "automationMenuRow_", [])
+        return testCase.collectByPrefix(root, "automationMenuRow_", []).filter(function(row) {
+            return !row.model.separator
+        })
     }
 
     function automationMenuSeparatorItems() {
         var root = findChild(testCase.surface, "automationMenu")
         if (!root || root.visible !== true)
             return []
-        return testCase.collectByPrefix(root, "automationMenuSeparator_", [])
+        return testCase.collectByPrefix(root, "automationMenuRow_", []).filter(function(row) {
+            return row.model.separator
+        })
     }
 
     /// Attaches and shows the production Automation page. Every wait is tied to
@@ -2131,11 +2347,105 @@ TestCase {
         return labels.join(",")
     }
 
+    function verifyAutomationLabelsFitGutter() {
+        var gutter = testCase.automationGutter()
+        var scroller = findChild(gutter, "automationTabsScroller")
+        verify(gutter && scroller, "the selector exposes its gutter and clipped scroller")
+        fuzzyCompare(gutter.width, testCase.surface.timelineSplitX, 0.01,
+                     "the label gutter includes the track headers and keyboard")
+        fuzzyCompare(gutter.width, testCase.surface.headersModel.trackHeaderWidth
+                                   + testCase.surface.gridModel.keyboardWidth, 0.01)
+        var labels = bootstrap.automationTabLabels().split(",")
+        var tabs = testCase.automationTabItems()
+        compare(tabs.length, labels.length, "every catalog label has a tab")
+        var previousScroll = scroller.contentY
+        try {
+            scroller.contentY = 0
+            var bounds = []
+            for (var i = 0; i < labels.length; ++i) {
+                var tab = testCase.automationTab(i)
+                verify(tab && tab.width > 0 && tab.height > 0, "the parameter tab has bounds")
+                var origin = tab.mapToItem(gutter, 0, 0)
+                verify(origin.x >= -0.5 && origin.x + tab.width <= gutter.width + 0.5,
+                       "parameter " + labels[i] + " stays inside the widened gutter")
+                var text = findChild(tab, "automationParameterTabText")
+                verify(text, "the parameter tab has its production Text item")
+                compare(text.text, labels[i])
+                verify(text.contentWidth > 0 && text.contentHeight > 0,
+                       "the parameter label has rendered ink")
+                verify(text.contentWidth <= text.width + 0.5
+                       && text.contentHeight <= text.height + 0.5,
+                       labels[i] + " fits without clipping its rendered text")
+                var textOrigin = text.mapToItem(tab, 0, 0)
+                verify(textOrigin.x >= -0.5 && textOrigin.x + text.width <= tab.width + 0.5,
+                       labels[i] + " text remains inside its own tab")
+                var center = { x: origin.x + tab.width / 2, y: origin.y + tab.height / 2 }
+                for (var j = 0; j < bounds.length; ++j)
+                    verify(Math.abs(center.x - bounds[j].x) > 0.5
+                           || Math.abs(center.y - bounds[j].y) > 0.5,
+                           "parameter tabs do not overlap at one center")
+                bounds.push(center)
+            }
+            for (var pair = 0; pair + 1 < labels.length - 1; pair += 2)
+                fuzzyCompare(bounds[pair].y, bounds[pair + 1].y, 0.5,
+                             "related controller pairs share a row")
+            var tempo = testCase.automationTab(labels.length - 1)
+            var left = testCase.automationTab(0)
+            var right = testCase.automationTab(1)
+            fuzzyCompare(tempo.x, left.x, 0.01, "Tempo shares the first column's left edge")
+            fuzzyCompare(tempo.x + tempo.width, right.x + right.width, 0.01,
+                         "Tempo spans both columns")
+            verify(bounds[bounds.length - 1].y > bounds[bounds.length - 2].y,
+                   "Tempo closes the selector below the controllers")
+            compare(scroller.clip, true, "the selector clips its scrolling content")
+        } finally {
+            scroller.contentY = previousScroll
+        }
+    }
+
+    function test_parameterLabelsFitGutterAtDerivedMinimum_data() {
+        return [{ tag: "font12", fontPx: 12 }, { tag: "font16", fontPx: 16 }]
+    }
+
+    function test_parameterLabelsFitGutterAtDerivedMinimum(data) {
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+        var previousFont = testCase.surface.gridModel.baseFontPx
+        try {
+            testCase.surface.gridModel.baseFontPx = data.fontPx
+            testCase.surface.configureViewport()
+            testCase.mountProductionAutomation(bootstrap.preferencesUrl("automation-labels-" + data.tag),
+                                               { "automationVisible": true, "automationHeight": 1 })
+            var gutter = testCase.automationGutter()
+            verify(gutter.height > 1, "the requested height is clamped to the derived minimum")
+            var minimum = gutter.height
+            testCase.pressGrip(testCase.automationKind)
+            testCase.dragGripTo(testCase.automationKind, testCase.dragSceneY + testCase.surface.height)
+            testCase.releaseGrip(testCase.automationKind)
+            fuzzyCompare(gutter.height, minimum, 0.01, "further shrinking keeps the derived minimum")
+            testCase.verifyAutomationLabelsFitGutter()
+            var scroller = findChild(gutter, "automationTabsScroller")
+            verify(scroller.contentHeight > scroller.height, "the catalog scrolls at minimum height")
+            scroller.contentY = 0
+            var first = testCase.automationTab(0)
+            var firstOrigin = first.mapToItem(scroller, 0, 0)
+            verify(firstOrigin.y >= -0.5 && firstOrigin.y + first.height <= scroller.height + 0.5,
+                   "the first parameter is visible at the content top")
+            scroller.contentY = scroller.contentHeight - scroller.height
+            var last = testCase.automationTab(testCase.automationModel().tabCount - 1)
+            var lastOrigin = last.mapToItem(scroller, 0, 0)
+            verify(lastOrigin.y >= -0.5 && lastOrigin.y + last.height <= scroller.height + 0.5,
+                   "Tempo is visible at the content bottom")
+        } finally {
+            testCase.surface.gridModel.baseFontPx = previousFont
+            testCase.surface.configureViewport()
+        }
+    }
+
     /// The drawn tab that reports itself checked, or null.
     function drawnAutomationActiveTab() {
         var tabs = testCase.automationTabItems()
         for (var i = 0; i < tabs.length; ++i) {
-            if (tabs[i].Accessible.checked)
+            if (tabs[i].Accessible.selected)
                 return tabs[i]
         }
         return null
@@ -2152,8 +2462,22 @@ TestCase {
     /// One real click on a drawn selector tab, in its label area: the Tempo row
     /// overlays its own Tap control on the tab's right edge, and the production
     /// row is the whole control either way.
-    function clickAutomationTab(index, modifiers) {
+    function revealAutomationTab(index) {
         var tab = testCase.automationTab(index)
+        verify(tab, "the selector drew tab " + index)
+        if (tab.activeFocus)
+            testCase.focusControl(testCase.automationPlot())
+        testCase.focusControl(tab)
+        var scroller = findChild(testCase.automationGutter(), "automationTabsScroller")
+        tryVerify(function() {
+            var origin = tab.mapToItem(scroller, 0, 0)
+            return origin.y >= 0 && origin.y + tab.height <= scroller.height
+        }, 1000, "keyboard focus minimally reveals the whole parameter control")
+        return tab
+    }
+
+    function clickAutomationTab(index, modifiers) {
+        var tab = testCase.revealAutomationTab(index)
         verify(tab, "the selector drew tab " + index)
         mouseClick(tab, tab.width * 0.2, tab.height / 2, Qt.LeftButton,
                    modifiers === undefined ? Qt.NoModifier : modifiers)
@@ -2161,14 +2485,14 @@ TestCase {
 
     /// Control-press on a drawn tab: the production ghost toggle entry.
     function pressAutomationTabWithControl(index) {
-        var tab = testCase.automationTab(index)
+        var tab = testCase.revealAutomationTab(index)
         verify(tab, "the selector drew tab " + index)
         mouseClick(tab, tab.width * 0.2, tab.height / 2, Qt.LeftButton, Qt.ControlModifier)
     }
 
     /// One real right press on a drawn tab: the production context request.
     function rightClickAutomationTab(index) {
-        var tab = testCase.automationTab(index)
+        var tab = testCase.revealAutomationTab(index)
         verify(tab, "the selector drew tab " + index)
         mouseClick(tab, tab.width * 0.2, tab.height / 2, Qt.RightButton)
     }
@@ -2350,7 +2674,25 @@ TestCase {
             return false
         tryVerify(function() { return bootstrap.automationPromptOpen() }, 2000,
                   "the destructive row opened the captured confirmation")
-        keyClick(Qt.Key_Return)
+        testCase.awaitAutomationModal("automationPrompt", true)
+        var cancel = findChild(testCase.surface, "automationPromptCancel")
+        tryVerify(function() { return cancel && cancel.activeFocus }, 1000,
+                  "the original confirmation is drawn with Cancel focused")
+        var accept = findChild(testCase.surface, "automationPromptAccept")
+        verify(accept, "the confirmation draws its explicit Delete action")
+        verify(waitForRendering(accept), "the confirmation's Delete control reaches a drawn frame")
+        var clickPoint = accept.mapToItem(testCase.surface, accept.width / 2, accept.height / 2)
+        console.log("DRAWER_CHECK_DELETE_POINT", clickPoint.x, clickPoint.y,
+                    "surface", testCase.surface.width, testCase.surface.height,
+                    "window", accept.Window.window.width, accept.Window.window.height)
+        for (var ancestor = accept; ancestor; ancestor = ancestor.parent) {
+            var bounds = ancestor.mapToItem(testCase.surface, 0, 0)
+            console.log("DRAWER_CHECK_DELETE_ANCESTOR", ancestor.objectName, String(ancestor),
+                        bounds.x, bounds.y, ancestor.width, ancestor.height,
+                        "visible", ancestor.visible, "enabled", ancestor.enabled,
+                        "clip", ancestor.clip, "z", ancestor.z)
+        }
+        mouseClick(accept, accept.width / 2, accept.height / 2, Qt.LeftButton)
         tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
                   "the confirmation's acceptance closed the form")
         tryVerify(function() { return bootstrap.automationLaneEventCount() === 0 }, 2000,
@@ -2366,13 +2708,20 @@ TestCase {
             return expected ? (item !== null && item.visible === true)
                             : (item === null || item.visible === false)
         }, 2000, name + " visibility is " + expected)
+        if (expected && name === "automationMenu") {
+            tryVerify(function() {
+                var actions = bootstrap.automationMenuActions().split(",")
+                return testCase.automationMenuRowItems().length
+                    + testCase.automationMenuSeparatorItems().length === actions.length
+            }, 2000, "the open menu has realized every published action and separator")
+        }
     }
 
     /// The lane menu of one parameter tab: the production selector's context
     /// request, opened with a real right click on the drawn tab.
     function openAutomationTabMenu(index) {
         wait(0)
-        var tab = testCase.automationTab(index)
+        var tab = testCase.revealAutomationTab(index)
         verify(tab, "the selector drew tab " + index)
         mouseClick(tab, tab.width * 0.2, tab.height / 2, Qt.LeftButton)
         tryVerify(function() { return bootstrap.automationActiveParameterIndex() === index }, 1000,
@@ -2435,17 +2784,17 @@ TestCase {
             && testCase.triggerAutomationMenuRow(actionId)
     }
 
-    /// Opens the drawn node's own menu with a real right press, and gives the panel
-    /// exactly one bounded pass to publish the rows the keyboard then walks —
-    /// never an open-ended poll, which is a window for an unrelated document write
-    /// to retire the capture.
+    /// Opens the drawn node menu and waits for its actual keyboard target,
+    /// including the shared ListView's deferred delegate realization.
     function openAutomationNodeMenu(nodeIndex) {
         var point = testCase.rightClickAutomationNode(nodeIndex)
         if (!point)
             return false
-        var wasOpen = bootstrap.automationMenuOpen()
-        wait(0)
-        return wasOpen && testCase.currentAutomationMenuAction() >= 0
+        testCase.awaitAutomationModal("automationMenu", true)
+        keyClick(Qt.Key_Down)
+        tryVerify(function() { return testCase.currentAutomationMenuAction() >= 0 }, 1000,
+                  "Down selects a realized point-menu action")
+        return bootstrap.automationMenuOpen()
     }
 
     /// One real click on a drawn menu row by its captured action id: the row's own
@@ -2561,6 +2910,11 @@ TestCase {
             testCase.awaitVoicePickerFocus()
             var index = model.pickerIndex
             keyClick(Qt.Key_Down)
+            var list = findChild(testCase.surface, "voicePickerList")
+            tryVerify(function() { return list && list.activeFocus }, 1000,
+                      "Down transfers search focus to the matched voice list")
+            compare(model.pickerIndex, index, "focus transfer preserves the current match")
+            keyClick(Qt.Key_Down)
             tryVerify(function() { return model.pickerIndex === index + 1 }, 1000,
                       "the picker moved onto another slot than the captured one")
             keyClick(Qt.Key_Return)
@@ -2580,11 +2934,14 @@ TestCase {
 
     /// A plot column that holds no change: the drawn marker rules publish their
     /// own x, so a column at least the hit radius clear of every rule is free.
-    function freeVoiceColumn(step) {
+    /// `start` is only the first candidate: the scan walks the lane in the
+    /// marker-reach stride so a plot narrower than two preferred columns still
+    /// offers the columns between them.
+    function freeVoiceColumn(start) {
         var lines = testCase.voiceMarkerLines()
         var input = testCase.voicePlotInput()
         var reach = 14
-        for (var x = step; x < input.width - 4; x += step) {
+        for (var x = start; x < input.width - 4; x += 24) {
             var free = true
             for (var i = 0; i < lines.length; ++i) {
                 if (Math.abs(lines[i].x - x) < reach) {
@@ -2616,6 +2973,17 @@ TestCase {
             return expected ? (item !== null && item.visible === true)
                             : (item === null || item.visible === false)
         }, 1000, name + " visibility is " + expected)
+        if (expected && name === "voiceChangeMenu") {
+            tryVerify(function() {
+                var panel = findChild(testCase.surface, "voiceMenuPanel")
+                if (!panel || panel.rowCount === 0) return false
+                for (var i = 0; i < panel.rowCount; ++i) {
+                    var row = panel.rowItem(i)
+                    if (!row || !row.visible || row.width <= 0 || row.height <= 0) return false
+                }
+                return true
+            }, 1000, "the shared voice menu realizes its drawn rows")
+        }
     }
 
     /// The picker's search field takes active focus one event-loop pass after it
@@ -2651,7 +3019,7 @@ TestCase {
         var gutter = findChild(page, "voiceGutter")
         var plot = testCase.voicePlot()
         verify(gutter && plot, "the page composed its gutter and plot")
-        fuzzyCompare(gutter.width, testCase.surface.gridModel.keyboardWidth, 0.01,
+        fuzzyCompare(gutter.width, testCase.surface.timelineSplitX, 0.01,
                      "the gutter is the shared column")
         fuzzyCompare(plot.x, gutter.width, 0.01, "the plot starts at the shared origin")
         fuzzyCompare(plot.width, page.width - gutter.width, 0.01,
@@ -2664,10 +3032,6 @@ TestCase {
         verify(findChild(page, "voiceHoverLabel"), "the page composed its hover label")
         verify(findChild(page, "voicePlotMessage"), "the page composed its plot message")
         compare(plot.Accessible.name, "Voice changes", "the plot publishes its accessible name")
-        compare(model.auditionAvailable, false,
-                "the page never advertises an audition it cannot perform")
-        compare(String(model.auditionDiagnostic).length > 0, true,
-                "the page publishes the audition capability diagnostic")
 
         // The staged song may carry no voice change at all, so this case creates
         // one through the production insertion path and checks the drawn result.
@@ -2750,7 +3114,7 @@ TestCase {
         var panel = findChild(testCase.surface, "voiceMenuPanel")
         verify(panel, "the menu composed its panel")
         testCase.auditVisibleTextInk(panel, "voice context menu")
-        compare(panel.Accessible.role, Accessible.PopupMenu,
+        compare(findChild(panel, "quickMenuFrame").Accessible.role, Accessible.PopupMenu,
                 "the panel publishes the popup-menu role")
         var changeRow = findChild(testCase.surface, "voiceMenuRow_1")
         var deleteRow = findChild(testCase.surface, "voiceMenuRow_3")
@@ -2804,12 +3168,31 @@ TestCase {
         testCase.awaitVoicePickerFocus()
         var index = model.pickerIndex
         compare(index >= 0, true, "the picker publishes a current row")
+        var search = findChild(testCase.surface, "voicePickerSearch")
+        var list = findChild(testCase.surface, "voicePickerList")
+        var accept = findChild(testCase.surface, "voicePickerAccept")
+        var cancel = findChild(testCase.surface, "voicePickerCancel")
+        verify(search && list && accept && cancel, "the picker draws its complete focus cycle")
+        keyClick(Qt.Key_Down)
+        tryVerify(function() { return list.activeFocus }, 1000,
+                  "Down from search transfers focus to the list")
+        compare(model.pickerIndex, index, "focus transfer does not skip the selected match")
         keyClick(Qt.Key_Down)
         tryVerify(function() { return model.pickerIndex === index + 1 }, 1000,
-                  "the down arrow moved the current row")
+                  "Down in the list moves the current row")
         keyClick(Qt.Key_Up)
         tryVerify(function() { return model.pickerIndex === index }, 1000,
                   "the up arrow returned to the captured row")
+        var forward = [accept, cancel, search, list]
+        for (var f = 0; f < forward.length; ++f) {
+            keyClick(Qt.Key_Tab)
+            compare(forward[f].activeFocus, true, "Tab follows the picker cycle at " + f)
+        }
+        var backward = [search, cancel, accept, list]
+        for (var b = 0; b < backward.length; ++b) {
+            keyClick(Qt.Key_Backtab, Qt.ShiftModifier)
+            compare(backward[b].activeFocus, true, "Backtab reverses the picker cycle at " + b)
+        }
         var rows = testCase.voicePickerRowItems()
         compare(rows.length > 0, true, "the picker drew its visible rows")
         compare(String(rows[0].Accessible.name).length > 0, true,
@@ -2861,6 +3244,46 @@ TestCase {
         testCase.clickToggle(testCase.voiceChangesKind)
         tryVerify(function() { return testCase.section(testCase.voiceChangesKind).visible }, 1000,
                   "the section is visible again")
+    }
+
+    function test_productionVoicePickerPointerAudition() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionVoice(bootstrap.preferencesUrl("voice-picker-audition"))
+        testCase.doubleClickPlot(testCase.freeVoiceColumn(24))
+        testCase.awaitVoiceModal("voicePicker", true)
+        testCase.awaitVoicePickerFocus()
+        verify(bootstrap.observeVoiceAudition(), "the observer retains the production audio callback")
+        var rows = testCase.voicePickerRowItems()
+        var list = findChild(testCase.surface, "voicePickerList")
+        var row = null
+        for (var i = 0; i < rows.length; ++i) {
+            var point = rows[i].mapToItem(list, rows[i].width / 2, rows[i].height / 2)
+            if (point.y > 0 && point.y < list.height) {
+                row = rows[i]
+                break
+            }
+        }
+        verify(row, "a picker row is visible inside the list viewport")
+        var program = Number(row.objectName.substring("voicePickerRow_".length))
+        var revision = bootstrap.automationDocumentRevision()
+        mousePress(row, row.width / 2, row.height / 2, Qt.LeftButton)
+        tryVerify(function() {
+            return bootstrap.voiceAuditionEvents() === program + ":60:112"
+        }, 2000, "the real row press auditions its own program at middle C")
+        mouseRelease(row, row.width / 2, row.height / 2, Qt.LeftButton)
+        compare(bootstrap.voiceAuditionEvents(),
+                program + ":60:112," + program + ":60:0",
+                "release stops the sounding program")
+        compare(bootstrap.automationDocumentRevision(), revision, "audition does not edit the song")
+        verify(bootstrap.observeVoiceAudition())
+        mousePress(row, row.width / 2, row.height / 2, Qt.LeftButton)
+        compare(bootstrap.voiceAuditionEvents(), program + ":60:112")
+        keyClick(Qt.Key_Escape)
+        testCase.awaitVoiceModal("voicePicker", false)
+        mouseRelease(testCase.surface, 1, 1, Qt.LeftButton)
+        compare(bootstrap.voiceAuditionEvents(),
+                program + ":60:112," + program + ":60:0",
+                "Escape stops a held audition exactly once before physical release")
     }
 
     // The shared playhead: presentations inside one voice span rebuild no static
@@ -2995,7 +3418,7 @@ TestCase {
                               Math.max(0, Math.round((top + (bottom - top) / 2) * scale)))
         verify(withModal.alpha(probeX, probeY) === 255,
                "the composited overlap pixel is opaque")
-        var cardChannels = testCase.channelsOf(card.color)
+        var cardChannels = testCase.channelsOf(card.appearance.background)
         // The overlap region is read through the suite's own pixel oracle: an
         // exact palette pixel inside it proves the card was composited over the
         // other section's body, whichever glyph happens to sit at the centre.
@@ -3080,27 +3503,40 @@ TestCase {
         compare(testCase.spacePropagations, propagations + 1,
                 "the focused search field keeps Space out of the transport")
 
-        // Every other picker surface claims only Return/Enter.
+        // Original PromptButton Space is a local modal acceptance key.
+        keyClick(Qt.Key_Down)
+        keyClick(Qt.Key_Down)
+        var markerCount = testCase.voiceMarkerLines().length
         var accept = findChild(testCase.surface, "voicePickerAccept")
         verify(accept, "the picker composed its accept control")
         accept.forceActiveFocus(Qt.TabFocusReason)
         keyClick(Qt.Key_Space)
-        tryVerify(function() { return testCase.spacePropagations === propagations + 2 }, 1000,
-                  "the picker's accept control leaves bare Space to the transport")
-        keyClick(Qt.Key_Escape)
-        tryVerify(function() { return !model.pickerOpen }, 1000, "Escape closed the picker")
+        tryVerify(function() { return !model.pickerOpen }, 1000,
+                  "Space activates the focused original OK button")
+        tryVerify(function() { return testCase.voiceMarkerLines().length === markerCount + 1 }, 1000,
+                  "local Space acceptance inserts the selected voice exactly once")
+        compare(testCase.spacePropagations, propagations + 1,
+                "modal acceptance never leaks into transport")
         testCase.awaitVoiceModal("voicePicker", false)
 
-        // The context menu's panel claims only Return/Enter either.
+        // The original menu host contains Space as local type-ahead input.
         var input = testCase.voicePlotInput()
         var point = input.mapFromItem(marker.parent, marker.x + 1,
                                       marker.y + marker.height / 2)
         mouseClick(input, point.x, point.y, Qt.RightButton)
         tryVerify(function() { return model.menuOpen }, 1000, "the context menu opened")
         testCase.awaitVoiceModal("voiceChangeMenu", true)
+        tryVerify(function() {
+            var menu = findChild(testCase.surface, "voiceChangeMenu")
+            return menu && menu.activeFocus
+        }, 1000, "the visible voice menu owns keyboard focus")
+        var revision = bootstrap.automationDocumentRevision()
         keyClick(Qt.Key_Space)
-        tryVerify(function() { return testCase.spacePropagations === propagations + 3 }, 1000,
-                  "the voice menu leaves bare Space to the window transport")
+        compare(testCase.spacePropagations, propagations + 1,
+                "the modal menu contains Space instead of leaking into transport")
+        compare(model.menuOpen, true, "Space does not activate a menu command")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "menu type-ahead does not edit the song")
         keyClick(Qt.Key_Escape)
         tryVerify(function() { return !model.menuOpen }, 1000, "Escape closed the menu")
         testCase.awaitVoiceModal("voiceChangeMenu", false)
@@ -3125,7 +3561,7 @@ TestCase {
         var gutter = testCase.automationGutter()
         var plot = testCase.automationPlot()
         verify(gutter && plot, "the page composed its selector column and plot")
-        fuzzyCompare(gutter.width, testCase.surface.gridModel.keyboardWidth, 0.01,
+        fuzzyCompare(gutter.width, testCase.surface.timelineSplitX, 0.01,
                      "the selector column is the shared gutter")
         fuzzyCompare(plot.x, gutter.width, 0.01, "the plot starts at the shared origin")
         fuzzyCompare(plot.width, page.width - gutter.width, 0.01,
@@ -3142,9 +3578,7 @@ TestCase {
         // and the accessible contract of a checkable button.
         var activeTab = testCase.drawnAutomationActiveTab()
         verify(activeTab, "the active parameter's tab is drawn")
-        compare(activeTab.Accessible.role, Accessible.Button, "a tab publishes the button role")
-        compare(activeTab.Accessible.checkable, true, "a tab is checkable")
-        compare(activeTab.Accessible.checked, true, "the active tab reports itself checked")
+        compare(activeTab.Accessible.selected, true, "the active parameter reports itself selected")
         compare(String(activeTab.Accessible.name).length > 0, true,
                 "a tab publishes its accessible name ('" + activeTab.Accessible.name + "')")
         var tempoTab = testCase.automationTab(model.tabCount - 1)
@@ -3152,7 +3586,7 @@ TestCase {
         compare(bootstrap.automationTabLabels().split(",").slice(-1)[0],
                 testCase.collectByNames(tempoTab, ["automationParameterTabText"], [])[0].text,
                 "the last catalog parameter is the Tempo row the selector drew")
-        compare(tempoTab.Accessible.checked, false, "the Tempo row is not active yet")
+        compare(tempoTab.Accessible.selected, false, "the Tempo row is not active yet")
         var tapControl = findChild(tempoTab, "automationTempoTapButton")
         verify(tapControl, "the Tempo row composed its Tap control")
         compare(tapControl.Accessible.role, Accessible.Button, "the Tap control is a button")
@@ -3206,6 +3640,28 @@ TestCase {
         verify(trackTab >= 0 && emptyTab >= 0,
                "the staged song offers an occupied and an empty parameter lane")
         var revisionBefore = model.interactionActive
+        var focusTab = testCase.automationTab(0)
+        var scroller = findChild(testCase.automationGutter(), "automationTabsScroller")
+        scroller.contentY = 0
+        testCase.focusControl(testCase.automationPlot())
+        mouseMove(testCase.automationPlotInput(), 4, 4)
+        waitForRendering(testCase.surface)
+        var idle = grabImage(testCase.surface)
+        var region = testCase.regionOf(idle, testCase.surface, focusTab)
+        var widthBefore = focusTab.width
+        var heightBefore = focusTab.height
+        testCase.focusControl(focusTab)
+        waitForRendering(testCase.surface)
+        var focused = grabImage(testCase.surface)
+        compare(focusTab.width, widthBefore, "keyboard focus never changes tab width")
+        compare(focusTab.height, heightBefore, "keyboard focus never changes tab height")
+        var x = Math.round((region.x0 + region.x1) / 2)
+        var stroke = Math.max(1, Math.round(model.baseFontPx / 13))
+        var y = region.y0 + Math.floor(stroke * 1.5 * idle.height / testCase.surface.height)
+        verify(idle.red(x, y) !== focused.red(x, y)
+               || idle.green(x, y) !== focused.green(x, y)
+               || idle.blue(x, y) !== focused.blue(x, y),
+               "keyboard focus changes the original inset outline color")
         testCase.clickAutomationTab(trackTab)
         tryVerify(function() { return bootstrap.automationActiveParameterIndex() === trackTab }, 2000,
                   "the pointer switched the active parameter")
@@ -3224,10 +3680,7 @@ TestCase {
         var bandFrom = bandRow.x
         var bandTo = bandInput.width - 4
         mousePress(bandInput, bandFrom, bandRow.y, Qt.RightButton)
-        compare(model.bandVisible, true, "the right press started the range band")
-        // The page's own release resolves the band's end from the release column,
-        // so the range is the right button's press and release alone.
-        mouseMove(bandInput, bandTo, bandRow.y, -1, Qt.LeftButton)
+        mouseMove(bandInput, bandTo, bandRow.y, -1, Qt.RightButton)
         compare(model.bandVisible, true, "the band stayed visible until its release")
         mouseRelease(bandInput, bandTo, bandRow.y, Qt.RightButton)
         var selected = bootstrap.automationSelectionRange()
@@ -3248,6 +3701,18 @@ TestCase {
                 "switching parameters wrote nothing to the lane")
         compare(bootstrap.automationSelectionRange(), selected,
                 "the explicit selection survives a parameter switch")
+        var insideBand = (bandFrom + bandTo) / 2
+        mouseClick(bandInput, insideBand, bandRow.y, Qt.RightButton)
+        compare(bootstrap.automationSelectionRange(), selected,
+                "a stationary right click inside the selected time range preserves it")
+        keyClick(Qt.Key_Escape)
+        mousePress(bandInput, insideBand, bandRow.y, Qt.RightButton)
+        mouseMove(bandInput, insideBand, bandRow.y > 32 ? bandRow.y - 32 : bandRow.y + 32,
+                  -1, Qt.RightButton)
+        mouseRelease(bandInput, insideBand, bandRow.y > 32 ? bandRow.y - 32 : bandRow.y + 32,
+                     Qt.RightButton)
+        compare(bootstrap.automationSelectionRange(), "",
+                "an activated band with zero snapped width clears the time range")
         compare(model.interactionActive, revisionBefore,
                 "a parameter switch leaves no interaction live")
 
@@ -3456,7 +3921,8 @@ TestCase {
                 "the point menu publishes Set Value and Delete")
         var panel = findChild(testCase.surface, "automationMenuPanel")
         verify(panel, "the menu composed its panel")
-        compare(panel.Accessible.role, Accessible.PopupMenu, "the panel publishes the popup-menu role")
+        compare(findChild(panel, "quickMenuFrame").Accessible.role, Accessible.PopupMenu,
+                "the drawn menu frame publishes the popup-menu role")
         var rows = testCase.automationMenuRowItems()
         compare(rows.length, 2, "the point menu drew its two rows")
         compare(rows[0].Accessible.role, Accessible.MenuItem, "a row publishes the menu-item role")
@@ -3480,22 +3946,15 @@ TestCase {
         tryVerify(function() { return field.activeFocus }, 2000,
                   "the prompt took active focus in its field")
         compare(model.promptDraft.length > 0, true, "the prompt opened with the captured value")
-        compare(String(model.promptTitle).length > 0, true, "the prompt publishes its captured title")
         var autoPrompt = findChild(testCase.surface, "automationPrompt")
         verify(autoPrompt, "the prompt composed its production surface")
-        compare(findChild(autoPrompt, "automationPromptTitle").text, model.promptTitle,
-                "the prompt draws its captured title")
-        var autoCardLabels = testCase.collectVisibleTexts(autoPrompt, []).map(function(t) { return t.text })
-        verify(autoCardLabels.indexOf("OK") >= 0, "the prompt draws its OK label")
-        verify(autoCardLabels.indexOf("Cancel") >= 0, "the prompt draws its Cancel label")
         testCase.auditVisibleTextInk(autoPrompt, "automation prompt")
 
         // A typed draft commits exactly one transaction.
         field.selectAll()
         keyClick(Qt.Key_9)
         wait(0)
-        compare(model.promptDraft, "9", "typing replaced the selected draft (field '"
-                + field.text + "', draft '" + model.promptDraft + "')")
+        compare(field.text, "9", "typing replaced the selected numeric text")
         compare(bootstrap.automationLaneValues(), valuesBefore, "typing committed nothing")
         keyClick(Qt.Key_Return)
         tryVerify(function() { return !model.promptOpen }, 2000, "Enter accepted the prompt")
@@ -3505,9 +3964,8 @@ TestCase {
         compare(bootstrap.automationFrozenRevision() < 0, true,
                 "an accepted prompt leaves no frozen revision behind")
 
-        // An out-of-domain draft stays open with its error and writes nothing.
-        // The field's own validator refuses such keystrokes interactively, so the
-        // draft also arrives the way a paste would: through the form's own route.
+        // An out-of-domain intermediate draft is refused locally by the original
+        // IntValidator; Return leaves it open without document or history writes.
         verify(testCase.openAutomationNodeMenu(testCase.automationWrittenNodeIndex()),
                "the written node's menu reopened for the draft case")
         verify(testCase.triggerAutomationMenuRow(1), "the Set Value row is the current one")
@@ -3524,8 +3982,6 @@ TestCase {
         wait(0)
         compare(field.text, invalid,
                 "the field took the out-of-domain digits (" + invalid + ")")
-        compare(String(model.promptError).length > 0, true,
-                "the typed out-of-domain draft publishes its error ('" + model.promptError + "')")
         keyClick(Qt.Key_Return)
         wait(0)
         compare(bootstrap.automationPromptOpen(), true,
@@ -3535,9 +3991,11 @@ TestCase {
         compare(bootstrap.automationDocumentRevision(), promptRevision,
                 "the refused acceptance published no revision")
         compare(session.canUndo, undoBefore, "the refused acceptance recorded no history entry")
-        model.updatePromptDraft(String(Number(model.promptMaximum) - 1))
-        wait(0)
-        compare(model.promptError, "", "a valid draft through the same route clears the error")
+        var valid = String(Number(model.promptMaximum) - 1)
+        field.selectAll()
+        for (var validDigit = 0; validDigit < valid.length; ++validDigit)
+            keyClick(Qt.Key_0 + Number(valid.charAt(validDigit)))
+        compare(field.text, valid, "the user corrected the intermediate draft")
         keyClick(Qt.Key_Return)
         tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
                   "the valid draft accepted through the form's own route")
@@ -3585,6 +4043,99 @@ TestCase {
     // deletable, the projected engine node's row is disabled and never acts, the
     // lane menu publishes the production labels, and an unavailable row is
     // refused rather than silently reported as done.
+    function test_productionAutomationRangeSubmenu() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation(bootstrap.preferencesUrl("automation-range-submenu"))
+        var volume = bootstrap.automationVolumeIndex()
+        testCase.clickAutomationTab(volume)
+        var revision = bootstrap.automationDocumentRevision()
+        var undo = session.canUndo
+        var redo = session.canRedo
+        testCase.openAutomationTabMenu(volume)
+        var range = findChild(testCase.surface, "automationMenuRow_12")
+        verify(range, "Volume offers the historical Value range submenu")
+        mouseMove(range, range.width / 2, range.height / 2)
+        tryVerify(function() {
+            var child = findChild(testCase.surface, "automationMenuChildRow_16")
+            return child && testCase.isEffectivelyVisible(child)
+        }, 1000, "hover reveals the hierarchical range choices")
+        var full = findChild(testCase.surface, "automationMenuChildRow_17")
+        compare(full.model.checked, true, "Volume initially uses the full range")
+        var range64 = findChild(testCase.surface, "automationMenuChildRow_16")
+        mouseClick(range64, range64.width / 2, range64.height / 2, Qt.LeftButton)
+        testCase.awaitAutomationModal("automationMenu", false)
+        testCase.openAutomationTabMenu(volume)
+        range = findChild(testCase.surface, "automationMenuRow_12")
+        mouseMove(range, range.width / 2, range.height / 2)
+        tryVerify(function() {
+            var child = findChild(testCase.surface, "automationMenuChildRow_16")
+            return child && child.model.checked
+        }, 1000, "reopening remembers the selected 64 range")
+        var checked = 0
+        for (var action = 13; action <= 17; ++action) {
+            var child = findChild(testCase.surface, "automationMenuChildRow_" + action)
+            verify(child, "every historical range choice is drawn")
+            if (child.model.checked) ++checked
+        }
+        compare(checked, 1, "exactly one range is checked")
+        keyClick(Qt.Key_Escape)
+        keyClick(Qt.Key_Escape)
+        testCase.openAutomationTabMenu(volume)
+        keyClick(Qt.Key_Left)
+        for (var step = 0; step < 12 && testCase.currentAutomationMenuAction() !== 12; ++step)
+            keyClick(Qt.Key_Down)
+        compare(testCase.currentAutomationMenuAction(), 12)
+        keyClick(Qt.Key_Right)
+        keyClick(Qt.Key_End)
+        keyClick(Qt.Key_Return)
+        testCase.awaitAutomationModal("automationMenu", false)
+        testCase.openAutomationTabMenu(volume)
+        range = findChild(testCase.surface, "automationMenuRow_12")
+        mouseMove(range, range.width / 2, range.height / 2)
+        tryVerify(function() {
+            var child = findChild(testCase.surface, "automationMenuChildRow_17")
+            return child && child.model.checked
+        }, 1000, "keyboard selection restored the full range")
+        keyClick(Qt.Key_Escape)
+        keyClick(Qt.Key_Escape)
+        compare(bootstrap.automationDocumentRevision(), revision, "range choices are view-only")
+        compare(session.canUndo, undo, "range choices add no undo entry")
+        compare(session.canRedo, redo, "range choices preserve redo history")
+    }
+
+    function test_productionAutomationOutsideRightRetarget() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation(bootstrap.preferencesUrl("automation-menu-retarget"))
+        verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
+        var nodes = testCase.automationLaneNodes()
+        var first = testCase.automationWrittenNodeIndex()
+        verify(first >= 0)
+        var firstTick = nodes[first].model.tick
+        verify(testCase.openAutomationNodeMenu(first))
+        var panel = findChild(testCase.surface, "automationMenuPanel")
+        panel = findChild(panel, "quickMenuFrame")
+        verify(panel, "the point menu has a drawn frame")
+        var target = null
+        for (var i = 0; i < nodes.length; ++i) {
+            if (i === first || nodes[i].model.projected) continue
+            var p = testCase.automationNodePoint(nodes[i])
+            var local = panel.mapFromItem(testCase.automationPlotInput(), p.x, p.y)
+            if (local.x < 0 || local.x > panel.width || local.y < 0 || local.y > panel.height) {
+                target = nodes[i]
+                break
+            }
+        }
+        verify(target, "another written node lies outside the open menu")
+        var targetTick = target.model.tick
+        var point = testCase.automationNodePoint(target)
+        mouseClick(testCase.automationPlotInput(), point.x, point.y, Qt.RightButton)
+        compare(bootstrap.automationMenuOpen(), true, "outside right click retargets rather than dismisses")
+        verify(testCase.triggerAutomationMenuRow(2))
+        var remaining = bootstrap.automationLaneTicks().split(",")
+        compare(remaining.indexOf(String(targetTick)), -1, "Delete acts on the newly hit node")
+        verify(remaining.indexOf(String(firstTick)) >= 0, "the original menu target survives")
+    }
+
     function test_productionAutomationMenusAndLaneCommands() {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
@@ -3678,16 +4229,19 @@ TestCase {
         testCase.awaitAutomationModal("automationPrompt", true)
         compare(testCase.automationModel().promptKind, 1,
                 "the open form is the lane-delete confirmation")
-        compare(String(testCase.automationModel().promptMessage).indexOf("written events") >= 0, true,
-                "the confirmation names the captured event count ('"
-                + testCase.automationModel().promptMessage + "')")
-        compare(String(testCase.automationModel().promptTitle), "Delete automation events",
-                "the confirmation publishes its captured title")
+        var cancel = findChild(testCase.surface, "automationPromptCancel")
+        tryVerify(function() { return cancel && cancel.activeFocus }, 1000,
+                  "the destructive confirmation initially focuses Cancel")
+        var revision = bootstrap.automationDocumentRevision()
         keyClick(Qt.Key_Return)
         tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
-                  "the confirmation's acceptance closed the form")
-        tryVerify(function() { return bootstrap.automationLaneEventCount() === 0 }, 2000,
-                  "the accepted confirmation emptied the lane")
+                  "initial Return cancels the destructive confirmation")
+        compare(bootstrap.automationLaneEventCount(), beforeConfirmation,
+                "initial Return preserves every written event")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "initial Return records no document change")
+        verify(testCase.clearAutomationLane(volumeTab),
+               "an explicit Delete pointer activation empties the lane")
 
         // A projected engine node: the case writes a lane whose first occurrence
         // is after tick zero, so the visible tick-zero column draws the engine's
@@ -3751,7 +4305,7 @@ TestCase {
         var location = bootstrap.preferencesUrl("production-automation-tap")
         testCase.mountProductionAutomation(location)
         var model = testCase.automationModel()
-        var tempoTab = testCase.automationTab(model.tabCount - 1)
+        var tempoTab = testCase.revealAutomationTab(model.tabCount - 1)
         verify(tempoTab, "the Tempo row is drawn in the selector")
         var tapControl = findChild(tempoTab, "automationTempoTapButton")
         verify(tapControl, "the Tempo row composed its Tap control")
@@ -3832,6 +4386,11 @@ TestCase {
         verify(bootstrap.automationTapCadence(500, 3), "the production tap route took 500 ms gaps")
         compare(model.tapTempoTapCount, 3, "the panel publishes the live tap count")
         compare(model.tapTempoActive, true, "the panel publishes the live session")
+        var inlineDraft = testCase.collectByName(tempoTab, "automationTempoTapDraft", [])[0]
+        tryVerify(function() { return inlineDraft && inlineDraft.visible }, 1000,
+                  "the live cadence is drawn inside the Tempo tab")
+        tryCompare(inlineDraft, "text", "120 BPM", 1000,
+                   "the original inline readout shows the tapped tempo")
         compare(bootstrap.automationTempoBpm(), expectedDraft,
                 "a live session writes nothing until its idle window")
         testCase.resetAutomationTap()
@@ -3995,9 +4554,9 @@ TestCase {
         compare(grid.cameraScrollX, parked, "the case handed the shared camera back")
     }
 
-    // Bare Space priority: the selector, the plot, the open menu and the tap
-    // panel all leave it to the window transport, and the prompt's own text field
-    // is the one explicit text-entry surface that consumes it.
+    // Bare Space delivery through page-owned input surfaces. The original
+    // TabButton has native key handling; its window-shortcut priority requires
+    // RewriteWindow smoke, not this harness's parent Keys counter.
     function test_productionAutomationSpacePriority() {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
@@ -4013,28 +4572,31 @@ TestCase {
         tryVerify(function() { return testCase.spacePropagations === propagations + 1 }, 2000,
                   "the automation plot leaves bare Space to the window transport")
 
-        // A selector tab claims only Return/Enter.
+        // Focusing the original selector and pressing Space never edits the lane.
         var volumeTab = bootstrap.automationVolumeIndex()
         verify(testCase.writeVolumeLanePoints(volumeTab),
                "the case created a written Volume lane with a real sweep")
         var tab = testCase.automationTab(volumeTab)
         verify(tab, "the selector drew the Volume tab")
         testCase.focusControl(tab)
+        var revision = bootstrap.automationDocumentRevision()
         keyClick(Qt.Key_Space)
-        tryVerify(function() { return testCase.spacePropagations === propagations + 2 }, 2000,
-                  "a focused selector tab leaves bare Space to the transport")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "Space on the focused selector does not edit automation")
+        propagations = testCase.spacePropagations
         keyClick(Qt.Key_Return)
         tryVerify(function() { return bootstrap.automationActiveParameterIndex() === volumeTab }, 2000,
                   "Return activates the focused tab")
 
         // The Tempo row's Tap control claims only Return/Enter.
-        var tempoTab = testCase.automationTab(model.tabCount - 1)
+        var tempoTab = testCase.revealAutomationTab(model.tabCount - 1)
         var tapControl = findChild(tempoTab, "automationTempoTapButton")
         verify(tapControl, "the Tempo row composed its Tap control")
         testCase.focusControl(tapControl)
         keyClick(Qt.Key_Space)
-        tryVerify(function() { return testCase.spacePropagations === propagations + 3 }, 2000,
-                  "the Tap control leaves bare Space to the window transport")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "Space on the inline Tap control does not edit automation")
+        propagations = testCase.spacePropagations
         compare(bootstrap.automationTapCount(), 0, "the Space key registered no tap")
         testCase.resetAutomationTap()
 
@@ -4046,7 +4608,7 @@ TestCase {
                   "the node menu opened")
         testCase.awaitAutomationModal("automationMenu", true)
         keyClick(Qt.Key_Space)
-        tryVerify(function() { return testCase.spacePropagations === propagations + 4 }, 2000,
+        tryVerify(function() { return testCase.spacePropagations === propagations + 1 }, 2000,
                   "the automation menu leaves bare Space to the window transport")
         keyClick(Qt.Key_Escape)
         tryVerify(function() { return !bootstrap.automationMenuOpen() }, 2000,
@@ -4064,7 +4626,7 @@ TestCase {
         tryVerify(function() { return field.activeFocus }, 2000, "the field took active focus")
         keyClick(Qt.Key_Space)
         wait(0)
-        compare(testCase.spacePropagations, propagations + 4,
+        compare(testCase.spacePropagations, propagations + 1,
                 "the focused value field keeps Space out of the transport")
         keyClick(Qt.Key_Escape)
         tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
@@ -4271,7 +4833,8 @@ TestCase {
 
         var panes = bootstrap.profilePanes
         for (var i = 0; i < panes.length; ++i)
-            verify(testCase.captureProfilePane(panes[i]),
+            verify(panes[i] === "track-headers" ? testCase.captureTrackHeadersProfile()
+                                              : testCase.captureProfilePane(panes[i]),
                    "captured the " + panes[i] + " pane at " + bootstrap.profileName
                    + " (dpr " + Screen.devicePixelRatio + " of " + bootstrap.profileDpr
                    + ", automationFont " + testCase.automationModel().baseFontPx

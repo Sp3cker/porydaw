@@ -24,6 +24,8 @@ FocusScope {
     objectName: "velocityPage"
 
     required property QtObject applicationSession
+    property var hintService: null
+    property bool hintScopeAllowed: true
 
     /// The page's Swift owner for the current document, and the neutral empty
     /// model while there is none: `velocityPage()` fails once no document is
@@ -113,7 +115,9 @@ FocusScope {
     }
     /// The shared plot origin: the gutter the roll draws at and the container
     /// publishes as `plotOrigin`.
-    readonly property real plotOrigin: page.gridModel ? page.gridModel.keyboardWidth : 0
+    readonly property real plotOrigin: page.gridModel
+                                       ? (page.gridModel.trackHeaderWidth || 0)
+                                         + page.gridModel.keyboardWidth : 0
     readonly property real plotWidth: Math.max(page.width - page.plotOrigin, 0)
     /// This page's own base-font seed, for the window before a document is
     /// presented.
@@ -210,61 +214,6 @@ FocusScope {
                 elide: Text.ElideNone
                 maximumLineCount: 1
                 clip: contentWidth > width || contentHeight > height
-            }
-        }
-
-        // The detent control: available exactly while the presented context is a
-        // PSG voice, and toggling it turns every context into the continuous
-        // domain, which is what the legacy drawer-chrome detent button does. The
-        // legacy control lives in the container's chrome bar; this page renders
-        // it against the ruler it changes until that chrome slot exists.
-        Rectangle {
-            id: detent
-
-            objectName: "velocityDetent"
-            visible: (page.pageModel ? page.pageModel.detentsAvailable : false)
-            x: 2
-            y: 2
-            width: Math.max(28, page.baseFontPx * 2.5)
-            height: Math.max(14, page.baseFontPx * 1.25)
-            radius: 2
-            color: (page.pageModel ? page.pageModel.detentsEnabled : true) ? page.gridPalette.selectionRing
-                                             : page.gridPalette.chromeBackground
-            border.width: 1
-            border.color: page.gridPalette.outline
-            activeFocusOnTab: true
-
-            function activate() { page.pageModel.toggleDetents() }
-
-            Text {
-                anchors.centerIn: parent
-                text: qsTr("Detents")
-                color: page.gridPalette.primaryText
-                font.pixelSize: Math.max(1, Math.min(page.baseFontPx, height - 2))
-                textFormat: Text.PlainText
-            }
-
-            Keys.onReturnPressed: (event) => {
-                detent.activate()
-                event.accepted = true
-            }
-            Keys.onEnterPressed: (event) => {
-                detent.activate()
-                event.accepted = true
-            }
-            Keys.onShortcutOverride: (event) => event.accepted =
-                event.key === Qt.Key_Return || event.key === Qt.Key_Enter
-
-            Accessible.role: Accessible.Button
-            Accessible.name: qsTr("Velocity detents")
-            Accessible.checkable: true
-            Accessible.checked: (page.pageModel ? page.pageModel.detentsEnabled : true)
-            Accessible.focusable: true
-            Accessible.onPressAction: detent.activate()
-
-            MouseArea {
-                anchors.fill: parent
-                onClicked: detent.activate()
             }
         }
 
@@ -485,6 +434,8 @@ FocusScope {
 
         anchors.fill: parent
         model: page.model
+        hintService: page.hintService
+        hintScopeAllowed: true
 
         onClosed: page.focusOrigin()
     }

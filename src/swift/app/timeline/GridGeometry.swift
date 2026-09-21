@@ -13,6 +13,10 @@ func physicalPixel(_ dpr: Double) -> Double {
     dpr > 0.0 ? 1.0 / dpr : 1.0
 }
 
+func gridLineThickness(baseFontPx: Double, devicePixelRatio: Double) -> Double {
+    fontPx(baseFontPx, 1.0 / 6.0) * physicalPixel(devicePixelRatio)
+}
+
 enum GridCameraPolicy {
     static let seedBaseFontPx = 13.0
 
@@ -48,7 +52,7 @@ struct GridMetrics {
     var drawThreshold: Double = 3
 
     var detailMinPxPerBeat: Double = 11
-    var gridLineStroke: Double = 2
+    let gridLineStroke: Double
     var autoGridMinCell: Double = 17
     var snapScale: Int = 0
     var tripletGrid = false
@@ -82,7 +86,7 @@ struct GridMetrics {
         keyLabelRightInset = fontPx(b, 0.25)
         drawThreshold = fontPx(b, 0.25)
         detailMinPxPerBeat = fontPx(b, 5.0 / 6.0)
-        gridLineStroke = fontPx(b, 1.0 / 6.0) * physicalPixel(dpr)
+        gridLineStroke = gridLineThickness(baseFontPx: baseFontPx, devicePixelRatio: dpr)
         autoGridMinCell = fontPx(b, 4.0 / 3.0)
         rulerMinFontPx = fontPx(b, 5.0 / 6.0)
         rulerLetterSpacing = fontPxF(b, -1.0 / 24.0)

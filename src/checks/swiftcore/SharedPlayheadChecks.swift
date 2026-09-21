@@ -29,6 +29,7 @@ private let reprojectionID = "swiftcore/SharedPlayhead::cameraReprojection"
 private let staticContentID = "swiftcore/SharedPlayhead::staticContentInvariant"
 private let lifecycleID = "swiftcore/SharedPlayhead::replacementTokenAndRetirement"
 private let pollingID = "swiftcore/SharedPlayhead::pollingLifecycle"
+private let compoundCommandID = "swiftcore/SharedPlayhead::compoundCommandPublication"
 
 private let mappingTolerance = 1e-6
 
@@ -170,6 +171,101 @@ func runSharedPlayheadChecks(_ report: CheckReport, session: DocumentSession,
     checkPureMapping(report)
     checkPureVisibilityFollowAndWrap(report)
     checkPresenterAgainstSession(report, session: session, service: service)
+    checkCompoundCommandPublication(report, session: session, service: service)
+}
+
+@MainActor
+private func checkCompoundCommandPublication(
+    _ report: CheckReport, session suite: DocumentSession, service: ProjectService
+) {
+    let session = sharedPlayheadReplacementSession(suite, service: service)
+    let grid = PianoGrid(session: session)
+    let automation = AutomationPage()
+    automation.attach(session: session, palette: GridPalette())
+    defer { automation.detach() }
+    let commands = EditorCommandRouter(session: session, grid: grid, automation: automation)
+    guard let source = session.document.notes(in: 0).first else {
+        report.fail(compoundCommandID, "compound command fixture has no source note")
+        return
+    }
+    session.setSelectedNotes([source.id])
+    commands.perform(.copy)
+    grid.setEditCursorTick(tick: 120)
+
+    let revision = session.document.revision
+    let history = session.document.history.currentIdentity
+    var playbackCount = 0
+    var publications: [SessionChange] = []
+    var observedCursors: [Tick] = []
+    var observedSelections: [[NoteID]] = []
+    var observedPlaybackCounts: [Int] = []
+    session.onPlayback = { _ in playbackCount += 1 }
+    session.onChange = { [weak grid] change in
+        if change.domains.contains(.cursor) {
+            grid?.refreshCursorPresentation()
+        }
+        publications.append(change)
+        observedCursors.append(session.editCursor)
+        observedSelections.append(session.selectedNoteOrder)
+        observedPlaybackCounts.append(playbackCount)
+    }
+
+    commands.perform(.paste)
+
+    let expectedCursor = Tick(120) + max(1, source.duration)
+    let inserted = session.selectedNoteOrder.compactMap(session.document.note)
+    report.expectEqual(1, publications.count, cppID: compoundCommandID,
+                       what: "paste publishes one completed session change")
+    report.expectEqual(
+        [.document, .selection, .dirty, .history, .cursor],
+        publications.first?.domains ?? [],
+        cppID: compoundCommandID,
+        what: "paste publication aggregates document, selection, and cursor domains")
+    report.expectEqual([expectedCursor], observedCursors, cppID: compoundCommandID,
+                       what: "the only observer sees the completed paste cursor")
+    report.expectEqual([session.selectedNoteOrder], observedSelections, cppID: compoundCommandID,
+                       what: "the only observer sees the completed pasted selection")
+    report.expectEqual([1], observedPlaybackCounts, cppID: compoundCommandID,
+                       what: "playback is published before the completed session state")
+    report.expectEqual(Int(expectedCursor), grid.editCursorTick, cppID: compoundCommandID,
+                       what: "cursor-domain routing updates the lightweight grid presentation")
+    report.expectEqual(1, inserted.count, cppID: compoundCommandID,
+                       what: "paste selects one inserted note")
+    report.expect(inserted.first?.tick == 120 && inserted.first?.id != source.id,
+                  cppID: compoundCommandID,
+                  message: "the completed selection names the inserted destination note")
+    report.expectEqual(revision + 1, session.document.revision, cppID: compoundCommandID,
+                       what: "paste commits one document revision")
+    report.expect(session.document.history.currentIdentity != history, cppID: compoundCommandID,
+                  message: "paste commits one history state")
+    report.expectEqual(1, playbackCount, cppID: compoundCommandID,
+                       what: "paste rebuilds and publishes playback exactly once")
+
+    publications.removeAll()
+    observedCursors.removeAll()
+    observedSelections.removeAll()
+    observedPlaybackCounts.removeAll()
+    playbackCount = 0
+    let cursorRevision = session.document.revision
+    let cursorDirty = session.document.isDirty
+    let cursorHistory = session.document.history.currentIdentity
+    let movedCursor = expectedCursor + 12
+
+    session.editCursor = movedCursor
+
+    report.expectEqual([.cursor], publications.map(\.domains), cppID: compoundCommandID,
+                       what: "a cursor-only move publishes only the cursor domain")
+    report.expectEqual(Int(movedCursor), grid.editCursorTick, cppID: compoundCommandID,
+                       what: "cursor publication updates the grid without a content refresh")
+    report.expect(session.document.revision == cursorRevision
+                      && session.document.isDirty == cursorDirty,
+                  cppID: compoundCommandID,
+                  message: "cursor-only publication preserves revision and dirty state")
+    report.expectEqual(cursorHistory, session.document.history.currentIdentity,
+                       cppID: compoundCommandID,
+                       what: "cursor-only publication creates no history entry")
+    report.expectEqual(0, playbackCount, cppID: compoundCommandID,
+                       what: "cursor-only publication rebuilds no playback timeline")
 }
 
 // MARK: - Pure policy

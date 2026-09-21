@@ -1,12 +1,13 @@
 // Controlled integer input: the owner applies valueCommitted to its model.
 // Appearance is injected; no popup session or document is required.
 import QtQuick
-import Porydaw.Ui
 
 Item {
     id: control
 
     required property var appearance
+    property var hintService: null
+    property bool hintScopeAllowed: true
 
     property int value: 0
     property int minimumValue: 0
@@ -213,6 +214,8 @@ Item {
             id: scrubHint
 
             source: input
+            hintService: control.hintService
+            scopeAllowed: control.hintScopeAllowed
             cursorShape: Qt.SizeVerCursor
             gestureOwning: scrubDrag.active
             profile: HintProfiles.DragScrub

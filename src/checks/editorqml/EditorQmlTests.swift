@@ -36,21 +36,20 @@ enum EditorQmlLane {
         let panes: [String]
     }
 
-    /// The reference-image ledger this page owns: `velocity-lane` and
-    /// `editor-drawer` at macOS DPR 1/2 font 12/16, plus `velocity-prompt` and
-    /// `voice-picker` at DPR 2 font 12/16. One child process renders every pane
-    /// whose ledger row names its profile.
+    /// The reference-image ledger: the lane, drawer and track headers at macOS
+    /// DPR 1/2 font 12/16, plus the prompt, picker and automation tabs at DPR 2.
+    /// One child process renders every pane whose ledger row names its profile.
     static let referenceProfiles: [ReferenceProfile] = [
         ReferenceProfile(name: "dpr1-font12", dpr: 1, fontPx: 12,
-                         panes: ["velocity-lane", "editor-drawer"]),
+                         panes: ["velocity-lane", "editor-drawer", "track-headers"]),
         ReferenceProfile(name: "dpr1-font16", dpr: 1, fontPx: 16,
-                         panes: ["velocity-lane", "editor-drawer"]),
+                         panes: ["velocity-lane", "editor-drawer", "track-headers"]),
         ReferenceProfile(name: "dpr2-font12", dpr: 2, fontPx: 12,
                          panes: ["velocity-lane", "editor-drawer", "velocity-prompt",
-                                 "voice-picker", "automation-tabs"]),
+                                 "voice-picker", "automation-tabs", "track-headers"]),
         ReferenceProfile(name: "dpr2-font16", dpr: 2, fontPx: 16,
                          panes: ["velocity-lane", "editor-drawer", "velocity-prompt",
-                                 "voice-picker", "automation-tabs"]),
+                                 "voice-picker", "automation-tabs", "track-headers"]),
     ]
 
     /// The one suite case a profile child runs. Qt Quick Test selects a case by
@@ -87,6 +86,9 @@ enum EditorQmlLane {
         "automation-tabs": ReferencePaneIdentity(
             component: "src/ui/songview/quick/drawer/AutomationPage.qml",
             drawnRoot: "automationPage"),
+        "track-headers": ReferencePaneIdentity(
+            component: "src/ui/songview/quick/swiftroll/TrackHeaderBand.qml",
+            drawnRoot: "timelineQuickTrackHeaders"),
     ]
 
     /// The theme the reference profiles are authoritative for: `themes::vanilla`,
@@ -609,6 +611,16 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
             + ".png"
     }
 
+    /// Read-only legacy geometry; captures remain in the runner scratch directory.
+    public func trackHeaderReferenceJson() -> String {
+        guard EditorQmlLane.referenceProfiles.contains(where: { $0.name == profileName })
+        else { return "" }
+        let url = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
+            .deletingLastPathComponent()
+            .appendingPathComponent("fixtures/visual/macos-\(profileName)/quick/vanilla/track-headers.json")
+        return (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+    }
+
     /// Records one pane's capture and fails it when the observed facts are not the
     /// requested profile: the metadata beside the PNG is the evidence the parent
     /// verifies, and a DPR, font, pane, theme, palette or fixture mismatch never
@@ -813,14 +825,36 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
         session?.voiceChangesPage().presentedContextSlot ?? -1
     }
 
-    /// The page's published audition capability and its diagnostic: the picker's
-    /// absent action is covered rather than hidden.
-    public func voiceAuditionAvailable() -> Bool {
-        session?.voiceChangesPage().auditionAvailable ?? true
+    @QtIgnored private var auditionEvents: [String] = []
+    @QtIgnored private var auditionObserverInstalled = false
+    @QtIgnored private var auditionForward: ((UInt8, UInt8, UInt8) -> Void)?
+
+    /// Observes production pointer delivery while retaining the real audio sink.
+    /// Callback evidence is not proof of audible native output.
+    public func observeVoiceAudition() -> Bool {
+        guard let page = session?.voiceChangesPage() else { return false }
+        if !auditionObserverInstalled {
+            let forward = page.onAuditionVoice
+            auditionForward = forward
+            page.onAuditionVoice = { [weak self] program, key, velocity in
+                self?.auditionEvents.append("\(program):\(key):\(velocity)")
+                forward?(program, key, velocity)
+            }
+            auditionObserverInstalled = true
+        }
+        auditionEvents.removeAll(keepingCapacity: true)
+        return true
     }
 
-    public func voiceAuditionDiagnostic() -> String {
-        session?.voiceChangesPage().auditionDiagnostic ?? ""
+    public func voiceAuditionEvents() -> String {
+        auditionEvents.joined(separator: ",")
+    }
+
+    public func stopObservingVoiceAudition() {
+        guard auditionObserverInstalled else { return }
+        session?.voiceChangesPage().onAuditionVoice = auditionForward
+        auditionForward = nil
+        auditionObserverInstalled = false
     }
 
     // ---- the production Automation page ------------------------------------

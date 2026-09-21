@@ -36,26 +36,13 @@ import PorydawCore
 // - `songview/editcommandtable.cpp` `edit.set_velocity`: the command row's
 //   availability gate and its prompt dispatch.
 //
-// Capability boundary: a keysplit/drumkit program's exact per-note map needs
-// subvoice data the Swift bank view does not expose. The blocked legacy cases
-// are the keysplit/drumkit rows of `src/checks/drawerpresentation/velocity.cpp`:
-// they install a `VOICE_KEYSPLIT_ALL` parent voice, read its per-key `subGroup`
-// child (`keySplitTable[key]` for the plain keysplit form) and call
-// `VelocityMap::resolve(&voice, key)` per note, so their answer is key-dependent
-// and cannot be reproduced from a top-level macro.
-// `keysplitCapabilityBoundary` names that as the one residual gap and proves the
-// page keeps rendering and navigation while refusing exactly those edits. The
-// minimal approval-gated contract that would resolve it is read-only: a
-// per-(slot, key) subvoice macro on the existing `BankSlotView` (for example
-// `subvoiceMacro(forKey:) -> Int32?`, nil when the slot is not keysplit or the
-// key is unknown), which this suite would then feed to
-// `VelocityContextPolicy.voiceKind(macro:)`; no mutation, no new service and no
-// bridge expansion is involved.
+// Per-key split fixtures exercise owned bank facts through the production page:
+// keyless/invalid resolution, compatible PSG selection, mixed maps and prompts.
 
 private let axisID = "swiftcore/VelocityPage::valueAxisLadder"
 private let psgID = "swiftcore/VelocityPage::psgIntrinsicRows"
 private let contextID = "swiftcore/VelocityPage::voiceContextResolution"
-private let keysplitID = "swiftcore/VelocityPage::keysplitCapabilityBoundary"
+private let keysplitID = "swiftcore/VelocityPage::keysplitPerNoteMapping"
 private let projectionID = "swiftcore/VelocityPage::handleProjection"
 private let gestureID = "swiftcore/VelocityPage::frozenGesturePolicy"
 private let transactionID = "swiftcore/VelocityPage::gestureTransactions"
@@ -127,7 +114,7 @@ private struct VelocityFixture {
                                       dirty: false, loadName: suite.bankLoadName,
                                       sampleRate: 48_000)
         session.selectedTrack = 0
-        session.selectedNotes = []
+        session.clearSelectedNotes()
         page = VelocityPage(baseFontPx: baseFontPx)
         self.session = session
         self.document = document
@@ -187,7 +174,8 @@ internal func runVelocityPageChecks(_ report: CheckReport, session: DocumentSess
     frozenGesturePolicy(report, session: session, service: service)
     gestureTransactions(report, session: session, service: service)
     promptTransaction(report, session: session, service: service)
-    keysplitCapabilityBoundary(report, session: session, service: service)
+    keysplitPerNoteMapping(report, session: session, service: service)
+    projectionRefresh(report, session: session, service: service)
     playheadDiagnostics(report, session: session, service: service)
     commandAvailability(report, session: session, service: service)
 }
@@ -554,7 +542,7 @@ private func gestureTransactions(_ report: CheckReport, session: DocumentSession
     let page = fixture.page
     let document = fixture.document
 
-    fixture.session.selectedNotes = [notes[0].id, notes[1].id]
+    fixture.session.setSelectedNotes([notes[0].id, notes[1].id])
     page.refreshFromDocument()
     let baseline = DocumentSnapshot(document)
     let before = fixture.handle(notes[0])?.y ?? 0
@@ -602,7 +590,7 @@ private func gestureTransactions(_ report: CheckReport, session: DocumentSession
 
     // Escape cancels: preview clears, nothing is written, the press-time
     // selection returns.
-    fixture.session.selectedNotes = [notes[0].id, notes[2].id]
+    fixture.session.setSelectedNotes([notes[2].id, notes[0].id])
     page.refreshFromDocument()
     let cancelBaseline = DocumentSnapshot(document)
     if let handle = fixture.handle(notes[0]) {
@@ -619,8 +607,8 @@ private func gestureTransactions(_ report: CheckReport, session: DocumentSession
                   message: "Escape clears the frozen preview")
     report.expect(DocumentSnapshot(document) == cancelBaseline, cppID: cancellationID,
                   message: "Escape writes nothing at all")
-    report.expect(fixture.session.selectedNotes == [notes[0].id, notes[2].id], cppID: cancellationID,
-                  message: "Escape restores the selection the press replaced")
+    report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: cancellationID,
+                  message: "Escape restores selection membership and insertion order")
 
     // A stale revision cancels instead of retargeting the current selection.
     if let handle = fixture.handle(notes[0]) {
@@ -639,7 +627,7 @@ private func gestureTransactions(_ report: CheckReport, session: DocumentSession
     page.refreshFromDocument()
 
     // The ruler click-sets the selected notes and commits once.
-    fixture.session.selectedNotes = [notes[0].id]
+    fixture.session.setSelectedNotes([notes[0].id])
     page.refreshFromDocument()
     let rulerBaseline = DocumentSnapshot(document)
     let rulerY = (page.axisModel.top + page.axisModel.bottom) / 2
@@ -657,7 +645,7 @@ private func gestureTransactions(_ report: CheckReport, session: DocumentSession
 
     // Middle-drag pan asks the one shared camera for its own scroll and writes
     // no document state.
-    fixture.session.selectedNotes = []
+    fixture.session.clearSelectedNotes()
     page.refreshFromDocument()
     let panBaseline = DocumentSnapshot(document)
     let panScroll = fixture.session.camera.snapshot.scrollX
@@ -675,7 +663,7 @@ private func gestureTransactions(_ report: CheckReport, session: DocumentSession
 
     // The detent control: available for a PSG context, and turning it off puts
     // every context on the continuous domain and cancels what it interrupted.
-    fixture.session.selectedNotes = [notes[0].id]
+    fixture.session.setSelectedNotes([notes[0].id])
     page.refreshFromDocument()
     report.expect(page.detentsAvailable && page.detentsEnabled, cppID: transactionID,
                   message: "a PSG context offers the detent control, enabled by default")
@@ -709,7 +697,7 @@ private func gestureTransactions(_ report: CheckReport, session: DocumentSession
     page.refreshFromDocument()
 
     // A band gesture resolves a selection and commits nothing.
-    fixture.session.selectedNotes = []
+    fixture.session.clearSelectedNotes()
     page.refreshFromDocument()
     let bandBaseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: 0, y: 0, surface: 1, button: 2, modifiers: 0)
@@ -734,6 +722,8 @@ private func promptTransaction(_ report: CheckReport, session: DocumentSession,
         report.fail(promptID, "the synthetic fixture published fewer than three notes")
         return
     }
+    var acceptedValues: [UInt8] = []
+    page.onVelocityAccepted = { acceptedValues.append($0) }
     report.expectEqual(1, VelocityPromptPolicy.minimum, cppID: promptID,
                        what: "the prompt's minimum is 1")
     report.expectEqual(127, VelocityPromptPolicy.maximum, cppID: promptID,
@@ -752,7 +742,7 @@ private func promptTransaction(_ report: CheckReport, session: DocumentSession,
                   message: "a valid draft publishes no error")
 
     // No selection: the entry point refuses and writes nothing.
-    fixture.session.selectedNotes = []
+    fixture.session.clearSelectedNotes()
     page.refreshFromDocument()
     let emptyBaseline = DocumentSnapshot(document)
     report.expect(!page.openSelectedVelocityPrompt(), cppID: promptID,
@@ -761,7 +751,7 @@ private func promptTransaction(_ report: CheckReport, session: DocumentSession,
                   message: "the selectionless entry point writes nothing")
 
     // Capture, draft typing, cancellation.
-    fixture.session.selectedNotes = [notes[0].id, notes[1].id]
+    fixture.session.setSelectedNotes([notes[0].id, notes[1].id])
     page.refreshFromDocument()
     report.expect(page.openSelectedVelocityPrompt(), cppID: promptID,
                   message: "the selected-note entry point opens the prompt")
@@ -784,6 +774,8 @@ private func promptTransaction(_ report: CheckReport, session: DocumentSession,
     report.expect(!page.promptOpen, cppID: cancellationID, message: "cancelling closes the prompt")
     report.expect(DocumentSnapshot(document) == emptyBaseline, cppID: cancellationID,
                   message: "cancelling writes nothing")
+    report.expect(acceptedValues.isEmpty, cppID: promptID,
+                  message: "drafting and cancellation do not latch a drawing velocity")
 
     // Acceptance: one transaction for every captured target.
     let acceptBaseline = DocumentSnapshot(document)
@@ -801,31 +793,37 @@ private func promptTransaction(_ report: CheckReport, session: DocumentSession,
     report.expect(!page.promptOpen, cppID: promptID, message: "acceptance closes the prompt")
     report.expect(fixture.session.selectedNotes == [notes[0].id, notes[1].id], cppID: promptID,
                   message: "acceptance preserves the selection")
+    report.expect(acceptedValues == [95], cppID: promptID,
+                  message: "valid acceptance latches the drawing velocity")
+    let noOpBaseline = DocumentSnapshot(document)
+    _ = page.openSelectedVelocityPrompt()
+    page.updatePromptDraft(draft: "95")
+    report.expect(page.acceptPrompt(), cppID: promptID,
+                  message: "an identical valid value is still accepted")
+    report.expect(DocumentSnapshot(document) == noOpBaseline && acceptedValues == [95, 95],
+                  cppID: promptID,
+                  message: "no-op acceptance relatches the drawing velocity without history")
     _ = try? runBlocking { try await fixture.session.undo() }
     report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0),
                        cppID: historyID, what: "Undo restores the prompt's before-values")
 
-    // The prompt's initial value: the note the page last pointed at when it is
-    // one of the captured targets, else the first in document order. The legacy
-    // selection insertion order is not reconstructible from
-    // `DocumentSession.selectedNotes` (a Set); this row names that gap.
-    fixture.session.selectedNotes = [notes[0].id, notes[1].id]
-    page.refreshFromDocument()
-    if let pointed = fixture.handle(notes[1]) {
-        _ = page.pointerMove(x: pointed.x, y: pointed.y, buttons: 0)
+    // The first selected note seeds the prompt, even when selected later in the
+    // song or another selected note is hovered before opening.
+    let ordered = VelocityFixture(session: session, service: service)
+    ordered.session.addSelectedNote(ordered.notes[1].id)
+    ordered.session.addSelectedNote(ordered.notes[0].id)
+    ordered.page.refreshFromDocument()
+    _ = ordered.page.openSelectedVelocityPrompt()
+    report.expectEqual(Int(ordered.notes[1].velocity), ordered.page.promptInitialValue,
+                       cppID: promptID, what: "selection insertion order seeds the prompt")
+    ordered.page.cancelPrompt()
+    if let pointed = ordered.handle(ordered.notes[0]) {
+        _ = ordered.page.pointerMove(x: pointed.x, y: pointed.y, buttons: 0)
     }
-    _ = page.openSelectedVelocityPrompt()
-    report.expectEqual(Int(notes[1].velocity), page.promptInitialValue, cppID: promptID,
-                       what: "the prompt starts from the note the user last pointed at")
-    page.cancelPrompt()
-    let unpinned = VelocityFixture(session: session, service: service)
-    unpinned.session.selectedNotes = [unpinned.notes[1].id, unpinned.notes[0].id]
-    unpinned.page.refreshFromDocument()
-    _ = unpinned.page.openSelectedVelocityPrompt()
-    report.expectEqual(Int(unpinned.notes[0].velocity), unpinned.page.promptInitialValue,
-                       cppID: promptID,
-                       what: "with no pointed note the prompt starts from document order")
-    unpinned.page.cancelPrompt()
+    _ = ordered.page.openSelectedVelocityPrompt()
+    report.expectEqual(Int(ordered.notes[1].velocity), ordered.page.promptInitialValue,
+                       cppID: promptID, what: "hover cannot reseed the ordered prompt")
+    ordered.page.cancelPrompt()
 
     // An invalid draft stays open, publishes its error and writes nothing.
     let invalidBaseline = DocumentSnapshot(document)
@@ -851,6 +849,8 @@ private func promptTransaction(_ report: CheckReport, session: DocumentSession,
     page.updatePromptDraft(draft: "40")
     report.expect(!page.acceptPrompt(), cppID: cancellationID,
                   message: "a stale acceptance commits nothing")
+    report.expect(acceptedValues == [95, 95], cppID: cancellationID,
+                  message: "invalid, cancelled and stale prompts never relatch drawing velocity")
     report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0),
                        cppID: cancellationID,
                        what: "the stale acceptance left its targets alone")
@@ -861,7 +861,7 @@ private func promptTransaction(_ report: CheckReport, session: DocumentSession,
 
     // A prompt cannot follow a later selection: the capture stays frozen.
     _ = page.openSelectedVelocityPrompt()
-    fixture.session.selectedNotes = [notes[2].id]
+    fixture.session.setSelectedNotes([notes[2].id])
     page.updatePromptDraft(draft: "77")
     report.expect(page.promptTargets == [notes[0].id, notes[1].id], cppID: promptID,
                   message: "the capture never follows a later selection")
@@ -875,63 +875,132 @@ private func promptTransaction(_ report: CheckReport, session: DocumentSession,
     _ = try? runBlocking { try await fixture.session.undo() }
 }
 
-// MARK: - Capability boundary
+// MARK: - Per-note split mapping
 
 @MainActor
-private func keysplitCapabilityBoundary(_ report: CheckReport, session: DocumentSession,
-                                        service: ProjectService) {
-    let slots = [
-        BankSlotView(kind: BankSlotKind.editable,
-                     voice: BankVoice(macro: BankVoiceMacro.keysplitAll,
-                                      symbol: "fixture_drums")),
-    ]
-    let keysplit = VelocityContextPolicy.resolve(slot: 0, endTick: nil, slots: slots)
-    report.expectEqual(VelocityContextStatus.keysplitSubvoice.rawValue, keysplit.status.rawValue,
-                       cppID: keysplitID, what: "a drumkit program reports the subvoice gap")
-    report.expect(!keysplit.editable, cppID: keysplitID,
-                  message: "the gap disables exact-map editing")
-    report.expect(keysplit.map == VelocityMap(voiceKind: .unresolved), cppID: keysplitID,
-                  message: "the gap never approximates a map")
-    report.expect(keysplit.diagnostic.contains("keysplit"), cppID: keysplitID,
-                  message: "the diagnostic names the capability that is missing")
-
+private func keysplitPerNoteMapping(_ report: CheckReport, session: DocumentSession,
+                                   service: ProjectService) {
+    var macros = Array(repeating: Int32(-1), count: 128)
+    macros[60] = BankVoiceMacro.square1
+    macros[67] = BankVoiceMacro.programmableWave
+    macros[72] = BankVoiceMacro.square1
+    let split = BankSlotView(kind: BankSlotKind.editable,
+                            voice: BankVoice(macro: BankVoiceMacro.keysplitAll),
+                            subvoiceMacros: macros)
+    let slots = [split, BankSlotView(), split]
+    let keyless = VelocityContextPolicy.resolve(slot: 0, endTick: nil, slots: slots)
+    report.expect(keyless.map == VelocityMap(voiceKind: .keyless) && !keyless.editable,
+                  cppID: keysplitID, message: "a split without a note key remains keyless")
+    let invalid = VelocityContextPolicy.resolve(slot: 0, endTick: nil, slots: slots, key: 61)
+    report.expect(invalid.map == VelocityMap(voiceKind: .invalid) && !invalid.editable,
+                  cppID: keysplitID, message: "invalid child facts never borrow another key")
+    for (key, kind) in [(60, VoiceKind.square1), (67, .wave), (72, .square1)] {
+        let context = VelocityContextPolicy.resolve(slot: 0, endTick: nil, slots: slots, key: key)
+        report.expect(context.editable && context.map == VelocityMap(voiceKind: kind),
+                      cppID: keysplitID, message: "key \(key) resolves its own child map")
+    }
+    report.expect(split.subvoiceMacro(forKey: -1) == nil
+                      && split.subvoiceMacro(forKey: 128) == nil,
+                  cppID: keysplitID, message: "out-of-domain keys do not resolve")
     let document = SongDocument(file: velocityPageFixture(),
                                 config: session.document.state.config,
                                 source: session.document.source,
                                 trackBudget: session.document.trackBudget)
-    let boundarySession = DocumentSession(document: document, service: service,
-                                          lease: session.bankLease, slots: slots,
-                                          dirty: false, loadName: session.bankLoadName,
-                                          sampleRate: 48_000)
-    boundarySession.selectedTrack = 0
+    let splitSession = DocumentSession(document: document, service: service,
+                                       lease: session.bankLease, slots: slots,
+                                       dirty: false, loadName: session.bankLoadName,
+                                       sampleRate: 48_000)
+    splitSession.selectedTrack = 0
     let page = VelocityPage(baseFontPx: 13)
-    page.attach(session: boundarySession, palette: GridPalette())
+    page.attach(session: splitSession, palette: GridPalette())
     page.configureBody(width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1,
                        baseFontPx: 13, dragDistance: 10)
-    boundarySession.selectedNotes = [document.notes(in: 0)[0].id]
+    let notes = document.notes(in: 0)
+    splitSession.setSelectedNotes([notes[0].id, notes[2].id])
     page.refreshFromDocument()
-    report.expect(page.contextUnsupported && !page.contextDiagnostic.isEmpty, cppID: keysplitID,
-                  message: "the page publishes the unsupported-context diagnostic")
-    report.expectEqual(BankVoiceMacro.keysplitAll, slots[0].voice?.macro ?? -1, cppID: keysplitID,
-                       what: "the boundary case drives a real drumkit program")
-    report.expect(!page.openSelectedVelocityPrompt(), cppID: keysplitID,
-                  message: "the prompt refuses an unknowable map")
-    report.expectEqual(3, page.publishedNoteCount, cppID: keysplitID,
-                       what: "rendering stays live for every note")
-    report.expectEqual(VelocityAxisModel.Mode.continuous.rawValue, page.axisMode, cppID: keysplitID,
-                       what: "the ruler presents the safe continuous domain")
-    let handle = page.publishedHandlesSnapshot[0]
-    report.expect(page.pointerPress(x: handle.x, y: handle.y, surface: 1, button: 1,
-                                    modifiers: 0), cppID: keysplitID,
-                  message: "the plot still delivers a press")
-    _ = page.pointerMove(x: handle.x, y: handle.y - 30, buttons: 1)
-    report.expect(page.frozenPreview.isEmpty, cppID: keysplitID,
-                  message: "an unknown map previews nothing")
-    _ = page.pointerRelease(x: handle.x, y: handle.y - 30, button: 1)
-    report.expect(!page.hasGesture, cppID: keysplitID,
-                  message: "the refused gesture ends without a transaction")
-    report.expectEqual(100, Int(document.notes(in: 0)[0].velocity), cppID: keysplitID,
-                       what: "the refused gesture wrote nothing")
+    report.expect(page.detentsAvailable && !page.contextUnsupported
+                      && page.axisMode == VelocityAxisModel.Mode.intrinsic.rawValue,
+                  cppID: keysplitID, message: "compatible per-key PSG notes retain detents")
+    splitSession.setSelectedNotes([notes[0].id, notes[1].id])
+    page.refreshFromDocument()
+    report.expect(!page.detentsAvailable && !page.contextUnsupported
+                      && page.axisMode == VelocityAxisModel.Mode.continuous.rawValue,
+                  cppID: keysplitID, message: "mixed PSG maps remain editable and continuous")
+    for note in notes.prefix(2) {
+        let kind: VoiceKind = note.pitch == 60 ? .square1 : .wave
+        let map = VelocityMap(voiceKind: kind)
+        let noteAxis = VelocityAxisModel(map: map, geometry: page.axisModel.geometry)
+        let handle = page.publishedHandlesSnapshot.first { $0.noteIdText == "\(note.id.rawValue)" }
+        report.expect(handle?.y == noteAxis.levelToY(map.level(of: Int(note.velocity))!),
+                      cppID: keysplitID,
+                      message: "mixed selection places each handle using its own level boundaries")
+    }
+    if let wave = page.publishedHandlesSnapshot.first(where: { $0.noteIdText == "\(notes[1].id.rawValue)" }) {
+        _ = page.pointerMove(x: wave.x, y: wave.y, buttons: 0)
+        report.expect(page.axisModel.map == VelocityMap(voiceKind: .wave),
+                      cppID: keysplitID, message: "hover resolves the hovered note key")
+        page.pointerLeave()
+    }
+    let before = DocumentSnapshot(document)
+    report.expect(page.openSelectedVelocityPrompt(), cppID: keysplitID,
+                  message: "mixed per-key selection opens its prompt")
+    page.updatePromptDraft(draft: "127")
+    report.expect(DocumentSnapshot(document) == before, cppID: keysplitID,
+                  message: "per-key prompt drafts never mutate history")
+    report.expect(page.acceptPrompt(), cppID: keysplitID,
+                  message: "per-key prompt accepts one captured transaction")
+    let accepted = DocumentSnapshot(document)
+    report.expect(document.note(notes[0].id)?.velocity == 127
+                      && document.note(notes[1].id)?.velocity == 127
+                      && document.note(notes[2].id)?.velocity == notes[2].velocity
+                      && accepted.revision == before.revision + 1,
+                  cppID: keysplitID, message: "acceptance changes only captured notes once")
+    report.expect(!page.acceptPrompt() && DocumentSnapshot(document) == accepted,
+                  cppID: keysplitID, message: "repeated acceptance cannot duplicate a transaction")
+    _ = try? runBlocking { try await splitSession.undo() }
+    report.expect(document.note(notes[0].id)?.velocity == notes[0].velocity
+                      && document.note(notes[1].id)?.velocity == notes[1].velocity,
+                  cppID: keysplitID, message: "one undo restores both captured values")
+    page.detach()
+}
+
+// Camera-only refresh must update both the rendered model and hit geometry;
+// document refresh must discard the raw-note cache after an edit and undo.
+@MainActor
+private func projectionRefresh(_ report: CheckReport, session: DocumentSession,
+                               service: ProjectService) {
+    let fixture = VelocityFixture(session: session, service: service)
+    let page = fixture.page
+    let note = fixture.notes[1]
+    let before = fixture.handle(note)!
+    let oldX = before.x
+    let oldY = before.y
+    let oldValue = before.value
+    fixture.session.mutateCamera { camera in
+        camera.setTimeZoom(camera.snapshot.pixelsPerBeat * 2)
+    }
+    page.refreshCamera()
+    let moved = fixture.handle(note)!
+    let expectedX = fixture.session.camera.displayX(tick: Double(note.tick), origin: 0, dpr: 1)
+    report.expect(moved.x == expectedX && moved.x != oldX && moved.y == oldY
+                      && moved.value == oldValue,
+                  cppID: projectionID, message: "camera refresh moves the handle without changing its value axis")
+    let row = page.handles[1]
+    report.expect(row.x == expectedX, cppID: projectionID,
+                  message: "the QML model receives the moved handle")
+    _ = page.pointerMove(x: moved.x, y: moved.y, buttons: 0)
+    report.expect(page.hoveredNoteText == "\(note.id.rawValue)", cppID: projectionID,
+                  message: "hit testing follows the camera-refreshed handle")
+    page.pointerLeave()
+    _ = fixture.document.setVelocities([NoteVelocity(noteID: note.id, velocity: 127)],
+                                       expectedRevision: fixture.document.revision)
+    page.refreshFromDocument()
+    report.expect(fixture.handle(note)?.value == 127, cppID: projectionID,
+                  message: "document edits invalidate cached note values")
+    _ = try? runBlocking { try await fixture.session.undo() }
+    page.refreshFromDocument()
+    report.expect(fixture.handle(note)?.value == oldValue, cppID: projectionID,
+                  message: "undo invalidates cached note values again")
     page.detach()
 }
 
@@ -943,43 +1012,39 @@ private func playheadDiagnostics(_ report: CheckReport, session: DocumentSession
     let fixture = VelocityFixture(session: session, service: service)
     let page = fixture.page
     page.refreshPlayhead(tick: 0, playing: true)
-    let warmBuilds = page.contentBuildCount
-    let warmPresentations = page.playheadPresentationCount
     let handleCount = fixture.handles.count
     for tick in 1...128 {
         page.refreshPlayhead(tick: Double(tick) / 8, playing: true)
     }
-    report.expectEqual(warmBuilds, page.contentBuildCount, cppID: diagnosticsID,
-                       what: "128 shared-playhead updates rebuild no velocity content")
-    // The page counts distinct presentations: the 128 calls above present sixteen
-    // distinct ticks, and a repeated equal tick is a no-op on both the presenter
-    // and the page.
-    report.expectEqual(warmPresentations + 16, page.playheadPresentationCount, cppID: diagnosticsID,
-                       what: "every distinct presentation reached the page's diagnostics")
     report.expectEqual(Tick(16), page.presentedContextTick, cppID: diagnosticsID,
                        what: "the presented context tick is the rounded playhead tick")
     report.expectEqual(0, page.presentedContextSlot, cppID: diagnosticsID,
                        what: "the presented context slot is the bank slot at that tick")
     report.expectEqual(handleCount, fixture.handles.count, cppID: diagnosticsID,
-                       what: "the playhead rebuilt no handle rows")
+                       what: "playhead movement preserves the displayed note count")
 
-    // A voice change inside the swept range is a real context change and does
-    // rebuild; the stopped context is the edit cursor.
+    // Crossing a voice change presents its slot; stopping follows the edit cursor.
     page.refreshPlayhead(tick: 96, playing: true)
-    report.expect(page.contentBuildCount > warmBuilds, cppID: diagnosticsID,
-                  message: "crossing a voice change rebuilds the context")
     report.expectEqual(2, page.presentedContextSlot, cppID: diagnosticsID,
                        what: "the new section resolves the slot of its own tick")
-    let stopped = page.contentBuildCount
     page.refreshPlayhead(tick: 96, playing: false)
-    report.expect(page.contentBuildCount > stopped, cppID: diagnosticsID,
-                  message: "a transport-state change resolves its own context")
-    let stoppedBuilds = page.contentBuildCount
     page.refreshPlayhead(tick: 400, playing: false)
-    report.expectEqual(stoppedBuilds, page.contentBuildCount, cppID: diagnosticsID,
-                       what: "a stopped playhead keeps presenting the edit cursor's context")
 
-    fixture.session.selectedNotes = [fixture.notes[0].id]
+    // Cursor-only publication crosses into another voice context without a
+    // document mutation or a broad document refresh.
+    fixture.session.onChange = { [weak page] change in
+        if change.domains.contains(.cursor) {
+            page?.refreshEditCursor()
+        }
+    }
+    let cursorDocument = DocumentSnapshot(fixture.document)
+    fixture.session.editCursor = 100
+    report.expectEqual(2, page.context.slot, cppID: diagnosticsID,
+                       what: "the stopped velocity context consumes the published edit cursor")
+    report.expectEqual(cursorDocument, DocumentSnapshot(fixture.document), cppID: diagnosticsID,
+                       what: "cursor-only publication changes no document or history state")
+
+    fixture.session.setSelectedNotes([fixture.notes[0].id])
     page.refreshFromDocument()
     report.expectEqual(1, page.selectedCount, cppID: projectionID,
                        what: "the selected handle publishes its own count")
@@ -991,10 +1056,7 @@ private func playheadDiagnostics(_ report: CheckReport, session: DocumentSession
                        what: "the hovered handle publishes its displayed value as the readout")
     report.expectEqual("\(fixture.notes[0].id.rawValue)", page.hoveredNoteText, cppID: projectionID,
                        what: "the hovered handle publishes its own identity")
-    let hoverBuilds = page.contentBuildCount
     page.pointerMove(x: 3, y: 3, buttons: 0)
-    report.expect(page.contentBuildCount == hoverBuilds, cppID: diagnosticsID,
-                  message: "hover movement rebuilds no static content")
     report.expect(!page.readoutVisible, cppID: projectionID,
                   message: "hover leaving every handle hides the readout")
 }
@@ -1017,7 +1079,7 @@ private func commandAvailability(_ report: CheckReport, session: DocumentSession
     let document = fixture.document
     let baseline = DocumentSnapshot(document)
 
-    fixture.session.selectedNotes = [fixture.notes[0].id]
+    fixture.session.setSelectedNotes([fixture.notes[0].id])
     grid.setEditCursorTick(tick: Int(fixture.session.editCursor))
     report.expect(grid.commandAvailable(command: setVelocity), cppID: commandID,
                   message: "Set Velocity becomes available with a selection")

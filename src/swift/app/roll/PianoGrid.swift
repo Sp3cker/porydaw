@@ -40,17 +40,12 @@ public final class PianoGrid {
     @QtIgnored private let commands: NoteCommands
     @QtIgnored private(set) var notes: [GridNote] = []
     @QtIgnored private var gesture: GridGesture?
-    @QtIgnored private var selectionAtRightPress: Set<NoteID> = []
+    @QtIgnored private var selectionAtRightPress: [NoteID] = []
     @QtIgnored var onCommandAvailabilityChanged: (() -> Void)?
     /// The Set Velocity row's dispatch: the document-bound page opens its own
     /// prompt transaction. `true` means the request was accepted. Swift-only,
     /// like the shared playhead's policy entries: no QML surface sees it.
     @QtIgnored public var onSetVelocityRequested: (() -> Bool)?
-    /// The session facts document-bound pages derive from — document revision,
-    /// primary track, note selection and edit cursor. Fired only when one of them
-    /// really changed, so an unchanged refresh never republishes a page.
-    @QtIgnored public var onSessionStateChanged: (() -> Void)?
-    @QtIgnored private var lastSessionFingerprint: SessionFingerprint?
     @QtIgnored private var lastCommandAvailability: [Bool] = []
     @QtIgnored private var keyboardAuditionKey: Int?
     @QtIgnored var onAudition: ((Int, Int, Int) -> Void)?
@@ -77,6 +72,7 @@ public final class PianoGrid {
     @QtTracked public var cameraScrollY = 0.0
     @QtTracked public var cameraMaxVScroll = 0.0
     @QtTracked public var keyboardWidth = 56.0
+    @QtTracked public var trackHeaderWidth = fontPx(GridCameraPolicy.seedBaseFontPx, 17.5)
     @QtTracked public var rulerHeight = 0.0
     @QtTracked public var ticksPerBeat = GridMetrics.ticksPerBeat
     @QtTracked public var snapTicks = 6
@@ -165,6 +161,12 @@ public final class PianoGrid {
         updateTimeAxis()
         staticSceneDirty = true
         refreshNotes()
+    }
+
+    /// Applies the session-owned edit cursor without rebuilding document content.
+    @QtIgnored
+    public func refreshCursorPresentation() {
+        editCursorTick = Int(session.editCursor)
     }
 
     @QtIgnored
@@ -317,11 +319,14 @@ public final class PianoGrid {
             pencilMode.toggle()
         case .gridNarrow:
             metrics.snapScale = max(-4, metrics.snapScale - 1)
+            refreshFromSession()
         case .gridWiden:
             metrics.snapScale = min(4, metrics.snapScale + 1)
+            refreshFromSession()
         case .gridTriplet:
             metrics.tripletGrid.toggle()
             tripletGrid = metrics.tripletGrid
+            refreshFromSession()
         default:
             let grid = UInt32(max(1, metrics.snapTicks(camera: session.camera)))
             _ = commands.execute(
@@ -332,8 +337,6 @@ public final class PianoGrid {
                         tick, by: Int64(grid - tick % grid))
                 })
         }
-        session.editCursor = TimeDefaults.tick(from: Double(editCursorTick))
-        refreshFromSession()
     }
 
     public func beginPointer(x: Double, y: Double, modifiers: Int) {
@@ -357,7 +360,7 @@ public final class PianoGrid {
             }
         } else {
             if modifiers & (QtFact.shiftModifier | QtFact.controlModifier) == 0 {
-                session.selectedNotes.removeAll()
+                session.clearSelectedNotes()
             }
             gesture = .pendingDraw(GridGesture.PendingDraw(
                 pressX: x, pressY: y, pressTick: pressTick, pressKey: pressKey))
@@ -384,7 +387,7 @@ public final class PianoGrid {
 
     public func beginRightPointer(x: Double, y: Double) {
         guard gesture == nil else { return }
-        selectionAtRightPress = session.selectedNotes
+        selectionAtRightPress = session.selectedNoteOrder
         let hit = hitNote(x: x, y: y)
         gesture = .pendingMenu(GridGesture.PendingMenu(
             pressX: x, pressY: y, threshold: metrics.drawThreshold,
@@ -417,9 +420,8 @@ public final class PianoGrid {
     public func doublePointer(x: Double, y: Double) {
         guard let hit = hitNote(x: x, y: y) else { return }
         let id = notes[hit.index].noteId
-        let ids = session.selectedNotes.contains(id) ? Array(session.selectedNotes) : [id]
+        let ids = session.selectedNotes.contains(id) ? session.selectedNoteOrder : [id]
         session.document.deleteNotes(ids)
-        session.selectedNotes.subtract(ids)
         refreshFromSession()
     }
 
@@ -463,7 +465,7 @@ public final class PianoGrid {
         // owns no time selection. Never a host cancel reason: reasons arrive
         // only through inputCancelled.
         guard gesture != nil else {
-            session.selectedNotes.removeAll()
+            session.clearSelectedNotes()
             refreshNotes()
             return true
         }
@@ -480,7 +482,7 @@ public final class PianoGrid {
     @QtIgnored
     private func cancelInput() {
         if case .band = gesture {
-            session.selectedNotes = selectionAtRightPress
+            session.setSelectedNotes(selectionAtRightPress)
         }
         stopAudition()
         gesture = nil
@@ -502,21 +504,21 @@ public final class PianoGrid {
     private func applyPressSelection(_ id: NoteID, modifiers: Int) {
         if modifiers & QtFact.controlModifier != 0 {
             if session.selectedNotes.contains(id) {
-                session.selectedNotes.remove(id)
+                session.removeSelectedNote(id)
             } else {
-                session.selectedNotes.insert(id)
+                session.addSelectedNote(id)
             }
         } else if modifiers & QtFact.shiftModifier != 0 {
-            session.selectedNotes.insert(id)
+            session.addSelectedNote(id)
         } else if !session.selectedNotes.contains(id) {
-            session.selectedNotes = [id]
+            session.setSelectedNotes([id])
         }
     }
 
     @QtIgnored
     private func commitGesture() {
         guard let gesture else { return }
-        let ids = Array(session.selectedNotes)
+        let ids = session.selectedNoteOrder
         switch gesture {
         case .pendingDraw(let state):
             addNote(
@@ -544,14 +546,14 @@ public final class PianoGrid {
             NewNote(track: trackIndex, tick: Tick(tick), pitch: UInt8(pitch),
                     duration: Tick(duration), velocity: UInt8(min(127, max(1, lastVelocity))))
         ]), let id = ids.first else { return }
-        session.selectedNotes = [id]
+        session.setSelectedNotes([id])
         activeNoteId = id.rawValue
     }
 
     @QtIgnored
     private func applyBandSelection() {
         guard let band = selectionBand else { return }
-        var covered = Set<NoteID>()
+        var covered: [NoteID] = []
         for note in notes {
             let displayed = displayedNote(note)
             let rect = metrics.noteRect(
@@ -561,10 +563,10 @@ public final class PianoGrid {
                 pitch: displayed.pitch)
             if rect.x < band.x + band.w, rect.x + rect.w > band.x,
                rect.y < band.y + band.h, rect.y + rect.h > band.y {
-                covered.insert(note.noteId)
+                covered.append(note.noteId)
             }
         }
-        session.selectedNotes = selectionAtRightPress.union(covered)
+        session.setSelectedNotes(selectionAtRightPress + covered)
     }
 
     @QtIgnored
@@ -674,6 +676,7 @@ public final class PianoGrid {
         cameraScrollY = snapshot.scrollY
         cameraMaxVScroll = snapshot.maxVScroll
         keyboardWidth = metrics.keyboardWidth
+        trackHeaderWidth = fontPx(baseFontPx, 17.5)
         ticksPerBeat = Int(max(1, session.document.ticksPerBeat))
         snapTicks = metrics.snapTicks(camera: session.camera)
         visibleGridTicks = metrics.visibleGridTicks(camera: session.camera)
@@ -796,25 +799,7 @@ public final class PianoGrid {
             lastCommandAvailability = availability
             onCommandAvailabilityChanged?()
         }
-        let fingerprint = SessionFingerprint(
-            revision: session.document.revision,
-            track: session.selectedTrack ?? -1,
-            selection: session.selectedNotes.map(\.rawValue).sorted(),
-            editCursor: session.editCursor)
-        if fingerprint != lastSessionFingerprint {
-            lastSessionFingerprint = fingerprint
-            onSessionStateChanged?()
-        }
         publishGeometry()
     }
 }
 
-/// The document/session facts a drawer page derives its projection from. Value
-/// equality is the whole publication rule: an unchanged refresh publishes
-/// nothing, so a page never rebuilds on a repeated equal grid publication.
-private struct SessionFingerprint: Equatable {
-    var revision: UInt64
-    var track: Int
-    var selection: [UInt64]
-    var editCursor: Tick
-}

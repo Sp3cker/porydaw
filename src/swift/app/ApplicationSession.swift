@@ -17,29 +17,16 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private var projectRoot = ""
     private var labels: [String] = []
     private var catalogService: ProjectService?
-    private var documentSession: DocumentSession?
     private var audio: NativeAudio?
-    private var grid: PianoGrid?
+    private var workspace: DocumentWorkspace?
     /// Drawer chrome is application state, not document state: this one
     /// presenter is created here and survives every project and song
     /// replacement.
     private let drawer: EditorDrawerPresenter
-    /// One shared playhead for the whole surface. It is created here, bound to
-    /// the current document's owners on install, and cancelled before any of
-    /// those owners is released.
+    /// One shared playhead for the whole surface. A document workspace binds it
+    /// to the current document and cancels it before that workspace is released.
     private let playhead: SharedPlayheadPresenter
-    /// The document-bound Velocity page: created with the document, attached
-    /// before the scene mounts, refreshed from the session's own publications,
-    /// and cancelled and released only after the host acknowledged detachment.
-    private var velocityPageOwner: VelocityPage?
-    /// The document-bound Voice Changes page: same lifetime as the Velocity
-    /// page, attached to its own section slot and fanned the one shared
-    /// playhead presentation beside it.
-    private var voiceChangesPageOwner: VoiceChangesPage?
-    /// The document-bound Automation page: same lifetime again, attached to its
-    /// own section slot before the scene mounts and fanned the same shared
-    /// playhead presentation.
-    private var automationPageOwner: AutomationPage?
+    private let mouseHints = MouseHints()
     private var detachContinuation: CheckedContinuation<Void, Never>?
     private var isDisposed = false
     private var activeReplacementTask: Task<Void, Never>?
@@ -63,8 +50,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     public func gridPresenter() -> PianoGrid {
-        guard let grid else { preconditionFailure("Grid requested without an open song") }
-        return grid
+        guard let workspace else { preconditionFailure("Grid requested without an open song") }
+        return workspace.grid
+    }
+
+    public func trackHeadersPresenter() -> TrackHeadersPresenter {
+        guard let workspace else {
+            preconditionFailure("Track headers requested without an open song")
+        }
+        return workspace.trackHeaders
     }
 
     /// Drawer chrome exists for the whole session, so unlike `gridPresenter()`
@@ -74,57 +68,73 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// The document-bound Velocity page. Like `gridPresenter()` it exists only
     /// while a document presentation is installed.
     public func velocityPage() -> VelocityPage {
-        guard let velocityPageOwner else {
+        guard let workspace else {
             preconditionFailure("Velocity page requested without an open song")
         }
-        return velocityPageOwner
+        return workspace.velocityPage
     }
 
     /// The document-bound Voice Changes page, with the same document lifetime as
     /// the Velocity page.
     public func voiceChangesPage() -> VoiceChangesPage {
-        guard let voiceChangesPageOwner else {
+        guard let workspace else {
             preconditionFailure("Voice Changes page requested without an open song")
         }
-        return voiceChangesPageOwner
+        return workspace.voiceChangesPage
     }
 
     /// The document-bound Automation page, with the same document lifetime as the
     /// other two pages.
     public func automationPage() -> AutomationPage {
-        guard let automationPageOwner else {
+        guard let workspace else {
             preconditionFailure("Automation page requested without an open song")
         }
-        return automationPageOwner
+        return workspace.automationPage
     }
 
     /// The one shared playhead. Like the drawer it exists for the whole session;
     /// it publishes an empty, detached presentation until a document is bound.
     public func playheadPresenter() -> SharedPlayheadPresenter { playhead }
 
+    public func mouseHintsPresenter() -> MouseHints { mouseHints }
+
+    @QtIgnored
+    private var commandRouter: EditorCommandRouter? {
+        guard let workspace else { return nil }
+        return EditorCommandRouter(session: workspace.session, grid: workspace.grid,
+                                   automation: workspace.automationPage)
+    }
+
     public func gridCommandAvailable(command: Int) -> Bool {
-        grid?.commandAvailable(command: command) ?? false
+        guard let command = EditCommand(rawValue: command) else { return false }
+        return commandRouter?.isAvailable(command) ?? false
     }
 
     public func performGridCommand(command: Int) {
-        grid?.performCommand(command: command)
+        guard let command = EditCommand(rawValue: command) else { return }
+        commandRouter?.perform(command)
     }
 
     public func routeGridKey(command: Int, autoRepeat: Bool) -> Int {
-        grid?.routeKey(command: command, autoRepeat: autoRepeat)
+        guard let command = EditCommand(rawValue: command) else {
+            return EditKeyDecision.decline.rawValue
+        }
+        return commandRouter?.route(command, autoRepeat: autoRepeat).rawValue
             ?? EditKeyDecision.decline.rawValue
     }
 
     public func handleGridEscape() -> Bool {
-        grid?.handleEscape() ?? false
+        workspace?.grid.handleEscape() ?? false
     }
 
     public func cancelGridInput(reason: Int) {
-        grid?.inputCancelled(reason: reason)
-        // The drawer container treats every reason identically: it drops the
-        // chrome resize session and every attached page's current interaction
-        // in the same call the grid receives.
-        drawer.inputCancelled(reason: reason)
+        // The drawer owns application-scoped chrome; an installed workspace's
+        // cancel already covers it, so it cancels directly only without one.
+        if let workspace {
+            workspace.cancel(reason: reason)
+        } else {
+            drawer.inputCancelled(reason: reason)
+        }
     }
 
     @QtSignal public func aboutToReleaseGrid()
@@ -136,6 +146,16 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtSignal public func gridCommandAvailabilityChanged()
     @QtSignal public func openFailed(message: String)
     @QtSignal public func operationFailed(message: String)
+    @QtSignal public func headerContextMenuRequested(x: Double, y: Double)
+    @QtSignal public func addTrackRequested()
+    @QtSignal public func changeTrackVoiceRequested(track: Int)
+    @QtSignal public func revealTrackVoiceRequested(track: Int)
+
+    /// The host's existing picker returns a program, or -1 on cancellation.
+    /// The presenter rechecks the captured document identity and revision.
+    public func completeTrackHeaderVoiceRequest(program: Int) {
+        workspace?.trackHeaders.completeVoiceRequest(program: program)
+    }
 
     public func acknowledgeGridDetached() {
         let continuation = detachContinuation
@@ -154,13 +174,17 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// `acknowledgeGridDetached()`, which is where the release happens.
     public func hostClosing() {
         isDisposed = true
+        mouseHints.setWindowActive(active: false)
         activeReplacementTask?.cancel()
-        // Drops the page callback before any owner can retire, then clears the
-        // attached presentation synchronously.
-        playhead.detach()
         // Cancel while the scene exists: the drawer's resize session and every
-        // attached page's interaction end in the same call.
-        drawer.inputCancelled(reason: GridCancelReason.hidden.rawValue)
+        // attached page's interaction end in the same call. The workspace's
+        // cancel covers the drawer it borrows; without a workspace the drawer
+        // still ends its own session.
+        if let workspace {
+            workspace.cancel(reason: GridCancelReason.hidden.rawValue)
+        } else {
+            drawer.inputCancelled(reason: GridCancelReason.hidden.rawValue)
+        }
     }
 
     /// Releases the document-bound presentation owners. Called from the
@@ -168,35 +192,29 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// close path's acknowledgment: never earlier, because the QML surface binds
     /// to the grid, the page and the session until the scene is really gone.
     private func releaseDocumentPresentation() {
-        if let page = automationPageOwner {
-            drawer.detachSection(page)
-            page.detach()
-            automationPageOwner = nil
+        let retiringSession: DocumentSession?
+        do {
+            let retiring = workspace
+            retiringSession = retiring?.session
+            workspace = nil
+            retiring?.teardown()
         }
-        if let page = voiceChangesPageOwner {
-            drawer.detachSection(page)
-            page.detach()
-            voiceChangesPageOwner = nil
-        }
-        if let page = velocityPageOwner {
-            drawer.detachSection(page)
-            page.detach()
-            velocityPageOwner = nil
-        }
-        grid?.detach()
-        grid = nil
         audio?.unload()
-        let retiring = documentSession
-        documentSession = nil
         songOpen = false
         documentDirty = false
         canUndo = false
         canRedo = false
-        // The session's own close is the asynchronous remainder of the release;
-        // it is requested before the reference is dropped so the service worker
-        // is never left running behind an unreferenced session.
-        if let retiring {
-            Task { _ = await retiring.close() }
+        // Keep the project alive until both the installed document and any
+        // in-flight replacement have retired, then stop its worker. Capture the
+        // session, not its workspace: the QML-facing owners must be released
+        // synchronously after the scene has detached, before any async close.
+        let service = catalogService
+        catalogService = nil
+        let replacementTask = activeReplacementTask
+        Task {
+            _ = await replacementTask?.value
+            _ = await retiringSession?.close()
+            await service?.close()
         }
     }
 
@@ -247,18 +265,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     public func requestSave() {
-        guard let documentSession, !saveInProgress else { return }
+        guard let session = workspace?.session, !saveInProgress else { return }
         saveInProgress = true
         lastSaveError = ""
         Task {
             do {
-                try await documentSession.save()
-                documentDirty = documentSession.document.isDirty || documentSession.bankDirty
-                canUndo = documentSession.document.history.canUndo
-                canRedo = documentSession.document.history.canRedo
-                // A save can adopt a refreshed bank whose slots carry new
-                // symbols; that publication has no document change of its own.
-                voiceChangesPageOwner?.refreshFromDocument()
+                try await session.save()
             } catch {
                 lastSaveError = String(describing: error)
             }
@@ -267,49 +279,35 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     public func requestUndo() {
-        guard let documentSession else { return }
+        guard let session = workspace?.session else { return }
         canUndo = false
         canRedo = false
         lastSaveError = ""
         Task {
             do {
-                _ = try await documentSession.undo()
-                documentDirty = documentSession.document.isDirty || documentSession.bankDirty
-                canUndo = documentSession.document.history.canUndo
-                canRedo = documentSession.document.history.canRedo
-                // Undoing a bank entry adopts its slots without a document
-                // change, so the Voice Changes labels are refreshed here.
-                voiceChangesPageOwner?.refreshFromDocument()
+                _ = try await session.undo()
             } catch {
                 let message = String(describing: error)
                 lastSaveError = message
                 operationFailed(message: message)
-                canUndo = documentSession.document.history.canUndo
-                canRedo = documentSession.document.history.canRedo
+                refreshDocumentState()
             }
         }
     }
 
     public func requestRedo() {
-        guard let documentSession else { return }
+        guard let session = workspace?.session else { return }
         canUndo = false
         canRedo = false
         lastSaveError = ""
         Task {
             do {
-                _ = try await documentSession.redo()
-                documentDirty = documentSession.document.isDirty || documentSession.bankDirty
-                canUndo = documentSession.document.history.canUndo
-                canRedo = documentSession.document.history.canRedo
-                // Redoing a bank entry adopts its slots without a document
-                // change, so the Voice Changes labels are refreshed here.
-                voiceChangesPageOwner?.refreshFromDocument()
+                _ = try await session.redo()
             } catch {
                 let message = String(describing: error)
                 lastSaveError = message
                 operationFailed(message: message)
-                canUndo = documentSession.document.history.canUndo
-                canRedo = documentSession.document.history.canRedo
+                refreshDocumentState()
             }
         }
     }
@@ -340,6 +338,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
             try await service.open(root: path)
             let newLabels = try await service.songLabels()
             await retireCurrentDocument()
+            await catalogService?.close()
             guard !isDisposed, !Task.isCancelled else {
                 await service.close()
                 return false
@@ -359,168 +358,171 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     private func replaceSong(label: String) async {
-        guard !projectRoot.isEmpty else {
+        guard let service = catalogService else {
             let message = "Open a project before opening a song."
             lastSaveError = message
             openFailed(message: message)
             return
         }
+        guard let audio else {
+            let message = String(describing:
+                NativeAudioError.initializationFailed("Audio service is unavailable."))
+            lastSaveError = message
+            openFailed(message: message)
+            return
+        }
         lastSaveError = ""
-        let service = ProjectService()
+        var opened: DocumentSession?
         do {
-            try await service.open(root: projectRoot)
             let replacement = try await DocumentSession.open(
-                service: service, label: label, sampleRate: audio?.sampleRate ?? 48_000)
-            guard let audio else {
-                _ = await replacement.close()
-                throw NativeAudioError.initializationFailed("Audio service is unavailable.")
-            }
-            try audio.bind(timeline: replacement.timeline, bank: replacement.bankLease,
-                           config: replacement.document.state.config)
-            let presenter = PianoGrid(session: replacement)
-            presenter.onAudition = { [weak audio] track, key, velocity in
-                guard let audio, (0...15).contains(track), (0...127).contains(key),
-                      (0...127).contains(velocity) else { return }
-                audio.previewNote(track: UInt8(track), key: UInt8(key), velocity: UInt8(velocity))
-            }
-            presenter.onCommandAvailabilityChanged = { [weak self] in
-                self?.gridCommandAvailabilityChanged()
-            }
-            replacement.onCameraChange = { [weak self, weak presenter, weak playhead] _ in
-                presenter?.refreshCamera()
-                // The camera publication reprojects the retained authoritative
-                // tick: the same position, a new projection.
-                playhead?.refreshProjection()
-                self?.velocityPageOwner?.refreshCamera()
-                self?.voiceChangesPageOwner?.refreshCamera()
-                self?.automationPageOwner?.refreshCamera()
-            }
-            replacement.onPlayback = { [weak self] timeline in
-                do {
-                    try self?.audio?.publish(timeline)
-                } catch {
-                    self?.lastSaveError = String(describing: error)
-                }
-            }
-            replacement.onChange = { [weak self, weak replacement, weak presenter,
-                                      weak playhead] _ in
-                guard let self, let replacement else { return }
-                presenter?.refreshFromSession()
-                // A document change may have rebuilt the timeline; re-read the
-                // authoritative sample through it before the next poll.
-                playhead?.refreshImmediate()
-                // Every document-bound page re-derives from the same document:
-                // track, bank and history changes reach both owners here.
-                self.velocityPageOwner?.refreshFromDocument()
-                self.voiceChangesPageOwner?.refreshFromDocument()
-                self.automationPageOwner?.refreshFromDocument()
-                self.documentDirty = replacement.document.isDirty || replacement.bankDirty
-                self.canUndo = replacement.document.history.canUndo
-                self.canRedo = replacement.document.history.canRedo
-            }
+                service: service, label: label, sampleRate: audio.sampleRate)
+            opened = replacement
+            let callbacks = DocumentWorkspace.Callbacks(
+                addTrackRequested: { [weak self] in self?.addTrackRequested() },
+                changeTrackVoiceRequested: { [weak self] track in
+                    self?.changeTrackVoiceRequested(track: track)
+                },
+                revealTrackVoiceRequested: { [weak self] track in
+                    self?.revealTrackVoiceRequested(track: track)
+                },
+                headerContextMenuRequested: { [weak self] x, y in
+                    self?.headerContextMenuRequested(x: x, y: y)
+                },
+                gridCommandAvailabilityChanged: { [weak self] in
+                    self?.gridCommandAvailabilityChanged()
+                },
+                sessionStateChanged: { [weak self] in
+                    self?.refreshDocumentState()
+                },
+                publicationFailed: { [weak self] message in
+                    self?.lastSaveError = message
+                })
+            let replacementWorkspace = try DocumentWorkspace(
+                session: replacement, audio: audio, drawer: drawer,
+                playhead: playhead, callbacks: callbacks)
             await retireCurrentDocument(unloadAudio: false)
             guard !isDisposed, !Task.isCancelled else {
+                replacementWorkspace.teardown()
                 _ = await replacement.close()
-                await service.close()
                 return
             }
-            catalogService = nil
-            documentSession = replacement
-            grid = presenter
-            // Owners are installed: bind the one shared playhead and only then
-            // start its polling task, so polling can never target a half-built
-            // or superseded document.
-            playhead.attach(session: replacement, audio: audio, grid: presenter, drawer: drawer)
-            playhead.startPolling()
-            // The document-bound pages are installed and attached before
-            // `songOpen` publishes, so the scene mounts with every page already
-            // in its slot.
-            let page = VelocityPage(baseFontPx: presenter.baseFontPx)
-            page.attach(session: replacement, palette: presenter.palette)
-            let voicePage = VoiceChangesPage(baseFontPx: presenter.baseFontPx)
-            voicePage.attach(session: replacement, palette: presenter.palette)
-            let automationPage = AutomationPage(baseFontPx: presenter.baseFontPx)
-            automationPage.attach(session: replacement, palette: presenter.palette)
-            presenter.onSetVelocityRequested = { [weak page] in
-                page?.openSelectedVelocityPrompt() ?? false
+            workspace = replacementWorkspace
+            replacementWorkspace.automationPage.onCommandAvailabilityChanged = { [weak self] in
+                self?.gridCommandAvailabilityChanged()
             }
-            presenter.onSessionStateChanged = { [weak page] in page?.refreshFromDocument() }
-            // The one Swift fan-out from the shared clock into the pages: the
-            // production QML never reads the presenter or calls a page's mutator,
-            // so each page's context follows the shared tick through the owners
-            // that already exist. One callback fans both pages — the session
-            // installs no second closure — and `SharedPlayheadPresenter.detach()`
-            // clears it before either page retires.
-            playhead.onPresentation = { [weak page, weak voicePage, weak automationPage] presentation in
-                page?.refreshPlayhead(tick: presentation.tick,
-                                      playing: presentation.playing)
-                voicePage?.refreshPlayhead(tick: presentation.tick,
-                                           playing: presentation.playing)
-                automationPage?.refreshPlayhead(tick: presentation.tick,
-                                                playing: presentation.playing)
-            }
-            velocityPageOwner = page
-            voiceChangesPageOwner = voicePage
-            automationPageOwner = automationPage
-            drawer.attachSection(page)
-            drawer.attachSection(voicePage)
-            drawer.attachSection(automationPage)
-            documentDirty = replacement.document.isDirty || replacement.bankDirty
-            canUndo = replacement.document.history.canUndo
-            canRedo = replacement.document.history.canRedo
+            replacementWorkspace.activate()
+            opened = nil
+            refreshDocumentState()
             songOpen = true
         } catch {
-            await service.close()
+            if let opened { _ = await opened.close() }
             let message = String(describing: error)
             lastSaveError = message
             openFailed(message: message)
         }
     }
 
+    private func refreshDocumentState() {
+        guard let session = workspace?.session else {
+            documentDirty = false
+            canUndo = false
+            canRedo = false
+            return
+        }
+        documentDirty = session.document.isDirty || session.bankDirty
+        canUndo = session.document.history.canUndo
+        canRedo = session.document.history.canRedo
+    }
+
     private func retireCurrentDocument(unloadAudio: Bool = true) async {
-        // Cancel the shared playhead first, while the document owners it reads
-        // still exist: the polling task stops and the attached presentation
-        // clears synchronously, so no late iteration can target the document
-        // this method is about to release.
-        playhead.detach()
-        // Cancel before the scene-removal request below: the drawer's resize
-        // session and any page interaction end while their items still exist.
-        drawer.inputCancelled(reason: GridCancelReason.hidden.rawValue)
-        if grid != nil {
+        let retiringSession: DocumentSession
+        if let retiring = workspace {
+            retiringSession = retiring.session
+            // Cancellation is synchronous while the scene still binds the workspace.
+            retiring.cancel(reason: GridCancelReason.hidden.rawValue)
             await withCheckedContinuation { continuation in
                 detachContinuation = continuation
                 aboutToReleaseGrid()
             }
-            grid?.detach()
-            self.grid = nil
+            // Only the host acknowledgment permits presentation owners to retire.
+            retiring.teardown()
+            if workspace === retiring { workspace = nil }
+            if unloadAudio { audio?.unload() }
+        } else {
+            if unloadAudio { audio?.unload() }
+            refreshDocumentState()
+            songOpen = false
+            return
         }
-        // The host acknowledged scene removal: each page's slot is dropped (its
-        // cancel already ran above, while the scene still existed) and its owner
-        // is released before the document session it reads.
-        if let page = automationPageOwner {
-            drawer.detachSection(page)
-            page.detach()
-            automationPageOwner = nil
-        }
-        if let page = voiceChangesPageOwner {
-            drawer.detachSection(page)
-            page.detach()
-            voiceChangesPageOwner = nil
-        }
-        if let page = velocityPageOwner {
-            drawer.detachSection(page)
-            page.detach()
-            velocityPageOwner = nil
-        }
-        if unloadAudio { audio?.unload() }
-        if let documentSession {
-            _ = await documentSession.close()
-            self.documentSession = nil
-        }
-        documentDirty = false
-        canUndo = false
-        canRedo = false
+        // End the workspace's lexical lifetime before crossing the session-close
+        // suspension point; QML no longer owns a live reference after detachment.
+        _ = await retiringSession.close()
+        refreshDocumentState()
         songOpen = false
+    }
+}
+
+/// Resolves canonical editor commands against live document selection. The
+/// window remains the sole key matcher and text/modal input arbiter.
+@MainActor
+public struct EditorCommandRouter {
+    private unowned let session: DocumentSession
+    private unowned let grid: PianoGrid
+    private unowned let automation: AutomationPage
+
+    public init(session: DocumentSession, grid: PianoGrid, automation: AutomationPage) {
+        self.session = session
+        self.grid = grid
+        self.automation = automation
+    }
+
+    private var timeSelectionActive: Bool { automation.selection?.isActive == true }
+    private var pointerGestureActive: Bool {
+        grid.interactionActive || automation.pointerGestureActive
+    }
+    private var modalActive: Bool { automation.menuOpen || automation.promptOpen }
+
+    private func targetsTimeSelection(_ command: EditCommand) -> Bool {
+        timeSelectionActive && editCommandPolicy(command).rangeOperation != .none
+    }
+
+    public func isAvailable(_ command: EditCommand) -> Bool {
+        guard !modalActive,
+              !pointerGestureActive || editCommandPolicy(command).survivesPointerGesture
+        else { return false }
+        if command == .paste || targetsTimeSelection(command) {
+            return automation.selectionCommandAvailable(command: command)
+        }
+        // A time range owns the timeline even for these notes-only rows.
+        if timeSelectionActive && (command == .lengthenNote || command == .shortenNote) {
+            return false
+        }
+        if command == .delete && automation.hoverDeleteAvailable() { return true }
+        return grid.commandAvailable(command: command.rawValue)
+    }
+
+    public func route(_ command: EditCommand, autoRepeat: Bool) -> EditKeyDecision {
+        guard !modalActive else { return .decline }
+        return EditKeyArbiter.decide(command: command, surface: EditSurfaceState(
+            pointerGestureActive: pointerGestureActive,
+            timeSelectionActive: timeSelectionActive,
+            noteSelectionEmpty: session.selectedNotes.isEmpty,
+            origin: .timeline, autoRepeat: autoRepeat,
+            commandAvailable: isAvailable(command)))
+    }
+
+    public func perform(_ command: EditCommand) {
+        guard isAvailable(command) else { return }
+        if command == .paste || targetsTimeSelection(command) {
+            // Ownership, not mutation success, decides whether notes may run.
+            // An empty or unchanged range never falls through to selected notes.
+            _ = automation.consumeSelectionCommand(command: command)
+            return
+        }
+        if command == .delete && automation.consumeHoverDelete() { return }
+        // Note and standalone commands keep their existing grid executor.
+        // Clipboard paste above is document-wide, never selected by focus.
+        grid.performCommand(command: command.rawValue)
     }
 }
 

@@ -1,12 +1,6 @@
-// Typed menu renderer hosted by songview::QuickMenuHost. The host creates one
-// instance per open menu level beneath QuickPopupSession's shared canvas
-// overlay. The overlay supplies the single outside-press underlay; every
-// menu level renders only its frame. All layout numbers (row height, column
-// edges, clamped origin) are measured by the host from the theme menu
-// appearance and pushed in as properties — this file owns painting, hover and
-// press delivery only.
-// QtQuick only: no Controls, no nested command maps; rows come from
-// QuickMenuModel's explicit typed roles.
+// Shared typed menu renderer. The Swift-owned menu supplies rows and the
+// QML host delivers hover and activation; each level paints only its frame.
+// The drawer-wide modal layer owns outside presses and keyboard navigation.
 import QtQuick
 
 Item {
@@ -31,6 +25,8 @@ Item {
     property point menuOrigin: Qt.point(0, 0)
     property int highlightedRow: -1
     property int pressedRow: -1
+    property string rowObjectNamePrefix: ""
+    readonly property int rowCount: list.count
 
     objectName: rootLevel ? "quickMenuPanelRoot" : "quickMenuPanelSubmenu"
 
@@ -102,17 +98,23 @@ Item {
 
             delegate: Item {
                 id: row
+                required property int index
+                required property var model
+                objectName: panel.rowObjectNamePrefix.length > 0
+                            ? panel.rowObjectNamePrefix + model.actionId : ""
+                readonly property bool separator: model.separator ?? false
+                readonly property bool available: model.enabled ?? true
 
                 // Canonical Qt state: Item.enabled drives accessibility, so
                 // a disabled row must be a disabled item, not a styling
                 // convention.
                 enabled: row.active
                 width: ListView.view.width
-                height: model.separator ? panel.separatorHeight : panel.rowHeight
+                height: row.separator ? panel.separatorHeight : panel.rowHeight
 
-                readonly property bool active: !model.separator && model.enabled
+                readonly property bool active: !row.separator && row.available
                 readonly property color rowTextColor: {
-                    if (!model.enabled && !model.separator)
+                    if (!row.available && !row.separator)
                         return panel.disabledTextColor
                     if (panel.pressedRow === index)
                         return panel.pressedTextColor
@@ -130,9 +132,9 @@ Item {
                 }
 
                 Rectangle {
-                    visible: model.separator
+                    visible: row.separator
                     width: parent.width
-                    height: model.separator ? panel.separatorHeight : 0
+                    height: row.separator ? panel.separatorHeight : 0
                     y: (parent.height - height) / 2
                     color: panel.separatorColor
                 }
@@ -142,7 +144,8 @@ Item {
                 Item {
                     id: tick
 
-                    visible: model.checkable && model.checked && !model.separator
+                    visible: (row.model.checkable ?? false) && (row.model.checked ?? false)
+                             && !row.separator
                     x: panel.checkX
                     y: (row.height - width) / 2
                     width: panel.checkWidth
@@ -191,7 +194,7 @@ Item {
                     verticalAlignment: Text.AlignVCenter
                     color: Qt.alpha(row.rowTextColor, 0.6)
                     font: panel.menuFont
-                    text: model.shortcutText
+                    text: row.model.shortcutText ?? ""
                     textFormat: Text.PlainText
                     renderType: Text.NativeRendering
                 }
@@ -200,7 +203,7 @@ Item {
                 Item {
                     id: arrow
 
-                    visible: model.hasSubmenu && !model.separator
+                    visible: (row.model.hasSubmenu ?? false) && !row.separator
                     x: panel.arrowRight - width
                     y: (row.height - height) / 2
                     width: panel.arrowWidth
@@ -246,8 +249,12 @@ Item {
                     onCanceled: panel.pressedRow = -1
                 }
 
-                Accessible.role: model.separator ? Accessible.Separator : Accessible.MenuItem
-                Accessible.name: model.text
+                Accessible.role: row.separator ? Accessible.Separator : Accessible.MenuItem
+                Accessible.name: row.model.text
+                Accessible.onPressAction: {
+                    if (row.active)
+                        panel.host.activateRow(panel, row.index)
+                }
             }
         }
 

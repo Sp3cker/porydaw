@@ -12,6 +12,7 @@ private final class IntegrationCounters {
     var camera = 0
     var playback = 0
     var document = 0
+    var cursor = 0
     var coherentDocumentCallback = false
 }
 
@@ -34,8 +35,14 @@ func runEditorGridCameraChecks(_ report: CheckReport, session: DocumentSession) 
         grid.refreshCamera()
     }
     session.onPlayback = { _ in counters.playback += 1 }
-    session.onChange = { _ in
-        counters.document += 1
+    session.onChange = { change in
+        let documentDomains: SessionChangeDomains = [.document, .dirty, .history]
+        if !change.domains.intersection(documentDomains).isEmpty {
+            counters.document += 1
+        }
+        if change.domains.contains(.cursor) {
+            counters.cursor += 1
+        }
         let snapshot = session.camera.snapshot
         counters.coherentDocumentCallback = near(
             snapshot.maxHScroll,
@@ -46,6 +53,98 @@ func runEditorGridCameraChecks(_ report: CheckReport, session: DocumentSession) 
     checkWheel(report, session: session, grid: grid, counters: counters)
     checkProjection(report, session: session, grid: grid)
     checkIsolation(report, session: session, grid: grid, counters: counters)
+    checkOrderedSelection(report, session: session, grid: grid)
+}
+
+@MainActor
+private func checkOrderedSelection(
+    _ report: CheckReport, session: DocumentSession, grid setupGrid: PianoGrid
+) {
+    let id = "swiftcore/EditorGridCamera::orderedSelection"
+    setupGrid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
+    setupGrid.resetCameraScroll()
+    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    guard let pitch = session.camera.projection.pitch(
+        atY: 160, keyHeight: session.camera.snapshot.keyHeight,
+        scrollY: session.camera.snapshot.scrollY, dpr: setupGrid.devicePixelRatio),
+        let added = try? session.document.addNotes([
+            NewNote(track: setupGrid.trackIndex, tick: 24, pitch: UInt8(pitch),
+                    duration: 24, velocity: 40),
+            NewNote(track: setupGrid.trackIndex, tick: 96, pitch: UInt8(pitch),
+                    duration: 24, velocity: 90),
+            NewNote(track: setupGrid.trackIndex, tick: 168, pitch: UInt8(pitch),
+                    duration: 24, velocity: 65)
+        ]), added.count == 3 else {
+        report.fail(id, "ordered-selection fixture could not create visible notes")
+        return
+    }
+    defer { session.document.deleteNotes(added) }
+    let grid = PianoGrid(session: session)
+    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
+    let a = added[0], b = added[1], c = added[2]
+    guard let aRect = firstRect(named: "gridNote_\(a.rawValue)", in: grid.scene.pianoNoteFills),
+          let bRect = firstRect(named: "gridNote_\(b.rawValue)", in: grid.scene.pianoNoteFills)
+    else {
+        report.fail(id, "ordered-selection fixture notes are not projected")
+        return
+    }
+    let revision = session.document.revision
+    let history = session.document.history.currentIdentity
+    let dirty = session.document.isDirty
+    let priorChange = session.onChange
+    var publications: [SessionChangeDomains] = []
+    session.onChange = { publications.append($0.domains) }
+    defer { session.onChange = priorChange }
+    func click(_ rect: SceneRect, modifiers: Int) {
+        let x = rect.x + rect.width / 2, y = rect.y + rect.height / 2
+        grid.beginPointer(x: x, y: y, modifiers: modifiers)
+        grid.endPointer(x: x, y: y)
+    }
+    session.clearSelectedNotes()
+    click(bRect, modifiers: 0)
+    click(aRect, modifiers: 0x0400_0000)
+    report.expect(session.selectedNoteOrder == [b, a]
+        && session.document.note(session.selectedNoteOrder[0])?.velocity == 90,
+        cppID: id, message: "Ctrl-add of earlier A(v40) retains later B(v90) as first selection")
+    click(bRect, modifiers: 0x0400_0000)
+    click(bRect, modifiers: 0x0400_0000)
+    report.expectEqual([a, b], session.selectedNoteOrder, cppID: id,
+                       what: "deselecting and re-adding appends the note")
+    session.setSelectedNotes([b, a, b])
+    report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
+                       what: "replacement preserves first occurrence and removes duplicates")
+    grid.beginRightPointer(x: 0, y: 0)
+    grid.updateRightPointer(x: 640, y: 320)
+    report.expect(Array(session.selectedNoteOrder.prefix(2)) == [b, a]
+        && session.selectedNotes.contains(c),
+        cppID: id, message: "band keeps press order before newly covered notes")
+    grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
+    report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
+                       what: "band cancellation restores selection order")
+    publications.removeAll()
+    session.setSelectedNotes([a, b])
+    report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
+                       what: "order-only replacement publishes the selection domain")
+    publications.removeAll()
+    session.withStateChanges {
+        session.setSelectedNotes([b, a])
+        session.addSelectedNote(c)
+    }
+    report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
+                       what: "order-only replacement and additive selection coalesce")
+    publications.removeAll()
+    session.setSelectedNotes([b, a, c, b])
+    session.addSelectedNote(b)
+    report.expect(publications.isEmpty, cppID: id,
+                  message: "unchanged normalized selection publishes nothing")
+    report.expect(session.document.revision == revision
+        && session.document.history.currentIdentity == history
+        && session.document.isDirty == dirty,
+        cppID: id, message: "selection gestures never mutate document or history")
+    session.setSelectedNotes([c, b, a])
+    session.document.deleteNotes([b])
+    report.expect(session.selectedNoteOrder == [c, a] && session.selectedNotes == Set([c, a]),
+                  cppID: id, message: "deletion prunes membership and preserves survivor order")
 }
 
 @MainActor
@@ -450,7 +549,7 @@ private func checkProjection(
             && created.map { Int($0.tick) == drawTick && Int($0.pitch) == drawPitch } == true,
         cppID: projectionID, message: "draw drag on an empty row adds one snapped note")
 
-    session.selectedNotes.removeAll()
+    session.clearSelectedNotes()
     let visibleIDs = Set((0..<grid.scene.pianoNoteFills.count).compactMap { index -> NoteID? in
         let name = grid.scene.pianoNoteFills[index].primitiveName
         return session.document.notes(in: grid.trackIndex)
@@ -501,6 +600,7 @@ private func checkIsolation(
     counters.camera = 0
     counters.playback = 0
     counters.document = 0
+    counters.cursor = 0
 
     _ = session.mutateCamera { _ = $0.setTimeZoom(140) }
     grid.handleWheel(
@@ -588,7 +688,7 @@ private func checkIsolation(
         session.camera.snapshot == published && grid.editCursorTick == Int(cursor),
         cppID: isolationID, message: "direct edit-cursor change neither moves camera nor republishes presenter cursor")
     report.expect(
-        counters.document == 0 && counters.playback == 0
+        counters.document == 0 && counters.playback == 0 && counters.cursor == 1
             && session.document.revision == revision && session.document.isDirty == dirty
             && session.document.history.canUndo == canUndo
             && session.document.history.canRedo == canRedo,

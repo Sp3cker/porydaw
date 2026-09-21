@@ -1,6 +1,8 @@
 import Foundation
 import PorydawCore
 import PorydawPlayback
+import PorydawPlaybackNative
+import PorydawAudioDeviceNative
 import PorydawProjectService
 
 public enum NativeAudioError: Error, Equatable {
@@ -9,91 +11,157 @@ public enum NativeAudioError: Error, Equatable {
     case publishFailed
 }
 
-/// Main-thread owner of the retained native audio service. Publications cross
-/// the boundary as one owned reference; the engine adopts them into its
-/// callback-safe handoff. The current bank lease remains strongly held until
-/// unload, because AudioEngine borrows the bank from that lease.
+/// Control-thread owner of the device, Swift renderer, and borrowed native bank.
+/// Cold mutations park callbacks before replacing storage.
 @MainActor
 public final class NativeAudio {
-    nonisolated(unsafe) private let handle: OpaquePointer
+    nonisolated(unsafe) private let device: AudioDevice
     private var bankLease: NativeBankLease?
 
     public init() throws {
-        guard let handle = pd_audio_service_create() else {
-            throw NativeAudioError.initializationFailed("Cannot allocate audio service.")
+        do {
+            device = try AudioDevice()
+        } catch AudioRenderEngine.InitializationError.engine {
+            throw NativeAudioError.initializationFailed(
+                "Failed to allocate the M4A audio engines. Free memory and try again.")
+        } catch {
+            throw NativeAudioError.initializationFailed(error.localizedDescription)
         }
-        var diagnostic = [CChar](repeating: 0, count: 512)
-        let initialized = diagnostic.withUnsafeMutableBufferPointer {
-            pd_audio_service_init(handle, $0.baseAddress, $0.count)
-        }
-        guard initialized else {
-            pd_audio_service_destroy(handle)
-            let message = diagnostic.withUnsafeBufferPointer {
-                String(cString: $0.baseAddress!)
-            }
-            throw NativeAudioError.initializationFailed(message)
-        }
-        self.handle = handle
     }
 
     deinit {
-        pd_audio_service_destroy(handle)
+        // Joining callbacks and destroying both engines must precede lease release.
+        withExtendedLifetime(bankLease) { device.shutdown() }
     }
 
-    public var sampleRate: Double {
-        pd_audio_service_sample_rate(handle)
-    }
-
-    public var transport: Int32 {
-        pd_audio_service_transport(handle)
-    }
-
-    public var playheadSamples: UInt64 {
-        pd_audio_service_playhead(handle)
-    }
-
-    public var activePcmChannels: Int32 {
-        pd_audio_service_active_pcm(handle)
-    }
-
-    public var activeCgbChannels: Int32 {
-        pd_audio_service_active_cgb(handle)
-    }
+    public var sampleRate: Double { device.sampleRate }
+    public var backendName: String { device.backendName }
+    public var usingNullBackend: Bool { device.usingNullBackend }
+    public var nullBackendForced: Bool { device.nullBackendForced }
+    public var periodSizeFrames: Int { device.periodSizeFrames }
+    public var periodCount: Int { device.periodCount }
+    public var transport: Int32 { device.renderer.transport.rawValue }
+    public var songLoaded: Bool { device.renderer.songLoaded }
+    public var timeline: PlaybackTimeline? { device.renderer.timeline }
+    public var playheadSamples: UInt64 { device.renderer.playheadSamples }
+    public var activePcmChannels: Int32 { Int32(device.renderer.activePcmChannels) }
+    public var activeCgbChannels: Int32 { Int32(device.renderer.activeCgbChannels) }
+    public var outputVolume: Int { device.renderer.outputVolume }
+    public var loopEnabled: Bool { device.renderer.loopEnabled }
+    public var resonanceSuppression: Bool { device.renderer.resonanceSuppression }
+    public var polyDebugInvert: Bool { device.renderer.polyDebugInvert }
+    public var pcmMixerMode: M4APcmMixerMode { device.renderer.pcmMixerMode }
+    public var maxPcmChannels: Int { device.renderer.maxPcmChannels }
+    public var pcmMixRate: Float { device.renderer.pcmMixRate }
+    public var analogFilter: Bool { device.renderer.analogFilter }
+    public var polyLostTotal: UInt64 { device.renderer.polyLostTotal }
 
     public func bind(timeline: PlaybackTimeline, bank: NativeBankLease,
                      config: SongConfig) throws {
-        let publication = PlaybackPublication.create(from: timeline)
-        let settings = PdAudioSettings(
-            pcmMixer: -1,
-            songVolume: UInt8(clamping: config.masterVolume),
-            reverb: UInt8(clamping: config.reverb ?? 50),
-            maxPcmChannels: 5,
-            pcmMixRate: 13_379,
-            analogFilter: false)
-        guard pd_audio_service_bind(handle, publication, bank.handle, settings) else {
-            throw NativeAudioError.bindFailed
+        try bind(timeline: timeline, bank: bank, settings: Self.settings(for: config))
+    }
+
+    public func bind(timeline: PlaybackTimeline, bank: NativeBankLease,
+                     settings: AudioSettings) throws {
+        let voices = try Self.borrowVoices(bank)
+        device.withRenderingStopped {
+            device.renderer.bind(timeline: timeline, voicegroup: voices, settings: settings)
+            bankLease = bank
         }
-        bankLease = bank
     }
 
     public func publish(_ timeline: PlaybackTimeline) throws {
-        let publication = PlaybackPublication.create(from: timeline)
-        guard pd_audio_service_publish(handle, publication) else {
-            throw NativeAudioError.publishFailed
-        }
+        guard device.renderer.songLoaded else { throw NativeAudioError.publishFailed }
+        device.renderer.publish(timeline)
     }
 
     public func unload() {
-        pd_audio_service_unload(handle)
-        bankLease = nil
+        device.withRenderingStopped {
+            device.renderer.unload()
+            bankLease = nil
+        }
     }
 
-    public func play() { pd_audio_service_play(handle) }
-    public func pause() { pd_audio_service_pause(handle) }
-    public func stop() { pd_audio_service_stop(handle) }
-    public func seek(sample: UInt64) { pd_audio_service_seek(handle, sample) }
+    public func updateSettings(_ settings: AudioSettings) {
+        device.withRenderingStopped { device.renderer.updateSettings(settings) }
+    }
+
+    public func updateSettings(config: SongConfig) {
+        updateSettings(Self.settings(for: config))
+    }
+
+    public func updateVoicegroup(_ bank: NativeBankLease) throws {
+        let voices = try Self.borrowVoices(bank)
+        device.withRenderingStopped {
+            device.renderer.updateVoicegroup(voices)
+            bankLease = bank
+        }
+    }
+
+    public func play() { device.renderer.play() }
+    public func pause() { device.renderer.pause() }
+    public func stop() { device.renderer.stop() }
+    public func seek(sample: UInt64) { device.renderer.seek(sample) }
+    public func setLoopEnabled(_ enabled: Bool) { device.renderer.setLoopEnabled(enabled) }
+    public func setMuteMask(_ mask: UInt32) { device.renderer.setMuteMask(mask) }
+    public func setSoloMask(_ mask: UInt32) { device.renderer.setSoloMask(mask) }
+    public func setOutputVolume(_ percent: Int) { device.renderer.setOutputVolume(percent) }
+    public func setResonanceSuppression(_ enabled: Bool) {
+        device.renderer.setResonanceSuppression(enabled)
+    }
+    public func setPolyDebugInvert(_ enabled: Bool) { device.renderer.setPolyDebugInvert(enabled) }
+    public func resetPolyStats() { device.renderer.resetPolyStats() }
+    public func polySnapshot() -> AudioPolySnapshot { device.renderer.polySnapshot() }
+    public func consumeTrackActivityLevels() -> [AudioActivityLevel] {
+        device.renderer.consumeTrackActivityLevels()
+    }
 
     public func previewNote(track: UInt8, key: UInt8, velocity: UInt8) {
-        pd_audio_service_preview_note(handle, track, key, velocity)
+        device.renderer.audition.previewNote(track: track, key: key, velocity: velocity)
+    }
+
+    public func previewNoteTimed(track: UInt8, key: UInt8, velocity: UInt8,
+                                 durationSamples: UInt32) {
+        device.renderer.audition.previewNoteTimed(track: track, key: key, velocity: velocity,
+                                                  durationSamples: durationSamples)
+    }
+
+    public func previewVoice(program: UInt8, key: UInt8, velocity: UInt8) {
+        device.renderer.audition.previewVoice(program: program, key: key, velocity: velocity)
+    }
+
+    public func auditionSample(samples: [Int8], frequency: UInt32, loopStart: UInt32,
+                               looped: Bool, key: UInt8, adsr: AudioADSR,
+                               toneKey: UInt8 = 60) -> Bool {
+        device.renderer.audition.publishSample(samples: samples, frequency: frequency,
+                                               loopStart: loopStart, looped: looped, key: key,
+                                               adsr: adsr, toneKey: toneKey)
+    }
+
+    public func auditionWave(wave16: [UInt8], key: UInt8, adsr: AudioADSR) -> Bool {
+        device.renderer.audition.publishWave(wave16: wave16, key: key, adsr: adsr)
+    }
+
+    public func auditionSampleOff() { device.renderer.audition.sampleOff() }
+
+    private static func settings(for config: SongConfig) -> AudioSettings {
+        var settings = AudioSettings()
+        settings.songVolume = UInt8(clamping: config.masterVolume)
+        settings.reverb = UInt8(clamping: config.reverb ?? 50)
+        return settings
+    }
+
+    /// Borrow the lease's pinned external allocation through its typed native API.
+    /// Derive the stored-field address from the compiler, not a copied Swift tuple
+    /// or an assumed C layout. The engine only reads this mutable library borrow.
+    private static func borrowVoices(_ bank: NativeBankLease) throws -> UnsafeMutablePointer<ToneData>? {
+        let nativeLease = pd_bank_lease_native(bank.handle)
+        defer { withExtendedLifetime(nativeLease) {} }
+        guard let storage = nativeLease.pointee.__getUnsafe() else { return nil }
+        guard let offset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices) else {
+            throw NativeAudioError.bindFailed
+        }
+        return UnsafeMutableRawPointer(mutating: storage).advanced(by: offset)
+            .assumingMemoryBound(to: ToneData.self)
     }
 }

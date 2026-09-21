@@ -22,7 +22,7 @@ final class NoteCommands {
              .transposeUpOctave, .transposeDownOctave, .nudgeLeft, .nudgeRight,
              .split, .join, .lengthenNote, .shortenNote, .setVelocity:
             return !selectedNotes().isEmpty
-        case .paste, .selectAll, .muteTracks, .soloTracks,
+        case .selectAll, .muteTracks, .soloTracks,
              .pencilMode, .gridNarrow, .gridWiden, .gridTriplet:
             return selectedTrack != nil
         default:
@@ -39,49 +39,49 @@ final class NoteCommands {
         if command == .setVelocity {
             return requestSetVelocity?() ?? false
         }
-        let before = session.document.revision
-        switch command {
-        case .copy:
-            _ = copySelection(snapTicks: snapTicks)
-        case .cut:
-            if copySelection(snapTicks: snapTicks) { deleteSelection() }
-        case .duplicate:
-            duplicateSelection(snapTicks: snapTicks)
-        case .paste:
-            paste(at: editCursor)
-        case .selectAll:
-            selectAll()
-        case .delete:
-            deleteSelection()
-        case .transposeUp:
-            transpose(1)
-        case .transposeDown:
-            transpose(-1)
-        case .transposeUpOctave:
-            transpose(12)
-        case .transposeDownOctave:
-            transpose(-12)
-        case .nudgeLeft:
-            nudge(-1, snapTicks: snapTicks)
-        case .nudgeRight:
-            nudge(1, snapTicks: snapTicks)
-        case .muteTracks:
-            toggleMute()
-        case .soloTracks:
-            toggleSolo()
-        case .split:
-            split(editCursor: editCursor, nextSubdivision: nextSubdivision)
-        case .join:
-            join()
-        case .lengthenNote:
-            resizeTrailing(Int64(max(1, snapTicks)))
-        case .shortenNote:
-            resizeTrailing(-Int64(max(1, snapTicks)))
-        default:
-            return false
+        return session.withStateChanges {
+            let before = session.document.revision
+            switch command {
+            case .copy:
+                _ = copySelection(snapTicks: snapTicks)
+            case .cut:
+                if copySelection(snapTicks: snapTicks) { deleteSelection() }
+            case .duplicate:
+                duplicateSelection(snapTicks: snapTicks)
+            case .selectAll:
+                selectAll()
+            case .delete:
+                deleteSelection()
+            case .transposeUp:
+                transpose(1)
+            case .transposeDown:
+                transpose(-1)
+            case .transposeUpOctave:
+                transpose(12)
+            case .transposeDownOctave:
+                transpose(-12)
+            case .nudgeLeft:
+                nudge(-1, snapTicks: snapTicks)
+            case .nudgeRight:
+                nudge(1, snapTicks: snapTicks)
+            case .muteTracks:
+                toggleMute()
+            case .soloTracks:
+                toggleSolo()
+            case .split:
+                split(editCursor: editCursor, nextSubdivision: nextSubdivision)
+            case .join:
+                join()
+            case .lengthenNote:
+                resizeTrailing(Int64(max(1, snapTicks)))
+            case .shortenNote:
+                resizeTrailing(-Int64(max(1, snapTicks)))
+            default:
+                return false
+            }
+            return session.document.revision != before || command == .copy
+                || command == .selectAll || command == .muteTracks || command == .soloTracks
         }
-        return session.document.revision != before || command == .copy
-            || command == .selectAll || command == .muteTracks || command == .soloTracks
     }
 
     private var selectedTrack: Int? {
@@ -93,9 +93,8 @@ final class NoteCommands {
 
     private func selectedNotes() -> [Note] {
         guard let track = selectedTrack else { return [] }
-        return session.selectedNotes.compactMap { session.document.note($0) }
+        return session.selectedNoteOrder.compactMap { session.document.note($0) }
             .filter { $0.track == track }
-            .sorted { $0.id.rawValue < $1.id.rawValue }
     }
 
     private func copySelection(snapTicks: Tick) -> Bool {
@@ -110,7 +109,6 @@ final class NoteCommands {
         let ids = selectedNotes().map(\.id)
         guard !ids.isEmpty else { return }
         session.document.deleteNotes(ids)
-        session.selectedNotes.subtract(ids)
     }
 
     private func duplicateSelection(snapTicks: Tick) {
@@ -134,36 +132,13 @@ final class NoteCommands {
         }
         guard !additions.isEmpty, let inserted = try? session.document.addNotes(additions),
               !inserted.isEmpty else { return }
-        session.selectedNotes = Set(inserted)
+        session.setSelectedNotes(inserted)
     }
 
-    private func paste(at editCursor: Tick) {
-        guard let track = selectedTrack, let decoded = clipboard.read() else { return }
-        let clip = ClipboardCodec.rescale(decoded.clip, sourceTicksPerBeat: decoded.ticksPerBeat,
-                                          destinationTicksPerBeat:
-                                              UInt32(session.document.ticksPerBeat))
-        guard let anticipatedCursor = ClipboardSemantics.pasteCursor(for: clip, at: editCursor)
-        else { return }
-
-        // Publish the destination before the document callback refreshes the grid.
-        // Restore it if the atomic paste rejects or has no useful content.
-        let priorCursor = session.editCursor
-        session.editCursor = anticipatedCursor
-        guard let result = ClipboardSemantics.paste(
-            clip, at: editCursor, selectedTrack: track, into: session.document)
-        else {
-            session.editCursor = priorCursor
-            return
-        }
-        session.editCursor = result.nextCursor
-        if clip.span == 0 {
-            session.selectedNotes = Set(result.insertedNoteIDs)
-        }
-    }
 
     private func selectAll() {
         guard let track = selectedTrack else { return }
-        session.selectedNotes = Set(session.document.notes(in: track).map(\.id))
+        session.setSelectedNotes(session.document.notes(in: track).map(\.id))
     }
 
     private func transpose(_ semitones: Int) {
@@ -254,12 +229,10 @@ final class NoteCommands {
         let oldIDs = Set(session.document.notes(in: track).map(\.id))
         guard session.document.applyRangeEdit(RangeEdit(removeNotes: removals,
                                                         addNotes: additions)) else { return }
-        let removedIDs = Set(removals.map(\.id))
-        session.selectedNotes.subtract(removedIDs)
         for note in session.document.notes(in: track)
         where !oldIDs.contains(note.id)
             && selectedPositions.contains(FragmentPosition(tick: note.tick, pitch: note.pitch)) {
-            session.selectedNotes.insert(note.id)
+            session.addSelectedNote(note.id)
         }
     }
 
@@ -283,10 +256,9 @@ final class NoteCommands {
         let oldIDs = Set(session.document.notes(in: track).map(\.id))
         guard session.document.applyRangeEdit(RangeEdit(removeNotes: removals,
                                                         addNotes: additions)) else { return }
-        session.selectedNotes.subtract(removals.map(\.id))
-        session.selectedNotes.formUnion(session.document.notes(in: track).compactMap {
-            oldIDs.contains($0.id) ? nil : $0.id
-        })
+        for note in session.document.notes(in: track) where !oldIDs.contains(note.id) {
+            session.addSelectedNote(note.id)
+        }
     }
 }
 

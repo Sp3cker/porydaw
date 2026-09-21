@@ -87,10 +87,20 @@ public struct BankSlotView: Equatable, Sendable {
     public var kind: Int32
     /// The parsed voice when kind is editable.
     public var voice: BankVoice?
+    /// Native split facts copied once at publication; -1 is an invalid child.
+    public var subvoiceMacros: [Int32]?
 
-    public init(kind: Int32 = BankSlotKind.none, voice: BankVoice? = nil) {
+    public init(kind: Int32 = BankSlotKind.none, voice: BankVoice? = nil,
+                subvoiceMacros: [Int32]? = nil) {
         self.kind = kind
         self.voice = voice
+        self.subvoiceMacros = subvoiceMacros
+    }
+
+    public func subvoiceMacro(forKey key: Int) -> Int32? {
+        guard (0..<128).contains(key), let subvoiceMacros,
+              subvoiceMacros.indices.contains(key), subvoiceMacros[key] >= 0 else { return nil }
+        return subvoiceMacros[key]
     }
 }
 
@@ -501,18 +511,56 @@ private func copyVoice(_ voice: PdVoiceValue) -> BankVoice {
               release: voice.release)
 }
 
-private func copySlots(_ view: UnsafePointer<PdBankView>?) -> (slots: [BankSlotView],
+/// Resolve native split facts while the completion's owning lease is alive.
+/// The sole owned array is retained by the published slot, never native pointers.
+private func copySubvoiceMacros(_ tone: ToneData) -> [Int32]? {
+    let split = tone.type & UInt8(VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL)
+    guard split != 0 else { return nil }
+    guard let group = tone.subGroup?.assumingMemoryBound(to: ToneData.self),
+          tone.type & UInt8(VOICE_KEYSPLIT) == 0 || tone.keySplitTable != nil else {
+        return Array(repeating: -1, count: 128)
+    }
+    return (0..<128).map { key in
+        let index = tone.type & UInt8(VOICE_KEYSPLIT_ALL) != 0
+            ? key : Int(tone.keySplitTable![key])
+        let type = group[index].type
+        guard type & UInt8(VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL) == 0 else { return -1 }
+        switch type & UInt8(VOICE_TYPE_CGB_MASK) {
+        case UInt8(VOICE_SQUARE_1): return BankVoiceMacro.square1
+        case UInt8(VOICE_SQUARE_2): return BankVoiceMacro.square2
+        case UInt8(VOICE_PROGRAMMABLE_WAVE): return BankVoiceMacro.programmableWave
+        case UInt8(VOICE_NOISE): return BankVoiceMacro.noise
+        default:
+            return type == UInt8(VOICE_DIRECTSOUND) || type == UInt8(VOICE_DIRECTSOUND_NO_RESAMPLE)
+                || type == UInt8(VOICE_DIRECTSOUND_ALT) ? BankVoiceMacro.directSound : -1
+        }
+    }
+}
+
+private func copySlots(_ view: UnsafePointer<PdBankView>?, lease: OpaquePointer)
+    -> (slots: [BankSlotView],
                                                                loadName: String,
                                                                sourcePath: String,
                                                                sectionLabel: String,
                                                                dirty: Bool) {
     guard let view, let base = view.pointee.slotViews else { return ([], "", "", "", false) }
+    let nativeLease = pd_bank_lease_native(lease)
+    defer { withExtendedLifetime(nativeLease) {} }
+    let bank = nativeLease.pointee.__getUnsafe()
     var slots: [BankSlotView] = []
     slots.reserveCapacity(view.pointee.slotCount)
     for index in 0..<view.pointee.slotCount {
         let slot = base[index]
         slots.append(BankSlotView(kind: slot.kind,
-                                  voice: slot.hasVoice ? copyVoice(slot.voice) : nil))
+                                  voice: slot.hasVoice ? copyVoice(slot.voice) : nil,
+                                  subvoiceMacros: bank.flatMap { bank in
+                                      guard index < 128 else { return nil }
+                                      return withUnsafePointer(to: bank.pointee.voices) {
+                                          $0.withMemoryRebound(to: ToneData.self, capacity: 128) {
+                                              copySubvoiceMacros($0[index])
+                                          }
+                                      }
+                                  }))
     }
     return (slots, copyCString(view.pointee.loadName), copyCString(view.pointee.sourcePath),
             copyCString(view.pointee.sectionLabel), view.pointee.dirty)
@@ -564,7 +612,7 @@ private let songCompletion: PdSongCompletion = {
         return
     }
     let cfg = copyCfg(meta.pointee.cfg)
-    let bankCopy = copySlots(bank)
+    let bankCopy = copySlots(bank, lease: lease)
     let song = LoadedSong(
         label: copyCString(meta.pointee.label), midiPath: copyCString(meta.pointee.midiPath),
         constant: copyCString(meta.pointee.constant), player: copyCString(meta.pointee.player),
@@ -597,7 +645,7 @@ private let saveCompletion: PdSaveCompletion = {
     }
     var receipt = SaveReceipt(flagsWritten: flagsWritten, bank: nil)
     if let bank, let lease {
-        let bankCopy = copySlots(bank)
+        let bankCopy = copySlots(bank, lease: lease)
         receipt.bank = AppliedBankEdit(
             lease: NativeBankLease(handle: lease, sourcePath: bankCopy.sourcePath,
                                    sectionLabel: bankCopy.sectionLabel),
@@ -621,7 +669,7 @@ private let bankEditCompletion: PdBankEditCompletion = {
                     "Bank edit applied without a refreshed view."))
             return
         }
-        let bankCopy = copySlots(bank)
+        let bankCopy = copySlots(bank, lease: lease)
         holder.continuation.resume(returning: AppliedBankEdit(
             lease: NativeBankLease(handle: lease, sourcePath: bankCopy.sourcePath,
                                    sectionLabel: bankCopy.sectionLabel),

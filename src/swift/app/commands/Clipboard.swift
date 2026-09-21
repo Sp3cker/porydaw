@@ -473,8 +473,8 @@ public enum ClipboardSemantics {
     }
 
     @MainActor
-    private static func gather(_ range: TimeRange, scope: TimeScope,
-                               from document: SongDocument) -> RangeContents {
+    static func gather(_ range: TimeRange, scope: TimeScope,
+                       from document: SongDocument) -> RangeContents {
         let scopedTracks: [Int]
         if scope.wholeSong {
             scopedTracks = Array(0..<document.engineTracks.usedTrackCount)
@@ -557,7 +557,7 @@ public enum ClipboardSemantics {
     }
 }
 
-private struct RangeContents {
+struct RangeContents {
     var tracks: [(track: Int, notes: [Note])]
     var lanes: [(track: Int, lane: Lane, points: [LanePoint])]
     var tempo: [TempoPoint]

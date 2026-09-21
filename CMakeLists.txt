@@ -187,8 +187,6 @@ qt_add_library(porydaw_app STATIC
     src/audio/auditionslots.h
     src/audio/resonance_suppressor.cpp
     src/audio/resonance_suppressor.h
-    src/audio/swift_audio_service.cpp
-    src/audio/swift_audio_service.h
     src/audio/swift_playback.h
     src/audio/timeline_handoff.h
     src/audio/trackactivitylevel.h
@@ -241,9 +239,25 @@ qt_add_resources(porydaw_app "swift_roll_qml"
     FILES
         src/ui/songview/quick/swiftroll/PianoRollCanvas.qml
         src/ui/songview/quick/swiftroll/EditorSurface.qml
+        src/ui/songview/quick/swiftroll/TrackHeaderBand.qml
         src/ui/songview/quick/swiftroll/SharedPlayhead.qml
         src/ui/songview/quick/swiftroll/SwiftRollOverlay.qml
         src/ui/songview/quick/swiftroll/TimelineQuickItem.qml
+        src/ui/songview/quick/swiftroll/MouseHintStatus.qml
+)
+
+# Shared original controls retain relative imports from the drawer resources.
+qt_add_resources(porydaw_app "drawer_shared_qml"
+    PREFIX "/porydaw"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick"
+    FILES
+        src/ui/songview/quick/PromptCard.qml
+        src/ui/songview/quick/PromptButton.qml
+        src/ui/songview/quick/DragInput.qml
+        src/ui/songview/quick/HoverHint.qml
+        src/ui/songview/quick/HintProfiles.qml
+        src/ui/songview/quick/QuickMenuPanel.qml
+        src/ui/songview/quick/AutomationTabs.qml
 )
 
 # The drawer keeps the swiftroll prefix layout, so EditorSurface's relative
@@ -261,7 +275,6 @@ qt_add_resources(porydaw_app "drawer_qml"
         src/ui/songview/quick/drawer/AutomationPage.qml
         src/ui/songview/quick/drawer/AutomationPrompt.qml
         src/ui/songview/quick/drawer/AutomationMenu.qml
-        src/ui/songview/quick/drawer/TapTempo.qml
 )
 
 qt_add_resources(porydaw_app "drawer_icons"
@@ -269,8 +282,16 @@ qt_add_resources(porydaw_app "drawer_icons"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
     FILES
         resources/velocity.svg
+        resources/velocity_labels.svg
         resources/automation.svg
         resources/flat-music.svg
+)
+
+qt_add_resources(porydaw_app "drawer_cursors"
+    PREFIX "/cursors"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+    FILES
+        resources/pencil.png
 )
 
 target_include_directories(porydaw_app PUBLIC

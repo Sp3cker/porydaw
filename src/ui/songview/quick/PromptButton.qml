@@ -70,6 +70,9 @@ Rectangle {
     TapHandler {
         id: tap
 
+        onPressedChanged: console.log("PROMPT_BUTTON pressed", button.objectName, pressed)
+        onGrabChanged: (transition, point) =>
+            console.log("PROMPT_BUTTON grab", button.objectName, transition, point.position)
         onTapped: button.activate()
     }
 }

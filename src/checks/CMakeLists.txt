@@ -100,6 +100,9 @@ if(APPLE)
         swiftcore/CoreCheckSupport.swift
         swiftcore/MidiChecks.swift
         swiftcore/PlaybackChecks.swift
+        swiftcore/AudioControllerChecks.swift
+        swiftcore/AudioAuditionChecks.swift
+        swiftcore/ResonanceSuppressionChecks.swift
         swiftcore/NoteChecks.swift
         swiftcore/EventChecks.swift
         swiftcore/TimeChecks.swift
@@ -110,6 +113,8 @@ if(APPLE)
         swiftcore/VelocityPageChecks.swift
         swiftcore/VoiceChangesPageChecks.swift
         swiftcore/AutomationPageChecks.swift
+        swiftcore/TrackHeadersChecks.swift
+        swiftcore/TrackHeadersInputChecks.swift
         swiftcore/SessionChecks.swift
     )
     set_target_properties(swift_core_check PROPERTIES

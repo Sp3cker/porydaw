@@ -406,6 +406,16 @@ private func checkDrawerStackingAndToggles(_ report: CheckReport) {
     expectDrawerToggle(report, cppID: stackingID,
                        message: "velocity occupies the third production toggle slot",
                        velocity, x: 1 + 2 * (buttonSize + 3), y: snapshot.barY + 3, size: buttonSize)
+    report.expect(snapshot.detentX == 0 && snapshot.detentY == 48 &&
+                  snapshot.detentSize == 16 && snapshot.detentIconInset == 1.5,
+                  cppID: stackingID,
+                  message: "detents occupy the velocity body's lower-left corner, not the bar")
+    let narrow = stored.harness.apply {
+        $0.configureHost(hostWidth: 9, hostHeight: drawerHostHeight, gutterWidth: drawerGutterWidth)
+    }.snapshot
+    report.expect(narrow.detentSize == 9 && narrow.detentY == 55,
+                  cppID: stackingID,
+                  message: "detent hit geometry is bounded by the visible velocity gutter")
 
     let slots = makeStoredDrawerHarness()
     let detached = slots.harness.apply { $0.detachPage(slots.pages[.voiceChanges]!) }

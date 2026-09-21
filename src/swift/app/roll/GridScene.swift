@@ -283,8 +283,8 @@ public final class GridScene {
             }
             rows.append(
                 SceneRect(
-                    x: 0, y: bottom - m.pixel / 2, width: gridW,
-                    height: m.pixel,
+                    x: 0, y: bottom - m.gridLineStroke / 2, width: gridW,
+                    height: m.gridLineStroke,
                     fillColor: key % 12 == 0 ? p.keyboardSeparator : p.rowLine))
         }
         sync(pianoGridRows, rows)

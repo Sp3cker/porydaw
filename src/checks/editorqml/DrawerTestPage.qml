@@ -20,8 +20,10 @@ FocusScope {
     required property QtObject applicationSession
 
     // The page's plot origin comes from the session's grid, which is the same
-    // gutter the container publishes as plotOrigin and the roll draws at.
-    readonly property real plotOrigin: page.applicationSession.gridPresenter().keyboardWidth
+    // gutter the container publishes as plotOrigin and the roll draws at: the
+    // track headers plus the keyboard column.
+    readonly property real plotOrigin: page.applicationSession.gridPresenter().trackHeaderWidth
+                                       + page.applicationSession.gridPresenter().keyboardWidth
 
     // Observable lifecycle: the container loads this item through the production
     // seam, so the lane can see that a scene teardown destroys the hosted content

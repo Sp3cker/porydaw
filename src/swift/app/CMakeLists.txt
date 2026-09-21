@@ -4,27 +4,59 @@ set(SWIFT_GRID_NATIVE_DIR "${SWIFT_GRID_DIR}/native")
 add_library(PorydawApp STATIC
     ProjectService.swift
     DocumentSession.swift
-    EditorCamera.swift
-    EditorDrawer.swift
+    DocumentWorkspace.swift
     NativeAudio.swift
+    audio/AudioDevice.swift
+    audio/AudioRenderEngine.swift
+    audio/AudioTransport.swift
+    audio/AudioTimelineHandoff.swift
+    audio/AudioTelemetry.swift
+    audio/AudioAudition.swift
+    audio/AudioSampleAudition.swift
+    audio/ResonanceSuppression.swift
     ApplicationSession.swift
-    SharedPlayhead.swift
-    VelocityPage.swift
-    VoiceChangesPage.swift
-    AutomationProjection.swift
-    AutomationTransactions.swift
-    AutomationPage.swift
-    Clipboard.swift
-    "${SWIFT_GRID_DIR}/EditCommands.swift"
-    "${SWIFT_GRID_DIR}/EditKeyArbiter.swift"
-    "${SWIFT_GRID_DIR}/GridGeometry.swift"
-    "${SWIFT_GRID_DIR}/GridGesture.swift"
-    "${SWIFT_GRID_DIR}/GridPalette.swift"
-    "${SWIFT_GRID_DIR}/GridScene.swift"
-    "${SWIFT_GRID_DIR}/GridTypography.swift"
-    NoteCommands.swift
-    "${SWIFT_GRID_DIR}/PianoGrid.swift"
-    "${SWIFT_GRID_DIR}/TimeAxis.swift"
+    MouseHints.swift
+    QListModelSync.swift
+    roll/PianoGrid.swift
+    roll/GridGesture.swift
+    roll/GridScene.swift
+    roll/NoteCommands.swift
+    timeline/EditorCamera.swift
+    timeline/DocumentProjectionCache.swift
+    timeline/SharedPlayhead.swift
+    timeline/TimeAxis.swift
+    timeline/GridGeometry.swift
+    timeline/GridPalette.swift
+    timeline/GridTypography.swift
+    timeline/TimelineSnapPolicy.swift
+    commands/EditCommands.swift
+    commands/EditKeyArbiter.swift
+    commands/Clipboard.swift
+    drawer/EditorDrawer.swift
+    drawer/EditorDrawerLayout.swift
+    drawer/velocity/VelocityContext.swift
+    drawer/velocity/VelocityAxis.swift
+    drawer/velocity/VelocityTransactions.swift
+    drawer/velocity/VelocityPage.swift
+    drawer/voicechanges/VoiceLanePolicy.swift
+    drawer/voicechanges/VoiceChangesProjection.swift
+    drawer/voicechanges/VoiceChangesTransactions.swift
+    drawer/voicechanges/VoiceChangesPage.swift
+    drawer/automation/AutomationProjection.swift
+    drawer/automation/AutomationProjectionCache.swift
+    drawer/automation/AutomationTransactions.swift
+    drawer/automation/AutomationDrawingTransactions.swift
+    drawer/automation/AutomationNodeTransactions.swift
+    drawer/automation/AutomationEdits.swift
+    drawer/automation/AutomationSelectionCommands.swift
+    drawer/automation/AutomationScene.swift
+    drawer/automation/AutomationInteraction.swift
+    drawer/automation/AutomationModal.swift
+    drawer/automation/AutomationTapTempo.swift
+    drawer/automation/AutomationPage.swift
+    headers/TrackHeaders.swift
+    headers/TrackHeadersGeometry.swift
+    headers/TrackHeadersInput.swift
 )
 
 # Generated like the playback module map: the service header lives at the
@@ -32,6 +64,11 @@ add_library(PorydawApp STATIC
 configure_file(
     module.modulemap.in
     "${CMAKE_CURRENT_BINARY_DIR}/module.modulemap"
+    @ONLY
+)
+configure_file(
+    audio/module.modulemap.in
+    "${CMAKE_CURRENT_BINARY_DIR}/audio/module.modulemap"
     @ONLY
 )
 set_target_properties(PorydawApp PROPERTIES
@@ -45,7 +82,15 @@ target_include_directories(PorydawApp INTERFACE
 )
 
 target_compile_options(PorydawApp PUBLIC
+    "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/third_party>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin/m4a>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin/hw_audio>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I$<JOIN:$<TARGET_PROPERTY:Qt6::Core,INTERFACE_INCLUDE_DIRECTORIES>, -Xcc -I>>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/module.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/audio/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_NATIVE_DIR}/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_NATIVE_DIR}>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"

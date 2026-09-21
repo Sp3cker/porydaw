@@ -43,6 +43,16 @@ FocusScope {
     // Empty selects the application's default QSettings store; every lane case
     // points this at a private file under its own scratch directory.
     property url preferenceLocation: ""
+    property var hintService: null
+    readonly property bool hintScopeAllowed: {
+        for (let child of modalLayer.children) {
+            if (child.visible)
+                return false
+        }
+        return true
+    }
+    readonly property var velocityModel: applicationSession.songOpen
+                                        ? applicationSession.velocityPage() : null
 
     // DrawerSectionKind raw values. Only the container maps a kind to its
     // stored key names, page name and icon resource; every layout fact stays
@@ -408,6 +418,10 @@ FocusScope {
             onLoaded: {
                 if (body.item && body.item.hasOwnProperty("modalHost"))
                     body.item.modalHost = modalLayer
+                if (body.item && body.item.hasOwnProperty("hintService"))
+                    body.item.hintService = Qt.binding(() => drawerScope.hintService)
+                if (body.item && body.item.hasOwnProperty("hintScopeAllowed"))
+                    body.item.hintScopeAllowed = Qt.binding(() => drawerScope.hintScopeAllowed)
             }
 
             // The URL is resolved once per attach and never re-pointed, so a
@@ -450,6 +464,16 @@ FocusScope {
         color: drawerScope.drawerPalette.chromeBackground
         border.width: 1
         border.color: drawerScope.drawerPalette.outline
+
+        MouseArea {
+            objectName: "drawerBarInput"
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton
+            onPressed: (mouse) => {
+                bar.forceActiveFocus(Qt.MouseFocusReason)
+                mouse.accepted = true
+            }
+        }
     }
 
     DrawerSection {
@@ -474,6 +498,76 @@ FocusScope {
         kind: drawerScope.automationKind
         toggleName: qsTr("Automation drawer")
         handleName: qsTr("Resize automation drawer")
+    }
+
+    Item {
+        id: detent
+        objectName: "drawerDetent"
+        x: drawerScope.presenter.detentX
+        y: drawerScope.presenter.detentY
+        width: drawerScope.presenter.detentSize
+        height: drawerScope.presenter.detentSize
+        visible: drawerScope.presenter.velocitySection.visible
+                 && !!drawerScope.velocityModel
+                 && drawerScope.velocityModel.detentsAvailable
+        activeFocusOnTab: visible
+
+        function activate() {
+            if (visible && drawerScope.velocityModel)
+                drawerScope.velocityModel.toggleDetents()
+        }
+
+        Keys.onReturnPressed: (event) => {
+            detent.activate()
+            event.accepted = true
+        }
+        Keys.onEnterPressed: (event) => {
+            detent.activate()
+            event.accepted = true
+        }
+        Keys.onShortcutOverride: (event) => event.accepted =
+            event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+
+        Accessible.role: Accessible.CheckBox
+        Accessible.name: qsTr("Velocity detents")
+        Accessible.checkable: true
+        Accessible.checked: !!drawerScope.velocityModel && drawerScope.velocityModel.detentsEnabled
+        Accessible.focusable: true
+        Accessible.onPressAction: detent.activate()
+
+        Canvas {
+            id: detentIcon
+            anchors.fill: parent
+            anchors.margins: drawerScope.presenter.detentIconInset
+            readonly property color tint: drawerScope.velocityModel
+                                          && drawerScope.velocityModel.detentsEnabled
+                                          ? drawerScope.drawerPalette.selectionRing
+                                          : drawerScope.drawerPalette.keyboardLabel
+            onTintChanged: requestPaint()
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+            onImageLoaded: requestPaint()
+            Component.onCompleted: loadImage("qrc:/icons/velocity_labels.svg")
+            onPaint: {
+                if (width <= 0 || height <= 0
+                        || !isImageLoaded("qrc:/icons/velocity_labels.svg"))
+                    return
+                const ctx = getContext("2d")
+                ctx.clearRect(0, 0, width, height)
+                ctx.globalCompositeOperation = "source-over"
+                ctx.drawImage("qrc:/icons/velocity_labels.svg", 0, 0, width, height)
+                ctx.globalCompositeOperation = "source-in"
+                ctx.fillStyle = tint
+                ctx.fillRect(0, 0, width, height)
+            }
+        }
+
+        MouseArea {
+            objectName: "drawerDetentInput"
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton
+            onClicked: detent.activate()
+        }
     }
 
     // Generic modal containment, one layer for the whole container: a page's

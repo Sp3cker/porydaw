@@ -6,20 +6,19 @@
 // that sees the whole group's hover. A child or page-wide ancestor publisher
 // over mixed profiles is a protocol violation.
 //
-// The Quick popup scope is enforced here. While the session is open, a source
-// its overlay owns may keep claiming; every other source is suppressed and
-// cannot claim even an empty profile (a suppressed group also clears existing
-// ownership). Native popups and application inactivity are the service's own
-// gates, not this component's.
+// The drawer supplies popup-scope eligibility explicitly. The Swift service
+// owns application scope; this component owns the physical source lifetime.
 import QtQuick
 import QtQml
-import Porydaw.Ui
 HoverHandler {
     id: hint
-    // The item whose physical surface this group describes. Ownership claims
-    // and clears use this identity, so a source switch moves the claim and a
-    // destroyed source is released by the service's source observation.
+    // A token identifies this physical source without retaining its QObject
+    // in Swift. Visibility and destruction below release its ownership.
     required property Item source
+    property var hintService: null
+    property bool scopeAllowed: true
+    property var _service: null
+    property int _sourceToken: 0
     property int profile: HintProfiles.Empty
     // While the existing drag owner holds the group's grab (the caller binds
     // this to that owner's active flag), the originating profile stays
@@ -31,17 +30,21 @@ HoverHandler {
     // never keeps ownership after an outside release.
     property bool releaseInside: true
 
-    // A HoverHandler is a QObject without an Item-style default property, so
-    // each non-visual Connections is bound to a named property instead. The
-    // target must resolve at creation: an unset Connections target falls back
-    // to this handler, which owns neither signal; an explicitly assigned null
-    // stays deliberately unconnected while the context object is unavailable.
-    property QtObject links: Connections {
-        target: hint._session()
-
-        function onIsOpenChanged() {
-            hint.sync()
-        }
+    onHintServiceChanged: {
+        if (_service && _sourceToken)
+            _service.clear(_sourceToken)
+        _service = hintService
+        _sourceToken = _service ? _service.allocateSourceToken() : 0
+        _owned = false
+        _gestureProfile = HintProfiles.Empty
+        sync()
+    }
+    onScopeAllowedChanged: sync()
+    property QtObject sourceLifetime: Connections {
+        target: hint.source
+        function onVisibleChanged() { hint.sync() }
+        function onWindowChanged() { hint.sync() }
+        function onParentChanged() { hint.sync() }
     }
     property QtObject refresh: Connections {
         target: hint._hints()
@@ -56,10 +59,7 @@ HoverHandler {
     property int _gestureProfile: HintProfiles.Empty
 
     function _hints() {
-        return (typeof mouseHints !== "undefined") ? mouseHints : null
-    }
-    function _session() {
-        return (typeof quickPopupSession !== "undefined") ? quickPopupSession : null
+        return _service
     }
 
     // Pointer scope changes reclaim or clear. Launching a grab is not
@@ -81,14 +81,17 @@ HoverHandler {
     // event of its own. During a retained grab the originating profile
     // stays claimed until the grab ends.
     onProfileChanged: if (!gestureOwning) sync()
-    onSourceChanged: sync()
+    onSourceChanged: {
+        if (_service && _sourceToken)
+            _superseded(_service)
+        sync()
+    }
     Component.onCompleted: sync()
     // A source-check clear, not a claim: the service releases only
     // this source's ownership.
     Component.onDestruction: {
-        const hints = (typeof mouseHints !== "undefined") ? mouseHints : null
-        if (hints && source)
-            hints.clear(source)
+        if (_service && _sourceToken)
+            _service.clear(_sourceToken)
     }
 
     // Settles a completed group gesture from the drag owner's actual release
@@ -116,13 +119,16 @@ HoverHandler {
     // unchanged hover both still resync.
     function sync() {
         const hints = _hints()
-        if (!hints || !source)
+        if (!hints || !_sourceToken)
             return
+        if (!source) {
+            _superseded(hints)
+            return
+        }
         // Scope gate first: a suppressed group may not claim or keep even
         // an empty profile. This also overrides gesture retention — scope
         // loss ends a retained profile.
-        const session = _session()
-        if (session && session.isOpen && !session.owns(source)) {
+        if (!scopeAllowed) {
             _superseded(hints)
             return
         }
@@ -135,10 +141,10 @@ HoverHandler {
         if (gestureOwning) {
             if (_owned) {
                 // Retain the originating profile for the whole grab.
-                hints.claim(source, _gestureProfile)
+                hints.claim(_sourceToken, _gestureProfile)
             } else if (hovered && releaseInside) {
                 _gestureProfile = profile
-                hints.claim(source, profile)
+                hints.claim(_sourceToken, profile)
                 _owned = true
             }
             return
@@ -150,14 +156,14 @@ HoverHandler {
             _superseded(hints)
             return
         }
-        hints.claim(source, profile)
+        hints.claim(_sourceToken, profile)
         _owned = true
     }
 
     function _superseded(hints) {
         _owned = false
         _gestureProfile = HintProfiles.Empty
-        hints.clear(source)
+        hints.clear(_sourceToken)
     }
 
     function _sourceVisible() {

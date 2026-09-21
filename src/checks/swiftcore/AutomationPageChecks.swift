@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawProjectService
 
 // Direct coverage for the pure Swift Automation domain and its page owner. The
 // projection, parameter metadata, snapping and frozen transactions are driven
@@ -46,8 +47,8 @@ import PorydawCore
 //   history entry, cancels synchronously, and a shared-playhead-only update
 //   rebuilds no static content.
 //
-// The four native MIME clipboard gaps stay separate: the clipboard cases below
-// cover only the in-process semantic payload.
+// Selection clipboard cases exercise the native shared payload; lane-menu copy
+// remains an independent absolute tick/value stream, as in the original canvas.
 
 /// The QML modifier flags a check's `AutomationModifiers` stand for, so every
 /// case drives the production input route instead of a Swift-only shorthand.
@@ -168,7 +169,14 @@ private struct AutomationFixture {
             page.configureBody(width: 480, height: 120, gutter: 0, devicePixelRatio: 1,
                                baseFontPx: baseFontPx, dragDistance: 10)
         }
-        session.onChange = { [weak page] _ in page?.refreshFromDocument() }
+        session.onChange = { [weak page] change in
+            let content: SessionChangeDomains = [.document, .selection, .bank]
+            if !change.domains.intersection(content).isEmpty {
+                page?.refreshFromDocument()
+            } else if change.domains.contains(.cursor) {
+                page?.refreshEditCursor()
+            }
+        }
         session.onCameraChange = { [weak page] _ in page?.refreshCamera() }
     }
 
@@ -309,9 +317,34 @@ private enum AutomationCheckTimeout: Error {
 
 // MARK: - Suite entry
 
+/// Preserves only the canonical Porydaw selection MIME within the offscreen lane.
+private final class PorydawSelectionClipboardState {
+    private var bytes: Data?
+
+    init() {
+        _ = pd_clipboard_read(Unmanaged.passUnretained(self).toOpaque()) { context, bytes, count in
+            guard let context, let bytes else { return }
+            Unmanaged<PorydawSelectionClipboardState>.fromOpaque(context)
+                .takeUnretainedValue().bytes = Data(bytes: bytes, count: count)
+        }
+    }
+
+    func restore() {
+        guard let bytes else {
+            _ = pd_clipboard_write(nil, 0)
+            return
+        }
+        bytes.withUnsafeBytes {
+            _ = pd_clipboard_write($0.bindMemory(to: UInt8.self).baseAddress, $0.count)
+        }
+    }
+}
+
 @MainActor
 internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSession,
                                       service: ProjectService) {
+    let clipboardState = PorydawSelectionClipboardState()
+    defer { clipboardState.restore() }
     parameterCatalogAndMetadata(report)
     laneProjection(report, suite: session, service: service)
     pointIdentityAndStaleness(report, suite: session, service: service)
@@ -333,6 +366,7 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     xcmdParity(report, suite: session, service: service)
     tapTempoCadenceAndCommit(report, suite: session, service: service)
     qtModifierMapping(report, suite: session, service: service)
+    restoredInteractionContracts(report, suite: session, service: service)
 }
 
 // MARK: - Catalog and metadata
@@ -492,6 +526,17 @@ private func laneProjection(_ report: CheckReport, suite: DocumentSession,
                        what: "a tick on a point holds its own value")
     report.expectEqual(64, pan.heldValue(at: 20) ?? -1, cppID: projectionID,
                        what: "a tick before the first written point holds the projected node")
+
+    let occurrences = pan.sources.map { AutomationLanePoint(tick: $0.tick, value: $0.value) }
+    report.expectEqual(90, AutomationLaneReplacement.held(occurrences, at: 24, inclusive: true),
+                       cppID: projectionID,
+                       what: "inclusive held lookup chooses the last equal-tick occurrence")
+    report.expect(AutomationLaneReplacement.held(occurrences, at: 24, inclusive: false) == nil,
+                  cppID: projectionID,
+                  message: "exclusive held lookup excludes the entire equal-tick group")
+    report.expectEqual(90, AutomationLaneReplacement.held(occurrences, at: 120, inclusive: false),
+                       cppID: projectionID,
+                       what: "exclusive held lookup retains the previous group's last occupant")
 
     // A written tick-zero point takes the place of the projected engine node.
     let volume = fixture.projection(fixture.volumeLane)
@@ -1141,6 +1186,24 @@ private func rangeEditAndClipboard(_ report: CheckReport, suite: DocumentSession
     report.expect(!cut.document.history.canUndo, cppID: rangeID,
                   message: "one undo consumes the cut's single history entry")
 
+    // Lane copy is cross-parameter but must not overwrite the system range clip.
+    cut.activate(cut.panLane)
+    _ = cut.page.openParameterMenu(index: cut.page.catalogIndex(of: cut.panLane), x: 0, y: 0)
+    report.expect(cut.page.consumeMenuAction(actionId: AutomationMenuAction.copyLane.rawValue),
+                  cppID: rangeID, message: "lane menu copies its absolute points")
+    cut.activate(cut.volumeLane)
+    _ = cut.page.openParameterMenu(index: cut.page.catalogIndex(of: cut.volumeLane), x: 0, y: 0)
+    report.expect(cut.page.consumeMenuAction(actionId: AutomationMenuAction.pasteLane.rawValue),
+                  cppID: rangeID, message: "lane menu pastes into another parameter")
+    report.expectEqual(["24:30", "120:40"], cut.values(cut.volumeLane), cppID: rangeID,
+                       what: "lane paste preserves absolute ticks across parameters")
+    cut.page.detach()
+    let otherDocument = AutomationFixture(suite: suite, service: service, pan: [])
+    report.expectEqual(280, otherDocument.page.pasteTimeSelection(at: 200).map(Int.init) ?? -1,
+                       cppID: rangeID, what: "the native range clip survives lane copy and detach")
+    report.expectEqual(["204:30"], otherDocument.values(otherDocument.panLane), cppID: rangeID,
+                       what: "another document pastes the shared range clip, not the lane buffer")
+
     // A whole-lane replacement keeps the lane's own point rules.
     let replace = AutomationFixture(suite: suite, service: service, pan: [(24, 30)])
     replace.activate(replace.panLane)
@@ -1339,15 +1402,20 @@ private func contextAndPublicationDiagnostics(_ report: CheckReport, suite: Docu
     report.expectEqual(Tick(0), fixture.page.contextTick, cppID: contextID,
                        what: "a stopped page presents the edit cursor")
 
-    // A stopped context follows the edit cursor.
+    // A cursor-only publication updates the stopped context without rebuilding
+    // document-derived content or changing document/history state.
+    let cursorDocument = fixture.snapshot
     fixture.session.editCursor = 100
-    fixture.page.refreshFromDocument()
     report.expectEqual(Tick(100), fixture.page.contextTick, cppID: contextID,
-                       what: "a stopped context consumes the edit cursor")
+                       what: "a stopped context consumes the published edit cursor")
     report.expectEqual(64, fixture.page.contextValue ?? -1, cppID: contextID,
                        what: "the context readout is the lane's held value there")
     report.expect(fixture.page.contextChangeCount > contextChanges, cppID: contextID,
-                  message: "a context move is counted")
+                  message: "a cursor-only context move is counted")
+    report.expectEqual(builds, fixture.page.contentBuildCount, cppID: contextID,
+                       what: "a cursor-only publication rebuilds no static content")
+    report.expectEqual(cursorDocument, fixture.snapshot, cppID: contextID,
+                       what: "a cursor-only publication changes no document or history state")
 
     // A shared-playhead presentation retargets the context and rebuilds nothing.
     let buildsBeforePlayhead = fixture.page.contentBuildCount
@@ -1425,7 +1493,7 @@ private func contextAndPublicationDiagnostics(_ report: CheckReport, suite: Docu
     // Detach drops everything the page published.
     fixture.page.detach()
     report.expect(fixture.page.projection == nil && fixture.page.rows.isEmpty
-                      && fixture.page.selection == nil && !fixture.page.hasClipboard,
+                      && fixture.page.selection == nil,
                   cppID: contextID, message: "detaching drops every published value")
 }
 
@@ -1989,6 +2057,14 @@ private func pointRangeAndPencilReplacements(_ report: CheckReport, suite: Docum
     let committed = AutomationFixture(suite: suite, service: service, modulation: [(0, 20)])
     let committedBefore = committed.snapshot
     committed.activate(committed.modulationLane)
+    // Historical CCLanes defaults Modulation to Auto: this fixture's maximum
+    // 20 displays 0–32. Request the full range before targeting value 60.
+    _ = committed.page.openParameterMenu(
+        index: committed.page.catalogIndex(of: committed.modulationLane), x: 0, y: 0)
+    report.expect(committed.page.consumeMenuAction(actionId: AutomationMenuAction.range127.rawValue),
+                  cppID: pointRangeID, message: "the stroke fixture selects its intended value range")
+    report.expectEqual(committedBefore, committed.snapshot, cppID: pointRangeID,
+                       what: "preparing the display range leaves document and history unchanged")
     committed.page.isPencilMode = true
     let strokeY = committed.y(committed.modulationLane, 60)
     report.expect(committed.page.pointerPress(x: committed.x(24), y: strokeY, surface: 1, button: 1), cppID: pointRangeID,
@@ -2240,4 +2316,138 @@ private func qtModifierMapping(_ report: CheckReport, suite: DocumentSession,
                   message: "the pointer route took the drag carrying the Qt control bit")
     report.expectEqual(["24:64"], snapped.values(snapped.panLane), cppID: modifierMappingID,
                        what: "the Qt control bit a QML event carries lands the drag on the neutral")
+}
+
+@MainActor
+private func restoredInteractionContracts(_ report: CheckReport, suite: DocumentSession,
+                                          service: ProjectService) {
+    let id = "swiftcore/AutomationPage::restoredInteractionContracts"
+    let fixture = AutomationFixture(suite: suite, service: service,
+                                    volume: [(48, 70)], pan: [(24, 60)],
+                                    tempo: [(0, 500_000), (36, 400_000)])
+    fixture.activate(fixture.panLane)
+    fixture.page.selectRange(from: 20, to: 60,
+                             lanes: [fixture.panLane, fixture.volumeLane, .tempo])
+    let before = fixture.snapshot
+    fixture.drag(fixture.panLane, from: (24, 60), to: 70, modifiers: AutomationQtModifier.alt)
+    report.expectEqual(["24:70"], fixture.values(fixture.panLane), cppID: id,
+                       what: "selected drag moves the grabbed lane")
+    report.expectEqual(["48:80"], fixture.values(fixture.volumeLane), cppID: id,
+                       what: "selected drag resolves a disjoint CC snapshot")
+    report.expectEqual(["0:120", "36:160"], fixture.tempoValues, cppID: id,
+                       what: "selected drag resolves Tempo through its own stream")
+    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+                       what: "heterogeneous selected drag is one revision")
+    report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
+    report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
+                       what: "undo restores secondary CC lane")
+    report.expectEqual(["0:120", "36:150"], fixture.tempoValues, cppID: id,
+                       what: "undo restores secondary Tempo lane")
+    report.expect(!fixture.document.history.canUndo, cppID: id,
+                  message: "the drag records exactly one history entry")
+
+    let page = fixture.page
+    let x = fixture.x(24)
+    let y = fixture.y(fixture.panLane, 60)
+    _ = page.pointerPress(x: x, y: y, surface: 1, button: AutomationQtButton.left)
+    _ = page.pointerRelease(x: x, y: y, button: AutomationQtButton.left)
+    report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
+                       what: "stationary selection click deletes grabbed node only")
+    report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
+                       what: "stationary selection click preserves other lanes")
+    _ = page.pointerPress(x: 400, y: 90, surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerRelease(x: 400, y: 90, button: AutomationQtButton.right)
+    report.expect(page.selection == nil, cppID: id,
+                  message: "outside right press clears selection before opening a menu")
+    page.dismissMenu()
+    page.selectRange(from: 0, to: fixture.songEndTick, lanes: [fixture.panLane])
+    _ = page.pointerPress(x: 400, y: 90, surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerMove(x: 400, y: 60, buttons: AutomationQtButton.right)
+    _ = page.pointerRelease(x: 400, y: 60, button: AutomationQtButton.right)
+    report.expect(page.selection == nil, cppID: id,
+                  message: "activated zero-width band clears selection")
+
+    fixture.activate(fixture.volumeLane)
+    let rangeBefore = fixture.snapshot
+    _ = page.openParameterMenu(index: page.catalogIndex(of: fixture.volumeLane), x: 0, y: 0)
+    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.range64.rawValue),
+                  cppID: id, message: "zoomable lane consumes range choice")
+    report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
+                       what: "range choice changes displayed maximum")
+    report.expectEqual(rangeBefore, fixture.snapshot, cppID: id,
+                       what: "range choice changes neither document nor history")
+    fixture.activate(fixture.panLane)
+    _ = page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0)
+    report.expect(!page.menuRowActions.contains(AutomationMenuAction.valueRange.rawValue),
+                  cppID: id, message: "centered lane has no value range submenu")
+    page.dismissMenu()
+    fixture.activate(fixture.volumeLane)
+    report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
+                       what: "range persists independently across parameter switches")
+    let synthetic = AutomationFixture(suite: suite, service: service)
+    synthetic.activate(synthetic.volumeLane)
+    if let point = synthetic.page.projection?.points.first {
+        _ = synthetic.page.pointerPress(x: point.x, y: point.y, surface: 1,
+                                        button: AutomationQtButton.right)
+        _ = synthetic.page.pointerRelease(x: point.x, y: point.y, button: AutomationQtButton.right)
+        report.expect(synthetic.page.publishedMenuRows.first {
+            $0.actionId == AutomationMenuAction.deleteNode.rawValue
+        }?.enabled == false, cppID: id, message: "synthetic engine default cannot be deleted")
+        _ = synthetic.page.consumeMenuAction(actionId: AutomationMenuAction.setValue.rawValue)
+        report.expect(synthetic.page.acceptPrompt(displayedValue: 80), cppID: id,
+                      message: "Set Value promotes the synthetic default")
+        report.expectEqual(["0:80"], synthetic.values(synthetic.volumeLane), cppID: id,
+                           what: "promoted value is a written tick-zero event")
+        _ = synthetic.page.openPrompt(tick: 0, value: 80)
+        synthetic.session.selectedTrack = nil
+        let stale = synthetic.snapshot
+        report.expect(!synthetic.page.acceptPrompt(displayedValue: 70), cppID: id,
+                      message: "a prompt cannot follow a primary-track change")
+        report.expectEqual(stale, synthetic.snapshot, cppID: id,
+                           what: "stale prompt leaves document and history untouched")
+    } else {
+        report.fail(id, "synthetic default projection missing")
+    }
+
+    let hover = AutomationFixture(suite: suite, service: service, volume: [(48, 70)])
+    hover.activate(hover.volumeLane)
+    hover.page.plotFocused = true
+    hover.page.isPencilMode = true
+    _ = hover.page.pointerMove(x: 400, y: 70, buttons: 0)
+    let hoverBefore = hover.snapshot
+    report.expect(hover.page.consumeHoverDelete(), cppID: id,
+                  message: "pencil blank hover consumes deletion without falling through")
+    report.expectEqual(hoverBefore, hover.snapshot, cppID: id,
+                       what: "blank hover deletion changes nothing")
+    hover.page.selectRange(from: 0, to: 100, lanes: [hover.volumeLane])
+    report.expect(!hover.page.consumeHoverDelete(), cppID: id,
+                  message: "time selection retains semantic delete priority")
+    hover.page.clearTimeSelection()
+    hover.page.isPencilMode = false
+    report.expect(!hover.page.consumeHoverDelete(), cppID: id,
+                  message: "arrow hover cannot claim pencil deletion")
+
+    let emptyRange = AutomationFixture(suite: suite, service: service, pan: [])
+    emptyRange.page.selectRange(from: 48, to: 96, lanes: [emptyRange.panLane])
+    let emptyBefore = emptyRange.snapshot
+    report.expect(emptyRange.page.consumeSelectionCommand(command: .nudgeRight), cppID: id,
+                  message: "an empty range owns its nudge command")
+    report.expect((emptyRange.page.selection?.range.startTick ?? 0) > 48
+                      && emptyRange.page.selection?.range.span == 48, cppID: id,
+                  message: "an empty range advances on the camera grid without changing its span")
+    report.expectEqual(emptyBefore, emptyRange.snapshot, cppID: id,
+                       what: "empty-band movement creates no document edit or history")
+
+    let duplicate = AutomationFixture(suite: suite, service: service, pan: [(24, 30)])
+    duplicate.page.selectRange(from: 0, to: 48, lanes: [duplicate.panLane])
+    report.expect(duplicate.page.consumeSelectionCommand(command: .duplicate), cppID: id,
+                  message: "range duplicate is consumed through the canonical command seam")
+    report.expectEqual(TimeRange(startTick: 48, endTick: 96), duplicate.page.selection?.range,
+                       cppID: id, what: "duplicate moves the band onto the inserted span")
+    report.expectEqual(Tick(96), duplicate.session.editCursor, cppID: id,
+                       what: "duplicate advances the edit cursor to the new span end")
+    report.expect(duplicate.undo() && !duplicate.document.history.canUndo, cppID: id,
+                  message: "duplicate remains one undo entry")
+    report.expectEqual(["24:30"], duplicate.values(duplicate.panLane), cppID: id,
+                       what: "undo restores the original range contents")
 }

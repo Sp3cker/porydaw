@@ -97,6 +97,9 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         runMusicalSemanticsSuite(report)
     case 3:
         runPlaybackSuite(report)
+        runAudioControllerChecks(report)
+        runAudioAuditionChecks(report)
+        runResonanceSuppressionChecks(report)
     case 4:
         // The envelope invokes this cdecl on the Qt main thread; the suite
         // runs synchronously there, so the unchecked box states the
