@@ -3971,6 +3971,127 @@ TestCase {
                 "the cancelled page reports no interaction")
     }
 
+    // The complete production drawer's playhead contract: with the real
+    // Velocity, Voice Changes and Automation pages all mounted and visible
+    // through the production chrome, 128 distinct authoritative stopped
+    // positions advance the one shared publication and each page's own
+    // presentation diagnostic by exactly 128, rebuild no page's static content,
+    // and leave every page rectangle and all four shared segments where they
+    // were — aligned on the one published projection.
+    function test_productionAllPagesPlayheadPerformance() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-all-pages-playhead")
+        var values = testCase.chromeState({ "velocityVisible": true, "velocityHeight": 110,
+                                            "voiceChangesVisible": true, "voiceChangesHeight": 130,
+                                            "automationVisible": true, "automationHeight": 150,
+                                            "activePage": "automation" })
+        testCase.mountProductionVelocity(location, values)
+        verify(bootstrap.attachProductionSection(testCase.voiceChangesKind),
+               "the production Voice Changes page attaches to its slot")
+        verify(bootstrap.attachProductionSection(testCase.automationKind),
+               "the production Automation page attaches to its slot")
+        testCase.resetChrome(location, values)
+        testCase.showSection(testCase.velocityKind)
+        testCase.showSection(testCase.voiceChangesKind)
+        testCase.showSection(testCase.automationKind)
+        // The case's own state, stated before it measures anything: three hosted
+        // production pages in three visible bodies, so every counter below is one
+        // shared presentation reaching all of them.
+        tryVerify(function() {
+            var pages = [testCase.velocityPageItem(), testCase.voicePageItem(),
+                         testCase.automationPageItem()]
+            for (var i = 0; i < pages.length; ++i) {
+                if (pages[i] === null || pages[i].width <= 0 || pages[i].height <= 0)
+                    return false
+            }
+            return testCase.section(testCase.velocityKind).visible
+                    && testCase.section(testCase.voiceChangesKind).visible
+                    && testCase.section(testCase.automationKind).visible
+        }, 2000, "all three production pages are hosted and visible through the chrome")
+
+        var grid = testCase.surface.gridModel
+        var playhead = testCase.playheadPresenter()
+        var origin = testCase.presenter().plotOrigin
+        verify(bootstrap.pausePlayheadPolling(),
+               "the lane holds the production polling task for a deterministic position")
+        grid.resetCameraScroll()
+        // Warm and settle the stopped presentation first: the pages' playing state
+        // and resolved context are whatever the previous case left, so this is the
+        // one observation of the case that may legitimately rebuild. The loop
+        // below measures inside the stopped context this leaves behind.
+        testCase.presentPlayhead(1000, 0)
+        tryVerify(function() { return playhead.timelineAttached && playhead.visible
+                                       && !playhead.playing }, 1000,
+                  "the stopped position is attached, visible and not playing")
+        testCase.awaitRenderedLayout()
+
+        var builds = [bootstrap.velocityContentBuilds(), bootstrap.voiceContentBuilds(),
+                      bootstrap.automationContentBuilds()]
+        var presented = [bootstrap.velocityPlayheadPresentations(),
+                         bootstrap.voicePlayheadPresentations(),
+                         bootstrap.automationPlayheadPresentations()]
+        var published = bootstrap.publishedPlayheadPresentations()
+        var kinds = [testCase.velocityKind, testCase.voiceChangesKind, testCase.automationKind]
+        var rects = []
+        for (var i = 0; i < kinds.length; ++i) {
+            var rect = testCase.renderedRect(testCase.body(kinds[i]))
+            rects.push(rect.x, rect.y, rect.width, rect.height)
+        }
+
+        // 128 distinct authoritative stopped positions: the sample spacing the
+        // lane's production Velocity case already proves into distinct shared
+        // ticks, presented through the one production owner. Each page dedupes its
+        // own presentation, so a repeated tick would show up as a short count
+        // instead of a passing run.
+        var updates = 128
+        for (var step = 1; step <= updates; ++step)
+            bootstrap.presentPlayheadObservation((1 + step) * 1000, 0)
+
+        tryVerify(function() {
+            return bootstrap.publishedPlayheadPresentations() === published + updates
+        }, 2000, "the one presenter published all " + updates + " shared positions ("
+                  + (bootstrap.publishedPlayheadPresentations() - published) + ")")
+        tryVerify(function() {
+            return bootstrap.velocityPlayheadPresentations() === presented[0] + updates
+                    && bootstrap.voicePlayheadPresentations() === presented[1] + updates
+                    && bootstrap.automationPlayheadPresentations() === presented[2] + updates
+        }, 2000, "each production page consumed exactly " + updates
+                  + " shared presentations (velocity "
+                  + (bootstrap.velocityPlayheadPresentations() - presented[0]) + ", voice "
+                  + (bootstrap.voicePlayheadPresentations() - presented[1]) + ", automation "
+                  + (bootstrap.automationPlayheadPresentations() - presented[2]) + ")")
+        compare(bootstrap.velocityContentBuilds(), builds[0],
+                "128 shared-playhead positions rebuilt no Velocity content")
+        compare(bootstrap.voiceContentBuilds(), builds[1],
+                "128 shared-playhead positions rebuilt no Voice Changes content")
+        compare(bootstrap.automationContentBuilds(), builds[2],
+                "128 shared-playhead positions rebuilt no Automation content")
+
+        // Position-only updates move no page rectangle, and every segment still
+        // reads the one published projection.
+        var after = []
+        for (var i = 0; i < kinds.length; ++i) {
+            var moved = testCase.renderedRect(testCase.body(kinds[i]))
+            after.push(moved.x, moved.y, moved.width, moved.height)
+        }
+        compare(after, rects, "every page rectangle survived the 128 shared positions")
+        tryVerify(function() { return playhead.visible }, 2000,
+                  "the last presented position is inside the shared viewport")
+        var names = ["sharedPlayheadRollClip", "sharedPlayheadVelocityClip",
+                     "sharedPlayheadVoiceChangesClip", "sharedPlayheadAutomationClip"]
+        for (var i = 0; i < names.length; ++i) {
+            testCase.awaitPlayheadVisibility(names[i], true)
+            // The drawn binding catches up on the next event-loop pass, the same
+            // lag every other drawn binding in this suite accounts for.
+            tryVerify(function() {
+                return Math.abs(testCase.playheadSurfaceX(names[i])
+                                - (origin + playhead.contentX)) < 0.01
+            }, 2000, "the " + names[i] + " line catches up with the shared published position")
+        }
+    }
+
     // The suite hands the document presentation back the way the host does at
     // close, around the one composition the lane mounted: polling stops, the
     // session cancels while the scene still exists, the scene is removed, and the
@@ -3993,6 +4114,16 @@ TestCase {
         verify(bootstrap.acknowledgeSceneRemoval(),
                "the session released its document presentation after the acknowledged"
                + " scene removal")
+        // Retirement is observable the same way the running lane is: the presenter
+        // outlives the document presentation, so the lane can present one more
+        // authoritative observation and watch it refused. A callback or a publish
+        // that survived the acknowledgment would move the settled count.
+        var settled = bootstrap.publishedPlayheadPresentations()
+        verify(settled > 0, "the lane published presentations before retirement")
+        compare(bootstrap.presentPlayheadObservation(192000, 2), false,
+                "an authoritative observation after the acknowledged removal is refused")
+        compare(bootstrap.publishedPlayheadPresentations(), settled,
+                "no shared presentation survives the acknowledged removal")
     }
 
     // The reference profiles: one child process per required DPR/font profile
