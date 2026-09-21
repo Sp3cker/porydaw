@@ -475,9 +475,9 @@ public final class VelocityPage: EditorDrawerPage {
             let hit = hitTest(x: x, y: y, includeStems: true)
             pressedNote = hit
             if hit == nil {
+                guard !contextUnsupported else { return true }
                 beginGesture(kind: .paint, x: x, y: y, detentUnlock: unlock, notes: [],
                              modifiers: modifiers)
-                guard !contextUnsupported else { return true }
                 paintBetween(fromX: x, fromY: y, toX: x, toY: y)
                 return true
             }

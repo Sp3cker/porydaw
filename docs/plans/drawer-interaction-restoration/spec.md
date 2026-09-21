@@ -50,3 +50,4 @@ Scouts' direct binary/ctest commands are discovery notes, not approved verificat
 ## Verified acceptance checkpoints
 
 - Automation restoration and selection commands: independent historical SPEC/QUALITY review passed. Regressions reproduced empty-clipboard Paste availability and lost command notifications after detach/reattach; both pass after the fixes. `deno task verify --filter swiftcore --filter swiftqtml --verbose` passed. The cohesive projection owner remains an accepted size exception; no line-count-only extraction.
+- Velocity restoration: independent historical SPEC/QUALITY review passed. The unsupported-context paint regression fails before the guard is moved ahead of gesture ownership and passes afterward. Typed subvoice lookup rejects indexes outside the external library's 128-entry voicegroup before indexing. The same combined Swift verification passed; unrelated drag, map, prompt and history contracts remain covered.

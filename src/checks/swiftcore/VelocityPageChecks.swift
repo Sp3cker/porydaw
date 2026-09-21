@@ -962,6 +962,25 @@ private func keysplitPerNoteMapping(_ report: CheckReport, session: DocumentSess
                       && document.note(notes[1].id)?.velocity == notes[1].velocity,
                   cppID: keysplitID, message: "one undo restores both captured values")
     page.detach()
+
+    let invalidSession = DocumentSession(document: document, service: service,
+                                         lease: session.bankLease, slots: [BankSlotView()],
+                                         dirty: false, loadName: session.bankLoadName,
+                                         sampleRate: 48_000)
+    invalidSession.selectedTrack = 0
+    page.attach(session: invalidSession, palette: GridPalette())
+    report.expect(page.contextUnsupported, cppID: keysplitID,
+                  message: "the invalid bank context advertises that velocity editing is unavailable")
+    let invalidBefore = DocumentSnapshot(document)
+    _ = page.pointerPress(x: 399, y: 0, surface: VelocityInputSurface.plot.rawValue,
+                          button: 1, modifiers: 0)
+    report.expect(!page.interactionActive, cppID: keysplitID,
+                  message: "an unsupported paint press never suspends follow or owns Escape")
+    _ = page.pointerMove(x: 0, y: 60, buttons: 1)
+    _ = page.pointerRelease(x: 0, y: 60, button: 1)
+    report.expect(DocumentSnapshot(document) == invalidBefore, cppID: keysplitID,
+                  message: "dragging an unsupported velocity context cannot change notes or history")
+    page.detach()
 }
 
 // Camera-only refresh must update both the rendered model and hit geometry;

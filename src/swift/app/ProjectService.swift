@@ -523,6 +523,7 @@ private func copySubvoiceMacros(_ tone: ToneData) -> [Int32]? {
     return (0..<128).map { key in
         let index = tone.type & UInt8(VOICE_KEYSPLIT_ALL) != 0
             ? key : Int(tone.keySplitTable![key])
+        guard index < Int(VOICEGROUP_SIZE) else { return -1 }
         let type = group[index].type
         guard type & UInt8(VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL) == 0 else { return -1 }
         switch type & UInt8(VOICE_TYPE_CGB_MASK) {
