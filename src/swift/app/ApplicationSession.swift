@@ -24,11 +24,16 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// presenter is created here and survives every project and song
     /// replacement.
     private let drawer: EditorDrawerPresenter
+    /// One shared playhead for the whole surface. It is created here, bound to
+    /// the current document's owners on install, and cancelled before any of
+    /// those owners is released.
+    private let playhead: SharedPlayheadPresenter
     private var detachContinuation: CheckedContinuation<Void, Never>?
     private var isDisposed = false
     private var activeReplacementTask: Task<Void, Never>?
     public required init() {
         drawer = EditorDrawerPresenter()
+        playhead = SharedPlayheadPresenter()
         do {
             audio = try NativeAudio()
         } catch {
@@ -53,6 +58,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// Drawer chrome exists for the whole session, so unlike `gridPresenter()`
     /// this needs no open song and never fails.
     public func drawerPresenter() -> EditorDrawerPresenter { drawer }
+
+    /// The one shared playhead. Like the drawer it exists for the whole session;
+    /// it publishes an empty, detached presentation until a document is bound.
+    public func playheadPresenter() -> SharedPlayheadPresenter { playhead }
 
     public func gridCommandAvailable(command: Int) -> Bool {
         grid?.commandAvailable(command: command) ?? false
@@ -98,7 +107,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public func hostClosing() {
         isDisposed = true
         activeReplacementTask?.cancel()
-        // The host removes the Quick scene next; cancel while it still exists.
+        // The host removes the Quick scene next; cancel while it still exists,
+        // and stop presenting before any document owner is released.
+        playhead.detach()
         drawer.inputCancelled(reason: GridCancelReason.hidden.rawValue)
     }
 
@@ -209,14 +220,22 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     public func playPause() {
         guard let audio else { return }
-        if audio.transport == 2 {
+        if audio.transport == SharedPlayheadPolicy.playingTransport {
             audio.pause()
         } else {
             audio.play()
         }
+        // The transport the audio service now reports is authoritative; present
+        // it without waiting for the next poll.
+        playhead.refreshImmediate()
     }
 
-    public func stop() { audio?.stop() }
+    public func stop() {
+        audio?.stop()
+        // Stop's rewind comes from the audio service; this presents whatever
+        // sample and transport the service reports now. No tick is synthesized.
+        playhead.refreshImmediate()
+    }
 
     private func replaceProject(path: String) async -> Bool {
         lastSaveError = ""
@@ -271,8 +290,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
             presenter.onCommandAvailabilityChanged = { [weak self] in
                 self?.gridCommandAvailabilityChanged()
             }
-            replacement.onCameraChange = { [weak presenter] _ in
+            replacement.onCameraChange = { [weak presenter, weak playhead] _ in
                 presenter?.refreshCamera()
+                // The camera publication reprojects the retained authoritative
+                // tick: the same position, a new projection.
+                playhead?.refreshProjection()
             }
             replacement.onPlayback = { [weak self] timeline in
                 do {
@@ -281,9 +303,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
                     self?.lastSaveError = String(describing: error)
                 }
             }
-            replacement.onChange = { [weak self, weak replacement, weak presenter] _ in
+            replacement.onChange = { [weak self, weak replacement, weak presenter, weak playhead] _ in
                 guard let self, let replacement else { return }
                 presenter?.refreshFromSession()
+                // A document change may have rebuilt the timeline; re-read the
+                // authoritative sample through it before the next poll.
+                playhead?.refreshImmediate()
                 self.documentDirty = replacement.document.isDirty || replacement.bankDirty
                 self.canUndo = replacement.document.history.canUndo
                 self.canRedo = replacement.document.history.canRedo
@@ -297,6 +322,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
             catalogService = nil
             documentSession = replacement
             grid = presenter
+            // Owners are installed: bind the one shared playhead and only then
+            // start its polling task, so polling can never target a half-built
+            // or superseded document.
+            playhead.attach(session: replacement, audio: audio, grid: presenter, drawer: drawer)
+            playhead.startPolling()
             documentDirty = replacement.document.isDirty || replacement.bankDirty
             canUndo = replacement.document.history.canUndo
             canRedo = replacement.document.history.canRedo
@@ -310,6 +340,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     private func retireCurrentDocument(unloadAudio: Bool = true) async {
+        // Cancel the shared playhead first, while the document owners it reads
+        // still exist: the polling task stops and the attached presentation
+        // clears synchronously, so no late iteration can target the document
+        // this method is about to release.
+        playhead.detach()
         // Cancel before the scene-removal request below: the drawer's resize
         // session and any page interaction end while their items still exist.
         drawer.inputCancelled(reason: GridCancelReason.hidden.rawValue)

@@ -102,6 +102,12 @@ public final class PianoGrid {
         return (x0, y0, x1 - x0, y1 - y0)
     }
 
+    /// True while a pointer gesture owns the roll. Swift-only: the shared
+    /// playhead suspends follow while a gesture is live, and no gesture state is
+    /// published or duplicated to QML.
+    @QtIgnored
+    public var interactionActive: Bool { gesture != nil }
+
     public init(session: DocumentSession) {
         self.session = session
         commands = NoteCommands(session: session)

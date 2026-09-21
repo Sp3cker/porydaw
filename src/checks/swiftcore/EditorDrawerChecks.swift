@@ -62,6 +62,9 @@ private final class DrawerStubPage: EditorDrawerPage {
 
     private(set) var cancelCount = 0
     private(set) var publishedHeightsAtCancel: [Int] = []
+    /// This stub owns no gesture of its own: layout and cancellation are what
+    /// these checks exercise, so it reports no interaction.
+    var interactionActive: Bool { false }
 
     private let harness: DrawerHarness
 

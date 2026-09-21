@@ -154,18 +154,20 @@ int fittedFrameThickness(const QRect &rect, int requestedPixels, int insetPixels
                       requestedPixels);
 }
 
+// Every segment of the shared playhead is a vertical line, and the tick-zero
+// note begins exactly at the homed projection, so a note's left column is not a
+// stable oracle: the frame probes sample the vertical edges, as the legacy
+// production raster oracle does. The exact colour and black assertions, insets
+// and thicknesses are unchanged.
 QString frameColorFailure(const QImage &image, const QRect &rect, int inset, int thickness,
                           const QColor &expected, const QString &label)
 {
     const int centerX = rect.center().x();
-    const int centerY = rect.center().y();
     for (int pixel = 0; pixel < thickness; ++pixel) {
         const int offset = inset + pixel;
-        const std::array<QPoint, 4> probes = {
+        const std::array<QPoint, 2> probes = {
             QPoint(centerX, rect.top() + offset),
             QPoint(centerX, rect.bottom() - offset),
-            QPoint(rect.left() + offset, centerY),
-            QPoint(rect.right() - offset, centerY),
         };
         for (const QPoint &point : probes) {
             const QColor actual = image.rect().contains(point) ? image.pixelColor(point) : QColor{};
@@ -186,14 +188,11 @@ QString blackFrameFailure(const QImage &image, const QRect &rect, int inset, int
                           const QString &label)
 {
     const int centerX = rect.center().x();
-    const int centerY = rect.center().y();
     for (int pixel = 0; pixel < thickness; ++pixel) {
         const int offset = inset + pixel;
-        const std::array<QPoint, 4> probes = {
+        const std::array<QPoint, 2> probes = {
             QPoint(centerX, rect.top() + offset),
             QPoint(centerX, rect.bottom() - offset),
-            QPoint(rect.left() + offset, centerY),
-            QPoint(rect.right() - offset, centerY),
         };
         for (const QPoint &point : probes) {
             const QColor actual = image.rect().contains(point) ? image.pixelColor(point) : QColor{};

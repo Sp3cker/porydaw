@@ -106,6 +106,7 @@ if(APPLE)
         swiftcore/EditorCameraChecks.swift
         swiftcore/EditorGridCameraChecks.swift
         swiftcore/EditorDrawerChecks.swift
+        swiftcore/SharedPlayheadChecks.swift
         swiftcore/SessionChecks.swift
     )
     set_target_properties(swift_core_check PROPERTIES

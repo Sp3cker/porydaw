@@ -13,6 +13,12 @@ final class DrawerTestPage: EditorDrawerPage {
     let contentUrl: String
     private(set) var bodyPolicy: EditorDrawerBodyPolicy
 
+    /// The lane's own interaction state, exactly as a production page reports
+    /// the gesture it owns; `cancelSectionInteraction` clears it, so the
+    /// playhead's follow suspension can be driven and released through the real
+    /// container seam.
+    private(set) var interactionActive = false
+
     /// Counted by `EditorQmlBootstrap`; every cancellation the container
     /// performs, including the one a detach performs, lands here once.
     private let onCancel: @MainActor () -> Void
@@ -40,7 +46,14 @@ final class DrawerTestPage: EditorDrawerPage {
         bodyPolicy.maximumBodyHeight = maximum
     }
 
+    /// The lane's interruption control: the page owns an interaction, exactly as
+    /// a production page does while its gesture is live.
+    func setInteractionActive(_ active: Bool) {
+        interactionActive = active
+    }
+
     func cancelSectionInteraction() {
+        interactionActive = false
         onCancel()
     }
 

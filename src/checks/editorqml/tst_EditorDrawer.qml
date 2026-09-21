@@ -156,6 +156,9 @@ TestCase {
         bootstrap.detachTestSection(velocityKind)
         bootstrap.detachTestSection(voiceChangesKind)
         bootstrap.detachTestSection(automationKind)
+        // A playhead case holds the production polling task for determinism;
+        // every case starts with it running again.
+        bootstrap.resumePlayheadPolling()
         testCase.spacePropagations = 0
         testCase.returnPropagations = 0
         testCase.leftPropagations = 0
@@ -200,6 +203,46 @@ TestCase {
     function pageItem(kind) { return testCase.body(kind).item }
     function rollInput() { return findChild(testCase.surface, "swiftRollInput") }
     function rollBand() { return findChild(testCase.surface, "swiftRollBand") }
+
+    // ---- the shared playhead ------------------------------------------------
+
+    // The one production presenter the session owns; the composition's playhead
+    // mounts on this same object.
+    function playheadPresenter() { return session.playheadPresenter() }
+    function playheadClip(name) { return findChild(testCase.surface, name) }
+    function playheadLine(name) {
+        var clip = testCase.playheadClip(name)
+        return clip ? findChild(clip, "sharedPlayheadLine") : null
+    }
+    // A line is plot-local, so its surface position is its clip's origin plus
+    // the one shared projection.
+    function playheadSurfaceX(name) {
+        var clip = testCase.playheadClip(name)
+        var line = testCase.playheadLine(name)
+        return clip && line ? clip.x + line.x : -1
+    }
+    // Production toggle activation until the kind's body is visible.
+    function showSection(kind) {
+        testCase.awaitRenderedLayout()
+        if (!testCase.section(kind).visible)
+            testCase.clickToggle(kind)
+        testCase.awaitRenderedLayout()
+    }
+    // One authoritative observation through the production presenter, with the
+    // drawn composition given a pass to catch up.
+    function presentPlayhead(sample, transport) {
+        var changed = bootstrap.presentPlayheadObservation(sample, transport)
+        wait(0)
+        return changed
+    }
+    // A drawn segment's visibility follows the published one on the next pass,
+    // the same lag every other drawn binding in this suite accounts for.
+    function awaitPlayheadVisibility(name, expected) {
+        tryVerify(function() {
+            var clip = testCase.playheadClip(name)
+            return clip !== null && clip.visible === expected
+        }, 2000, "the " + name + " segment visibility is " + expected)
+    }
 
     function keyName(kind) {
         switch (kind) {
@@ -367,6 +410,17 @@ TestCase {
     function renderedRect(item) {
         var origin = item.mapToItem(testCase.drawer(), 0, 0)
         return { x: origin.x, y: origin.y, width: item.width, height: item.height }
+    }
+
+    // A drawn item measured in the surface's own coordinates: the playhead's
+    // segments live across the roll band and the drawer, so the container is not
+    // the common ancestor they are compared in.
+    function verifySurfaceRect(item, x, y, width, height, what) {
+        var origin = item.mapToItem(testCase.surface, 0, 0)
+        fuzzyCompare(origin.x, x, 0.01, what + ": x")
+        fuzzyCompare(origin.y, y, 0.01, what + ": y")
+        fuzzyCompare(item.width, width, 0.01, what + ": width")
+        fuzzyCompare(item.height, height, 0.01, what + ": height")
     }
 
     // A drawn item follows the published geometry of its own kind only after the
@@ -1161,5 +1215,232 @@ TestCase {
         // Only the injected file was written.
         testCase.compareSnapshots(testCase.snapshotStore(""), defaultStore,
                                  "the application's default store is untouched")
+    }
+
+    // ---- the shared playhead ------------------------------------------------
+
+    // The production composition renders one playhead: a segment clipped to the
+    // roll plot column and one clipped to every visible drawer body, all reading
+    // the one position the session's presenter publishes. A stopped position
+    // stays rendered, gutters and chrome stay clear, and position-only updates
+    // rebuild nothing.
+    function test_sharedPlayheadRendersRollAndVisibleBodies() {
+        var location = bootstrap.preferencesUrl("playhead-bodies")
+        verify(testCase.attachPage(testCase.velocityKind), "the velocity page attaches")
+        verify(testCase.attachPage(testCase.voiceChangesKind), "the voice-changes page attaches")
+        verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
+        testCase.createSurface(location)
+        testCase.awaitRenderedLayout()
+        verify(bootstrap.pausePlayheadPolling(),
+               "the lane holds the production polling task for a deterministic position")
+
+        var playhead = testCase.playheadPresenter()
+        var grid = testCase.surface.gridModel
+        var origin = testCase.presenter().plotOrigin
+        grid.resetCameraScroll()
+        testCase.presentPlayhead(4000, 0)
+        tryVerify(function() { return playhead.timelineAttached && playhead.visible
+                                        && !playhead.playing }, 1000,
+                  "the stopped position is attached, visible and not playing")
+        compare(playhead.timelineAttached, true, "a document is attached")
+        compare(playhead.playing, false, "the stopped transport is published as not playing")
+
+        var rollClip = testCase.playheadClip("sharedPlayheadRollClip")
+        var rollPlot = findChild(testCase.surface, "timelineQuickRollPlot")
+        verify(rollClip !== null && rollPlot !== null, "the composition mounted the roll segment")
+        testCase.awaitPlayheadVisibility("sharedPlayheadRollClip", true)
+        testCase.verifySurfaceRect(rollClip, rollPlot.x, rollPlot.y, rollPlot.width, rollPlot.height,
+                                   "the roll segment clips to the plot column")
+        fuzzyCompare(testCase.playheadSurfaceX("sharedPlayheadRollClip"),
+                     origin + playhead.contentX, 0.01,
+                     "the roll line is the published projection from the shared origin")
+        verify(rollClip.x >= grid.keyboardWidth - 0.01, "no segment covers the keyboard gutter")
+
+        // A second published position moves the drawn segment with it.
+        var firstX = testCase.playheadSurfaceX("sharedPlayheadRollClip")
+        testCase.presentPlayhead(16000, 0)
+        tryVerify(function() {
+            return testCase.playheadSurfaceX("sharedPlayheadRollClip") !== firstX
+        }, 2000, "the drawn segment tracks the published position")
+        fuzzyCompare(testCase.playheadSurfaceX("sharedPlayheadRollClip"),
+                     origin + playhead.contentX, 0.01,
+                     "the moved line is still the published projection")
+
+        var kinds = [testCase.velocityKind, testCase.voiceChangesKind, testCase.automationKind]
+        var names = ["sharedPlayheadVelocityClip", "sharedPlayheadVoiceChangesClip",
+                     "sharedPlayheadAutomationClip"]
+        var barY = testCase.presenter().barY
+        var drawerY = testCase.drawer().y
+        for (var i = 0; i < kinds.length; ++i) {
+            testCase.showSection(kinds[i])
+            var state = testCase.section(kinds[i])
+            var clip = testCase.playheadClip(names[i])
+            verify(clip !== null, "the " + testCase.keyName(kinds[i]) + " segment exists")
+            testCase.awaitPlayheadVisibility(names[i], true)
+            fuzzyCompare(clip.x, origin, 0.01, "the body segment starts at the shared origin")
+            fuzzyCompare(clip.y, drawerY + state.bodyY, 0.01,
+                         "the body segment covers the published body")
+            fuzzyCompare(clip.width, testCase.presenter().plotWidth, 0.01,
+                         "the body segment clips to the shared plot width")
+            fuzzyCompare(clip.height, state.bodyHeight, 0.01,
+                         "the body segment covers the published body height")
+            fuzzyCompare(testCase.playheadSurfaceX(names[i]), origin + playhead.contentX, 0.01,
+                         "the body line reads the same projected position")
+            verify(clip.y + clip.height <= drawerY + barY + 0.01,
+                   "no body segment covers the drawer chrome")
+        }
+
+        // The half of the container left of the shared origin is the gutter: no
+        // segment may occupy it, and a hidden body renders none at all.
+        testCase.clickToggle(testCase.voiceChangesKind)
+        testCase.awaitRenderedLayout()
+        compare(testCase.section(testCase.voiceChangesKind).visible, false,
+                "the section hides behind its toggle")
+        testCase.awaitPlayheadVisibility("sharedPlayheadVoiceChangesClip", false)
+        testCase.showSection(testCase.voiceChangesKind)
+        testCase.awaitPlayheadVisibility("sharedPlayheadVoiceChangesClip", true)
+
+        // Position-only updates publish positions: the grid's notes, the page
+        // rectangles and the document stay exactly as they were.
+        var summary = grid.noteSummary
+        var notes = grid.renderedNoteCount
+        var revision = grid.appliedRevisionText
+        var heights = [testCase.section(testCase.velocityKind).bodyHeight,
+                       testCase.section(testCase.voiceChangesKind).bodyHeight,
+                       testCase.section(testCase.automationKind).bodyHeight]
+        for (var step = 1; step <= 128; ++step)
+            bootstrap.presentPlayheadObservation(step * 1000, 0)
+        wait(0)
+        compare(grid.noteSummary, summary, "playhead-only updates rebuild no grid content")
+        compare(grid.renderedNoteCount, notes, "playhead-only updates render the same notes")
+        compare(grid.appliedRevisionText, revision, "playhead-only updates apply no revision")
+        compare([testCase.section(testCase.velocityKind).bodyHeight,
+                 testCase.section(testCase.voiceChangesKind).bodyHeight,
+                 testCase.section(testCase.automationKind).bodyHeight], heights,
+                "playhead-only updates leave every page rectangle alone")
+        compare(playhead.timelineAttached, true, "the position stays attached")
+        tryVerify(function() {
+            var presenter = testCase.playheadPresenter()
+            var drawn = testCase.playheadClip("sharedPlayheadRollClip")
+            var line = testCase.playheadLine("sharedPlayheadRollClip")
+            return drawn.visible === presenter.visible
+                && Math.abs(drawn.x + line.x - (origin + presenter.contentX)) < 0.01
+        }, 2000, "the drawn segment catches up with the last published position")
+        testCase.awaitRenderedLayout()
+        compare(rollClip.x >= grid.keyboardWidth - 0.01, true,
+                "the last position still never covers the gutter")
+    }
+
+    // A camera change reprojects the retained authoritative tick, an
+    // out-of-viewport projection draws nothing, and scrolling back renders the
+    // same position again.
+    function test_sharedPlayheadHidesOutOfViewportAndReprojects() {
+        var location = bootstrap.preferencesUrl("playhead-viewport")
+        verify(testCase.attachPage(testCase.velocityKind), "the velocity page attaches")
+        testCase.createSurface(location)
+        testCase.awaitRenderedLayout()
+        verify(bootstrap.pausePlayheadPolling(),
+               "the lane holds the production polling task for a deterministic position")
+        testCase.showSection(testCase.velocityKind)
+
+        var playhead = testCase.playheadPresenter()
+        var grid = testCase.surface.gridModel
+        var origin = testCase.presenter().plotOrigin
+        grid.resetCameraScroll()
+        testCase.presentPlayhead(4000, 0)
+        tryVerify(function() { return playhead.timelineAttached && playhead.visible }, 1000,
+                  "the position starts attached and visible")
+        var tick = playhead.tick
+        var publishedX = playhead.contentX
+        var parkedScroll = grid.cameraScrollX
+
+        // The camera moves the projection past the plot origin: the same tick,
+        // a hidden segment.
+        grid.setCameraHScroll(parkedScroll + publishedX + 20)
+        tryVerify(function() { return !playhead.visible }, 1000,
+                  "a projection left of the plot is hidden")
+        fuzzyCompare(playhead.tick, tick, 0.000001,
+                     "a camera change reprojects the retained tick without moving it")
+        testCase.awaitPlayheadVisibility("sharedPlayheadRollClip", false)
+        testCase.awaitPlayheadVisibility("sharedPlayheadVelocityClip", false)
+
+        // Scrolling back renders the same retained position.
+        grid.setCameraHScroll(parkedScroll)
+        tryVerify(function() { return playhead.visible }, 1000, "the position returns")
+        fuzzyCompare(playhead.tick, tick, 0.000001, "the returned position is the same tick")
+        testCase.awaitPlayheadVisibility("sharedPlayheadRollClip", true)
+        fuzzyCompare(testCase.playheadSurfaceX("sharedPlayheadRollClip"), origin + playhead.contentX,
+                     0.01, "the returned segment reads the reprojected position")
+    }
+
+    // The 85%/10% follow rule is suspended by every member of the aggregate: the
+    // page's own interaction, a live drawer resize and a live roll gesture, each
+    // driven through the production owners, with a real pointer.
+    function test_sharedPlayheadSuspendsFollowForEveryInteraction() {
+        var location = bootstrap.preferencesUrl("playhead-follow")
+        verify(testCase.attachPage(testCase.velocityKind), "the velocity page attaches")
+        testCase.createSurface(location)
+        testCase.awaitRenderedLayout()
+        verify(bootstrap.pausePlayheadPolling(),
+               "the lane holds the production polling task for a deterministic position")
+        testCase.showSection(testCase.velocityKind)
+
+        var playhead = testCase.playheadPresenter()
+        var grid = testCase.surface.gridModel
+        var kind = testCase.velocityKind
+        // ApplicationSession.playPause()'s playing transport raw value.
+        var playing = 2
+        // A sample far past the viewport: the presenter resolves its tick, so the
+        // lane performs no sample-to-tick arithmetic of its own.
+        var farSample = 100000000
+        grid.resetCameraScroll()
+        var parked = grid.cameraScrollX
+
+        testCase.presentPlayhead(farSample, playing)
+        tryVerify(function() { return grid.cameraScrollX !== parked }, 1000,
+                  "an idle aggregate lets follow scroll the camera")
+        compare(playhead.playing, true, "the playing transport is published")
+
+        // The page's own interaction.
+        grid.setCameraHScroll(parked)
+        verify(bootstrap.setTestSectionInteraction(kind, true), "the page owns an interaction")
+        testCase.presentPlayhead(farSample, playing)
+        compare(grid.cameraScrollX, parked, "a page interaction suspends follow")
+        verify(bootstrap.setTestSectionInteraction(kind, false), "the page releases it")
+        testCase.presentPlayhead(farSample, playing)
+        tryVerify(function() { return grid.cameraScrollX !== parked }, 1000,
+                  "releasing the page lets the next observation follow")
+
+        // The container's own resize session, through real pointer input.
+        grid.setCameraHScroll(parked)
+        testCase.pressGrip(kind)
+        testCase.dragGripTo(kind, testCase.dragSceneY - 20)
+        testCase.presentPlayhead(farSample, playing)
+        compare(grid.cameraScrollX, parked, "a live drawer resize suspends follow")
+        testCase.releaseGrip(kind)
+        testCase.presentPlayhead(farSample, playing)
+        tryVerify(function() { return grid.cameraScrollX !== parked }, 1000,
+                  "ending the resize lets the next observation follow")
+
+        // The roll's own pointer gesture. The press is cancelled the way the
+        // input item cancels an ungrabbed pointer, so no note is committed.
+        grid.setCameraHScroll(parked)
+        var rollInput = testCase.rollInput()
+        mousePress(rollInput, rollInput.width / 2, rollInput.height / 2, Qt.LeftButton)
+        testCase.presentPlayhead(farSample, playing)
+        compare(grid.cameraScrollX, parked, "a live roll gesture suspends follow")
+        testCase.surface.applicationSession.cancelGridInput(
+            testCase.surface.cancelReasonPointerUngrabbed)
+        mouseRelease(rollInput, rollInput.width / 2, rollInput.height / 2, Qt.LeftButton)
+        testCase.presentPlayhead(farSample, playing)
+        tryVerify(function() { return grid.cameraScrollX !== parked }, 1000,
+                  "ending the gesture lets the next observation follow")
+
+        // The retained position is the authoritative one throughout: the
+        // presenter published every observation the lane presented.
+        compare(playhead.timelineAttached, true, "the position stays attached")
+        tryVerify(function() { return playhead.visible === false
+                                        || testCase.playheadClip("sharedPlayheadRollClip").visible },
+                  1000, "the drawn segment agrees with the published visibility")
     }
 }

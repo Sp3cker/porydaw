@@ -144,6 +144,11 @@ public protocol EditorDrawerPage: AnyObject {
     /// Non-empty QML URL, resolved once at attach and never re-pointed.
     var contentUrl: String { get }
     var bodyPolicy: EditorDrawerBodyPolicy { get }
+    /// True while this page owns an interaction that a follow-scroll would
+    /// disrupt. The presenter reads it synchronously and never retains it; it is
+    /// not a QML focus or pointer heuristic, and a page reports `false` again
+    /// once its own cancellation ran.
+    var interactionActive: Bool { get }
     /// Ends this page's current interaction or gesture. Called synchronously by the
     /// container before a hide, a replace or a global cancellation publishes.
     func cancelSectionInteraction()
@@ -298,6 +303,17 @@ public struct EditorDrawerLayout {
 
     /// The kind whose body a live resize session belongs to, if any.
     public var resizeKind: DrawerSectionKind? { resize?.kind }
+
+    /// True while the chrome resize session is live or any attached page reports
+    /// its own interaction. One aggregate a follow-scroll suspension reads; it is
+    /// derived on every read and never cached.
+    public var interactionActive: Bool {
+        if resize != nil { return true }
+        for kind in DrawerSectionKind.allCases where sections[kind].page?.interactionActive == true {
+            return true
+        }
+        return false
+    }
 
     public var hasAttachedPage: Bool {
         for kind in DrawerSectionKind.allCases where isAvailable(kind) { return true }
@@ -981,6 +997,12 @@ public final class EditorDrawerPresenter {
     public func inputCancelled(reason: Int) {
         publish(layout.cancelInteractions())
     }
+
+    /// The container's aggregate interaction state: the chrome resize session or
+    /// any attached page's own interaction. Swift-only: the shared playhead's
+    /// follow gate reads it, and no QML surface learns gesture state from it.
+    @QtIgnored
+    public var interactionActive: Bool { layout.interactionActive }
 
     /// Emitted when an available kind's visibility or stored height really changed.
     /// `height == 0` is the unset marker.

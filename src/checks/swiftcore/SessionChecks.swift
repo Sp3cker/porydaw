@@ -834,6 +834,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     }
 
     runEditorGridCameraChecks(report, session: session)
+    runSharedPlayheadChecks(report, session: session, service: service)
 
     // 8. Close lifecycle.
     do {

@@ -8,6 +8,7 @@ add_library(PorydawApp STATIC
     EditorDrawer.swift
     NativeAudio.swift
     ApplicationSession.swift
+    SharedPlayhead.swift
     Clipboard.swift
     "${SWIFT_GRID_DIR}/EditCommands.swift"
     "${SWIFT_GRID_DIR}/EditKeyArbiter.swift"

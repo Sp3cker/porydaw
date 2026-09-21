@@ -237,4 +237,49 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
     @QtIgnored private var session: ApplicationSession? {
         qmlChildren.compactMap { $0 as? ApplicationSession }.first
     }
+
+    // ---- shared playhead drive ---------------------------------------------
+    //
+    // Deterministic lane controls for the one production playhead owner. The
+    // offscreen lane's native playhead never advances (the audio engine moves it
+    // in its device callback), so a case presents the authoritative observation
+    // itself through the production presenter instead of racing a polling task
+    // that could only re-present a stopped position. No clock, no second
+    // presenter and no production test branch is involved.
+
+    /// Stops the production polling task. `true` means a task had been running.
+    public func pausePlayheadPolling() -> Bool {
+        guard let presenter = session?.playheadPresenter() else { return false }
+        let wasPolling = presenter.isPolling
+        presenter.stopPolling()
+        return wasPolling
+    }
+
+    /// Restarts the production polling task. `true` means it is polling again.
+    public func resumePlayheadPolling() -> Bool {
+        guard let presenter = session?.playheadPresenter(), presenter.timelineAttached else {
+            return false
+        }
+        presenter.startPolling()
+        return presenter.isPolling
+    }
+
+    /// One authoritative `(sample, transport)` observation, presented by the same
+    /// production owner the polling task drives. `true` means the published
+    /// presentation changed.
+    public func presentPlayheadObservation(sample: Double, transport: Int) -> Bool {
+        guard let presenter = session?.playheadPresenter(), sample.isFinite, sample >= 0 else {
+            return false
+        }
+        return presenter.observe(sample: UInt64(sample), transport: Int32(transport))
+    }
+
+    /// Sets the test page's own interaction through the real page seam the
+    /// container reads. `true` means the page now reports it.
+    public func setTestSectionInteraction(kind: Int, active: Bool) -> Bool {
+        guard let sectionKind = DrawerSectionKind(rawValue: kind),
+              let page = testPages[sectionKind] else { return false }
+        page.setInteractionActive(active)
+        return page.interactionActive == active
+    }
 }

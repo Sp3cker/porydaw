@@ -201,6 +201,25 @@ Item {
         preferenceLocation: root.drawerPreferenceLocation
     }
 
+    // One shared playhead over the whole surface: the roll plot column and every
+    // visible drawer body. It renders the presenter's published position only,
+    // takes no input, and sits above the drawer so its body segments are drawn
+    // over the page content they cross.
+    SharedPlayhead {
+        id: sharedPlayhead
+        anchors.fill: parent
+        z: 3
+
+        presenter: root.applicationSession.playheadPresenter()
+        playheadColor: root.gridModel.palette.playhead
+        rollPlotRect: Qt.rect(rollPlot.x, rollPlot.y, rollPlot.width, rollPlot.height)
+        drawerRect: Qt.rect(editorDrawer.x, editorDrawer.y,
+                            editorDrawer.width, editorDrawer.height)
+        velocitySection: root.drawerPresenter.velocitySection
+        voiceChangesSection: root.drawerPresenter.voiceChangesSection
+        automationSection: root.drawerPresenter.automationSection
+    }
+
     function configureViewport() {
         var dpr = Screen.devicePixelRatio > 0 ? Screen.devicePixelRatio : 1.0
         root.gridModel.configureViewport(Math.max(rollPlot.width, 1.0),
