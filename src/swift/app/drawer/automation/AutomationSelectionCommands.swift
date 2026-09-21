@@ -9,7 +9,7 @@ extension AutomationPage {
     @QtIgnored
     public func selectionCommandAvailable(command: EditCommand) -> Bool {
         guard let session else { return false }
-        if command == .paste { return activeTrack() != nil }
+        if command == .paste { return activeTrack() != nil && hasClipboard }
         guard let selection, selection.isActive else { return false }
         switch editCommandPolicy(command).rangeOperation {
         case .none: return false

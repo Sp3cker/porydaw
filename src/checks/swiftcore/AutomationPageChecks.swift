@@ -1163,12 +1163,16 @@ private func rangeEditAndClipboard(_ report: CheckReport, suite: DocumentSession
         lanes: [fixture.panLane], tempo: true))
     report.expect(pasteRowEnabled() == false, cppID: rangeID,
                   message: "the range menu refuses Paste when the system clipboard is empty")
+    report.expect(!fixture.page.selectionCommandAvailable(command: .paste), cppID: rangeID,
+                  message: "the window Paste command is unavailable for an empty clipboard")
     report.expect(fixture.page.copyTimeSelection(), cppID: rangeID,
                   message: "the selection copies into the semantic clipboard")
     report.expect(fixture.page.hasClipboard, cppID: rangeID,
                   message: "the clipboard publishes its semantic payload")
     report.expect(pasteRowEnabled() == true, cppID: rangeID,
                   message: "the range menu enables Paste for a copied system selection")
+    report.expect(fixture.page.selectionCommandAvailable(command: .paste), cppID: rangeID,
+                  message: "the window Paste command becomes available for the copied selection")
     let beforePaste = fixture.snapshot
     report.expectEqual(310, fixture.page.pasteTimeSelection(at: 200).map(Int.init) ?? -1,
                        cppID: rangeID,
@@ -1497,12 +1501,22 @@ private func contextAndPublicationDiagnostics(_ report: CheckReport, suite: Docu
                   message: "a hover on a node publishes the node")
     report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: contextID,
                        what: "a node hover reads out the node's value")
+    report.expectEqual(15, fixture.page.hoverHintProfile, cppID: contextID,
+                       what: "a written node advertises node movement")
     _ = fixture.page.pointerMove(x: fixture.x(150), y: fixture.y(fixture.volumeLane, 20),
                                  buttons: 0)
     report.expect(fixture.page.hover?.hasPoint == false, cppID: contextID,
                   message: "a hover on the background publishes the tick")
     report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: contextID,
                        what: "a background hover reads the value the lane holds there")
+    report.expectEqual(17, fixture.page.hoverHintProfile, cppID: contextID,
+                       what: "the background advertises sweep and ramp input")
+    fixture.page.isPencilMode = true
+    report.expectEqual(18, fixture.page.hoverHintProfile, cppID: contextID,
+                       what: "switching tools updates stationary hover instructions")
+    fixture.page.isPencilMode = false
+    report.expectEqual(17, fixture.page.hoverHintProfile, cppID: contextID,
+                       what: "leaving pencil mode restores sweep instructions")
     report.expect(fixture.page.hoverBuildCount > hoverBuilds, cppID: contextID,
                   message: "the hover publications are counted")
     fixture.page.pointerLeave()
@@ -2391,6 +2405,13 @@ private func restoredInteractionContracts(_ report: CheckReport, suite: Document
     page.dismissMenu()
     page.selectRange(from: 0, to: fixture.songEndTick, lanes: [fixture.panLane])
     _ = page.pointerPress(x: 400, y: 90, surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerMove(x: 404, y: 86, buttons: AutomationQtButton.right)
+    report.expect(!page.bandVisible && page.selection?.range == TimeRange(
+        startTick: 0, endTick: fixture.songEndTick), cppID: id,
+                  message: "a pending band preserves selection below the Manhattan threshold")
+    _ = page.pointerMove(x: 405, y: 85, buttons: AutomationQtButton.right)
+    report.expect(page.bandVisible, cppID: id,
+                  message: "diagonal travel activates at Manhattan ten before Euclidean ten")
     _ = page.pointerMove(x: 400, y: 60, buttons: AutomationQtButton.right)
     _ = page.pointerRelease(x: 400, y: 60, button: AutomationQtButton.right)
     report.expect(page.selection == nil, cppID: id,
@@ -2455,6 +2476,32 @@ private func restoredInteractionContracts(_ report: CheckReport, suite: Document
     hover.page.isPencilMode = false
     report.expect(!hover.page.consumeHoverDelete(), cppID: id,
                   message: "arrow hover cannot claim pencil deletion")
+    hover.page.isPencilMode = true
+    _ = hover.page.pointerMove(x: hover.x(48), y: hover.y(hover.volumeLane, 70), buttons: 0)
+    report.expect(hover.page.consumeHoverDelete(), cppID: id,
+                  message: "pencil hover deletion consumes the written point")
+    report.expectEqual([String](), hover.values(hover.volumeLane), cppID: id,
+                       what: "hover deletion removes the actual written point")
+    report.expectEqual(hoverBefore.revision + 1, hover.document.revision, cppID: id,
+                       what: "hover deletion publishes one revision")
+    report.expect(hover.undo() && !hover.document.history.canUndo, cppID: id,
+                  message: "hover deletion is exactly one undo entry")
+    report.expectEqual(["48:70"], hover.values(hover.volumeLane), cppID: id,
+                       what: "undo restores the hover-deleted point")
+
+    _ = hover.page.pointerPress(x: hover.x(48), y: hover.y(hover.volumeLane, 70),
+                                 surface: 1, button: AutomationQtButton.right)
+    _ = hover.page.pointerRelease(x: hover.x(48), y: hover.y(hover.volumeLane, 70),
+                                   button: AutomationQtButton.right)
+    report.expect(hover.page.menuTargetIsPoint, cppID: id,
+                  message: "the written point owns its captured menu target")
+    _ = hover.page.openParameterMenu(index: hover.page.catalogIndex(of: hover.volumeLane),
+                                     x: 0, y: 0)
+    let superseded = hover.snapshot
+    report.expect(!hover.page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
+                  cppID: id, message: "a replacement lane menu invalidates the old point action")
+    report.expectEqual(superseded, hover.snapshot, cppID: id,
+                       what: "a superseded point command cannot edit the lane")
 
     let emptyRange = AutomationFixture(suite: suite, service: service, pan: [])
     emptyRange.page.selectRange(from: 48, to: 96, lanes: [emptyRange.panLane])
