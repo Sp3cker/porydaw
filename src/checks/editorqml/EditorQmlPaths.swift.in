@@ -1,0 +1,17 @@
+// Generated from EditorQmlPaths.swift.in by src/checks/CMakeLists.txt.
+//
+// The drawer lane needs the repository directory that holds its QML files and
+// the pinned Qt installation's QML and plugin directories. CMake substitutes
+// them at configure time; the generated copy is what the lane compiles.
+
+enum EditorQmlPaths {
+    /// Holds `tst_EditorDrawer.qml` and `DrawerTestPage.qml`; also the lane's
+    /// `setInputDir` value.
+    static let testDirectory = "@EDITOR_QML_TEST_DIR@"
+
+    /// `qmake -query QT_INSTALL_QML`, handed to `setImportPath`.
+    static let qmlImportPath = "@QT_INSTALL_QML@"
+
+    /// `qmake -query QT_INSTALL_PLUGINS`, handed to `setPluginsPath`.
+    static let pluginPath = "@QT_INSTALL_PLUGINS@"
+}

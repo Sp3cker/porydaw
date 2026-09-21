@@ -5,6 +5,7 @@
 // deno task build:checks [--release] -> build porydaw + porydaw_checks + mid2agb
 // deno task build:render [--release] -> build porydaw_render_cli only
 // deno task verify [--verbose] [--filter <name>] [-- <run_checks args>]
+// deno task verify:qml [verify options] -> build editor_qml_tests + mid2agb, run that lane
 // deno task format [--check] [files...]
 
 import { join } from "node:path";
@@ -14,7 +15,11 @@ import {
 } from "./local_build_environment.ts";
 import { poryaaaaConfiguration } from "./poryaaaa_source.ts";
 import { unsupportedSources, unsupportedSourcesError } from "./format.ts";
-import { parseCheckOptions, VERIFY_HELP } from "./checks_options.ts";
+import {
+  type CheckOptions,
+  parseCheckOptions,
+  VERIFY_HELP,
+} from "./checks_options.ts";
 
 const decoder = new TextDecoder();
 const BUILD_DIR = "build";
@@ -24,12 +29,16 @@ type Subcommand =
   | "build:checks"
   | "build:render"
   | "verify"
+  | "verify:qml"
   | "format";
 
 function help(command?: Subcommand): string {
   switch (command) {
     case "verify":
       return VERIFY_HELP;
+    case "verify:qml":
+      // Same runner options; only the build targets and harness binary differ.
+      return VERIFY_HELP.replaceAll("deno task verify", "deno task verify:qml");
     case "build:app":
     case "build:checks":
     case "build:render":
@@ -63,6 +72,7 @@ Examples:
   build:checks  build the application, checks, and mid2agb
   build:render  build the Swift-backed offline renderer
   verify        build and run checks
+  verify:qml    build and run the QML drawer lane
   format        format sources (or --check)
 help: deno task <command> --help`;
   }
@@ -192,7 +202,47 @@ async function runBuild(
   console.log(`build: ok (${sec}s)`);
 }
 
-async function runVerify(rawArgs: string[]): Promise<void> {
+// One verify lane = the build targets it needs plus the harness it runs through
+// tools/run_checks.ts. Options, filters and the --qt payload are identical.
+interface VerifyLane {
+  readonly command: "verify" | "verify:qml";
+  /** Harness executable name inside the build directory. */
+  readonly binary: string;
+  buildTargets(options: CheckOptions): string[];
+}
+
+// The application binary is only needed by the production-startup windowed rows.
+function verifyBuildTargets(options: CheckOptions): string[] {
+  const productionStartupSelected = options.filters.length === 0
+    ? !options.exclusions.includes("production-startup")
+    : options.filters.some((filter) => "production-startup".includes(filter)) &&
+      !options.exclusions.includes("production-startup");
+  return [
+    ...(productionStartupSelected ? ["porydaw"] : []),
+    "porydaw_checks",
+    "mid2agb",
+  ];
+}
+
+const VERIFY_LANES: Record<"verify" | "verify:qml", VerifyLane> = {
+  "verify": {
+    command: "verify",
+    binary: "porydaw_checks",
+    buildTargets: verifyBuildTargets,
+  },
+  // The QML lane is its own executable and manifest, not a porydaw_checks
+  // catalog row; run_checks.ts still needs mid2agb beside the build.
+  "verify:qml": {
+    command: "verify:qml",
+    binary: "editor_qml_tests",
+    buildTargets: () => ["editor_qml_tests", "mid2agb"],
+  },
+};
+
+async function runVerify(
+  rawArgs: string[],
+  lane: VerifyLane,
+): Promise<void> {
   // Terminal --qt: everything after it is the Qt test payload. It is never
   // parsed as a runner option — not by the loop below and not by the
   // no-build/verbose pre-scans. run_checks.ts parses the marker identically.
@@ -211,7 +261,7 @@ async function runVerify(rawArgs: string[]): Promise<void> {
     } else if (arg === "--filter") {
       const next = runnerArgs[++i];
       if (!next || next.startsWith("-")) {
-        usage("verify", "--filter requires a value");
+        usage(lane.command, "--filter requires a value");
       }
       filters.push(`--filter=${next}`);
     } else if (arg === "--all" || arg === "--no-windowing-checks") {
@@ -233,24 +283,19 @@ async function runVerify(rawArgs: string[]): Promise<void> {
   try {
     options = parseCheckOptions(args);
   } catch (error) {
-    usage("verify", error instanceof Error ? error.message : String(error));
+    usage(lane.command, error instanceof Error ? error.message : String(error));
   }
-  if (options.help) showHelp("verify");
-  const productionStartupSelected = options.filters.length === 0
-    ? !options.exclusions.includes("production-startup")
-    : options.filters.some((filter) => "production-startup".includes(filter)) &&
-      !options.exclusions.includes("production-startup");
-  await runBuild([
-    ...(productionStartupSelected ? ["porydaw"] : []),
-    "porydaw_checks",
-    "mid2agb",
-  ]);
+  if (options.help) showHelp(lane.command);
+  await runBuild(lane.buildTargets(options));
+  const executable = Deno.build.os === "windows"
+    ? `${lane.binary}.exe`
+    : lane.binary;
   const binary = join(
     BUILD_DIR,
     ...((Deno.build.os === "windows" && await usesMultiConfigBuild())
       ? ["Release"]
       : []),
-    Deno.build.os === "windows" ? "porydaw_checks.exe" : "porydaw_checks",
+    executable,
   );
   const cmd = new Deno.Command("deno", {
     args: [
@@ -352,6 +397,7 @@ const rest = raw.slice(1);
 if (sub === "build-app") sub = "build:app";
 if (sub === "build-checks" || sub === "build:check") sub = "build:checks";
 if (sub === "build-render") sub = "build:render";
+if (sub === "verify-qml") sub = "verify:qml";
 const normalized = sub as Subcommand;
 switch (normalized) {
   case "build:app":
@@ -367,7 +413,10 @@ switch (normalized) {
     );
     break;
   case "verify":
-    await runVerify(rest);
+    await runVerify(rest, VERIFY_LANES.verify);
+    break;
+  case "verify:qml":
+    await runVerify(rest, VERIFY_LANES["verify:qml"]);
     break;
   case "format":
     await runFormat(rest);

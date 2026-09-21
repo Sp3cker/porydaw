@@ -5,6 +5,7 @@ add_library(PorydawApp STATIC
     ProjectService.swift
     DocumentSession.swift
     EditorCamera.swift
+    EditorDrawer.swift
     NativeAudio.swift
     ApplicationSession.swift
     Clipboard.swift

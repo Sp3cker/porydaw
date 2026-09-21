@@ -292,6 +292,7 @@ private func savedMidiCompilesAfterDocumentSave(_ report: CheckReport, fixtureRo
 @MainActor
 internal func runProjectSessionSuite(_ report: CheckReport) {
     runEditorCameraChecks(report)
+    runEditorDrawerChecks(report)
 
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
         report.fail("project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",

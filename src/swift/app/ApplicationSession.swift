@@ -20,10 +20,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private var documentSession: DocumentSession?
     private var audio: NativeAudio?
     private var grid: PianoGrid?
+    /// Drawer chrome is application state, not document state: this one
+    /// presenter is created here and survives every project and song
+    /// replacement.
+    private let drawer: EditorDrawerPresenter
     private var detachContinuation: CheckedContinuation<Void, Never>?
     private var isDisposed = false
     private var activeReplacementTask: Task<Void, Never>?
     public required init() {
+        drawer = EditorDrawerPresenter()
         do {
             audio = try NativeAudio()
         } catch {
@@ -45,6 +50,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
         return grid
     }
 
+    /// Drawer chrome exists for the whole session, so unlike `gridPresenter()`
+    /// this needs no open song and never fails.
+    public func drawerPresenter() -> EditorDrawerPresenter { drawer }
+
     public func gridCommandAvailable(command: Int) -> Bool {
         grid?.commandAvailable(command: command) ?? false
     }
@@ -64,6 +73,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     public func cancelGridInput(reason: Int) {
         grid?.inputCancelled(reason: reason)
+        // The drawer container treats every reason identically: it drops the
+        // chrome resize session and every attached page's current interaction
+        // in the same call the grid receives.
+        drawer.inputCancelled(reason: reason)
     }
 
     @QtSignal public func aboutToReleaseGrid()
@@ -85,6 +98,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public func hostClosing() {
         isDisposed = true
         activeReplacementTask?.cancel()
+        // The host removes the Quick scene next; cancel while it still exists.
+        drawer.inputCancelled(reason: GridCancelReason.hidden.rawValue)
     }
 
     /// Starts project replacement without exposing async/throws through Qt.
@@ -295,6 +310,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     private func retireCurrentDocument(unloadAudio: Bool = true) async {
+        // Cancel before the scene-removal request below: the drawer's resize
+        // session and any page interaction end while their items still exist.
+        drawer.inputCancelled(reason: GridCancelReason.hidden.rawValue)
         if grid != nil {
             await withCheckedContinuation { continuation in
                 detachContinuation = continuation

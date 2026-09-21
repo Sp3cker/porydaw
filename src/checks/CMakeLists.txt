@@ -23,7 +23,8 @@ target_include_directories(mid2agb PRIVATE
 set_target_properties(mid2agb PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
 
 # ---- Rewrite check executable ----
-find_package(Qt6 REQUIRED COMPONENTS Test)
+# QuickTest serves the Swift-hosted editor-QML lane at the end of this file.
+find_package(Qt6 REQUIRED COMPONENTS Test QuickTest)
 if(APPLE)
     porydaw_mark_interface_includes_system(Qt6::Test)
 endif()
@@ -104,6 +105,7 @@ if(APPLE)
         swiftcore/TimeChecks.swift
         swiftcore/EditorCameraChecks.swift
         swiftcore/EditorGridCameraChecks.swift
+        swiftcore/EditorDrawerChecks.swift
         swiftcore/SessionChecks.swift
     )
     set_target_properties(swift_core_check PROPERTIES
@@ -154,3 +156,91 @@ target_precompile_headers(porydaw_checks PRIVATE
 target_compile_definitions(porydaw_checks PRIVATE
     PORYDAW_CHECK_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 add_dependencies(porydaw_checks mid2agb)
+
+# ---- Editor drawer Qt Quick Test lane (Swift-hosted, test only) ----
+# The drawer container's QML lane is its own Swift executable, so tools/
+# run_checks.ts drives it like any other harness: the runner reads this lane's
+# manifest and launches it with one entry. Its cases load the production
+# composition by relative URL, so the QML input directory is the source
+# directory, and the Qt import/plugin paths are read from the pinned Qt
+# installation this configure selected — never from the caller's environment.
+if(APPLE)
+    # Locate qmake through the Qt package this configure selected, so the query
+    # answers for that same Qt (verified against the pinned Qt 6.11).
+    set(PORYDAW_QMAKE_EXECUTABLE "")
+    if(TARGET Qt6::qmake)
+        get_target_property(PORYDAW_QMAKE_EXECUTABLE Qt6::qmake IMPORTED_LOCATION)
+    endif()
+    if(NOT PORYDAW_QMAKE_EXECUTABLE)
+        message(FATAL_ERROR
+            "Qt6::qmake is unavailable; the editor drawer QML lane cannot "
+            "resolve QT_INSTALL_QML/QT_INSTALL_PLUGINS")
+    endif()
+    foreach(_porydaw_qt_query IN ITEMS QT_INSTALL_QML QT_INSTALL_PLUGINS)
+        execute_process(
+            COMMAND "${PORYDAW_QMAKE_EXECUTABLE}" -query "${_porydaw_qt_query}"
+            OUTPUT_VARIABLE ${_porydaw_qt_query}
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND_ERROR_IS_FATAL ANY
+        )
+    endforeach()
+    set(EDITOR_QML_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/editorqml")
+    configure_file(
+        "${EDITOR_QML_TEST_DIR}/EditorQmlPaths.swift.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
+        @ONLY
+    )
+    # CMake emits Swift compile rules only for a target that archives or links
+    # its sources, so the lane's Swift module is its own static library and the
+    # executable below links it instead of compiling Swift itself.
+    add_library(editor_qml_lane STATIC
+        editorqml/EditorQmlTests.swift
+        editorqml/DrawerTestPage.swift
+        "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
+    )
+    set_target_properties(editor_qml_lane PROPERTIES
+        Swift_MODULE_NAME EditorQmlCheck
+        Swift_LANGUAGE_VERSION 6
+        AUTOMOC OFF
+        AUTOUIC OFF
+        AUTORCC OFF
+    )
+    # The Swift module-map compile options the core check sets, so this lane
+    # sees the app module's Clang headers through the same contract. QtBridge
+    # and PorydawApp also hand their Swift modules to this compile.
+    target_compile_options(editor_qml_lane PRIVATE
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
+    )
+    target_link_libraries(editor_qml_lane PRIVATE QtBridge PorydawApp)
+
+    # A plain executable at the build root: the Deno runner resolves
+    # `<build>/editor_qml_tests` as a file, so no bundle or symlink wrapper.
+    # The link runs through the C++ driver because porydaw_app's LTO objects
+    # only link with the toolchain that produced them — the Swift driver aborts
+    # in the LTO backend while force-loading them. The lane's template is the
+    # one (uncompiled) source this target needs; the entry point comes from the
+    # module archive above.
+    add_executable(editor_qml_tests editorqml/EditorQmlPaths.swift.in)
+    set_target_properties(editor_qml_tests PROPERTIES
+        AUTOMOC OFF
+        AUTOUIC OFF
+        AUTORCC OFF
+        LINKER_LANGUAGE CXX
+        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+    )
+    # PorydawApp carries the session and its QML registration entry point; the
+    # whole-archive C++ app library carries the QML resources; QtBridge
+    # supplies the QTestAppCpp host.
+    target_link_libraries(editor_qml_tests PRIVATE
+        editor_qml_lane
+        QtBridge
+        PorydawApp
+        "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+        Qt6::QuickTest
+    )
+    # run_checks.ts refuses to start without mid2agb beside the build root.
+    add_dependencies(editor_qml_tests mid2agb)
+endif()

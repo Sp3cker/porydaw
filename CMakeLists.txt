@@ -245,6 +245,24 @@ qt_add_resources(porydaw_app "swift_roll_qml"
         src/ui/songview/quick/swiftroll/TimelineQuickItem.qml
 )
 
+# The drawer keeps the swiftroll prefix layout, so EditorSurface's relative
+# `import "../drawer"` resolves in both the resource engine and the source tree.
+qt_add_resources(porydaw_app "drawer_qml"
+    PREFIX "/porydaw/drawer"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/drawer"
+    FILES
+        src/ui/songview/quick/drawer/EditorDrawer.qml
+)
+
+qt_add_resources(porydaw_app "drawer_icons"
+    PREFIX "/icons"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+    FILES
+        resources/velocity.svg
+        resources/automation.svg
+        resources/flat-music.svg
+)
+
 target_include_directories(porydaw_app PUBLIC
     src
 )
