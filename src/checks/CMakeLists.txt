@@ -109,6 +109,7 @@ if(APPLE)
         swiftcore/SharedPlayheadChecks.swift
         swiftcore/VelocityPageChecks.swift
         swiftcore/VoiceChangesPageChecks.swift
+        swiftcore/AutomationPageChecks.swift
         swiftcore/SessionChecks.swift
     )
     set_target_properties(swift_core_check PROPERTIES

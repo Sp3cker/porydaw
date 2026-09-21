@@ -837,6 +837,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     runSharedPlayheadChecks(report, session: session, service: service)
     runVelocityPageChecks(report, session: session, service: service)
     runVoiceChangesPageChecks(report, session: session, service: service)
+    runAutomationPageChecks(report, session: session, service: service)
 
     // 8. Close lifecycle.
     do {

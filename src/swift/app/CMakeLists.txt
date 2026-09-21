@@ -11,6 +11,9 @@ add_library(PorydawApp STATIC
     SharedPlayhead.swift
     VelocityPage.swift
     VoiceChangesPage.swift
+    AutomationProjection.swift
+    AutomationTransactions.swift
+    AutomationPage.swift
     Clipboard.swift
     "${SWIFT_GRID_DIR}/EditCommands.swift"
     "${SWIFT_GRID_DIR}/EditKeyArbiter.swift"
