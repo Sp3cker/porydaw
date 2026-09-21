@@ -137,9 +137,12 @@ TestCase {
         // its slot before the composition mounts, so the document-bound page
         // owner's content is never loaded there and never outlives a QML item
         // that consumed it.
-        if (testCase.containerPhase)
-            verify(bootstrap.detachProductionSection(velocityKind),
-                   "the container phase releases the production page before it mounts")
+        if (testCase.containerPhase) {
+            verify(bootstrap.detachProductionSection(testCase.velocityKind),
+                   "the container phase releases the production velocity page before it mounts")
+            verify(bootstrap.detachProductionSection(testCase.voiceChangesKind),
+                   "the container phase releases the production voice page before it mounts")
+        }
         // One production composition for the document-bound owners' whole
         // lifetime: the scene that consumed their QObject proxies is not
         // destroyed for a case, exactly as the running application keeps its one
@@ -180,6 +183,10 @@ TestCase {
         bootstrap.detachTestSection(velocityKind)
         bootstrap.detachTestSection(voiceChangesKind)
         bootstrap.detachTestSection(automationKind)
+        // Whatever the previous case left live — a page gesture, a prompt or a
+        // page modal — ends here through the composition's own cancellation
+        // path, the same call a hidden surface makes.
+        verify(bootstrap.cancelInput(), "no interaction is live at a case boundary")
         // A playhead case holds the production polling task for determinism;
         // every case starts with it running again.
         bootstrap.resumePlayheadPolling()
@@ -193,6 +200,13 @@ TestCase {
     // releases this case's attachments through the container's own detach, so
     // nothing the scene bound is destroyed to end a case.
     function cleanup() {
+        // A case ends by settling what it opened: every live page interaction ends
+        // through the composition's own cancellation path, and both modal surfaces
+        // are waited down to their drawn closed state, so the next case starts
+        // from the settled composition instead of a pass behind it.
+        bootstrap.cancelInput()
+        testCase.awaitVoiceModal("voicePicker", false)
+        testCase.awaitVoiceModal("voiceChangeMenu", false)
         wait(0)
     }
 
@@ -1596,9 +1610,12 @@ TestCase {
     /// rather than in a reviewer's eye.
     function captureProfilePane(pane) {
         var page = testCase.velocityPageItem()
+        var voicePage = testCase.voicePageItem()
         var target = pane === "editor-drawer" ? testCase.drawer()
                    : pane === "velocity-prompt"
                      ? findChild(page, "velocityPromptCard")
+                   : pane === "voice-picker"
+                     ? findChild(testCase.surface, "drawerModalLayer")
                    : page
         if (!target)
             return false
@@ -1611,13 +1628,27 @@ TestCase {
             if (!model.promptOpen)
                 return false
         }
+        if (pane === "voice-picker") {
+            var voice = testCase.voiceModel()
+            if (!voice.pickerOpen) {
+                var column = testCase.freeVoiceColumn(24)
+                if (column >= 0)
+                    testCase.doubleClickPlot(column)
+                wait(0)
+            }
+            if (!voice.pickerOpen)
+                return false
+            testCase.awaitVoiceModal("voicePicker", true)
+        }
         var origin = target.mapToItem(testCase.surface, 0, 0)
         var url = bootstrap.profilePngUrl(pane)
         var saved = false
         target.grabToImage(function(result) { saved = result.saveToFile(url) })
         tryVerify(function() { return saved }, 5000, pane + " rendered a PNG")
         return bootstrap.writeProfileMetadata(pane, page.Screen.devicePixelRatio,
-                                              testCase.velocityModel().baseFontPx,
+                                              pane === "voice-picker"
+                                              ? testCase.voiceModel().baseFontPx
+                                              : testCase.velocityModel().baseFontPx,
                                               target.width, target.height,
                                               origin.x, origin.y,
                                               target.width, target.height)
@@ -1848,6 +1879,632 @@ TestCase {
                 "an exact context publishes no diagnostic")
     }
 
+    // ---- the production Voice Changes page ----------------------------------
+
+    function voicePageItem() { return testCase.pageItem(testCase.voiceChangesKind) }
+    function voicePlot() { return findChild(testCase.voicePageItem(), "voicePlot") }
+    function voicePlotInput() { return findChild(testCase.voicePageItem(), "voicePlotInput") }
+    function voiceModel() { return testCase.surface.applicationSession.voiceChangesPage() }
+
+    /// The drawn marker rules of the hosted page, in tree order.
+    function voiceMarkerLines() {
+        return testCase.collectByName(testCase.voicePlot(), "voiceChangeMarkerLine", [])
+    }
+
+    /// Attaches and shows the production Voice Changes page. Every wait is tied
+    /// to the drawn or published fact the case needs — the kind's availability,
+    /// its visibility, the hosted item and its drawn size, then the readout the
+    /// page composes — so a case observes its own state whatever ran before it.
+    /// The staged song may carry no program change at all, so the marker set is
+    /// the case's own to create through the page's insertion path.
+    function mountProductionVoice(location, values) {
+        verify(bootstrap.attachProductionSection(testCase.voiceChangesKind),
+               "the production Voice Changes page attaches to its slot")
+        testCase.resetChrome(location, values)
+        tryVerify(function() {
+            var toggle = testCase.toggle(testCase.voiceChangesKind)
+            return toggle !== null && toggle.width > 0
+        }, 2000, "the published voice-changes toggle is drawn for the attached page")
+        if (!testCase.section(testCase.voiceChangesKind).visible)
+            testCase.clickToggle(testCase.voiceChangesKind)
+        tryVerify(function() { return testCase.section(testCase.voiceChangesKind).visible }, 2000,
+                  "the voice-changes section is visible")
+        tryVerify(function() { return testCase.voicePageItem() !== null }, 2000,
+                  "the drawer hosts the production Voice Changes page item")
+        tryVerify(function() {
+            var page = testCase.voicePageItem()
+            return page !== null && page.width > 0 && page.height > 0
+        }, 2000, "the hosted production page took its drawn body size")
+        tryVerify(function() {
+            return findChild(testCase.voicePageItem(), "voiceReadout") !== null
+        }, 2000, "the hosted production page composed its readout")
+        return testCase.voicePageItem()
+    }
+
+    /// Every named descendant whose objectName starts with `prefix`, in tree
+    /// walk order: a view instantiates one delegate per visible row, so the
+    /// drawn rows are the lane's oracle for the picker's published model.
+    function collectByPrefix(item, prefix, found) {
+        var collected = found || []
+        if (!item)
+            return collected
+        if (String(item.objectName).indexOf(prefix) === 0)
+            collected.push(item)
+        for (var i = 0; i < item.children.length; ++i)
+            testCase.collectByPrefix(item.children[i], prefix, collected)
+        return collected
+    }
+
+    /// The drawn picker rows of the hosted page.
+    function voicePickerRowItems() {
+        return testCase.collectByPrefix(testCase.surface, "voicePickerRow_", [])
+    }
+
+    /// Inserts one voice change through the production picker: the real
+    /// double-click entry on a free lane column, the picker's own arrow
+    /// navigation onto another slot than the captured one, then Enter
+    /// acceptance. Returns the drawn marker rule the insertion produced, or null.
+    function insertVoiceChange(startColumn) {
+        var model = testCase.voiceModel()
+        var drawnBefore = testCase.voiceMarkerLines().length
+        var column = startColumn ? startColumn : 24
+        for (var attempt = 0; attempt < 6; ++attempt) {
+            var candidate = testCase.freeVoiceColumn(column)
+            if (candidate < 0)
+                return null
+            testCase.doubleClickPlot(candidate)
+            tryVerify(function() { return model.pickerOpen }, 1000,
+                      "the double-click on the empty lane opened the picker")
+            if (bootstrap.voiceMarkerTicks().split(",")
+                    .indexOf(String(bootstrap.voicePickerTargetTick())) >= 0) {
+                // The snapped tick already holds a change, so an acceptance here
+                // would be production's value replacement instead of an
+                // insertion. Another column is this helper's case.
+                model.cancelPicker()
+                column = candidate + 24
+                continue
+            }
+            testCase.awaitVoiceModal("voicePicker", true)
+            testCase.awaitVoicePickerFocus()
+            var index = model.pickerIndex
+            keyClick(Qt.Key_Down)
+            tryVerify(function() { return model.pickerIndex === index + 1 }, 1000,
+                      "the picker moved onto another slot than the captured one")
+            keyClick(Qt.Key_Return)
+            tryVerify(function() { return !model.pickerOpen }, 1000, "Enter accepted the picker")
+            tryVerify(function() {
+                return testCase.voiceMarkerLines().length === drawnBefore + 1
+            }, 1000, "the accepted picker inserted exactly one voice change")
+            var drawn = testCase.voiceMarkerLines()
+            for (var i = 0; i < drawn.length; ++i) {
+                if (Math.abs(drawn[i].x - candidate) < 14)
+                    return drawn[i]
+            }
+            return null
+        }
+        return null
+    }
+
+    /// A plot column that holds no change: the drawn marker rules publish their
+    /// own x, so a column at least the hit radius clear of every rule is free.
+    function freeVoiceColumn(step) {
+        var lines = testCase.voiceMarkerLines()
+        var input = testCase.voicePlotInput()
+        var reach = 14
+        for (var x = step; x < input.width - 4; x += step) {
+            var free = true
+            for (var i = 0; i < lines.length; ++i) {
+                if (Math.abs(lines[i].x - x) < reach) {
+                    free = false
+                    break
+                }
+            }
+            if (free)
+                return x
+        }
+        return -1
+    }
+
+    /// One real double-click in the page's own plot coordinates.
+    function doubleClickPlot(x) {
+        var input = testCase.voicePlotInput()
+        mouseDoubleClickSequence(input, x, input.height / 2, Qt.LeftButton)
+    }
+
+    /// The page pushes modality to a modal surface on its own change signal, and
+    /// the surface renders that flag on the next pass: a case that drives a modal
+    /// with the pointer waits for the drawn state it is about to hit, the same way
+    /// every other case in this suite waits for what it clicks.
+    function awaitVoiceModal(name, expected) {
+        // A kind that hosts no page, or a hosted page that composes no such modal
+        // (the container cases host their own test pages), is already settled.
+        tryVerify(function() {
+            var item = findChild(testCase.surface, name)
+            return expected ? (item !== null && item.visible === true)
+                            : (item === null || item.visible === false)
+        }, 1000, name + " visibility is " + expected)
+    }
+
+    /// The picker's search field takes active focus one event-loop pass after it
+    /// opens; a key case waits for the focus the key will be delivered to.
+    function awaitVoicePickerFocus() {
+        tryVerify(function() {
+            var field = findChild(testCase.surface, "voicePickerSearch")
+            return field !== null && field.activeFocus
+        }, 1000, "the picker took focus in its search field")
+    }
+
+    /// Types one zero-padded program number into the picker's focused search
+    /// field, one real key at a time.
+    function typeProgram(value) {
+        var text = ("000" + value).slice(-3)
+        for (var i = 0; i < text.length; ++i)
+            keyClick(Qt.Key_0 + parseInt(text.charAt(i), 10))
+        wait(0)
+    }
+
+    /// The production page mounts through the real presenter and renders its own
+    // composition: the shared gutter splits gutter and plot, every change
+    // publishes a marker rule, and the context readout is drawn.
+    function test_productionVoiceChangesPageMountsAndRenders() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-voice")
+        var page = testCase.mountProductionVoice(location)
+        compare(String(testCase.section(testCase.voiceChangesKind).contentUrl).length > 0, true,
+                "the kind publishes the production page URL")
+
+        var gutter = findChild(page, "voiceGutter")
+        var plot = testCase.voicePlot()
+        verify(gutter && plot, "the page composed its gutter and plot")
+        fuzzyCompare(gutter.width, testCase.surface.gridModel.keyboardWidth, 0.01,
+                     "the gutter is the shared column")
+        fuzzyCompare(plot.x, gutter.width, 0.01, "the plot starts at the shared origin")
+        fuzzyCompare(plot.width, page.width - gutter.width, 0.01,
+                     "the plot spans the body beside the gutter")
+        fuzzyCompare(plot.height, page.height, 0.01, "the plot spans the body height")
+
+        var model = testCase.voiceModel()
+        verify(findChild(page, "voiceGridLines"), "the page composed its grid")
+        verify(findChild(page, "voiceReadout"), "the page composed its context readout")
+        verify(findChild(page, "voiceHoverLabel"), "the page composed its hover label")
+        verify(findChild(page, "voicePlotMessage"), "the page composed its plot message")
+        compare(plot.Accessible.name, "Voice changes", "the plot publishes its accessible name")
+        compare(model.auditionAvailable, false,
+                "the page never advertises an audition it cannot perform")
+        compare(String(model.auditionDiagnostic).length > 0, true,
+                "the page publishes the audition capability diagnostic")
+
+        // The staged song may carry no voice change at all, so this case creates
+        // one through the production insertion path and checks the drawn result.
+        var drawnBefore = testCase.voiceMarkerLines().length
+        var inserted = testCase.insertVoiceChange(360)
+        verify(inserted, "the production picker inserted a voice change")
+        compare(testCase.voiceMarkerLines().length, drawnBefore + 1,
+                "the insertion published exactly one more drawn marker rule")
+        compare(findChild(page, "voiceReadout").visible, true,
+                "the readout is drawn for the presented track")
+    }
+
+    // Real pointer input on the drawn composition: the double-click picker entry,
+    // a typed filter, Enter acceptance, one insertion, and then the point menu's
+    // typed rows with the delete that consumes them.
+    function test_productionVoiceChangesPointerAndMenuTransactions() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-voice-pointer")
+        var page = testCase.mountProductionVoice(location)
+        var model = testCase.voiceModel()
+        var drawnBefore = testCase.voiceMarkerLines().length
+
+        // The picker's filter: a real double-click on a free lane column opens
+        // the insertion picker, and real keystrokes filter its published rows.
+        var column = testCase.freeVoiceColumn(360)
+        verify(column >= 0, "the staged song leaves a free voice-lane column")
+        testCase.doubleClickPlot(column)
+        tryVerify(function() { return model.pickerOpen }, 1000,
+                  "the double-click on the empty lane opened the picker")
+        compare(model.pickerTitle, "Insert voice change",
+                "an empty-lane target opens the insertion title")
+        var field = findChild(testCase.surface, "voicePickerSearch")
+        verify(field, "the picker composed its search field")
+        testCase.awaitVoiceModal("voicePicker", true)
+        tryVerify(function() { return field.activeFocus }, 1000,
+                  "the picker took focus in its search field")
+        testCase.typeProgram(0)
+        tryVerify(function() { return model.pickerFilter === "000" }, 1000,
+                  "the typed text reached the page's filter (filter '"
+                  + model.pickerFilter + "')")
+        compare(model.pickerHasMatch, true, "the typed filter matched the slot it names")
+        var rows = testCase.voicePickerRowItems()
+        compare(rows.length > 0, true, "the filter drew its visible rows")
+        compare(String(rows[0].Accessible.name).indexOf("000") >= 0, true,
+                "a filtered row names the slot it matched ('" + rows[0].Accessible.name + "')")
+        compare(model.interactionActive, true, "the open picker is an active interaction")
+        keyClick(Qt.Key_Escape)
+        tryVerify(function() { return !model.pickerOpen }, 1000, "Escape closed the picker")
+        compare(testCase.voiceMarkerLines().length, drawnBefore,
+                "the cancelled picker wrote nothing")
+        compare(testCase.voicePlot().activeFocus, true,
+                "focus returned to the page's plot after the picker closed")
+
+        // The insertion path: the same double-click entry, the picker's own arrow
+        // navigation onto another slot, then Enter.
+        var inserted = testCase.insertVoiceChange(360)
+        verify(inserted, "the production picker inserted a voice change")
+        compare(testCase.voiceMarkerLines().length, drawnBefore + 1,
+                "the inserted occurrence published its own drawn rule")
+        compare(session.canUndo, true, "the insertion reached the document's history")
+
+        // The point menu on the inserted marker, driven through the rendered rows.
+        var input = testCase.voicePlotInput()
+        var markerPoint = input.mapFromItem(inserted.parent, inserted.x + 1,
+                                            inserted.y + inserted.height / 2)
+        mouseClick(input, markerPoint.x, markerPoint.y, Qt.RightButton)
+        tryVerify(function() { return model.menuOpen }, 1000,
+                  "the right press on the marker opened the context menu")
+        testCase.awaitVoiceModal("voiceChangeMenu", true)
+        var panel = findChild(testCase.surface, "voiceMenuPanel")
+        verify(panel, "the menu composed its panel")
+        compare(panel.Accessible.role, Accessible.PopupMenu,
+                "the panel publishes the popup-menu role")
+        var changeRow = findChild(testCase.surface, "voiceMenuRow_1")
+        var deleteRow = findChild(testCase.surface, "voiceMenuRow_3")
+        verify(changeRow && deleteRow, "the marker target published both typed rows")
+        compare(changeRow.Accessible.role, Accessible.MenuItem,
+                "a row publishes the menu-item role")
+        compare(String(deleteRow.Accessible.name).length > 0, true,
+                "a row publishes its accessible name")
+        mouseClick(deleteRow, deleteRow.width / 2, deleteRow.height / 2, Qt.LeftButton)
+        tryVerify(function() { return testCase.voiceMarkerLines().length === drawnBefore }, 1000,
+                  "the rendered delete row removed the captured occurrence")
+        testCase.awaitVoiceModal("voiceChangeMenu", false)
+        compare(session.canUndo, true, "the deletion reached the document's history")
+
+        // An outside press dismisses the menu and writes nothing.
+        var kept = testCase.insertVoiceChange(60)
+        verify(kept, "the case inserted another marker for the dismissal")
+        var settled = testCase.voiceMarkerLines().length
+        markerPoint = input.mapFromItem(kept.parent, kept.x + 1, kept.y + kept.height / 2)
+        mouseClick(input, markerPoint.x, markerPoint.y, Qt.RightButton)
+        tryVerify(function() { return model.menuOpen }, 1000, "the menu reopened")
+        testCase.awaitVoiceModal("voiceChangeMenu", true)
+        var underlay = findChild(testCase.surface, "voiceMenuUnderlay")
+        verify(underlay, "the menu composed its dismissing underlay")
+        mouseClick(underlay, 4, 4, Qt.LeftButton)
+        tryVerify(function() { return !model.menuOpen }, 1000,
+                  "the outside press dismissed the menu")
+        compare(testCase.voiceMarkerLines().length, settled,
+                "the outside dismissal wrote nothing")
+    }
+
+    // The picker's own keyboard and focus contract: arrow navigation over the
+    // published rows, Escape cancelling, the outside press cancelling, and focus
+    // returning to the page's plot.
+    function test_productionVoiceChangesPickerKeyboardAndCancellation() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-voice-keyboard")
+        var page = testCase.mountProductionVoice(location)
+        var model = testCase.voiceModel()
+        var marker = testCase.insertVoiceChange(60)
+        verify(marker, "the case created a marker through the production picker")
+        var before = testCase.voiceMarkerLines().length
+        var column = testCase.freeVoiceColumn(24)
+        verify(column >= 0, "the staged song leaves a free voice-lane column")
+
+        testCase.doubleClickPlot(column)
+        tryVerify(function() { return model.pickerOpen }, 1000, "the picker opened")
+        testCase.awaitVoiceModal("voicePicker", true)
+        testCase.awaitVoicePickerFocus()
+        var index = model.pickerIndex
+        compare(index >= 0, true, "the picker publishes a current row")
+        keyClick(Qt.Key_Down)
+        tryVerify(function() { return model.pickerIndex === index + 1 }, 1000,
+                  "the down arrow moved the current row")
+        keyClick(Qt.Key_Up)
+        tryVerify(function() { return model.pickerIndex === index }, 1000,
+                  "the up arrow returned to the captured row")
+        var rows = testCase.voicePickerRowItems()
+        compare(rows.length > 0, true, "the picker drew its visible rows")
+        compare(String(rows[0].Accessible.name).length > 0, true,
+                "a drawn row publishes its accessible name ('" + rows[0].Accessible.name + "')")
+        compare(rows[0].Accessible.role, Accessible.ListItem,
+                "a drawn row publishes the list-item role")
+        keyClick(Qt.Key_Escape)
+        tryVerify(function() { return !model.pickerOpen }, 1000, "Escape closed the picker")
+        testCase.awaitVoiceModal("voicePicker", false)
+        compare(testCase.voiceMarkerLines().length, before, "Escape wrote nothing")
+        compare(testCase.voicePlot().activeFocus, true,
+                "focus returned to the page's plot after the picker closed")
+
+        // An outside press dismisses without a write and without a gesture.
+        testCase.doubleClickPlot(column)
+        tryVerify(function() { return model.pickerOpen }, 1000, "the picker reopened")
+        testCase.awaitVoiceModal("voicePicker", true)
+        var underlay = findChild(testCase.surface, "voicePickerUnderlay")
+        verify(underlay, "the picker composed its dismissing underlay")
+        mouseClick(underlay, 4, 4, Qt.LeftButton)
+        tryVerify(function() { return !model.pickerOpen }, 1000,
+                  "the outside press dismissed the picker")
+        testCase.awaitVoiceModal("voicePicker", false)
+        compare(model.interactionActive, false,
+                "the dismissing press left no interaction behind")
+        compare(testCase.voiceMarkerLines().length, before, "the outside dismissal wrote nothing")
+
+        // A live marker drag, cancelled by hiding the section, commits nothing.
+        var input = testCase.voicePlotInput()
+        var lines = testCase.voiceMarkerLines()
+        var dragged = null
+        for (var i = 0; i < lines.length; ++i) {
+            if (Math.abs(lines[i].x - marker.x) < 1)
+                dragged = lines[i]
+        }
+        verify(dragged, "the inserted marker is still drawn for the drag")
+        var start = input.mapFromItem(dragged.parent, dragged.x + dragged.width / 2,
+                                      dragged.y + dragged.height / 2)
+        mousePress(input, start.x, start.y, Qt.LeftButton)
+        mouseMove(input, start.x + 30, start.y, -1, Qt.LeftButton)
+        compare(model.interactionActive, true, "the live drag reports an active interaction")
+        testCase.clickToggle(testCase.voiceChangesKind)
+        tryVerify(function() { return !testCase.section(testCase.voiceChangesKind).visible }, 1000,
+                  "the section hid")
+        compare(model.interactionActive, false, "hiding the section cancelled the drag")
+        mouseRelease(input, start.x + 30, start.y, Qt.LeftButton)
+        compare(model.interactionActive, false, "the released pointer committed nothing")
+        compare(testCase.voiceMarkerLines().length, before, "the cancelled drag wrote nothing")
+        testCase.clickToggle(testCase.voiceChangesKind)
+        tryVerify(function() { return testCase.section(testCase.voiceChangesKind).visible }, 1000,
+                  "the section is visible again")
+    }
+
+    // The shared playhead: presentations inside one voice span rebuild no static
+    // content and every published presentation reaches the page through the
+    // session's own Swift fan-out — the one callback, fanned to both pages.
+    function test_productionVoiceChangesPlayheadPerformance() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-voice-playhead")
+        var page = testCase.mountProductionVoice(location)
+        verify(testCase.insertVoiceChange(90),
+               "the case created a marker so the presented span has a boundary")
+        verify(bootstrap.pausePlayheadPolling(),
+               "the lane holds the production polling task for determinism")
+        // The lane presents real observations, so it learns the sample-to-tick
+        // rate from the production presenter itself instead of assuming a tempo.
+        bootstrap.presentPlayheadObservation(0, 2)
+        var probe = 250.0
+        while (probe <= 8000 && bootstrap.voicePresentedTick() < 1) {
+            bootstrap.presentPlayheadObservation(probe, 2)
+            probe *= 2
+        }
+        var warmTick = bootstrap.voicePresentedTick()
+        verify(warmTick >= 1, "the presented samples advanced the shared tick")
+        var perTick = probe / 2 / warmTick
+        var endTick = bootstrap.voiceContextEndTick()
+        verify(endTick > warmTick + 1, "the presented span has room to move inside it")
+        var builds = bootstrap.voiceContentBuilds()
+        var presented = bootstrap.voicePlayheadPresentations()
+        var published = bootstrap.publishedPlayheadPresentations()
+        var slot = bootstrap.voicePresentedSlot()
+        var sample = probe / 2
+        var step = Math.max(1, Math.floor(perTick / 4))
+        var updates = 0
+        while (updates < 24 && bootstrap.voicePresentedTick() + 3 < endTick) {
+            // One iteration is one distinct presented tick: the samples that
+            // round to a tick the page already has are the dedupe the page owes.
+            var previous = bootstrap.voicePresentedTick()
+            var guard = 0
+            while (bootstrap.voicePresentedTick() === previous && guard < 32) {
+                sample += step
+                bootstrap.presentPlayheadObservation(sample, 2)
+                guard += 1
+            }
+            updates += 1
+        }
+        compare(updates > 0, true, "the case presented inside the span")
+        compare(bootstrap.voiceContentBuilds(), builds,
+                "shared-playhead movement inside one span rebuilt no voice content")
+        compare(bootstrap.voicePresentedSlot(), slot,
+                "every presented tick stayed inside its own voice context")
+        compare(bootstrap.voicePlayheadPresentations() - presented, updates,
+                "every distinct context presentation reached the Voice Changes page ("
+                + (bootstrap.voicePlayheadPresentations() - presented) + " of " + updates + ")")
+        compare(bootstrap.publishedPlayheadPresentations() - published >= updates, true,
+                "the shared presenter published every presentation the page consumed")
+
+        // Crossing the span boundary updates the readout and rebuilds once.
+        var crossingGuard = 0
+        while (bootstrap.voicePresentedSlot() === slot && crossingGuard < 64) {
+            sample += step
+            bootstrap.presentPlayheadObservation(sample, 2)
+            crossingGuard += 1
+        }
+        compare(bootstrap.voicePresentedSlot() !== slot, true,
+                "the crossed boundary changed the presented context")
+        compare(bootstrap.voiceContentBuilds(), builds + 1,
+                "crossing a span rebuilt the projection exactly once")
+        compare(testCase.voiceMarkerLines().length > 0, true,
+                "the rebuilt projection still draws its markers")
+        compare(page.objectName, "voiceChangesPage", "the case composition is the production page")
+    }
+
+    // The container's one modal layer: the picker is composed into it, it really
+    // sits above another section's body, an outside press inside that other
+    // section dismisses it without starting that page's gesture, and the
+    // composited drawer pixel proves the stacking rather than a subtree grab.
+    function test_productionVoiceChangesModalLayerComposition() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-voice-modal-layer")
+        var values = testCase.chromeState({ "velocityVisible": true, "voiceChangesVisible": true })
+        testCase.mountProductionVelocity(location, values)
+        verify(bootstrap.attachProductionSection(testCase.voiceChangesKind),
+               "the composition hosts both document-bound pages")
+        testCase.resetChrome(location, values)
+        testCase.showSection(testCase.voiceChangesKind)
+        var marker = testCase.insertVoiceChange(120)
+        verify(marker, "the case created a marker through the production picker")
+
+        var column = testCase.freeVoiceColumn(240)
+        verify(column >= 0, "the lane leaves a free column for the picker")
+        testCase.doubleClickPlot(column)
+        tryVerify(function() { return testCase.voiceModel().pickerOpen }, 1000,
+                  "the picker opened")
+        testCase.awaitVoiceModal("voicePicker", true)
+        var layer = findChild(testCase.surface, "drawerModalLayer")
+        var card = findChild(testCase.surface, "voicePickerCard")
+        verify(layer && card, "the modal layer hosts the picker's card")
+        var pickerRoot = findChild(testCase.surface, "voicePicker")
+        verify(pickerRoot, "the picker root is composed")
+        compare(pickerRoot.parent, layer,
+                "the picker composes into the container's one modal layer")
+
+        // The card crosses another section's body: that is where stacking matters.
+        var velocityBody = findChild(testCase.drawer(), "drawerBody_" + testCase.keyName(testCase.velocityKind))
+        verify(velocityBody, "the velocity body is hosted beside the voice body")
+        var cardInDrawer = card.mapToItem(testCase.drawer(), 0, 0)
+        var bodyInDrawer = velocityBody.mapToItem(testCase.drawer(), 0, 0)
+        var left = Math.max(cardInDrawer.x, bodyInDrawer.x)
+        var right = Math.min(cardInDrawer.x + card.width,
+                             bodyInDrawer.x + velocityBody.width)
+        var top = Math.max(cardInDrawer.y, bodyInDrawer.y)
+        var bottom = Math.min(cardInDrawer.y + card.height,
+                              bodyInDrawer.y + velocityBody.height)
+        compare(right > left && bottom > top, true,
+                "the picker's card overlaps the velocity body (card "
+                + Math.round(cardInDrawer.x) + "," + Math.round(cardInDrawer.y) + " "
+                + Math.round(card.width) + "x" + Math.round(card.height) + "; body "
+                + Math.round(bodyInDrawer.x) + "," + Math.round(bodyInDrawer.y) + " "
+                + Math.round(velocityBody.width) + "x" + Math.round(velocityBody.height) + ")")
+
+        var drawer = testCase.drawer()
+        var withModal = grabImage(drawer)
+        verify(withModal && withModal.width > 0, "the drawer composited into an image")
+        var scale = drawer.width > 0 ? withModal.width / drawer.width : 1
+        var probeX = Math.min(withModal.width - 1,
+                              Math.max(0, Math.round((left + (right - left) / 2) * scale)))
+        var probeY = Math.min(withModal.height - 1,
+                              Math.max(0, Math.round((top + (bottom - top) / 2) * scale)))
+        verify(withModal.alpha(probeX, probeY) === 255,
+               "the composited overlap pixel is opaque")
+        var cardChannels = testCase.channelsOf(card.color)
+        // The overlap region is read through the suite's own pixel oracle: an
+        // exact palette pixel inside it proves the card was composited over the
+        // other section's body, whichever glyph happens to sit at the centre.
+        var radius = Math.max(2, Math.round(4 * scale))
+        var probeRegion = {
+            "x0": Math.max(0, probeX - radius), "y0": Math.max(0, probeY - radius),
+            "x1": Math.min(withModal.width - 1, probeX + radius),
+            "y1": Math.min(withModal.height - 1, probeY + radius)
+        }
+        var cardFill = testCase.nearestPixel(withModal, probeRegion, cardChannels)
+        verify(cardFill.distance <= 6,
+               "the composited overlap region carries the card's own fill ("
+               + cardFill.pixel.join("/") + " vs " + cardChannels.join("/")
+               + " at " + cardFill.at + ")")
+
+        // An outside press inside the other section dismisses the modal and never
+        // reaches that section's own input.
+        var velocityBefore = bootstrap.velocitySelectedNoteIds()
+        var velocityGesture = testCase.velocityModel().interactionActive
+        // A point inside the other section's body that the card does not cover:
+        // the dismissing press must reach the modal's underlay, not the card.
+        var crossX = bodyInDrawer.x + 6
+        var crossY = bodyInDrawer.y + velocityBody.height / 2
+        compare(crossX < cardInDrawer.x || crossX > cardInDrawer.x + card.width
+                || crossY < cardInDrawer.y || crossY > cardInDrawer.y + card.height, true,
+                "the cross-section press point lies outside the card")
+        var underlay = findChild(testCase.surface, "voicePickerUnderlay")
+        verify(underlay, "the picker composed its dismissing underlay")
+        var underlayPoint = underlay.mapFromItem(testCase.drawer(), crossX, crossY)
+        compare(underlayPoint.x >= 0 && underlayPoint.x <= underlay.width
+                && underlayPoint.y >= 0 && underlayPoint.y <= underlay.height, true,
+                "the cross-section press point lies inside the modal layer's underlay")
+        mouseClick(underlay, underlayPoint.x, underlayPoint.y, Qt.LeftButton)
+        tryVerify(function() { return !testCase.voiceModel().pickerOpen }, 1000,
+                  "the outside press inside another section dismissed the picker")
+        testCase.awaitVoiceModal("voicePicker", false)
+        compare(bootstrap.velocitySelectedNoteIds(), velocityBefore,
+                "the dismissing press did not reach the other section's selection")
+        compare(testCase.velocityModel().interactionActive, velocityGesture,
+                "the dismissing press started no gesture in the other section")
+
+        var withoutModal = grabImage(drawer)
+        verify(withoutModal && withoutModal.width > 0, "the drawer composited again")
+        var bodyFill = testCase.nearestPixel(withoutModal, probeRegion, cardChannels)
+        verify(bodyFill.distance > cardFill.distance + 6,
+               "the overlap region belongs to the section body once the modal is gone ("
+               + cardFill.pixel.join("/") + " d=" + cardFill.distance + " -> "
+               + bodyFill.pixel.join("/") + " d=" + bodyFill.distance + ")")
+    }
+
+    // Bare Space priority: the voice page never claims it, the picker's search
+    // field is the explicit text-entry exception, and every other picker/menu
+    // surface leaves it to the window transport.
+    function test_productionVoiceChangesSpacePriority() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-voice-space")
+        var page = testCase.mountProductionVoice(location)
+        var model = testCase.voiceModel()
+        var marker = testCase.insertVoiceChange(60)
+        verify(marker, "the case created a marker for the menu")
+        var propagations = testCase.spacePropagations
+
+        // The plot: bare Space reaches the window's transport command.
+        testCase.voicePlot().forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Space)
+        tryVerify(function() { return testCase.spacePropagations === propagations + 1 }, 1000,
+                  "the voice plot leaves bare Space to the window transport")
+
+        // The picker's search field is the modal's one text-entry surface.
+        var column = testCase.freeVoiceColumn(120)
+        verify(column >= 0, "the lane leaves a free column for the picker")
+        testCase.doubleClickPlot(column)
+        tryVerify(function() { return model.pickerOpen }, 1000, "the picker opened")
+        testCase.awaitVoiceModal("voicePicker", true)
+        testCase.awaitVoicePickerFocus()
+        var typed = String(model.pickerFilter).length
+        keyClick(Qt.Key_Space)
+        tryVerify(function() { return String(model.pickerFilter).length === typed + 1 }, 1000,
+                  "the focused search field takes Space as text")
+        compare(testCase.spacePropagations, propagations + 1,
+                "the focused search field keeps Space out of the transport")
+
+        // Every other picker surface claims only Return/Enter.
+        var accept = findChild(testCase.surface, "voicePickerAccept")
+        verify(accept, "the picker composed its accept control")
+        accept.forceActiveFocus(Qt.TabFocusReason)
+        keyClick(Qt.Key_Space)
+        tryVerify(function() { return testCase.spacePropagations === propagations + 2 }, 1000,
+                  "the picker's accept control leaves bare Space to the transport")
+        keyClick(Qt.Key_Escape)
+        tryVerify(function() { return !model.pickerOpen }, 1000, "Escape closed the picker")
+        testCase.awaitVoiceModal("voicePicker", false)
+
+        // The context menu's panel claims only Return/Enter either.
+        var input = testCase.voicePlotInput()
+        var point = input.mapFromItem(marker.parent, marker.x + 1,
+                                      marker.y + marker.height / 2)
+        mouseClick(input, point.x, point.y, Qt.RightButton)
+        tryVerify(function() { return model.menuOpen }, 1000, "the context menu opened")
+        testCase.awaitVoiceModal("voiceChangeMenu", true)
+        keyClick(Qt.Key_Space)
+        tryVerify(function() { return testCase.spacePropagations === propagations + 3 }, 1000,
+                  "the voice menu leaves bare Space to the window transport")
+        keyClick(Qt.Key_Escape)
+        tryVerify(function() { return !model.menuOpen }, 1000, "Escape closed the menu")
+        testCase.awaitVoiceModal("voiceChangeMenu", false)
+        compare(model.interactionActive, false, "the case left no interaction behind")
+    }
+
     // The suite hands the document presentation back the way the host does at
     // close, around the one composition the lane mounted: polling stops, the
     // session cancels while the scene still exists, the scene is removed, and the
@@ -1879,10 +2536,20 @@ TestCase {
         if (!bootstrap.profileActive)
             skip("the reference capture runs in a dedicated profile child")
         var location = bootstrap.preferencesUrl("profile-" + bootstrap.profileName)
-        var page = testCase.mountProductionVelocity(location)
+        // Both document-bound pages mount in this composition: the drawer capture
+        // carries the whole production surface, and the picker pane needs the
+        // Voice Changes page in its slot and visible.
+        var values = testCase.chromeState({ "velocityVisible": true, "voiceChangesVisible": true })
+        var page = testCase.mountProductionVelocity(location, values)
+        verify(bootstrap.attachProductionSection(testCase.voiceChangesKind),
+               "the profile composition attaches the production Voice Changes page")
+        testCase.resetChrome(location, values)
+        testCase.showSection(testCase.voiceChangesKind)
+        tryVerify(function() { return testCase.voiceMarkerLines().length > 0 }, 2000,
+                  "the profile composition drew the voice change markers")
         // The profile's font is pushed through the production composition: the
         // grid's base font is the font-relative geometry base the roll, the
-        // drawer chrome and this page all measure from.
+        // drawer chrome and both pages measure from.
         testCase.surface.gridModel.baseFontPx = bootstrap.profileFontPx
         testCase.surface.configureViewport()
         wait(0)
@@ -1895,6 +2562,8 @@ TestCase {
                 "the child renders at its profile's device pixel ratio")
         compare(testCase.velocityModel().baseFontPx, bootstrap.profileFontPx,
                 "the page received the profile's base font")
+        compare(testCase.voiceModel().baseFontPx, bootstrap.profileFontPx,
+                "the Voice Changes page received the profile's base font too")
 
         var panes = bootstrap.profilePanes
         for (var i = 0; i < panes.length; ++i)

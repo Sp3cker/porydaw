@@ -255,6 +255,9 @@ qt_add_resources(porydaw_app "drawer_qml"
         src/ui/songview/quick/drawer/EditorDrawer.qml
         src/ui/songview/quick/drawer/VelocityPage.qml
         src/ui/songview/quick/drawer/VelocityPrompt.qml
+        src/ui/songview/quick/drawer/VoiceChangesPage.qml
+        src/ui/songview/quick/drawer/VoicePicker.qml
+        src/ui/songview/quick/drawer/VoiceChangeMenu.qml
 )
 
 qt_add_resources(porydaw_app "drawer_icons"

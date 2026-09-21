@@ -32,6 +32,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// before the scene mounts, refreshed from the session's own publications,
     /// and cancelled and released only after the host acknowledged detachment.
     private var velocityPageOwner: VelocityPage?
+    /// The document-bound Voice Changes page: same lifetime as the Velocity
+    /// page, attached to its own section slot and fanned the one shared
+    /// playhead presentation beside it.
+    private var voiceChangesPageOwner: VoiceChangesPage?
     private var detachContinuation: CheckedContinuation<Void, Never>?
     private var isDisposed = false
     private var activeReplacementTask: Task<Void, Never>?
@@ -70,6 +74,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
             preconditionFailure("Velocity page requested without an open song")
         }
         return velocityPageOwner
+    }
+
+    /// The document-bound Voice Changes page, with the same document lifetime as
+    /// the Velocity page.
+    public func voiceChangesPage() -> VoiceChangesPage {
+        guard let voiceChangesPageOwner else {
+            preconditionFailure("Voice Changes page requested without an open song")
+        }
+        return voiceChangesPageOwner
     }
 
     /// The one shared playhead. Like the drawer it exists for the whole session;
@@ -142,6 +155,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// close path's acknowledgment: never earlier, because the QML surface binds
     /// to the grid, the page and the session until the scene is really gone.
     private func releaseDocumentPresentation() {
+        if let page = voiceChangesPageOwner {
+            drawer.detachSection(page)
+            page.detach()
+            voiceChangesPageOwner = nil
+        }
         if let page = velocityPageOwner {
             drawer.detachSection(page)
             page.detach()
@@ -220,6 +238,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 documentDirty = documentSession.document.isDirty || documentSession.bankDirty
                 canUndo = documentSession.document.history.canUndo
                 canRedo = documentSession.document.history.canRedo
+                // A save can adopt a refreshed bank whose slots carry new
+                // symbols; that publication has no document change of its own.
+                voiceChangesPageOwner?.refreshFromDocument()
             } catch {
                 lastSaveError = String(describing: error)
             }
@@ -238,6 +259,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 documentDirty = documentSession.document.isDirty || documentSession.bankDirty
                 canUndo = documentSession.document.history.canUndo
                 canRedo = documentSession.document.history.canRedo
+                // Undoing a bank entry adopts its slots without a document
+                // change, so the Voice Changes labels are refreshed here.
+                voiceChangesPageOwner?.refreshFromDocument()
             } catch {
                 let message = String(describing: error)
                 lastSaveError = message
@@ -259,6 +283,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 documentDirty = documentSession.document.isDirty || documentSession.bankDirty
                 canUndo = documentSession.document.history.canUndo
                 canRedo = documentSession.document.history.canRedo
+                // Redoing a bank entry adopts its slots without a document
+                // change, so the Voice Changes labels are refreshed here.
+                voiceChangesPageOwner?.refreshFromDocument()
             } catch {
                 let message = String(describing: error)
                 lastSaveError = message
@@ -347,6 +374,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 // tick: the same position, a new projection.
                 playhead?.refreshProjection()
                 self?.velocityPageOwner?.refreshCamera()
+                self?.voiceChangesPageOwner?.refreshCamera()
             }
             replacement.onPlayback = { [weak self] timeline in
                 do {
@@ -362,6 +390,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 // A document change may have rebuilt the timeline; re-read the
                 // authoritative sample through it before the next poll.
                 playhead?.refreshImmediate()
+                // Every document-bound page re-derives from the same document:
+                // track, bank and history changes reach both owners here.
+                self.velocityPageOwner?.refreshFromDocument()
+                self.voiceChangesPageOwner?.refreshFromDocument()
                 self.documentDirty = replacement.document.isDirty || replacement.bankDirty
                 self.canUndo = replacement.document.history.canUndo
                 self.canRedo = replacement.document.history.canRedo
@@ -380,25 +412,33 @@ public final class ApplicationSession: QmlInstantiableStatus {
             // or superseded document.
             playhead.attach(session: replacement, audio: audio, grid: presenter, drawer: drawer)
             playhead.startPolling()
-            // The document-bound page is installed and attached before `songOpen`
-            // publishes, so the scene mounts with its page already in the slot.
+            // The document-bound pages are installed and attached before
+            // `songOpen` publishes, so the scene mounts with every page already
+            // in its slot.
             let page = VelocityPage(baseFontPx: presenter.baseFontPx)
             page.attach(session: replacement, palette: presenter.palette)
+            let voicePage = VoiceChangesPage(baseFontPx: presenter.baseFontPx)
+            voicePage.attach(session: replacement, palette: presenter.palette)
             presenter.onSetVelocityRequested = { [weak page] in
                 page?.openSelectedVelocityPrompt() ?? false
             }
             presenter.onSessionStateChanged = { [weak page] in page?.refreshFromDocument() }
-            // The one Swift fan-out from the shared clock into the page: the
-            // production QML never reads the presenter or calls the page's
-            // mutator, so the page's context follows the shared tick through the
-            // owners that already exist. The callback is weak and is cleared by
-            // `SharedPlayheadPresenter.detach()` before this page retires.
-            playhead.onPresentation = { [weak page] presentation in
+            // The one Swift fan-out from the shared clock into the pages: the
+            // production QML never reads the presenter or calls a page's mutator,
+            // so each page's context follows the shared tick through the owners
+            // that already exist. One callback fans both pages — the session
+            // installs no second closure — and `SharedPlayheadPresenter.detach()`
+            // clears it before either page retires.
+            playhead.onPresentation = { [weak page, weak voicePage] presentation in
                 page?.refreshPlayhead(tick: presentation.tick,
                                       playing: presentation.playing)
+                voicePage?.refreshPlayhead(tick: presentation.tick,
+                                           playing: presentation.playing)
             }
             velocityPageOwner = page
+            voiceChangesPageOwner = voicePage
             drawer.attachSection(page)
+            drawer.attachSection(voicePage)
             documentDirty = replacement.document.isDirty || replacement.bankDirty
             canUndo = replacement.document.history.canUndo
             canRedo = replacement.document.history.canRedo
@@ -428,9 +468,14 @@ public final class ApplicationSession: QmlInstantiableStatus {
             grid?.detach()
             self.grid = nil
         }
-        // The host acknowledged scene removal: the page's slot is dropped (its
+        // The host acknowledged scene removal: each page's slot is dropped (its
         // cancel already ran above, while the scene still existed) and its owner
         // is released before the document session it reads.
+        if let page = voiceChangesPageOwner {
+            drawer.detachSection(page)
+            page.detach()
+            voiceChangesPageOwner = nil
+        }
         if let page = velocityPageOwner {
             drawer.detachSection(page)
             page.detach()

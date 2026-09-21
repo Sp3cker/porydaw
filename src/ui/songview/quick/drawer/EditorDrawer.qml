@@ -13,6 +13,12 @@
 // arrives here as an empty contentUrl and the loader drops its item; the drawer
 // keeps no reference to a page it no longer hosts, and detaching writes no key.
 //
+// Modal containment: one container-wide layer (`drawerModalLayer`) above every
+// section hosts the modal surfaces of pages that opt in through their optional
+// `modalHost` property, so a page's picker or menu is never clipped by the body
+// loader that hosts its content. The layer draws nothing and takes no input of
+// its own.
+//
 // Input: a focused toggle activates with Return/Enter, a focused grip resizes
 // with Up/Down and consumes Left/Right. Bare Space is never claimed, so the
 // window's transport shortcut outranks incidental focus here. Every visibility
@@ -396,6 +402,14 @@ FocusScope {
             focus: true
             clip: true
 
+            // The container's one modal layer reaches the page after it loads,
+            // and only when the page declares the property: a page with no modal
+            // surface simply has none to fill.
+            onLoaded: {
+                if (body.item && body.item.hasOwnProperty("modalHost"))
+                    body.item.modalHost = modalLayer
+            }
+
             // The URL is resolved once per attach and never re-pointed, so a
             // reload happens only when the presenter publishes another one.
             function syncSource() {
@@ -460,6 +474,24 @@ FocusScope {
         kind: drawerScope.automationKind
         toggleName: qsTr("Automation drawer")
         handleName: qsTr("Resize automation drawer")
+    }
+
+    // Generic modal containment, one layer for the whole container: a page's
+    // modal surface (a picker, a menu) must not be clipped by the body loader
+    // that hosts the page's content, and it must sit above every section's
+    // bodies and chrome, whichever section it belongs to. The layer is declared
+    // after all of them, spans the container, takes no input and draws nothing
+    // of its own; a page that composes no modal never populates it. Opt-in pages
+    // receive it as their optional `modalHost` property right after loading.
+    Item {
+        id: modalLayer
+
+        objectName: "drawerModalLayer"
+        x: 0
+        y: 0
+        width: drawerScope.width
+        height: drawerScope.height
+        z: 3
     }
 
     Connections {

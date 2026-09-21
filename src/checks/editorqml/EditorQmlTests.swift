@@ -37,18 +37,20 @@ enum EditorQmlLane {
     }
 
     /// The reference-image ledger this page owns: `velocity-lane` and
-    /// `editor-drawer` at macOS DPR 1/2 font 12/16, and `velocity-prompt` at DPR 2
-    /// font 12/16. One child process renders every pane whose ledger row names
-    /// its profile, so four children cover all ten captures.
+    /// `editor-drawer` at macOS DPR 1/2 font 12/16, plus `velocity-prompt` and
+    /// `voice-picker` at DPR 2 font 12/16. One child process renders every pane
+    /// whose ledger row names its profile.
     static let referenceProfiles: [ReferenceProfile] = [
         ReferenceProfile(name: "dpr1-font12", dpr: 1, fontPx: 12,
                          panes: ["velocity-lane", "editor-drawer"]),
         ReferenceProfile(name: "dpr1-font16", dpr: 1, fontPx: 16,
                          panes: ["velocity-lane", "editor-drawer"]),
         ReferenceProfile(name: "dpr2-font12", dpr: 2, fontPx: 12,
-                         panes: ["velocity-lane", "editor-drawer", "velocity-prompt"]),
+                         panes: ["velocity-lane", "editor-drawer", "velocity-prompt",
+                                 "voice-picker"]),
         ReferenceProfile(name: "dpr2-font16", dpr: 2, fontPx: 16,
-                         panes: ["velocity-lane", "editor-drawer", "velocity-prompt"]),
+                         panes: ["velocity-lane", "editor-drawer", "velocity-prompt",
+                                 "voice-picker"]),
     ]
 
     /// The one suite case a profile child runs. Qt Quick Test selects a case by
@@ -424,7 +426,8 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
         let page: EditorDrawerPage
         switch sectionKind {
         case .velocity: page = session.velocityPage()
-        case .automation, .voiceChanges: return false
+        case .voiceChanges: page = session.voiceChangesPage()
+        case .automation: return false
         }
         session.drawerPresenter().detachSection(page)
         return !session.drawerPresenter().section(kind: kind).available
@@ -437,7 +440,8 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
         let page: EditorDrawerPage
         switch sectionKind {
         case .velocity: page = session.velocityPage()
-        case .automation, .voiceChanges: return false
+        case .voiceChanges: page = session.voiceChangesPage()
+        case .automation: return false
         }
         session.drawerPresenter().attachSection(page)
         return session.drawerPresenter().section(kind: kind).available
@@ -513,6 +517,77 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
     /// The page's published unsupported-context flag.
     public func velocityContextUnsupported() -> Bool {
         session?.velocityPage().contextUnsupported ?? false
+    }
+
+    // ---- the production Voice Changes page ---------------------------------
+
+    /// The document-bound Voice Changes page for the lane's Swift-side reads.
+    /// The QML cases reach the same object through
+    /// `applicationSession.voiceChangesPage()`, which is the production accessor.
+    @QtIgnored
+    public func voiceChangesPage() -> VoiceChangesPage? { session?.voiceChangesPage() }
+
+    /// The page's content-build diagnostic: `UInt64` is not a bridge type, so the
+    /// lane reads it as a number it can compare.
+    public func voiceContentBuilds() -> Double {
+        Double(session?.voiceChangesPage().contentBuildCount ?? 0)
+    }
+
+    /// The page's shared-playhead presentation diagnostic.
+    public func voicePlayheadPresentations() -> Double {
+        Double(session?.voiceChangesPage().playheadPresentationCount ?? 0)
+    }
+
+    /// The presented voice-context span's end tick: a playhead case presents
+    /// inside it so a rebuild can only come from a real content change.
+    public func voiceContextEndTick() -> Double {
+        Double(session?.voiceChangesPage().presentedContextEndTick ?? TimeDefaults.noTick)
+    }
+
+    /// The presented voice-context slot, so a case can prove it never changed.
+    public func voicePresentedSlot() -> Int {
+        session?.voiceChangesPage().presentedContextSlot ?? -1
+    }
+
+    /// The page's published audition capability and its diagnostic: the picker's
+    /// absent action is covered rather than hidden.
+    public func voiceAuditionAvailable() -> Bool {
+        session?.voiceChangesPage().auditionAvailable ?? true
+    }
+
+    public func voiceAuditionDiagnostic() -> String {
+        session?.voiceChangesPage().auditionDiagnostic ?? ""
+    }
+
+    /// The context tick the Voice Changes page last presented, so a case can
+    /// present inside the span it is measuring.
+    public func voicePresentedTick() -> Double {
+        Double(session?.voiceChangesPage().presentedContextTick ?? 0)
+    }
+
+    /// The tick the open picker captured: a lane case chooses a column whose
+    /// snapped tick holds no change, so its acceptance is an insertion rather
+    /// than the production value replacement at an occupied tick.
+    public func voicePickerTargetTick() -> Double {
+        Double(session?.voiceChangesPage().pickerTargetTick ?? TimeDefaults.noTick)
+    }
+
+    /// The ticks of the published voice-change markers, comma-separated, so a
+    /// lane case can tell an occupied lane tick from a free one.
+    public func voiceMarkerTicks() -> String {
+        guard let page = session?.voiceChangesPage() else { return "" }
+        return page.publishedMarkers.map { "\(Tick($0.tick))" }.joined(separator: ",")
+    }
+
+    /// The composition's own cancellation path, so a lane case never starts from
+    /// the previous case's live interaction: the grid receives the reason and the
+    /// drawer cancels every attached page's interaction in the same call, which
+    /// is exactly what a hidden surface does. `true` means no interaction is
+    /// live afterwards.
+    public func cancelInput() -> Bool {
+        guard let session else { return false }
+        session.cancelGridInput(reason: 2)
+        return !session.drawerPresenter().interactionActive
     }
 
     /// Every `cancelSectionInteraction()` the container performed on a test
