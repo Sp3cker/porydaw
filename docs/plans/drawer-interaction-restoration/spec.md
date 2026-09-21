@@ -4,7 +4,7 @@
 
 Restore observable pre-Swift editor-drawer interaction behavior. Reuse the original QML controls and component structure, adapting bindings to Swift rather than inventing replacement controls. Swift retains document, transaction, selection, and presenter authority under [the charter](../swift-backend-charter.md). Historical C++ is evidence, not a runtime dependency.
 
-User ruling: no new C++ code, including native bridge extensions. New implementation is Swift/QML. Existing native APIs may be consumed through typed Swift interop; no opaque-layout guesses, diagnostic-token pointer casts, or new handwritten C++ accessors.
+User ruling: no new C++ code, including native bridge extensions. New implementation is Swift/QML. Only external-library adaptation may remain native; an existing first-party C API is not an exemption. Move the responsible first-party policy to Swift instead of adding another delegation. No opaque-layout guesses, diagnostic-token pointer casts, or new handwritten C++ accessors.
 
 The detailed [inventory](inventory.md) records source locations and hypotheses. Source before `becfeb40` (container), `4b0d0738` (velocity), `414d2544` (voice), and `d2eb173e` (automation) is the oracle. The migration commits themselves are not the pre-migration baseline. The current dirty working tree is the implementation starting point; unrelated TrackHeaders and ownership work must survive.
 
@@ -46,3 +46,7 @@ The detailed [inventory](inventory.md) records source locations and hypotheses. 
 Historical source supersedes both scout rounds: left/right presses outside selection clear it, while a stationary right-click inside preserves it; a stationary selected-node click deletes only the grabbed point; vertical band extent is not applicable to one displayed lane. The scout suggestion to call native file-private `resolveVoice` directly is not an available API: recover equivalent read-only subvoice facts from the bank's ToneData without linking the old application policy into Swift.
 
 Scouts' direct binary/ctest commands are discovery notes, not approved verification commands. Controller runs `deno task verify --filter swiftcore --verbose`, `deno task verify --filter swiftqtml --verbose`, and `deno task verify:qml --filter editorqml-drawer --verbose`. Existing tap-tempo tests exist; the follow-up claim that the entire family is absent must be reconciled against `AutomationPageChecks.swift` before adding checks. Source-based preserved claims are not runtime proof.
+
+## Verified acceptance checkpoints
+
+- Automation restoration and selection commands: independent historical SPEC/QUALITY review passed. Regressions reproduced empty-clipboard Paste availability and lost command notifications after detach/reattach; both pass after the fixes. `deno task verify --filter swiftcore --filter swiftqtml --verbose` passed. The cohesive projection owner remains an accepted size exception; no line-count-only extraction.

@@ -1140,16 +1140,35 @@ private func deleteTransactions(_ report: CheckReport, suite: DocumentSession,
 @MainActor
 private func rangeEditAndClipboard(_ report: CheckReport, suite: DocumentSession,
                                    service: ProjectService) {
+    let savedClipboard = PorydawSelectionClipboardState()
+    defer { savedClipboard.restore() }
+    _ = pd_clipboard_write(nil, 0)
     let fixture = AutomationFixture(suite: suite, service: service,
                                     pan: [(24, 30), (120, 40)],
                                     tempo: [(0, 500_000), (48, 400_000)])
+    fixture.activate(fixture.panLane)
+    func pasteRowEnabled() -> Bool? {
+        let x = fixture.x(80)
+        let y = fixture.y(fixture.panLane, 80)
+        _ = fixture.page.pointerPress(x: x, y: y, surface: AutomationInputSurface.plot.rawValue,
+                                      button: AutomationQtButton.right, modifiers: 0)
+        _ = fixture.page.pointerRelease(x: x, y: y, button: AutomationQtButton.right, modifiers: 0)
+        defer { fixture.page.dismissMenu() }
+        return fixture.page.publishedMenuRows.first {
+            $0.actionId == AutomationMenuAction.rangePaste.rawValue
+        }?.enabled
+    }
     fixture.page.applyTimeSelection(AutomationTimeSelection(
         range: TimeRange(startTick: 20, endTick: 130), scope: .lanes,
         lanes: [fixture.panLane], tempo: true))
+    report.expect(pasteRowEnabled() == false, cppID: rangeID,
+                  message: "the range menu refuses Paste when the system clipboard is empty")
     report.expect(fixture.page.copyTimeSelection(), cppID: rangeID,
                   message: "the selection copies into the semantic clipboard")
     report.expect(fixture.page.hasClipboard, cppID: rangeID,
                   message: "the clipboard publishes its semantic payload")
+    report.expect(pasteRowEnabled() == true, cppID: rangeID,
+                  message: "the range menu enables Paste for a copied system selection")
     let beforePaste = fixture.snapshot
     report.expectEqual(310, fixture.page.pasteTimeSelection(at: 200).map(Int.init) ?? -1,
                        cppID: rangeID,
@@ -1491,10 +1510,20 @@ private func contextAndPublicationDiagnostics(_ report: CheckReport, suite: Docu
                   message: "leaving the plot clears the hover")
 
     // Detach drops everything the page published.
+    var copyAvailable = false
+    fixture.page.onCommandAvailabilityChanged = { [weak page = fixture.page] in
+        copyAvailable = page?.selectionCommandAvailable(command: .copy) ?? false
+    }
     fixture.page.detach()
     report.expect(fixture.page.projection == nil && fixture.page.rows.isEmpty
                       && fixture.page.selection == nil,
                   cppID: contextID, message: "detaching drops every published value")
+    fixture.page.attach(session: fixture.session, palette: GridPalette())
+    fixture.activate(fixture.volumeLane)
+    fixture.page.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 0, endTick: 96), scope: .lanes, lanes: [fixture.volumeLane]))
+    report.expect(copyAvailable, cppID: contextID,
+                  message: "a retained command subscriber observes selection after page reattachment")
 }
 
 // MARK: - Reopened exclusion row: sweep stepping and ramp finish

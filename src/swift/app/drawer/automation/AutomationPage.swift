@@ -413,7 +413,6 @@ public final class AutomationPage: EditorDrawerPage {
     /// acknowledged scene removal and before the document owners retire.
     @QtIgnored
     public func detach() {
-        onCommandAvailabilityChanged = nil
         cancelSectionInteraction()
         session = nil
         projection = nil
