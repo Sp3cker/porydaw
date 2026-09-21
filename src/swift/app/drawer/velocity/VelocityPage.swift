@@ -520,18 +520,22 @@ public final class VelocityPage: EditorDrawerPage {
     }
 
     /// Hover and detent changes republish the ruler and handle rows: a content
-    /// rebuild hands its own build in, the hover-only paths build one.
+    /// rebuild hands its own build in, the hover-only paths derive the scoped
+    /// axis, handle and ruler values those interactions actually change.
     @QtIgnored func refreshAxisAndHandles(_ snapshot: VelocitySceneSnapshot? = nil) {
-        let built = snapshot ?? buildScene()
-        rebuildAxis(built)
+        let built = snapshot.map { VelocityAxisAndHandles($0) }
+            ?? VelocitySceneSnapshot.buildAxisAndHandles(
+                sceneInput(reuseGeometry: handleReuseGeometry()), typography: typography,
+                previousHandles: handlesByID)
+        rebuildAxis(built.axis)
         publishHandles(built.handles)
-        publishAxis(built)
+        publishAxis(built.rows)
         publishReadout()
     }
 
     /// Applies one build's value axis to the page's published axis values.
-    private func rebuildAxis(_ snapshot: VelocitySceneSnapshot) {
-        axis = snapshot.axis
+    private func rebuildAxis(_ axis: VelocityAxisModel) {
+        self.axis = axis
         setPublished(&axisMode, axis.mode.rawValue)
         setPublished(&axisGraduationsVisible, axis.mode == .intrinsic && detentsEnabled)
         setPublished(&axisAccessibleDescription, axis.accessibleDescription)
@@ -674,11 +678,11 @@ public final class VelocityPage: EditorDrawerPage {
 
     /// Publishes one build's ruler rows: the ticks, graduations, markers and
     /// labels `VelocityScene` derived for the presented axis.
-    private func publishAxis(_ snapshot: VelocitySceneSnapshot) {
-        syncRects(axisTicks, snapshot.axisTicks)
-        syncRects(axisGraduations, snapshot.axisGraduations)
-        syncRects(axisMarkers, snapshot.axisMarkers)
-        syncTexts(axisLabels, snapshot.axisLabels)
+    private func publishAxis(_ rows: VelocityAxisRows) {
+        syncRects(axisTicks, rows.ticks)
+        syncRects(axisGraduations, rows.graduations)
+        syncRects(axisMarkers, rows.markers)
+        syncTexts(axisLabels, rows.labels)
     }
 
     private var typography: GridTypography? {

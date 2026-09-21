@@ -159,12 +159,6 @@ struct VelocitySceneSnapshot {
     let grid: [SceneRect]
     let bands: [SceneRect]
 
-    /// The empty build: no session, no rows.
-    static let detached = Self(
-        axis: VelocityAxisModel(),
-        handles: [], axisTicks: [], axisGraduations: [], axisMarkers: [], axisLabels: [],
-        grid: [], bands: [])
-
     /// The full static build: the value axis for the presented context, the note
     /// handle rows, the ruler rows and labels, the time grid and the PSG bands.
     /// `typography` and `previousHandles` are the page's `@MainActor` objects,
@@ -172,6 +166,37 @@ struct VelocitySceneSnapshot {
     @MainActor
     static func build(_ input: VelocitySceneInput, typography: GridTypography?,
                       previousHandles: [NoteID: VelocityHandle]) -> Self {
+        let parts = axisAndHandles(input, typography: typography, previousHandles: previousHandles)
+        return Self(
+            axis: parts.axis,
+            handles: parts.handles,
+            axisTicks: parts.rows.ticks,
+            axisGraduations: parts.rows.graduations,
+            axisMarkers: parts.rows.markers,
+            axisLabels: parts.rows.labels,
+            grid: VelocityScene.grid(input),
+            bands: VelocityScene.bands(input, axis: parts.axis, projection: parts.projection))
+    }
+
+    /// The scoped build a hover, a pointer exit or a detent change republishes:
+    /// the same axis, handle rows and ruler rows a full build derives, without
+    /// the grid subdivision walk or the PSG band walk a content rebuild performs.
+    @MainActor
+    static func buildAxisAndHandles(_ input: VelocitySceneInput, typography: GridTypography?,
+                                    previousHandles: [NoteID: VelocityHandle])
+        -> VelocityAxisAndHandles {
+        let parts = axisAndHandles(input, typography: typography, previousHandles: previousHandles)
+        return VelocityAxisAndHandles(axis: parts.axis, handles: parts.handles, rows: parts.rows)
+    }
+
+    /// The values both builds share: the value axis, the projection the rows are
+    /// drawn against, the note handle rows and the ruler rows one interaction
+    /// state produces.
+    @MainActor
+    private static func axisAndHandles(_ input: VelocitySceneInput, typography: GridTypography?,
+                                       previousHandles: [NoteID: VelocityHandle])
+        -> (axis: VelocityAxisModel, projection: VelocityProjection, handles: [VelocityHandle],
+            rows: VelocityAxisRows) {
         let axis = VelocityScene.axisModel(input)
         let projection = VelocityProjection(camera: input.camera, geometry: input.geometry,
                                             devicePixelRatio: input.devicePixelRatio, axis: axis)
@@ -181,15 +206,7 @@ struct VelocitySceneSnapshot {
             || handles.filter(\.selected).count > 1 || input.interaction.hovered != nil
         let rows = VelocityScene.axisRows(input, axis: axis, relativeGesture: relativeGesture,
                                           typography: typography)
-        return Self(
-            axis: axis,
-            handles: handles,
-            axisTicks: rows.ticks,
-            axisGraduations: rows.graduations,
-            axisMarkers: rows.markers,
-            axisLabels: rows.labels,
-            grid: VelocityScene.grid(input),
-            bands: VelocityScene.bands(input, axis: axis, projection: projection))
+        return (axis, projection, handles, rows)
     }
 
     /// The scoped build a live gesture uses: motion changes only the frozen
@@ -289,6 +306,31 @@ struct VelocitySceneSnapshot {
             result.append(handle)
         }
         return result
+    }
+}
+
+/// The axis, the note handle rows and the ruler rows one interaction state
+/// produces: the half of a build a hover, a pointer exit or a detent change
+/// republishes. Those interactions never change the time grid or the PSG bands,
+/// so the scoped build never walks them.
+struct VelocityAxisAndHandles {
+    let axis: VelocityAxisModel
+    let handles: [VelocityHandle]
+    let rows: VelocityAxisRows
+
+    /// The scoped view of a full build: the same axis, handle and ruler values,
+    /// without the grid and the bands that build also produced.
+    init(_ snapshot: VelocitySceneSnapshot) {
+        axis = snapshot.axis
+        handles = snapshot.handles
+        rows = VelocityAxisRows(ticks: snapshot.axisTicks, graduations: snapshot.axisGraduations,
+                                markers: snapshot.axisMarkers, labels: snapshot.axisLabels)
+    }
+
+    init(axis: VelocityAxisModel, handles: [VelocityHandle], rows: VelocityAxisRows) {
+        self.axis = axis
+        self.handles = handles
+        self.rows = rows
     }
 }
 
