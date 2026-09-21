@@ -1558,6 +1558,22 @@ TestCase {
         return collected
     }
 
+    // Every QQuickText under the root whether drawn or not: a control that is
+    // legitimately hidden (the Detents button while detents are unavailable)
+    // must still carry opaque ink and its label, so it appears correctly when
+    // shown. Ink failures here trip on the transparent fallback too.
+    function collectAllTexts(item, found) {
+        var collected = found || []
+        if (!item || !item.children)
+            return collected
+        if (item.text !== undefined && item.color !== undefined && item.font !== undefined
+                && item.length === undefined)
+            collected.push(item)
+        for (var i = 0; i < item.children.length; ++i)
+            testCase.collectAllTexts(item.children[i], collected)
+        return collected
+    }
+
     // The sign-off gate: the mounted composition drew text at all, and every
     // visible run carries opaque ink. Returns the runs for the label-content
     // assertions the case adds itself.
@@ -1761,10 +1777,16 @@ TestCase {
         compare(detent.Accessible.checkable, true, "the detent control is checkable")
         compare(detent.Accessible.checked, testCase.velocityModel().detentsEnabled,
                 "the detent control shows the page's own preference")
-        var detentTexts = testCase.collectVisibleTexts(detent, [])
+        var detentTexts = testCase.collectAllTexts(detent, [])
         verify(detentTexts.length > 0, "the detent control labels itself")
-        compare(String(detentTexts[0].text).length > 0, true,
-                "the detent control draws its label ('" + detentTexts[0].text + "')")
+        for (var di = 0; di < detentTexts.length; ++di) {
+            verify(detentTexts[di].color.a > 0,
+                   "the detent control carries opaque ink ('" + detentTexts[di].text + "')")
+        }
+        if (testCase.isEffectivelyVisible(detent)) {
+            compare(String(detentTexts[0].text).length > 0, true,
+                    "the detent control draws its label ('" + detentTexts[0].text + "')")
+        }
         testCase.auditVisibleTextInk(page, "velocity page")
     }
 
