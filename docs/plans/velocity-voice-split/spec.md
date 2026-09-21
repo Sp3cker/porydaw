@@ -1,50 +1,77 @@
 # Velocity/voice split — spec
 
 Behavior-preserving (Fowler) extraction. No gesture semantics, snap lattice,
-detent rule, picker/menu rows, commit/undo shape, or QML publish names change
-unless a brief names the rename. Non-goal: timeline-band cutover
-(`velocityquick.cpp`, `voicechangequick.cpp`, C++ areas stay live); QML logic
-moves (QML stays render-only); new features.
+detent rule, picker/menu rows, commit/undo shape, or QML publish names change.
+Non-goal: timeline-band cutover (`velocityquick.cpp`, `voicechangequick.cpp`,
+C++ areas stay live); QML logic moves (QML stays render-only); new features.
 
 ## Vocabulary
 
 - Owner: `@QtBridgeable @MainActor` page class retained by `ApplicationSession`
   (`VelocityPage`, `VoiceChangesPage`). Owns lifecycle (`attach`/`detach`),
-  session refresh (`refreshFromDocument`, `refreshEditCursor`, `refreshCamera`,
-  `refreshPlayhead`), and publication. Thin after split (~250L).
-- Scene (pure): static content build from `DocumentSession` — handles/markers,
-  rows/labels, spans, grid/gutter/typography inputs. No `QtBridge`, no gesture
-  state, no session retention. Reusable by a future timeline adapter.
-- Projection (pure): plot-relative x/y math, axis mapping, hit-test, snap.
-  No `QRect`, no QML types.
+  session refresh, all published state, all reuse caches, and all
+  publish-apply plumbing (`publish*`, `sync*`, `matches*`, `setPublished*`).
+  Thin after split: lifecycle + refresh + apply only.
+- Scene (pure build): static content computation from explicit inputs —
+  handles/markers, rows/labels, spans, grid/gutter/typography values. Never
+  retains `DocumentSession`; never touches gesture/drag/hover state except
+  through its declared snapshot input (below). Reuse guarantee is scoped:
+  no `QtBridge`/QML types in signatures, no retained session — not
+  "timeline-ready"; a future adapter with a `DocumentSession` can call it.
+- Projection: plot-relative x/y math, axis mapping, hit-test, snap. A
+  context-holding value type constructed per rebuild (camera mapping,
+  geometry, DPR, axis mode), not a namespace.
 - Interaction: pointer/wheel/keyboard dispatch, frozen gesture/occurrence,
-  hover/selection/preview, prompt/picker/menu sequencing. Calls Scene and
-  `VelocityTransactions` / `VoiceChangesTransactions` for commits.
+  hover/selection/preview, prompt/picker/menu sequencing. Implemented as
+  `extension VelocityPage` / `extension VoiceChangesPage` in separate files,
+  following the `AutomationInteraction.swift:117,467` precedent — no wiring
+  object, no back-channel, no forwarding methods. Page refresh methods read
+  interaction state directly.
 - Transactions (existing): document-history commits. Unchanged shape.
 
 ## Forward interfaces (post-split)
 
-- `VelocitySceneSnapshot` (`VelocityScene.swift`, pure): `static build(session:camera:geometry:...)`
-  + `detached`; Page applies it via existing `publishHandles/publishAxis/publishGrid/publishBands/publishTransient`.
-- `VelocityProjection` (`VelocityProjection.swift`, pure): `xForDisplayTick`,
-  `yForNote(map:velocity:detentUnlock:)`, `hitTest(x:y:includeStems:)`,
-  `projectHandles()` inputs. Same numeric behavior as today.
-- `VelocityInteraction` (`VelocityInteraction.swift`): owns `pointerPress/Move/Release/Leave`,
-  `beginGesture/freeze/cancelGesture/finishGesture`, `updateRampPreview/paintBetween/updateBandPreview/updateHover`,
-  prompt dispatch, `handleEscape/cancelSectionInteraction` behavior. Page forwards.
-- `VoiceChangesSceneSnapshot` (`VoiceChangesScene.swift`, pure): `markerEntries/projectMarkers`
-  inputs, `publishMarkers/publishSpans/publishGrid/publishGutter/publishTypography/publishReadout` inputs.
-- `VoiceChangesInteraction` (`VoiceChangesInteraction.swift`): owns
-  `pointerPress/Move/Release/Leave/DoubleClick`, `captureTarget/openPicker/openMenu`,
-  picker + menu dispatch, `updateHover/clearHover`, `cancelDrag/cancelPan`.
-  Occurrence-identity + camera-scroll staleness rules unchanged.
-- QML (`VelocityPage.qml`, `VelocityPrompt.qml`, `VoiceChangesPage.qml`,
-  `VoicePicker.qml`, `VoiceChangeMenu.qml`): render published primitives only.
-  Publish names stable; task 5 lists the only renames (none planned — cutover
-  is include/delegate, not rename).
+- `VelocityScene` (`VelocityScene.swift`): `struct VelocitySceneInput`
+  (notes + selection, `VelocityInteractionSnapshot`, geometry/axis/DPR/font,
+  palette colors as values, bank/context resolution closure) and
+  `static func build(_:) -> VelocitySceneSnapshot` producing handle rows,
+  axis rows/labels, grid/band values. Page applies via the existing
+  `publishHandles/publishAxis/publishGrid/publishBands` (which stay on Page).
+- `VelocityInteractionSnapshot` (Sendable struct in `VelocityInteraction.swift`):
+  frozen notes + preview values + detentUnlock, hovered `NoteID?`,
+  `detentsEnabled`. Page builds it from live gesture/hover state per rebuild
+  and passes it to Scene build. Transient/readout publication
+  (`publishTransient`, `publishReadout`) stays on Page and reads live state —
+  never moves to Scene.
+- `VelocityProjection` (`VelocityProjection.swift`): `struct VelocityProjection`
+  holding x-mapping/axis/geometry/DPR; methods `xForDisplayTick`,
+  `yForNote(map:velocity:detentUnlock:)`, `hitTest(x:y:includeStems:)`.
+  Reuse caches (`handleGeometryKey`, `handlesByID`, `typographyCache`,
+  `metricsCache`) stay stored properties on Page; Scene/Projection take
+  `reuseGeometry: Bool` + previous-handle lookup as parameters.
+- `VoiceChangesScene` (`VoiceChangesScene.swift`): `struct VoiceChangesSceneInput`
+  (lane points, bank slots, track, `VoiceInteractionSnapshot`, geometry/DPR/font)
+  and `static func build(_:) -> VoiceChangesSceneSnapshot` producing marker
+  entries, spans, labels, grid/gutter/typography values. Page applies via the
+  existing `publishMarkers/publishSpans/publishGrid/publishGutter/publishTypography/publishReadout`
+  (which stay on Page). `publishTransient` stays on Page.
+- `VoiceInteractionSnapshot` (Sendable struct in `VoiceChangesInteraction.swift`):
+  drag preview state, hover/selected occurrence identities. Page passes it per
+  rebuild. Marker/span caches (`markerLookup`, `entriesRevision/entriesTrack/cachedEntries`,
+  `metricsKey/cachedMetrics`) stay on Page.
+- Check-facing `@QtIgnored` public accessors never move files: they stay
+  declared on Page (extensions share access, so nothing breaks and no forwards
+  are needed). QML-facing publish names stable.
+- Snapshot field rule: snapshots carry Sendable value types and `@MainActor`
+  handles only; `GridPalette`/typography objects stay build inputs, never
+  outputs.
 
 ## Import rule
 
-Only the Owner and Transactions import `QtBridge`. Scene/Projection/Context/
-Policy import `Foundation` + `PorydawCore` (+ `NativeGridTypography` where
-already used) and never retain `DocumentSession`. Enforced by grep in task 5.
+Scene/Projection files MAY import `QtBridge` (scene primitives
+`SceneRect`/`SceneText`, `QVariantSettable` — cf. `AutomationScene.swift:4`,
+`VoiceChangesProjection.swift:4`) plus `Foundation`, `PorydawCore`,
+`NativeGridTypography` as needed. Interaction extension files MUST NOT contain
+`import QtBridge` (they operate on Page state and call Page apply methods;
+any bridge-dependent call stays a Page method). Enforced by grep in task 5.
+No file adds a module import the moved code did not already use.

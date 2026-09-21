@@ -1,72 +1,68 @@
-# Task 4 — Extract voice interaction (pointer/picker/menu/hover)
+# Task 4 — Extract voice interaction as page extension
 
 ## Context
 
-Second half of the voice split. Moves dispatch out of `VoiceChangesPage.swift`
-into `VoiceChangesInteraction.swift`, consuming the task-3 scene contract.
-Behavior change: none — same occurrence-identity freeze/revalidate, alt fine-
-clock lattice, camera-scroll staleness rejection, audition + undo/redo shape.
+Second half of the voice split. Relocates pointer/picker/menu/hover/drag
+dispatch into `VoiceChangesInteraction.swift` as `extension VoiceChangesPage`
+(same precedent as task 2), consuming the task-3 scene contract. File
+placement only — same type, no wiring, no forwards. Behavior change: none.
 
 ## Exact write set
 
-- `src/swift/app/drawer/voicechanges/VoiceChangesPage.swift` (delete moved methods; add forwarding)
-- `src/swift/app/drawer/voicechanges/VoiceChangesInteraction.swift` (new)
+- `src/swift/app/drawer/voicechanges/VoiceChangesPage.swift` (delete relocated method bodies)
+- `src/swift/app/drawer/voicechanges/VoiceChangesInteraction.swift` (new: extension + snapshot struct)
 - `src/swift/app/CMakeLists.txt` (register the new file)
 
 ## Prerequisites
 
-Task 3 interfaces: `VoiceChangesSceneSnapshot.build`, marker/span publish inputs.
+Task 3 interfaces: `VoiceChangesSceneInput/Snapshot.build`, scene value helpers.
 
 ## Interface contract
 
-- `VoiceChangesInteraction` owns, with unchanged public signatures:
-  `pointerPress(x:y:surface:button:modifiers:)`, `pointerMove(x:y:buttons:modifiers:) -> Bool`,
-  `pointerRelease(x:y:button:) -> Bool`, `pointerLeave()`, `pointerDoubleClick(x:y:) -> Bool`,
-  `handleEscape() -> Bool`, `cancelSectionInteraction()`, `dismissModal()`,
-  `setPickerFilter(text:)`, `selectPickerRow(index:)`, `pressAndHoldPickerRow(index:)`,
-  `releasePickerAudition()`, `movePickerSelection(delta:)`, `acceptPicker() -> Bool`,
-  `cancelPicker()`, `activateMenuAction(actionId:) -> Bool`, `activateMenuRow(index:) -> Bool`,
-  `dismissVoiceMenu()`; internals `currentTrack/captureTarget/commit/openPicker/openMenu/updateHover/clearHover/cancelDrag/cancelPan/refreshInteractionPublished/xForTick/snapTick/markerHit/effectiveContextTick/contextKey`
-  move whole.
-- Page keeps: lifecycle, `configureBody`, session refresh, scene-apply,
-  published modal/models/diagnostics state, `contextLabel(at:)`.
-  Occurrence identity stays `(revision, track, chunk, event index, tick, value)`
-  frozen at open, revalidated before every commit; camera scroll never drifts
-  the captured target; rewrite-between-open-and-activate rejects the pick.
-- Preserve: typed menu rows per target (Change/Delete vs Insert), picker
-  capture/filter/accept/insert/replace/no-op/cancel/Escape-outside-right,
-  marker-drag activation distance + single-move commit, alt fine-clock lattice,
-  audition callback + document-history shape.
-- Interaction may read Scene/Projection/Policy + Transactions; must not retain
-  `DocumentSession` beyond a call.
+- Uses `VoiceInteractionSnapshot` defined canonically in task 3 (`VoiceChangesScene.swift`):
+  this task adds the per-rebuild construction call from live drag/hover/selection state and
+  the extension's reads of it; field extensions update the struct and Scene build reads together here.
+- Relocated whole into the extension (bodies verbatim, signatures unchanged):
+  `pointerPress/pointerMove/pointerRelease/pointerLeave/pointerDoubleClick`,
+  `handleEscape`, `cancelSectionInteraction`, `dismissModal`,
+  `setPickerFilter/selectPickerRow/pressAndHoldPickerRow/releasePickerAudition/movePickerSelection/acceptPicker/cancelPicker`,
+  `activateMenuAction/activateMenuRow/dismissVoiceMenu`,
+  `currentTrack/captureTarget/commit/openPicker/openMenu`,
+  `updateHover/clearHover`, `cancelDrag/cancelPan`, `refreshInteractionPublished`.
+- Stays in the Page file: lifecycle, `configureBody`, all `refresh*` (read
+  drag/picker/menu state directly), `rebuildContent` orchestration, all publish
+  apply bodies, `publishPicker/refreshPicker/selectPickerProgram` sequencing
+  calls, all caches and stored state, all check-facing `@QtIgnored` accessors.
+- Preserve: occurrence identity `(revision, track, chunk, event index, tick,
+  value)` frozen at open and revalidated before every commit; camera scroll
+  never drifts the captured target; rewrite-between-open-and-activate rejects
+  the pick; typed menu rows per target; picker capture/filter/accept/insert/
+  replace/no-op/cancel/Escape/outside-right; marker-drag activation distance +
+  single-move commit; alt fine-clock lattice; same-value no-op; audition
+  callback + history shape.
+- Extension file MUST NOT contain `import QtBridge`.
 
 ## Implementation steps
 
-1. Move the listed dispatch/capture/hover/teardown declarations whole; Page
-   methods become forwards preserving signatures and return values.
-2. Keep `commit(_ mutation: VoiceLaneMutation)` single-entry history path and
-   staleness guard verbatim; keep `selectPickerProgram/refreshPicker/publishPicker`
-   sequencing (build from Scene, dispatch here).
+1. Cut the listed bodies into `extension VoiceChangesPage` verbatim; no stubs
+   or forwards left behind.
+2. Add `VoiceInteractionSnapshot` and its per-rebuild construction; wire into
+   task 3's input in place of the placeholder.
 3. Keep `refreshInteractionPublished` wiring identical for container gating.
 4. Do not touch Scene/Projection/Policy/Transactions except to call them; do
    not rename picker/menu publish names.
-5. Edge cases: same-value pick = no-op; blank-slot commit rules; outside-right
-   dismissal with no retarget; drag below activation distance commits nothing.
+5. Edge cases: drag below activation distance commits nothing; blank-slot rules
+   unchanged; native audio integration stays separately verified.
 
 ## Acceptance predicate
 
-Dispatch behavior identical; Page forwards. Verified by:
-
-- `deno task build:checks`
-- `deno task verify --filter swiftcore --verbose` (picker/drag/menu/cancellation/
-  collision/alt-lattice/audition cases)
-- `deno task verify --filter editorqml-drawer --verbose` (`voice-picker` pane)
-- `deno task verify --filter drawerpresentation --verbose`
-- `deno task format --check`
+Per plan.md Verification policy; task focus: picker insertion/replacement,
+marker-drag transactions, context-menu transactions, cancellation paths,
+collision/blank-slot, alt lattice, audition (`swiftcore/VoiceChangesPage::*`
+cases; `voice-picker` editorqml pane).
 
 ## Task-specific constraints
 
-- Any retarget, menu-row, or commit-count divergence is a move defect. Restore
-  verbatim; do not "improve" picker ranking or menu contents.
-- No new keyboard shortcuts; no audition redesign (native audio integration
-  stays separately verified on the production workspace).
+- Retarget, menu-row, or commit-count divergence is a move defect. Restore
+  verbatim; no picker ranking or menu-content improvements.
+- No new keyboard shortcuts; no audition redesign.

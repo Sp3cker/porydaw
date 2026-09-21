@@ -1,18 +1,17 @@
-# Task 1 — Extract velocity scene + projection (pure)
+# Task 1 — Extract velocity scene + projection (pure build)
 
 ## Context
 
-First half of the velocity split. Move static content build and plot math out
-of the 1490L `VelocityPage.swift` owner into two pure files per `spec.md`,
-so a future timeline adapter can call the same build. Producer for task 2,
-which consumes the extracted projection/interaction boundary. Behavior change:
-none — Fowler extraction, identical numbers.
+First half of the velocity split. Moves static content computation and plot
+math out of the 1490L `VelocityPage.swift` owner into two new files per
+`spec.md`. Producer for task 2, which consumes `VelocitySceneInput/build` and
+`VelocityProjection`. Behavior change: none — Fowler extraction.
 
 ## Exact write set
 
-- `src/swift/app/drawer/velocity/VelocityPage.swift` (delete moved declarations; keep owner + forwarding)
-- `src/swift/app/drawer/velocity/VelocityScene.swift` (new)
-- `src/swift/app/drawer/velocity/VelocityProjection.swift` (new)
+- `src/swift/app/drawer/velocity/VelocityPage.swift` (delete moved value-computation bodies; keep orchestration, state, apply)
+- `src/swift/app/drawer/velocity/VelocityScene.swift` (new: input/snapshot/build + moved value helpers)
+- `src/swift/app/drawer/velocity/VelocityProjection.swift` (new: context-holding struct + moved math)
 - `src/swift/app/CMakeLists.txt` (register the two new files)
 
 ## Prerequisites
@@ -21,53 +20,62 @@ None (first producer). Consumer: task 2.
 
 ## Interface contract
 
-- `VelocitySceneSnapshot` (Sendable, pure): `static let detached` plus
-  `static func build(...)` over `(session: DocumentSession, camera: EditorCamera,
-  geometry: AutomationPlotGeometry`-equivalent velocity geometry, bank slots,
-  selection, plot size/DPR/font)` returning handles, axis rows/labels, grid/band
-  inputs. Field names match what `publishHandles/publishAxis/publishGrid/publishBands`
-  already consume — no publish-name changes.
-- `VelocityProjection` (pure): `xForDisplayTick(_:)`, `yForNote(map:velocity:detentUnlock:)`,
-  `hitTest(x:y:includeStems:) -> NoteID?`, `projectHandles() -> [VelocityHandle]`.
-  Bit-identical mapping to today's private methods (same names, same signatures,
-  now internal to the new file); `VelocityPage` forwards.
-- Preserve: `VelocityHandle` + `matches`, `VelocityPagePolicy`, `VelocityInputSurface`,
-  `VelocityQtButton`, `VelocityModifier`, `VelocityAxis.swift`, `VelocityContext.swift`,
-  `VelocityTransactions.swift` untouched. Do not move gesture/prompt methods
-  (task 2 owns `pointerPress/Move/Release/Leave`, `beginGesture/freeze/cancelGesture/finishGesture`,
-  `updateRampPreview/paintBetween/updateBandPreview/updateHover`, prompt dispatch).
-- New files import `Foundation` + `PorydawCore` only (plus existing typography
-  helper if the moved code already uses it). Never `QtBridge`; never retain `DocumentSession`.
+- `struct VelocityProjection` (Sendable value): constructed per rebuild from
+  x-mapping, `geometry`, `devicePixelRatio`, axis mode. Methods `xForDisplayTick(_:)`,
+  `yForNote(map:velocity:detentUnlock:)`, `hitTest(x:y:includeStems:handles:)` —
+  same names; `hitTest` takes the handle set explicitly instead of reading
+  `publishedHandles` (only signature change in this task, required by purity).
+- `struct VelocityInteractionSnapshot` (Sendable, defined canonically in this task in
+  `VelocityScene.swift`): frozen notes + preview values + detentUnlock, hovered `NoteID?`,
+  `detentsEnabled`. Page builds it from live gesture/hover state per rebuild and passes it
+  to Scene build. Task 2 adds only the per-rebuild construction call and uses the struct;
+  if dispatch needs a field the snapshot lacks, task 2 extends the struct and its build
+  reads in the same task.
+- `struct VelocitySceneInput` (Sendable): notes + selection, bank/context
+  resolution inputs, `VelocityInteractionSnapshot`, geometry/axis/DPR/font values,
+  palette colors as values.
+- `struct VelocitySceneSnapshot` (Sendable values + `@MainActor` handles only):
+  `static let detached`, `static func build(_ input:) -> Self` returning handle
+  rows, axis rows/labels, grid/band values. Palette/typography objects are
+  inputs, never outputs.
+- Moved whole (bodies verbatim, Page keeps its call sites): `rebuildAxis`
+  computation half, `projectHandles` row-computation half,
+  `trackNotes/selectedTrackNotes/voiceMap/contextResolver/resolvedContext/contextKey/effectiveContextTick/presentationContext`,
+  `gridMetrics/timeAxis/fontMap/appendDashed`, typography value helper.
+- Stays on Page (never moves): `attach/detach`, `configureBody`, all
+  `refresh*`, `rebuildContent` + `refreshAxisAndHandles` orchestration,
+  `publishReadout`, all `publish*/sync*/matches*/setPublished*` apply plumbing,
+  `velocityNoteText`, every stored property and reuse cache
+  (`axis`, `publishedHandles`, `handlesByID`, `paintCandidates`,
+  `handleGeometryKey`, `typographyCache`, `metricsCache`, `palette`, `geometry`,
+  `session`), every check-facing `@QtIgnored` accessor, all gesture/prompt
+  methods (task 2). `rebuildContent`/`refreshAxisAndHandles` keep their
+  signatures and now call `VelocitySceneSnapshot.build` + existing publish.
+- New files add no module import the moved code did not use; Scene/Projection
+  may import `QtBridge` per spec.md.
 
 ## Implementation steps
 
-1. Move content-rebuild declarations whole: `rebuildContent`, `refreshAxisAndHandles`,
-   `rebuildAxis`, `projectHandles`, `xForDisplayTick`, `yForNote`, `hitTest`,
-   `publishHandles/syncRects/syncTexts/matchesText/rectMatches/fontMatches/publishAxis/fontMap/gridMetrics/timeAxis/publishGrid/publishBands/publishTransient/appendDashed`
-   bodies into Scene/Projection by responsibility (build vs math vs publish-apply;
-   apply stays on Page as thin `publish*` calls over the snapshot). Keep every
-   branch, radius, density band, detent-toggle read, and stacked-node hit order.
-2. Keep `attach/detach`, `configureBody`, `refreshFromDocument/refreshEditCursor/refreshCamera/refreshPlayhead`,
-   composition input, and all gesture/prompt state exactly where they are.
-3. Register both new files in `CMakeLists.txt` beside `drawer/velocity/VelocityPage.swift`.
-4. Enforce import rule on the new files; no `QListModel`/`SceneRect`/`QVariant`
-   types leak into Scene/Projection (those stay behind Page publish calls).
-5. Edge cases to preserve verbatim: continuous vs PSG axis density, empty-track
-   message path, DPR/font scaling, ruler `[0, gutter)` vs plot-x ownership.
+1. Create `VelocityProjection` with the three math methods; `hitTest` reads
+   passed-in handles, not Page state.
+2. Create `VelocitySceneInput/Snapshot/build`; move the listed value helpers
+   whole. Gesture/hover-dependent reads (`gesture?.frozenNote/preview/detentUnlock`,
+   `hovered`, `detentsEnabled`) become reads of the input snapshot, not live state.
+3. Reduce Page's `rebuildAxis`/`projectHandles` to orchestration: build input
+   (including the interaction snapshot from live state), call build, update
+   caches, call existing publish. Cache-update + publish bodies stay verbatim.
+4. Register both files in `CMakeLists.txt`; keep QML publish names unchanged.
+5. Preserve verbatim: axis density bands, detent-toggle reads, stacked-node hit
+   order, DPR/font scaling, ruler-vs-plot ownership, empty-track message path.
 
 ## Acceptance predicate
 
-Behavior identical; owner thin; pure files import-clean. Verified by:
-
-- `deno task build:checks`
-- `deno task verify --filter swiftcore --verbose` (VelocityPage axis/projection/context/gesture Concept cases)
-- `deno task verify --filter editorqml-drawer --verbose` (`velocity-lane` pane)
-- `deno task verify --filter velocity --verbose` (legacy C++ unchanged)
-- `deno task format --check`
+Per plan.md Verification policy; task focus: axis ladder, PSG rows, handle
+projection, context resolution, playhead diagnostics
+(`swiftcore/VelocityPage::*` cases; `velocity-lane` editorqml pane).
 
 ## Task-specific constraints
 
-- If any numeric output differs (handle x/y, axis labels, hit order), stop: the
-  extraction is wrong, do not "fix forward" with new snapping. Keep the old
-  method bodies verbatim in the new home.
-- Do not rename published QML-facing vars (`handles`, axis/grid/band models).
+- Numeric divergence (handle x/y, labels, hit order) is a defect in the move —
+  restore verbatim bodies, do not fix forward with new snapping.
+- `publishTransient`/`publishReadout` are not in this task; do not move them.
