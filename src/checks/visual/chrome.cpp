@@ -12,9 +12,11 @@
 
 #include <QApplication>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QCoreApplication>
 #include <QDockWidget>
 #include <QLabel>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QMainWindow>
 #include <QMenuBar>
@@ -27,6 +29,7 @@
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QToolBar>
 #include <QtTest>
 
@@ -60,6 +63,8 @@ using checks::visual::appendRequiredRegion;
 using checks::visual::childRegion;
 using checks::visual::clippedItemRect;
 using checks::visual::compare;
+using checks::visual::compareComboPopup;
+using checks::visual::compareMenuPopup;
 using checks::visual::compareShown;
 using checks::visual::mergeRegions;
 using checks::visual::nameChild;
@@ -138,6 +143,9 @@ QVector<SongInfo> visualSongs()
         song(7, "se_use_item"),
         song(8, "mus_stray_unregistered", false),
         song(9, "mus_partial_entry", true, {QStringLiteral("song_table.inc")}),
+        // A lone prefix lands in the Other bucket, so the category popup and
+        // filter scenarios freeze that entry too.
+        song(10, "fanfare_jingle"),
     };
 }
 
@@ -177,18 +185,28 @@ bool appendSongListRegions(QList<Region> &regions, SongListPanel &panel, QString
                      .arg(QString::fromLatin1(entry.name), QString::fromLatin1(entry.objectName));
         return false;
     }
-    const auto itemRegion = [&](const QString &name, int row) {
-        QListWidgetItem *item = list->item(row);
+    const auto itemRegion = [&](const QString &name, QListWidgetItem *item) {
         if (!item)
             return;
         const QRect rect = clippedItemRect(*list, list->visualItemRect(item));
         if (rect.isValid() && !rect.isEmpty())
             regions.append({name, rect.translated(list->viewport()->mapTo(&panel, QPoint(0, 0)))});
     };
-    itemRegion(QStringLiteral("songs.row.first"), 0);
-    itemRegion(QStringLiteral("songs.row.second"), 1);
-    itemRegion(QStringLiteral("songs.row.unregistered"), 8);
-    itemRegion(QStringLiteral("songs.row.partial"), 9);
+    const auto itemForSong = [&](int songId) -> QListWidgetItem * {
+        for (int row = 0; row < list->count(); ++row)
+            if (list->item(row)->data(Qt::UserRole).toInt() == songId)
+                return list->item(row);
+        return nullptr;
+    };
+    // Every visible row is pinned by position so filtered and sorted states
+    // freeze their exact membership and order; the warning rows are also
+    // pinned by song id so they stay semantic when a filter reorders them.
+    for (int row = 0; row < list->count(); ++row)
+        itemRegion(QStringLiteral("songs.row.%1").arg(row), list->item(row));
+    itemRegion(QStringLiteral("songs.row.first"), list->item(0));
+    itemRegion(QStringLiteral("songs.row.second"), list->item(1));
+    itemRegion(QStringLiteral("songs.row.unregistered"), itemForSong(8));
+    itemRegion(QStringLiteral("songs.row.partial"), itemForSong(9));
     return true;
 }
 
@@ -438,6 +456,20 @@ class VisualChromeTest final : public QObject
     void transportBar();
     void songList_data();
     void songList();
+    void songListFiltered_data();
+    void songListFiltered();
+    void songListCategory_data();
+    void songListCategory();
+    void songListSorted_data();
+    void songListSorted();
+    void songListEmpty_data();
+    void songListEmpty();
+    void songListCategoryPopup_data();
+    void songListCategoryPopup();
+    void songListSortPopup_data();
+    void songListSortPopup();
+    void songListMenu_data();
+    void songListMenu();
     void shellVanilla();
     void shellLoaded();
     void polyphonyPanel_data();
@@ -529,6 +561,187 @@ void VisualChromeTest::songList()
     QString error;
     QVERIFY2(appendSongListRegions(regions, panel, &error), qPrintable(error));
     compareShown(QStringLiteral("songlist/%1").arg(theme), panel, regions);
+}
+
+// Every filtered-state scenario shares the same staged panel: the ten-song
+// fixture, the loaded song selected, and the frozen dock size. The caller
+// mutates one control, then the standard region set freezes the result.
+static void stageSongList(SongListPanel &panel, const QString &theme)
+{
+    const auto selected = themeFor(theme);
+    QVERIFY2(selected.has_value(),
+             qPrintable(QStringLiteral("unknown theme id \"%1\"").arg(theme)));
+    themes::apply(*qApp, *selected);
+    panel.setSongs(visualSongs());
+    panel.setCurrentSong(1);
+    panel.resize(280, 480);
+    showSettled(panel);
+}
+
+static void compareSongList(const QString &id, SongListPanel &panel)
+{
+    QList<Region> regions;
+    QString error;
+    QVERIFY2(appendSongListRegions(regions, panel, &error), qPrintable(error));
+    // The search field's clear button is a platform ✕ glyph whose subpixel
+    // placement jitters between grabs; it carries no app-specific state, so
+    // both regions covering the field stop short of its right-docked square.
+    // songs.search is already in the list from appendSongListRegions — replace
+    // it in place; songListSearch comes from widgetRegions and overrides here.
+    if (auto *search = panel.findChild<QLineEdit *>(QStringLiteral("songListSearch"))) {
+        const QRect rect(search->mapTo(&panel, QPoint(0, 0)), search->size());
+        const QRect trimmed = rect.adjusted(0, 0, -search->height(), 0);
+        for (Region &region : regions)
+            if (region.name == QLatin1String("songs.search"))
+                region.bounds = trimmed;
+        regions.append({QStringLiteral("songListSearch"), trimmed});
+    }
+    compareShown(id, panel, regions);
+}
+
+void VisualChromeTest::songListFiltered_data()
+{
+    addThemeRows();
+}
+
+void VisualChromeTest::songListFiltered()
+{
+    QFETCH(QString, theme);
+    SongListPanel panel;
+    stageSongList(panel, theme);
+    // A live query: the search text, the narrowed list, and the "N of M"
+    // count are all part of the frozen state. Mid-search the loaded song's
+    // selection stays clear so Enter takes the first match.
+    panel.findChild<QLineEdit *>(QStringLiteral("songListSearch"))->setText(QStringLiteral("gym"));
+    QApplication::processEvents();
+    parkFocus(panel);
+    compareSongList(QStringLiteral("songlist/filtered-%1").arg(theme), panel);
+}
+
+void VisualChromeTest::songListCategory_data()
+{
+    addThemeRows();
+}
+
+void VisualChromeTest::songListCategory()
+{
+    QFETCH(QString, theme);
+    SongListPanel panel;
+    stageSongList(panel, theme);
+    // The category combo's data is the prefix; "se_" narrows to the three
+    // sound-effect songs and rewrites the All/count captions.
+    auto *category = panel.findChild<QComboBox *>(QStringLiteral("songListCategory"));
+    QVERIFY(category);
+    category->setCurrentIndex(category->findData(QStringLiteral("se_")));
+    QApplication::processEvents();
+    parkFocus(panel);
+    compareSongList(QStringLiteral("songlist/category-%1").arg(theme), panel);
+}
+
+void VisualChromeTest::songListSorted_data()
+{
+    addThemeRows();
+}
+
+void VisualChromeTest::songListSorted()
+{
+    QFETCH(QString, theme);
+    SongListPanel panel;
+    stageSongList(panel, theme);
+    // A–Z order: the row regions pin the reordered membership, including the
+    // warning rows' new positions.
+    auto *sort = panel.findChild<QComboBox *>(QStringLiteral("songListSort"));
+    QVERIFY(sort);
+    sort->setCurrentIndex(1);
+    QApplication::processEvents();
+    parkFocus(panel);
+    compareSongList(QStringLiteral("songlist/sorted-%1").arg(theme), panel);
+}
+
+void VisualChromeTest::songListEmpty_data()
+{
+    addThemeRows();
+}
+
+void VisualChromeTest::songListEmpty()
+{
+    QFETCH(QString, theme);
+    SongListPanel panel;
+    stageSongList(panel, theme);
+    // A query with no matches: empty list, "0 of 10 songs" caption.
+    panel.findChild<QLineEdit *>(QStringLiteral("songListSearch"))
+        ->setText(QStringLiteral("no-such-song"));
+    QApplication::processEvents();
+    parkFocus(panel);
+    compareSongList(QStringLiteral("songlist/empty-%1").arg(theme), panel);
+}
+
+void VisualChromeTest::songListCategoryPopup_data()
+{
+    addThemeRows();
+}
+
+void VisualChromeTest::songListCategoryPopup()
+{
+    QFETCH(QString, theme);
+    SongListPanel panel;
+    stageSongList(panel, theme);
+    // The open dropdown freezes the category list: All, the counted prefixes
+    // with their friendly names, and Other.
+    auto *category = panel.findChild<QComboBox *>(QStringLiteral("songListCategory"));
+    QVERIFY(category);
+    compareComboPopup(*category, QStringLiteral("songlist/category-popup-%1").arg(theme));
+}
+
+void VisualChromeTest::songListSortPopup_data()
+{
+    addThemeRows();
+}
+
+void VisualChromeTest::songListSortPopup()
+{
+    QFETCH(QString, theme);
+    SongListPanel panel;
+    stageSongList(panel, theme);
+    auto *sort = panel.findChild<QComboBox *>(QStringLiteral("songListSort"));
+    QVERIFY(sort);
+    compareComboPopup(*sort, QStringLiteral("songlist/sort-popup-%1").arg(theme));
+}
+
+void VisualChromeTest::songListMenu_data()
+{
+    QTest::addColumn<QString>("theme");
+    QTest::addColumn<int>("songId");
+    // The registered row's Register action is disabled; the unregistered
+    // row's is enabled. Both menus freeze their full item set.
+    QTest::newRow("vanilla-registered") << QStringLiteral("vanilla") << 0;
+    QTest::newRow("vanilla-unregistered") << QStringLiteral("vanilla") << 8;
+    QTest::newRow("dark-registered") << QStringLiteral("darkneutralhigh") << 0;
+    QTest::newRow("dark-unregistered") << QStringLiteral("darkneutralhigh") << 8;
+}
+
+void VisualChromeTest::songListMenu()
+{
+    QFETCH(QString, theme);
+    QFETCH(int, songId);
+    SongListPanel panel;
+    stageSongList(panel, theme);
+    auto *list = panel.findChild<QListWidget *>();
+    QVERIFY(list);
+    QListWidgetItem *item = nullptr;
+    for (int row = 0; row < list->count(); ++row)
+        if (list->item(row)->data(Qt::UserRole).toInt() == songId)
+            item = list->item(row);
+    QVERIFY(item);
+    // The production menu runs exec() inside the slot; a zero-delay timer
+    // fires inside that modal loop, grabs the active popup, and closes it.
+    const QString id =
+        QStringLiteral("songlist/menu-%1-%2")
+            .arg(songId == 8 ? QStringLiteral("unregistered") : QStringLiteral("registered"))
+            .arg(theme);
+    QTimer::singleShot(0, &panel, [id] { compareMenuPopup(id); });
+    emit list->customContextMenuRequested(list->visualItemRect(item).center());
+    QApplication::processEvents();
 }
 
 void VisualChromeTest::shellVanilla()

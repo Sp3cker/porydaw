@@ -12,6 +12,10 @@
 #include <QTabBar>
 #include <QtTest>
 
+#include <QComboBox>
+#include <QListView>
+#include <QMenu>
+
 namespace checks::visual {
 
 Region childRegion(const QString &name, QWidget &root, const QWidget &child)
@@ -161,6 +165,72 @@ void compareShown(const QString &id, QWidget &widget, const QList<Region> &extra
     QString error;
     QVERIFY2(compareWidget(id, widget, mergeRegions(widgetRegions(widget), extra), &error),
              qPrintable(error));
+}
+
+QList<Region> comboPopupRegions(QWidget &popup)
+{
+    auto regions = widgetRegions(popup);
+    auto *view = popup.findChild<QListView *>();
+    if (!view)
+        return regions;
+    const QRect popupBounds(QPoint(0, 0), popup.size());
+    const QRect viewport =
+        QRect(view->viewport()->mapTo(&popup, QPoint(0, 0)), view->viewport()->size()) &
+        popupBounds;
+    regions.append({QStringLiteral("popup.view"), viewport});
+    for (int row = 0; row < view->model()->rowCount(); ++row) {
+        const QRect rect = view->visualRect(view->model()->index(row, 0));
+        if (!rect.isValid())
+            continue;
+        const QRect mapped =
+            rect.translated(view->viewport()->mapTo(&popup, QPoint(0, 0))) & viewport;
+        if (!mapped.isEmpty())
+            regions.append({QStringLiteral("popup.row.%1").arg(row), mapped});
+    }
+    return regions;
+}
+
+QList<Region> menuPopupRegions(QWidget &popup)
+{
+    auto regions = widgetRegions(popup);
+    auto *menu = qobject_cast<QMenu *>(&popup);
+    if (!menu)
+        return regions;
+    const QRect popupBounds(QPoint(0, 0), popup.size());
+    int index = 0;
+    for (QAction *action : menu->actions()) {
+        const QRect rect = menu->actionGeometry(action) & popupBounds;
+        if (!rect.isEmpty())
+            regions.append({QStringLiteral("menu.row.%1").arg(index++), rect});
+    }
+    return regions;
+}
+
+void compareComboPopup(QComboBox &combo, const QString &baselineId)
+{
+    combo.showPopup();
+    QWidget *popup = combo.view()->window();
+    QVERIFY(popup);
+    QTRY_VERIFY_WITH_TIMEOUT(popup->isVisible(), 5000);
+    QApplication::processEvents();
+    if (QWidget *focused = QApplication::focusWidget())
+        focused->clearFocus();
+    QApplication::processEvents();
+    QString error;
+    QVERIFY2(compareWidget(baselineId, *popup, comboPopupRegions(*popup), &error),
+             qPrintable(error));
+    popup->hide();
+    QApplication::processEvents();
+}
+
+void compareMenuPopup(const QString &baselineId)
+{
+    QWidget *popup = QApplication::activePopupWidget();
+    QVERIFY2(popup, "expected an active popup widget inside the menu's modal loop");
+    QString error;
+    QVERIFY2(compareWidget(baselineId, *popup, menuPopupRegions(*popup), &error),
+             qPrintable(error));
+    popup->hide();
 }
 
 } // namespace checks::visual

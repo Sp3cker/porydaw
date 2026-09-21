@@ -1,0 +1,78 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 174,
+        "width": 383
+    },
+    "profile": "macos-dpr2-font12",
+    "regions": [
+        {
+            "h": 172,
+            "name": "popup.view",
+            "w": 381,
+            "x": 1,
+            "y": 1
+        },
+        {
+            "h": 21,
+            "name": "popup.row.0",
+            "w": 381,
+            "x": 1,
+            "y": 1
+        },
+        {
+            "h": 21,
+            "name": "popup.row.1",
+            "w": 381,
+            "x": 1,
+            "y": 22
+        },
+        {
+            "h": 21,
+            "name": "popup.row.2",
+            "w": 381,
+            "x": 1,
+            "y": 43
+        },
+        {
+            "h": 21,
+            "name": "popup.row.3",
+            "w": 381,
+            "x": 1,
+            "y": 64
+        },
+        {
+            "h": 21,
+            "name": "popup.row.4",
+            "w": 381,
+            "x": 1,
+            "y": 85
+        },
+        {
+            "h": 21,
+            "name": "popup.row.5",
+            "w": 381,
+            "x": 1,
+            "y": 106
+        },
+        {
+            "h": 21,
+            "name": "popup.row.6",
+            "w": 381,
+            "x": 1,
+            "y": 127
+        },
+        {
+            "h": 21,
+            "name": "popup.row.7",
+            "w": 381,
+            "x": 1,
+            "y": 148
+        }
+    ]
+}

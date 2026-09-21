@@ -72,6 +72,9 @@ int runVoicegroupViewCacheCheck(const QStringList &qtArguments);
 int runVoicegroupSaveCheck(const QString &projectRoot, const QString &songLabel,
                            const QString &screenshotPath, const QStringList &qtArguments);
 
+// Songs dock list (src/checks/songlist).
+int runSongListCheck(const QStringList &qtArguments);
+
 // MIDI round trip (src/checks/midi).
 int runSmfCheck(const QStringList &qtArguments);
 int runRoundTrip(const QString &projectRoot, const QString &mid2agbPath,

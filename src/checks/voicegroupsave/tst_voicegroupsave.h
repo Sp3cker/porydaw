@@ -64,6 +64,9 @@ class VoicegroupSaveTest final : public QObject
     void samplePickerKeysplitAuditions();
     void samplePickerWaveModeAuditionsAndCommits();
     void newVoicegroupCreatesAndAssignsUndoably();
+    void treePressHoldAuditions();
+    void sampleButtonsEmitRequests();
+    void selectorChangeRequestsArg();
 
   private:
     bool openSong(QString &error);

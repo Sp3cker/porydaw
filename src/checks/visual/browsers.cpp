@@ -30,6 +30,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QHeaderView>
+#include <QLineEdit>
 #include <QModelIndex>
 #include <QSet>
 #include <QSpinBox>
@@ -48,6 +49,7 @@ namespace {
 using checks::visual::appendNamedRegion;
 using checks::visual::appendRequiredRegion;
 using checks::visual::childRegion;
+using checks::visual::compareComboPopup;
 using checks::visual::compareShown;
 using checks::visual::Region;
 
@@ -301,18 +303,40 @@ class VisualBrowsersTest final : public QObject
     void browserBaseline();
     void editorVariants_data();
     void editorVariants();
+    void selectorPopup_data();
+    void selectorPopup();
+    void typePopup_data();
+    void typePopup();
+    void loadingState_data();
+    void loadingState();
+    void scrolledTree_data();
+    void scrolledTree();
+    void emptySong_data();
+    void emptySong();
     void samplePickerPopup_data();
     void samplePickerPopup();
+    void pickerPopupFiltered_data();
+    void pickerPopupFiltered();
 
   private:
     bool populateBrowser(QString &error);
     void applyTheme(const QString &id);
     void grabBrowser(const QString &id);
     QWidget *pickerPopup() const;
+    // Rebinds the browser to `view` with the fixture's full catalog state;
+    // the synth variant passes its pendingSynths overlay.
+    void bindView(const LoadedBankView *view,
+                  const QHash<QString, VgSynthDesc> &pendingSynths = {});
 
     QString m_projectRoot;
     DecompProject m_project;
+    VgCatalogScan m_catalog;
+    VgDirectSoundScan m_directSound;
+    QStringList m_progWave;
     std::optional<LoadedBankView> m_bank;
+    // A slot-kind overlay of m_bank for the Broken-variant grab; a member so
+    // the borrowed view stays alive through the compare.
+    std::optional<LoadedBankView> m_derivedBank;
     std::unique_ptr<SongViewRig> m_rig;
     std::unique_ptr<FixtureSampleSet> m_sampleSet;
     std::unique_ptr<VoicegroupBrowser> m_browser;
@@ -363,19 +387,18 @@ void VisualBrowsersTest::cleanupTestCase()
 
 bool VisualBrowsersTest::populateBrowser(QString &error)
 {
-    const VgCatalogScan catalog = VoicegroupSource::catalogScan(m_projectRoot);
-    const VgDirectSoundScan directSound = VoicegroupSource::directSoundCatalog(m_projectRoot);
-    const QStringList progWave = VoicegroupSource::progWaveSymbols(m_projectRoot);
+    m_catalog = VoicegroupSource::catalogScan(m_projectRoot);
+    m_directSound = VoicegroupSource::directSoundCatalog(m_projectRoot);
+    m_progWave = VoicegroupSource::progWaveSymbols(m_projectRoot);
 
-    m_sampleSet = FixtureSampleSet::load(m_project, catalog, directSound, progWave, error);
+    m_sampleSet = FixtureSampleSet::load(m_project, m_catalog, m_directSound, m_progWave, error);
     if (!m_sampleSet)
         return false;
 
     m_browser = std::make_unique<VoicegroupBrowser>();
-    m_browser->setVoicegroupChoices(catalog.groupArgs);
+    m_browser->setVoicegroupChoices(m_catalog.groupArgs);
     m_browser->setSampleInfoProvider(m_sampleSet->pickInfoProvider());
-    m_browser->setSource(&*m_bank, directSound.directSound, progWave, catalog.keysplits,
-                         catalog.drumkits, catalog.typicalAdsr, directSound.synths);
+    bindView(&*m_bank);
     m_browser->setCurrentVoicegroupArg(QStringLiteral("_fixture_rich"));
     m_browser->setUsedVoices(m_rig->view().usedVoices());
     m_browser->selectSlot(kDirectSoundSlot);
@@ -383,6 +406,14 @@ bool VisualBrowsersTest::populateBrowser(QString &error)
     m_browser->show();
     QApplication::processEvents();
     return true;
+}
+
+void VisualBrowsersTest::bindView(const LoadedBankView *view,
+                                  const QHash<QString, VgSynthDesc> &pendingSynths)
+{
+    m_browser->setSource(view, m_directSound.directSound, m_progWave, m_catalog.keysplits,
+                         m_catalog.drumkits, m_catalog.typicalAdsr, m_directSound.synths,
+                         pendingSynths);
 }
 
 // id -> theme, the only two the baselines cover; the data rows cannot carry
@@ -452,27 +483,237 @@ void VisualBrowsersTest::editorVariants_data()
     QTest::addColumn<QString>("theme");
     QTest::addColumn<int>("slot");
     QTest::addColumn<QString>("variant");
+    QTest::addColumn<QString>("kind");
+    // fixture_rich slot map (sound/voicegroups/fixture_rich.inc): every
+    // editor family gets a frozen form — the CGB sweep/duty rows, the
+    // picker's wave mode, the keysplit/drumkit symbol combos, the noise
+    // period row, the blank-slot materialization draft, the read-only cry
+    // notice, the unparseable-line notice, and the Golden Sun synth rows.
+    const struct {
+        int slot;
+        const char *variant;
+        const char *kind;
+    } variants[] = {
+        {kSquare1Slot, "editor-square1", "normal"},
+        {5, "editor-square2", "normal"},
+        {6, "editor-wave", "normal"},
+        {7, "editor-noise", "normal"},
+        {8, "editor-keysplit", "normal"},
+        {10, "editor-drumkit", "normal"},
+        {13, "editor-blank", "normal"},
+        {kCrySlot, "editor-readonly", "normal"},
+        {1, "editor-broken", "broken"},
+        {kDirectSoundSlot, "editor-synth", "synth"},
+    };
     for (const char *themeId : kThemeIds) {
         const QString theme = QString::fromLatin1(themeId);
-        QTest::newRow(qPrintable(theme + "-square1"))
-            << theme << kSquare1Slot << QStringLiteral("editor-square1");
-        QTest::newRow(qPrintable(theme + "-readonly"))
-            << theme << kCrySlot << QStringLiteral("editor-readonly");
+        for (const auto &v : variants)
+            QTest::newRow(qPrintable(theme + "-" + QLatin1String(v.variant)))
+                << theme << v.slot << QString::fromLatin1(v.variant) << QString::fromLatin1(v.kind);
     }
 }
 
-// Editor form states: the Square 1 voice shows the sweep/duty rows with the
-// masked CGB ADSR fields; the cry voice shows the read-only notice with the
-// editor disabled.
+// Editor form states: each voice family shows its own rows — Square 1 the
+// sweep/duty fields with masked CGB ADSR, wave the picker in wave mode,
+// keysplit/drumkit their symbol combos, noise the period field, a blank slot
+// the materialization draft, the cry voice the read-only notice, a broken
+// line the kept-as-is notice, and a synth voice the Golden Sun parameters.
 void VisualBrowsersTest::editorVariants()
 {
     QFETCH(QString, theme);
     QFETCH(int, slot);
     QFETCH(QString, variant);
+    QFETCH(QString, kind);
     applyTheme(theme);
+
+    if (kind == QLatin1String("broken")) {
+        // A line the loader consumed but couldn't parse: the row renders the
+        // bank's tone while the editor shows the kept-as-is notice. The view
+        // overlay drops the parsed voice so the slot is read-only.
+        m_derivedBank = *m_bank;
+        m_derivedBank->slotViews[slot].kind = VgLineKind::Broken;
+        m_derivedBank->slotViews[slot].voice.reset();
+        bindView(&*m_derivedBank);
+    } else if (kind == QLatin1String("synth")) {
+        // A minted-but-unsaved synth definition: the voice's sample symbol
+        // resolves through pendingSynths, so the editor shows the Golden Sun
+        // rows without any fixture-file synth data.
+        const QString symbol = m_bank->slotViews[slot].voice->symbol;
+        VgSynthDesc desc; // pulse defaults: 50% duty, no LFO
+        bindView(&*m_bank, {{symbol, desc}});
+    }
+
     m_browser->selectSlot(slot);
     QApplication::processEvents();
     grabBrowser(QStringLiteral("voicegroupbrowser/%1/%2").arg(variant, theme));
+
+    if (kind == QLatin1String("synth")) {
+        // The synth voice's Type dropdown carries the extra "Synth (Golden
+        // Sun)" entry — freeze the open popup while the overlay is bound.
+        QComboBox *const typeCombo = editorTypeCombo(*m_browser);
+        QVERIFY(typeCombo);
+        compareComboPopup(*typeCombo,
+                          QStringLiteral("voicegroupbrowser/type-popup-synth/%1").arg(theme));
+    }
+    if (kind != QLatin1String("normal")) {
+        bindView(&*m_bank);
+        m_derivedBank.reset();
+        m_browser->selectSlot(kDirectSoundSlot);
+        QApplication::processEvents();
+    }
+}
+
+void VisualBrowsersTest::selectorPopup_data()
+{
+    QTest::addColumn<QString>("theme");
+    for (const char *themeId : kThemeIds)
+        QTest::newRow(themeId) << QString::fromLatin1(themeId);
+}
+
+// The voicegroup selector's open dropdown: every -G arg the project offers,
+// in catalog order, with the current arg highlighted.
+void VisualBrowsersTest::selectorPopup()
+{
+    QFETCH(QString, theme);
+    applyTheme(theme);
+    auto *selector = m_browser->findChild<QComboBox *>(QStringLiteral("vgArgCombo"));
+    QVERIFY(selector);
+    compareComboPopup(*selector, QStringLiteral("voicegroupbrowser/selector-popup/%1").arg(theme));
+}
+
+void VisualBrowsersTest::typePopup_data()
+{
+    QTest::addColumn<QString>("theme");
+    for (const char *themeId : kThemeIds)
+        QTest::newRow(themeId) << QString::fromLatin1(themeId);
+}
+
+// The editor's Type dropdown on a plain sample voice: each selectable family
+// once, no _alt duplicates, no Synth entry while the project has none.
+void VisualBrowsersTest::typePopup()
+{
+    QFETCH(QString, theme);
+    applyTheme(theme);
+    // Rebind so a prior variant's overlay (synth pending defs, derived bank)
+    // can't leak into the combo model — the popup must show the plain list.
+    bindView(&*m_bank);
+    m_browser->selectSlot(kDirectSoundSlot);
+    QApplication::processEvents();
+    QComboBox *const typeCombo = editorTypeCombo(*m_browser);
+    QVERIFY(typeCombo);
+    compareComboPopup(*typeCombo, QStringLiteral("voicegroupbrowser/type-popup/%1").arg(theme));
+}
+
+void VisualBrowsersTest::loadingState_data()
+{
+    QTest::addColumn<QString>("theme");
+    for (const char *themeId : kThemeIds)
+        QTest::newRow(themeId) << QString::fromLatin1(themeId);
+}
+
+// The async-load overlay: all 128 rows read "NNN Loading...", the selector
+// shows its loading text, and the editor is disabled in place — geometry
+// identical to the bound state.
+void VisualBrowsersTest::loadingState()
+{
+    QFETCH(QString, theme);
+    applyTheme(theme);
+    m_browser->setLoading(true);
+    QApplication::processEvents();
+    grabBrowser(QStringLiteral("voicegroupbrowser/loading/%1").arg(theme));
+    m_browser->setLoading(false);
+    m_browser->selectSlot(kDirectSoundSlot);
+    QApplication::processEvents();
+}
+
+void VisualBrowsersTest::scrolledTree_data()
+{
+    QTest::addColumn<QString>("theme");
+    for (const char *themeId : kThemeIds)
+        QTest::newRow(themeId) << QString::fromLatin1(themeId);
+}
+
+// The tree mid-scroll: a late slot selected and centered, so the baseline
+// pins the scrollbar position, the visible window of rows, and the blank
+// rows' presentation.
+void VisualBrowsersTest::scrolledTree()
+{
+    QFETCH(QString, theme);
+    applyTheme(theme);
+    m_browser->revealSlot(64);
+    QApplication::processEvents();
+    grabBrowser(QStringLiteral("voicegroupbrowser/scrolled/%1").arg(theme));
+    m_browser->revealSlot(0);
+    m_browser->selectSlot(kDirectSoundSlot);
+    QApplication::processEvents();
+}
+
+void VisualBrowsersTest::emptySong_data()
+{
+    QTest::addColumn<QString>("theme");
+    for (const char *themeId : kThemeIds)
+        QTest::newRow(themeId) << QString::fromLatin1(themeId);
+}
+
+// No bound bank: the selector placeholder, the cleared rows, and the empty
+// editor state a song-less session shows.
+void VisualBrowsersTest::emptySong()
+{
+    QFETCH(QString, theme);
+    applyTheme(theme);
+    bindView(nullptr);
+    QApplication::processEvents();
+    grabBrowser(QStringLiteral("voicegroupbrowser/empty/%1").arg(theme));
+    bindView(&*m_bank);
+    m_browser->setCurrentVoicegroupArg(QStringLiteral("_fixture_rich"));
+    m_browser->setUsedVoices(m_rig->view().usedVoices());
+    m_browser->selectSlot(kDirectSoundSlot);
+    QApplication::processEvents();
+}
+
+void VisualBrowsersTest::pickerPopupFiltered_data()
+{
+    QTest::addColumn<QString>("theme");
+    for (const char *themeId : kThemeIds)
+        QTest::newRow(themeId) << QString::fromLatin1(themeId);
+}
+
+// The picker popup mid-filter: only matching rows stay visible under their
+// section headers, and the query text sits in the search field.
+void VisualBrowsersTest::pickerPopupFiltered()
+{
+    QFETCH(QString, theme);
+    applyTheme(theme);
+    m_browser->selectSlot(kDirectSoundSlot);
+    QApplication::processEvents();
+
+    auto *picker = m_browser->findChild<SamplePickerButton *>();
+    QVERIFY(picker);
+    picker->openPopup();
+    QWidget *popup = pickerPopup();
+    QVERIFY(popup);
+    QTRY_VERIFY_WITH_TIMEOUT(popup->isVisible(), 5000);
+    auto *filter = popup->findChild<QLineEdit *>();
+    QVERIFY(filter);
+    filter->setText(QStringLiteral("pluck"));
+    QApplication::processEvents();
+    if (QWidget *focused = QApplication::focusWidget())
+        focused->clearFocus();
+    QApplication::processEvents();
+
+    QList<Region> regions;
+    appendPopupRegions(regions, *popup);
+    // The line edit's clear button is a platform ✕ glyph whose subpixel
+    // placement jitters between grabs; it carries no app-specific state, so
+    // the search region stops short of its right-docked square.
+    const QRect searchRect(filter->mapTo(popup, QPoint(0, 0)), filter->size());
+    regions.append(
+        {QStringLiteral("vgSamplePickerSearch"), searchRect.adjusted(0, 0, -filter->height(), 0)});
+    compareShown(QStringLiteral("samplepicker/filtered-%1").arg(theme), *popup, regions);
+
+    popup->hide();
+    QApplication::processEvents();
+    QVERIFY2(!picker->popupVisible(), "sample picker popup did not close");
 }
 
 void VisualBrowsersTest::samplePickerPopup_data()

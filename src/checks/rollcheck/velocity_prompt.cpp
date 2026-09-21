@@ -18,9 +18,11 @@
 #include "ui/songview/quick/timelineinputitem.h"
 #include <QCoreApplication>
 #include <QEvent>
+#include <QMouseEvent>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QWheelEvent>
 #include <QtTest>
 #include <optional>
 
@@ -651,4 +653,194 @@ void PianoRollTest::velocityPromptBounds()
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
         doc.undoStack()->undo();
     QCOMPARE(doc.smf().write(), before);
+}
+
+// The DragInput field's pointer gestures are the DragSpinBox port contract:
+// vertical drags past the appearance threshold scrub the draft at the
+// production rates, a dragged release never selects, and the document stays
+// untouched until the prompt accepts.
+void PianoRollTest::velocityPromptScrubDrag()
+{
+    auto &check = *m_fixture;
+    const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
+    QVERIFY(seed.has_value());
+    SongDocument &doc = check.document();
+    SongView &view = check.view();
+    const quick_popup::PromptGuard guard(view);
+    const QByteArray before = doc.smf().write();
+    const int undoCount = doc.undoStack()->count();
+
+    const VelocityPromptSession opened = openVelocityPromptViaSelection(check, seed->noteB);
+    QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic));
+    QQuickItem *const input =
+        quick_popup::promptItem(*opened.popup, QLatin1String("noteVelocityInput"));
+    QVERIFY2(input, "the velocity prompt has no text input");
+    QQuickItem *const dragInput = input->parentItem();
+    QVERIFY2(dragInput, "the velocity input has no DragInput parent");
+    const QVariantMap appearance = dragInput->property("appearance").toMap();
+    const qreal threshold = appearance.value(QStringLiteral("dragThreshold")).toDouble();
+    QVERIFY2(threshold > 0.0, "the DragInput appearance lacks a drag threshold");
+    QCOMPARE(input->property("text").toString(), QStringLiteral("73"));
+
+    // One upward scrub: (displacement - threshold) * 0.5 steps. QTest
+    // delivery reaches the DragHandler through the real window dispatch;
+    // direct sendEvent bypasses the pointer-handler grab.
+    const QPoint center =
+        input->mapToScene(QPointF(input->width() / 2, input->height() / 2)).toPoint();
+    QTest::mousePress(opened.window, Qt::LeftButton, Qt::NoModifier, center);
+    QTest::mouseMove(opened.window, center + QPoint(0, -40));
+    QTest::mouseRelease(opened.window, Qt::LeftButton, Qt::NoModifier, center + QPoint(0, -40));
+    QCoreApplication::processEvents();
+
+    const int plainSteps = int((40.0 - threshold) * 0.5);
+    QCOMPARE(input->property("text").toString(), QString::number(73 + plainSteps));
+    QVERIFY2(doc.smf().write() == before && doc.undoStack()->count() == undoCount,
+             "a scrub drag wrote to the song before the prompt accepted");
+    // A dragged release is not a tap: no select-all may follow it.
+    QVERIFY2(input->property("selectedText").toString().isEmpty(),
+             "the scrub release selected the draft text");
+
+    // Shift holds the fine rate: the same displacement steps at 0.2/px.
+    // QTest::mouseMove cannot carry a modifier, so the press and release go
+    // through QTest (which activates the handler's grab) while each move is
+    // a manual QMouseEvent that keeps Shift on the centroid's modifiers.
+    const int shifted = 73 + plainSteps;
+    QTest::mousePress(opened.window, Qt::LeftButton, Qt::ShiftModifier, center);
+    const QPointF shiftEnd = center + QPointF(0, -40);
+    QMouseEvent shiftMove(QEvent::MouseMove, shiftEnd,
+                          opened.window->mapToGlobal(shiftEnd.toPoint()), Qt::NoButton,
+                          Qt::LeftButton, Qt::ShiftModifier);
+    QCoreApplication::sendEvent(opened.window, &shiftMove);
+    QTest::mouseRelease(opened.window, Qt::LeftButton, Qt::ShiftModifier, shiftEnd.toPoint());
+    QCoreApplication::processEvents();
+    QCOMPARE(input->property("text").toString(),
+             QString::number(shifted + int((40.0 - threshold) * 0.2)));
+    QTest::keyClick(opened.window, Qt::Key_Escape);
+    QCoreApplication::processEvents();
+    QVERIFY2(!opened.popup->isOpen(), "Escape did not close the scrubbed prompt");
+    QVERIFY2(doc.smf().write() == before && doc.undoStack()->count() == undoCount,
+             "cancel after scrubbing wrote to the song");
+}
+
+// Wheel parity with QAbstractSpinBox: angle deltas accumulate into a
+// persistent remainder, each full 120-unit notch is one step, Control
+// multiplies by ten, and on macOS Shift folds the horizontal axis back onto
+// the vertical step axis.
+void PianoRollTest::velocityPromptWheelSteps()
+{
+    auto &check = *m_fixture;
+    const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
+    QVERIFY(seed.has_value());
+    SongDocument &doc = check.document();
+    SongView &view = check.view();
+    const quick_popup::PromptGuard guard(view);
+    const QByteArray before = doc.smf().write();
+    const int undoCount = doc.undoStack()->count();
+
+    const VelocityPromptSession opened = openVelocityPromptViaSelection(check, seed->noteB);
+    QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic));
+    QQuickItem *const input =
+        quick_popup::promptItem(*opened.popup, QLatin1String("noteVelocityInput"));
+    QVERIFY2(input, "the velocity prompt has no text input");
+    QCOMPARE(input->property("text").toString(), QStringLiteral("73"));
+
+    const QPointF center = input->mapToScene(QPointF(input->width() / 2, input->height() / 2));
+    const auto wheel = [window = opened.window, center](const QPoint &angle,
+                                                        Qt::KeyboardModifiers modifiers) {
+        QWheelEvent event(center, window->mapToGlobal(center.toPoint()), QPoint(), angle,
+                          Qt::NoButton, modifiers, Qt::NoScrollPhase, false);
+        QCoreApplication::sendEvent(window, &event);
+    };
+
+    // Two half-notches carry in the remainder: the first is a no-op, the
+    // second completes one step.
+    wheel(QPoint(0, 60), Qt::NoModifier);
+    QCOMPARE(input->property("text").toString(), QStringLiteral("73"));
+    wheel(QPoint(0, 60), Qt::NoModifier);
+    QCOMPARE(input->property("text").toString(), QStringLiteral("74"));
+    // Control multiplies the notch by ten.
+    wheel(QPoint(0, 120), Qt::ControlModifier);
+    QCOMPARE(input->property("text").toString(), QStringLiteral("84"));
+#ifdef Q_OS_MACOS
+    // Shift folds a mouse wheel's horizontal axis onto the step axis.
+    wheel(QPoint(120, 0), Qt::ShiftModifier);
+    QCOMPARE(input->property("text").toString(), QStringLiteral("85"));
+#endif
+    QVERIFY2(doc.smf().write() == before && doc.undoStack()->count() == undoCount,
+             "wheel stepping wrote to the song before the prompt accepted");
+
+    QTest::keyClick(opened.window, Qt::Key_Escape);
+    QCoreApplication::processEvents();
+    QVERIFY2(!opened.popup->isOpen(), "Escape did not close the wheeled prompt");
+}
+
+// A tap on the field focuses it and selects the whole draft — the deferred
+// select-all that survives the TextInput's own release-time caret settling.
+void PianoRollTest::velocityPromptTapSelectsAll()
+{
+    auto &check = *m_fixture;
+    const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
+    QVERIFY(seed.has_value());
+    SongView &view = check.view();
+    const quick_popup::PromptGuard guard(view);
+
+    const VelocityPromptSession opened = openVelocityPromptViaSelection(check, seed->noteB);
+    QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic));
+    QQuickItem *const input =
+        quick_popup::promptItem(*opened.popup, QLatin1String("noteVelocityInput"));
+    QVERIFY2(input, "the velocity prompt has no text input");
+
+    // Clear the open-time selection, then tap: the deferred select-all must
+    // restore the full draft selection.
+    QVERIFY2(QMetaObject::invokeMethod(input, "deselect"),
+             "the velocity input does not expose deselect");
+    QCOMPARE(input->property("selectedText").toString(), QString());
+    QTest::mouseClick(opened.window, Qt::LeftButton, Qt::NoModifier,
+                      quick_popup::itemCenter(*input));
+    QVERIFY2(
+        QTest::qWaitFor([input] { return input->property("selectedText").toString() == "73"; }),
+        "tapping the velocity input did not select the whole draft");
+    QVERIFY2(quick_popup::inputHasActiveFocus(*opened.window, QLatin1String("noteVelocityInput")),
+             "tapping the velocity input did not focus it");
+
+    QTest::keyClick(opened.window, Qt::Key_Escape);
+    QCoreApplication::processEvents();
+    QVERIFY2(!opened.popup->isOpen(), "Escape did not close the tapped prompt");
+}
+
+// CorrectToPreviousValue parity: an intermediate draft that fails the
+// validator reverts to the current value when focus leaves the field inside
+// the popup — the prompt stays open and nothing commits.
+void PianoRollTest::velocityPromptFocusLossCorrection()
+{
+    auto &check = *m_fixture;
+    const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
+    QVERIFY(seed.has_value());
+    SongDocument &doc = check.document();
+    SongView &view = check.view();
+    const quick_popup::PromptGuard guard(view);
+    const QByteArray before = doc.smf().write();
+    const int undoCount = doc.undoStack()->count();
+
+    const VelocityPromptSession opened = openVelocityPromptViaSelection(check, seed->noteB);
+    QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic));
+    QQuickItem *const input =
+        quick_popup::promptItem(*opened.popup, QLatin1String("noteVelocityInput"));
+    QVERIFY2(input, "the velocity prompt has no text input");
+
+    // "0" is validator-intermediate (below the minimum): it types in but can
+    // never commit. Tabbing away must correct the draft back to 73.
+    QTest::keyClick(opened.window, Qt::Key_0);
+    QCoreApplication::processEvents();
+    QCOMPARE(input->property("text").toString(), QStringLiteral("0"));
+    QTest::keyClick(opened.window, Qt::Key_Tab);
+    QCoreApplication::processEvents();
+    QCOMPARE(input->property("text").toString(), QStringLiteral("73"));
+    QVERIFY2(opened.popup->isOpen(), "focus-loss correction closed the velocity prompt");
+    QVERIFY2(doc.smf().write() == before && doc.undoStack()->count() == undoCount,
+             "focus-loss correction wrote to the song");
+
+    QTest::keyClick(opened.window, Qt::Key_Escape);
+    QCoreApplication::processEvents();
+    QVERIFY2(!opened.popup->isOpen(), "Escape did not close the corrected prompt");
 }

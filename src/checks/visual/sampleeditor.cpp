@@ -138,33 +138,6 @@ int appendLabelRegions(QList<checks::visual::Region> &regions, const QString &ba
     return painted;
 }
 
-// Semantic regions for an open QComboBox popup: the view plus one region per
-// item row, clipped to the painted viewport, so row count, order, and the
-// highlighted row are all frozen. The popup is a separate window — it must
-// be grabbed directly; the dialog grab never sees it.
-QList<checks::visual::Region> comboPopupRegions(QWidget &popup)
-{
-    auto regions = checks::visual::widgetRegions(popup);
-    auto *view = popup.findChild<QListView *>();
-    if (!view)
-        return regions;
-    const QRect popupBounds(QPoint(0, 0), popup.size());
-    const QRect viewport =
-        QRect(view->viewport()->mapTo(&popup, QPoint(0, 0)), view->viewport()->size()) &
-        popupBounds;
-    regions.append({QStringLiteral("popup.view"), viewport});
-    for (int row = 0; row < view->model()->rowCount(); ++row) {
-        const QRect rect = view->visualRect(view->model()->index(row, 0));
-        if (!rect.isValid())
-            continue;
-        const QRect mapped =
-            rect.translated(view->viewport()->mapTo(&popup, QPoint(0, 0))) & viewport;
-        if (!mapped.isEmpty())
-            regions.append({QStringLiteral("popup.row.%1").arg(row), mapped});
-    }
-    return regions;
-}
-
 // Geometry these regions mirror in WaveformView::paintEvent
 // (src/ui/waveformview.cpp) — the exact lines are cited so a change there is
 // traceable to the baselines it invalidates:
@@ -468,29 +441,6 @@ void scrollControlColumnToBottom(SampleEditorDialog &dialog)
     scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());
     QApplication::processEvents();
     checks::visual::parkFocus(dialog);
-}
-
-// Grabs an open combo popup directly (it is a separate window the dialog grab
-// never sees) and compares it against `baselineId`. Focus is dropped first so
-// no caret blinks in the popup raster.
-void compareComboPopup(SampleEditorDialog &dialog, const char *comboObjectName,
-                       const QString &baselineId)
-{
-    auto *combo = child<QComboBox>(dialog, comboObjectName);
-    QVERIFY(combo);
-    combo->showPopup();
-    QWidget *popup = combo->view()->window();
-    QVERIFY(popup);
-    QTRY_VERIFY_WITH_TIMEOUT(popup->isVisible(), 5000);
-    QApplication::processEvents();
-    if (QWidget *focused = QApplication::focusWidget())
-        focused->clearFocus();
-    QApplication::processEvents();
-    QString error;
-    QVERIFY2(checks::visual::compareWidget(baselineId, *popup, comboPopupRegions(*popup), &error),
-             qPrintable(error));
-    popup->hide();
-    QApplication::processEvents();
 }
 
 } // namespace
@@ -826,8 +776,8 @@ void VisualSampleEditorTest::ratePopup()
 {
     auto dialog = makeDialog(themes::vanilla(), Fixture::Prepared);
     checks::visual::showSettled(*dialog);
-    compareComboPopup(*dialog, "sampleRateCombo",
-                      QStringLiteral("sample-editor/rate-popup-vanilla"));
+    checks::visual::compareComboPopup(*child<QComboBox>(*dialog, "sampleRateCombo"),
+                                      QStringLiteral("sample-editor/rate-popup-vanilla"));
 }
 
 void VisualSampleEditorTest::normalizePopup()
@@ -835,8 +785,8 @@ void VisualSampleEditorTest::normalizePopup()
     auto dialog = makeDialog(themes::vanilla(), Fixture::Prepared);
     openAdvanced(*dialog);
     scrollControlColumnToBottom(*dialog);
-    compareComboPopup(*dialog, "sampleNormalizeMode",
-                      QStringLiteral("sample-editor/normalize-popup-vanilla"));
+    checks::visual::compareComboPopup(*child<QComboBox>(*dialog, "sampleNormalizeMode"),
+                                      QStringLiteral("sample-editor/normalize-popup-vanilla"));
 }
 
 void VisualSampleEditorTest::normalizeOneshot()

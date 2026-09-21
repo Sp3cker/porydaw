@@ -1,0 +1,673 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 680,
+        "width": 420
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 529,
+            "name": "listPositionIndicator",
+            "w": 8,
+            "x": 411,
+            "y": 31
+        },
+        {
+            "h": 26,
+            "name": "vgArgCombo",
+            "w": 316,
+            "x": 100,
+            "y": 2
+        },
+        {
+            "h": 27,
+            "name": "vgNewSampleButton",
+            "w": 30,
+            "x": 386,
+            "y": 593
+        },
+        {
+            "h": 22,
+            "name": "vgSamplePickerButton",
+            "w": 314,
+            "x": 70,
+            "y": 595
+        },
+        {
+            "h": 26,
+            "name": "selector",
+            "w": 316,
+            "x": 100,
+            "y": 2
+        },
+        {
+            "h": 531,
+            "name": "tree",
+            "w": 420,
+            "x": 0,
+            "y": 30
+        },
+        {
+            "h": 26,
+            "name": "tree.header",
+            "w": 410,
+            "x": 1,
+            "y": 31
+        },
+        {
+            "h": 20,
+            "name": "tree.row.051",
+            "w": 408,
+            "x": 1,
+            "y": 37
+        },
+        {
+            "h": 20,
+            "name": "tree.row.051.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 37
+        },
+        {
+            "h": 20,
+            "name": "tree.row.051.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 37
+        },
+        {
+            "h": 20,
+            "name": "tree.row.052",
+            "w": 408,
+            "x": 1,
+            "y": 57
+        },
+        {
+            "h": 20,
+            "name": "tree.row.052.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 57
+        },
+        {
+            "h": 20,
+            "name": "tree.row.052.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 57
+        },
+        {
+            "h": 20,
+            "name": "tree.row.053",
+            "w": 408,
+            "x": 1,
+            "y": 77
+        },
+        {
+            "h": 20,
+            "name": "tree.row.053.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 77
+        },
+        {
+            "h": 20,
+            "name": "tree.row.053.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 77
+        },
+        {
+            "h": 20,
+            "name": "tree.row.054",
+            "w": 408,
+            "x": 1,
+            "y": 97
+        },
+        {
+            "h": 20,
+            "name": "tree.row.054.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 97
+        },
+        {
+            "h": 20,
+            "name": "tree.row.054.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 97
+        },
+        {
+            "h": 20,
+            "name": "tree.row.055",
+            "w": 408,
+            "x": 1,
+            "y": 117
+        },
+        {
+            "h": 20,
+            "name": "tree.row.055.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 117
+        },
+        {
+            "h": 20,
+            "name": "tree.row.055.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 117
+        },
+        {
+            "h": 20,
+            "name": "tree.row.056",
+            "w": 408,
+            "x": 1,
+            "y": 137
+        },
+        {
+            "h": 20,
+            "name": "tree.row.056.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 137
+        },
+        {
+            "h": 20,
+            "name": "tree.row.056.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 137
+        },
+        {
+            "h": 20,
+            "name": "tree.row.057",
+            "w": 408,
+            "x": 1,
+            "y": 157
+        },
+        {
+            "h": 20,
+            "name": "tree.row.057.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 157
+        },
+        {
+            "h": 20,
+            "name": "tree.row.057.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 157
+        },
+        {
+            "h": 20,
+            "name": "tree.row.058",
+            "w": 408,
+            "x": 1,
+            "y": 177
+        },
+        {
+            "h": 20,
+            "name": "tree.row.058.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 177
+        },
+        {
+            "h": 20,
+            "name": "tree.row.058.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 177
+        },
+        {
+            "h": 20,
+            "name": "tree.row.059",
+            "w": 408,
+            "x": 1,
+            "y": 197
+        },
+        {
+            "h": 20,
+            "name": "tree.row.059.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 197
+        },
+        {
+            "h": 20,
+            "name": "tree.row.059.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 197
+        },
+        {
+            "h": 20,
+            "name": "tree.row.060",
+            "w": 408,
+            "x": 1,
+            "y": 217
+        },
+        {
+            "h": 20,
+            "name": "tree.row.060.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 217
+        },
+        {
+            "h": 20,
+            "name": "tree.row.060.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 217
+        },
+        {
+            "h": 20,
+            "name": "tree.row.061",
+            "w": 408,
+            "x": 1,
+            "y": 237
+        },
+        {
+            "h": 20,
+            "name": "tree.row.061.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 237
+        },
+        {
+            "h": 20,
+            "name": "tree.row.061.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 237
+        },
+        {
+            "h": 20,
+            "name": "tree.row.062",
+            "w": 408,
+            "x": 1,
+            "y": 257
+        },
+        {
+            "h": 20,
+            "name": "tree.row.062.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 257
+        },
+        {
+            "h": 20,
+            "name": "tree.row.062.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 257
+        },
+        {
+            "h": 20,
+            "name": "tree.row.063",
+            "w": 408,
+            "x": 1,
+            "y": 277
+        },
+        {
+            "h": 20,
+            "name": "tree.row.063.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 277
+        },
+        {
+            "h": 20,
+            "name": "tree.row.063.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 277
+        },
+        {
+            "h": 20,
+            "name": "tree.row.064",
+            "w": 408,
+            "x": 1,
+            "y": 297
+        },
+        {
+            "h": 20,
+            "name": "tree.row.064.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 297
+        },
+        {
+            "h": 20,
+            "name": "tree.row.064.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 297
+        },
+        {
+            "h": 20,
+            "name": "tree.row.065",
+            "w": 408,
+            "x": 1,
+            "y": 317
+        },
+        {
+            "h": 20,
+            "name": "tree.row.065.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 317
+        },
+        {
+            "h": 20,
+            "name": "tree.row.065.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 317
+        },
+        {
+            "h": 20,
+            "name": "tree.row.066",
+            "w": 408,
+            "x": 1,
+            "y": 337
+        },
+        {
+            "h": 20,
+            "name": "tree.row.066.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 337
+        },
+        {
+            "h": 20,
+            "name": "tree.row.066.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 337
+        },
+        {
+            "h": 20,
+            "name": "tree.row.067",
+            "w": 408,
+            "x": 1,
+            "y": 357
+        },
+        {
+            "h": 20,
+            "name": "tree.row.067.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 357
+        },
+        {
+            "h": 20,
+            "name": "tree.row.067.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 357
+        },
+        {
+            "h": 20,
+            "name": "tree.row.068",
+            "w": 408,
+            "x": 1,
+            "y": 377
+        },
+        {
+            "h": 20,
+            "name": "tree.row.068.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 377
+        },
+        {
+            "h": 20,
+            "name": "tree.row.068.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 377
+        },
+        {
+            "h": 20,
+            "name": "tree.row.069",
+            "w": 408,
+            "x": 1,
+            "y": 397
+        },
+        {
+            "h": 20,
+            "name": "tree.row.069.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 397
+        },
+        {
+            "h": 20,
+            "name": "tree.row.069.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 397
+        },
+        {
+            "h": 20,
+            "name": "tree.row.070",
+            "w": 408,
+            "x": 1,
+            "y": 417
+        },
+        {
+            "h": 20,
+            "name": "tree.row.070.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 417
+        },
+        {
+            "h": 20,
+            "name": "tree.row.070.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 417
+        },
+        {
+            "h": 20,
+            "name": "tree.row.071",
+            "w": 408,
+            "x": 1,
+            "y": 437
+        },
+        {
+            "h": 20,
+            "name": "tree.row.071.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 437
+        },
+        {
+            "h": 20,
+            "name": "tree.row.071.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 437
+        },
+        {
+            "h": 20,
+            "name": "tree.row.072",
+            "w": 408,
+            "x": 1,
+            "y": 457
+        },
+        {
+            "h": 20,
+            "name": "tree.row.072.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 457
+        },
+        {
+            "h": 20,
+            "name": "tree.row.072.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 457
+        },
+        {
+            "h": 20,
+            "name": "tree.row.073",
+            "w": 408,
+            "x": 1,
+            "y": 477
+        },
+        {
+            "h": 20,
+            "name": "tree.row.073.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 477
+        },
+        {
+            "h": 20,
+            "name": "tree.row.073.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 477
+        },
+        {
+            "h": 20,
+            "name": "tree.row.074",
+            "w": 408,
+            "x": 1,
+            "y": 497
+        },
+        {
+            "h": 20,
+            "name": "tree.row.074.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 497
+        },
+        {
+            "h": 20,
+            "name": "tree.row.074.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 497
+        },
+        {
+            "h": 20,
+            "name": "tree.row.075",
+            "w": 408,
+            "x": 1,
+            "y": 517
+        },
+        {
+            "h": 20,
+            "name": "tree.row.075.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 517
+        },
+        {
+            "h": 20,
+            "name": "tree.row.075.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 517
+        },
+        {
+            "h": 20,
+            "name": "tree.row.076",
+            "w": 408,
+            "x": 1,
+            "y": 537
+        },
+        {
+            "h": 20,
+            "name": "tree.row.076.type-icon",
+            "w": 56,
+            "x": 253,
+            "y": 537
+        },
+        {
+            "h": 20,
+            "name": "tree.row.076.adsr",
+            "w": 100,
+            "x": 309,
+            "y": 537
+        },
+        {
+            "h": 26,
+            "name": "editor.type",
+            "w": 346,
+            "x": 70,
+            "y": 565
+        },
+        {
+            "h": 27,
+            "name": "editor.sample",
+            "w": 346,
+            "x": 70,
+            "y": 593
+        },
+        {
+            "h": 22,
+            "name": "editor.sample.button",
+            "w": 314,
+            "x": 70,
+            "y": 595
+        },
+        {
+            "h": 27,
+            "name": "editor.sample.new",
+            "w": 30,
+            "x": 386,
+            "y": 593
+        },
+        {
+            "h": 30,
+            "name": "editor.adsr.attack",
+            "w": 85,
+            "x": 70,
+            "y": 622
+        },
+        {
+            "h": 30,
+            "name": "editor.adsr.decay",
+            "w": 85,
+            "x": 157,
+            "y": 622
+        },
+        {
+            "h": 30,
+            "name": "editor.adsr.sustain",
+            "w": 85,
+            "x": 244,
+            "y": 622
+        },
+        {
+            "h": 30,
+            "name": "editor.adsr.release",
+            "w": 85,
+            "x": 331,
+            "y": 622
+        },
+        {
+            "h": 30,
+            "name": "editor.adsr",
+            "w": 346,
+            "x": 70,
+            "y": 622
+        }
+    ]
+}

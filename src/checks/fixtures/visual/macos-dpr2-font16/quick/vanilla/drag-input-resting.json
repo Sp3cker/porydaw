@@ -1,0 +1,29 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 800,
+        "width": 1280
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 105,
+            "name": "popup.form",
+            "w": 141,
+            "x": 569,
+            "y": 347
+        },
+        {
+            "h": 23,
+            "name": "drag-input.field",
+            "w": 44,
+            "x": 573,
+            "y": 395
+        }
+    ]
+}

@@ -1,0 +1,78 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 420,
+        "width": 340
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 18,
+            "name": "vgSamplePickerDetail",
+            "w": 330,
+            "x": 5,
+            "y": 397
+        },
+        {
+            "h": 357,
+            "name": "vgSamplePickerList",
+            "w": 330,
+            "x": 5,
+            "y": 36
+        },
+        {
+            "h": 18,
+            "name": "picker.section.0",
+            "w": 326,
+            "x": 6,
+            "y": 37
+        },
+        {
+            "h": 18,
+            "name": "picker.section.0.type-icon",
+            "w": 24,
+            "x": 308,
+            "y": 37
+        },
+        {
+            "h": 18,
+            "name": "picker.row.DirectSoundWaveData_fixture_pluck",
+            "w": 314,
+            "x": 18,
+            "y": 55
+        },
+        {
+            "h": 18,
+            "name": "picker.row.DirectSoundWaveData_fixture_pluck.type-icon",
+            "w": 24,
+            "x": 308,
+            "y": 55
+        },
+        {
+            "h": 18,
+            "name": "picker.row.pluck",
+            "w": 326,
+            "x": 6,
+            "y": 73
+        },
+        {
+            "h": 18,
+            "name": "picker.row.pluck.type-icon",
+            "w": 24,
+            "x": 308,
+            "y": 73
+        },
+        {
+            "h": 27,
+            "name": "vgSamplePickerSearch",
+            "w": 303,
+            "x": 5,
+            "y": 5
+        }
+    ]
+}

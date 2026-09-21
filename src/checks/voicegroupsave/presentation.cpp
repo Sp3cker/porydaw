@@ -15,6 +15,7 @@
 #include <QPushButton>
 #include <QQuickItem>
 #include <QTimer>
+#include <QToolButton>
 #include <QTreeWidget>
 #include <QtTest>
 
@@ -418,6 +419,103 @@ void VoicegroupSaveTest::typeColumnMapsEveryFamily()
     QVERIFY(!m_browser->hasTypeIcon(altBlank));
     QVERIFY(m_browser->slotRowType(altBlank).isEmpty());
     QVERIFY(m_browser->slotRowAccessibleType(altBlank).isEmpty());
+}
+
+void VoicegroupSaveTest::treePressHoldAuditions()
+{
+    auto *browser = m_window->findChild<VoicegroupBrowser *>();
+    QVERIFY(browser);
+    auto *tree = browser->findChild<QTreeWidget *>();
+    QVERIFY(tree);
+    m_window->show();
+    m_window->activateWindow();
+    QCoreApplication::processEvents();
+
+    QTreeWidgetItem *const first = tree->topLevelItem(m_dsSlot);
+    QVERIFY(first);
+    const QPoint firstPos = tree->visualItemRect(first).center();
+    QVERIFY2(!firstPos.isNull(), "first slot row has no visible rect");
+
+    QSignalSpy spy(browser, &VoicegroupBrowser::auditionVoice);
+    QTest::mousePress(tree->viewport(), Qt::LeftButton, Qt::NoModifier, firstPos);
+    QCOMPARE(spy.size(), 1);
+    QCOMPARE(spy.at(0).at(0).toInt(), m_dsSlot);
+    QCOMPARE(spy.at(0).at(1).toInt(), 60);
+    QCOMPARE(spy.at(0).at(2).toInt(), 112);
+
+    // Pressing a second row while the first is held releases it first, then
+    // starts the new voice — the note never overlaps.
+    const int other = m_dsSlot == 0 ? 1 : 0;
+    QTreeWidgetItem *const second = tree->topLevelItem(other);
+    QVERIFY(second);
+    const QPoint secondPos = tree->visualItemRect(second).center();
+    QVERIFY2(!secondPos.isNull(), "second slot row has no visible rect");
+    QTest::mousePress(tree->viewport(), Qt::LeftButton, Qt::NoModifier, secondPos);
+    QCOMPARE(spy.size(), 3);
+    QCOMPARE(spy.at(1).at(0).toInt(), m_dsSlot);
+    QCOMPARE(spy.at(1).at(2).toInt(), 0);
+    QCOMPARE(spy.at(2).at(0).toInt(), other);
+    QCOMPARE(spy.at(2).at(2).toInt(), 112);
+
+    QTest::mouseRelease(tree->viewport(), Qt::LeftButton, Qt::NoModifier, secondPos);
+    QCOMPARE(spy.size(), 4);
+    QCOMPARE(spy.at(3).at(0).toInt(), other);
+    QCOMPARE(spy.at(3).at(2).toInt(), 0);
+}
+
+void VoicegroupSaveTest::sampleButtonsEmitRequests()
+{
+    auto *browser = m_window->findChild<VoicegroupBrowser *>();
+    QVERIFY(browser);
+    m_window->show();
+    m_window->activateWindow();
+    QCoreApplication::processEvents();
+    m_browser->selectSlot(m_dsSlot);
+    QVERIFY2(m_browser->hasSamplePickerEditor(),
+             "DirectSound slot did not surface the sample picker editor");
+
+    auto *const newButton = browser->findChild<QToolButton *>(QStringLiteral("vgNewSampleButton"));
+    auto *const editButton =
+        browser->findChild<QToolButton *>(QStringLiteral("vgEditSampleButton"));
+    QVERIFY(newButton && editButton);
+    QVERIFY2(newButton->isVisible() && editButton->isVisible(),
+             "sample action buttons are not visible for the DirectSound slot");
+
+    QSignalSpy newSpy(browser, &VoicegroupBrowser::newSampleRequested);
+    QSignalSpy editSpy(browser, &VoicegroupBrowser::editSampleRequested);
+    QTest::mouseClick(newButton, Qt::LeftButton);
+    QCOMPARE(newSpy.size(), 1);
+    QCOMPARE(newSpy.at(0).at(0).toInt(), m_dsSlot);
+    QTest::mouseClick(editButton, Qt::LeftButton);
+    QCOMPARE(editSpy.size(), 1);
+    QCOMPARE(editSpy.at(0).at(0).toInt(), m_dsSlot);
+}
+
+void VoicegroupSaveTest::selectorChangeRequestsArg()
+{
+    const QString other = otherVoicegroupArg();
+    QVERIFY2(m_window->m_workspace->projectState().catalog.groupArgs.size() >= 2 &&
+                 !other.isEmpty(),
+             "required staged voicegroups missing: >=2 groupArgs via sound/voice_groups.inc and "
+             "sound/voicegroups/fixture_alt.inc");
+    auto *browser = m_window->findChild<VoicegroupBrowser *>();
+    QVERIFY(browser);
+    QComboBox *const selector = m_browser->voicegroupSelector();
+    QVERIFY(selector);
+
+    QSignalSpy spy(browser, &VoicegroupBrowser::voicegroupChangeRequested);
+    selector->setCurrentText(SongRegistry::voicegroupDisplayName(other));
+    QVERIFY(QMetaObject::invokeMethod(selector, "activated", Qt::DirectConnection,
+                                      Q_ARG(int, selector->currentIndex())));
+    QCOMPARE(spy.size(), 1);
+    QCOMPARE(spy.at(0).at(0).toString(), other);
+    QVERIFY2(settle([this, &other] {
+                 return m_document->cfg().voicegroupArg == other && m_tab->voicegroupId() &&
+                        *m_tab->voicegroupId() != *m_homeId;
+             }),
+             "selector request did not rebind the voicegroup");
+    requestUndo();
+    QVERIFY2(waitForVoicegroup(m_homeArg, *m_homeId), "selector undo did not restore home binding");
 }
 
 } // namespace checks

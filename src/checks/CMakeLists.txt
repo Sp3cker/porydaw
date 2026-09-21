@@ -161,6 +161,7 @@ qt_add_executable(porydaw_checks
     onboardcheck/regionedlayout.cpp
     onboardcheck/import.cpp
     onboardcheck/deletion.cpp
+    songlist/tst_songlist.cpp
     voicegroup/voicegrouptestfixture.h
     voicegroup/voicegrouptestfixture.cpp
     voicegroup/voicegroupsourcecatalog.cpp

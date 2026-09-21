@@ -8,6 +8,7 @@
 
 class QAbstractItemView;
 class QWidget;
+class QComboBox;
 
 // Shared scenario helpers for the QWidget frozen-appearance baselines: region
 // lookup for named production children, focus parking before a grab, and the
@@ -85,5 +86,26 @@ QRect clippedItemRect(QAbstractItemView &view, const QRect &itemRect);
 /// named descendant regions merged with `extra` (semantic names win). Fails the
 /// test through QVERIFY2 carrying the comparator's message.
 void compareShown(const QString &id, QWidget &widget, const QList<Region> &extra);
+
+/// Semantic regions for an open QComboBox popup: the view plus one region per
+/// item row, clipped to the painted viewport, so row count, order, and the
+/// highlighted row are all frozen. The popup is a separate window — it must
+/// be grabbed directly; the owner's grab never sees it.
+QList<Region> comboPopupRegions(QWidget &popup);
+
+/// Semantic regions for a QMenu popup: one region per action's geometry, so
+/// item count, order, separators, and enabled/disabled ink are all frozen.
+QList<Region> menuPopupRegions(QWidget &popup);
+
+/// Opens `combo`'s popup, grabs the separate popup window, and compares it
+/// against `baselineId`. Focus is dropped first so no caret blinks in the
+/// popup raster. Fails the test through QVERIFY2.
+void compareComboPopup(QComboBox &combo, const QString &baselineId);
+
+/// Grabs the currently active popup widget (a QMenu mid-exec, driven by a
+/// zero-delay timer inside the modal loop) and compares it against
+/// `baselineId`. Fails the test through QVERIFY2; returns without comparing
+/// when no popup is active.
+void compareMenuPopup(const QString &baselineId);
 
 } // namespace checks::visual

@@ -172,6 +172,7 @@ class VisualQuickTest : public QObject
     void quickMenuPanelBaseline();
     void ccDeleteConfirmBaseline();
     void voicePickerBaseline();
+    void dragInputBaseline();
     void eventListBaseline();
     void automationTabsBaseline();
 
@@ -580,6 +581,80 @@ void VisualQuickTest::velocityPromptBaseline()
     expectPopupBaseline(QStringLiteral("quick/vanilla/velocity-prompt"),
                         checks::visual::awaitPopupForm(m_tab->view()),
                         QStringLiteral("noteVelocityAccept"));
+}
+
+void VisualQuickTest::dragInputBaseline()
+{
+    // DragInput is the prompt family's numeric field (the DragSpinBox port).
+    // The velocity prompt is its single-field host, so the field's four
+    // deterministic states freeze there: resting, focused, text-selected, and
+    // a mid-edit draft. The scrub cursor and hover hint are transient pointer
+    // surfaces a grab cannot freeze; their stepping behavior lives in the
+    // presentation checks.
+    QVERIFY(m_hasNote);
+    m_tab->view().selectionModel().setNoteSelection({m_note.noteId});
+    QVERIFY2(m_tab->view().editCommandAvailable(SongView::EditCommand::SetVelocity),
+             "Set Velocity must be available with a note selected");
+    m_tab->view().executeEditCommand(SongView::EditCommand::SetVelocity);
+    QQuickItem *const form = checks::visual::awaitPopupForm(m_tab->view());
+    QVERIFY2(form, "velocity prompt did not open in the Quick canvas");
+    QQuickItem *const field =
+        checks::support::visualDescendant(form, QStringLiteral("noteVelocityInput"));
+    QVERIFY2(field, "velocity prompt lacks the DragInput field");
+
+    const auto capture = [this, form](const QString &id) {
+        checks::support::pumpQuick();
+        const QPointF scene = form->mapToScene(QPointF{});
+        QList<checks::visual::Region> regions{
+            {QStringLiteral("popup.form"), QRect{qRound(scene.x()), qRound(scene.y()),
+                                                 qRound(form->width()), qRound(form->height())}},
+            checks::visual::quickItemRegion(QStringLiteral("drag-input.field"), form,
+                                            QStringLiteral("noteVelocityInput")),
+        };
+        QString error;
+        QVERIFY2(checks::visual::expectQuickBaseline(id, *m_window, m_root.data(), regions, &error),
+                 qPrintable(error));
+    };
+
+    // Active focus needs an active window; activate before the prompt's
+    // deferred activateInitialFocus can be observed.
+    m_window->requestActivate();
+    QVERIFY2(QTest::qWaitForWindowActive(m_window),
+             "Quick window did not become active for the focus capture");
+    // The prompt's deferred activateInitialFocus focuses and selects the
+    // field on a later turn; wait for it so it cannot re-show the caret or
+    // re-select after the states below are staged.
+    QVERIFY2(QTest::qWaitFor([field] { return field->hasActiveFocus(); }),
+             "velocity prompt's deferred focus never reached the DragInput field");
+    // The blinking caret would race every grab; hide it once for all states.
+    field->setProperty("cursorVisible", false);
+    QCOMPARE(field->property("cursorVisible").toBool(), false);
+
+    // Resting: focus parked on OK, no selection — the field's idle face.
+    checks::visual::steadyPopupFocus(form, QStringLiteral("noteVelocityAccept"));
+    QVERIFY2(QMetaObject::invokeMethod(field, "deselect"),
+             "DragInput field does not expose deselect");
+    capture(QStringLiteral("quick/vanilla/drag-input-resting"));
+
+    // Focused: the focus border is the frozen signal; the caret stays hidden.
+    field->forceActiveFocus(Qt::PopupFocusReason);
+    QVERIFY2(QTest::qWaitFor([field] { return field->hasActiveFocus(); }),
+             "DragInput field did not take active focus");
+    QVERIFY2(QMetaObject::invokeMethod(field, "deselect"),
+             "DragInput field does not expose deselect");
+    capture(QStringLiteral("quick/vanilla/drag-input-focused"));
+
+    // Selected: the prompt's own open state — full selection highlight, no
+    // caret. selectAll is an invokable on the inner TextInput.
+    QVERIFY2(QMetaObject::invokeMethod(field, "selectAll"),
+             "DragInput field does not expose selectAll");
+    capture(QStringLiteral("quick/vanilla/drag-input-selected"));
+
+    // Editing: an uncommitted draft replaces the selected text. The property
+    // write bypasses the validator, which is fine — this pins the mid-edit
+    // face, not input acceptance.
+    field->setProperty("text", QStringLiteral("9"));
+    capture(QStringLiteral("quick/vanilla/drag-input-editing"));
 }
 
 void VisualQuickTest::insertTimePromptBaseline()

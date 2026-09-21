@@ -1,0 +1,99 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 480,
+        "width": 280
+    },
+    "profile": "macos-dpr2-font12",
+    "regions": [
+        {
+            "h": 407,
+            "name": "songList",
+            "w": 274,
+            "x": 3,
+            "y": 53
+        },
+        {
+            "h": 22,
+            "name": "songListCategory",
+            "w": 184,
+            "x": 3,
+            "y": 28
+        },
+        {
+            "h": 14,
+            "name": "songListCount",
+            "w": 274,
+            "x": 3,
+            "y": 463
+        },
+        {
+            "h": 22,
+            "name": "songListSort",
+            "w": 87,
+            "x": 190,
+            "y": 28
+        },
+        {
+            "h": 22,
+            "name": "songs.search",
+            "w": 252,
+            "x": 3,
+            "y": 3
+        },
+        {
+            "h": 22,
+            "name": "songs.category",
+            "w": 184,
+            "x": 3,
+            "y": 28
+        },
+        {
+            "h": 22,
+            "name": "songs.sort",
+            "w": 87,
+            "x": 190,
+            "y": 28
+        },
+        {
+            "h": 407,
+            "name": "songs.list",
+            "w": 274,
+            "x": 3,
+            "y": 53
+        },
+        {
+            "h": 14,
+            "name": "songs.count",
+            "w": 274,
+            "x": 3,
+            "y": 463
+        },
+        {
+            "h": 14,
+            "name": "songs.row.0",
+            "w": 272,
+            "x": 4,
+            "y": 54
+        },
+        {
+            "h": 14,
+            "name": "songs.row.first",
+            "w": 272,
+            "x": 4,
+            "y": 54
+        },
+        {
+            "h": 22,
+            "name": "songListSearch",
+            "w": 252,
+            "x": 3,
+            "y": 3
+        }
+    ]
+}

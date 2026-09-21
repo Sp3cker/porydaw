@@ -1,0 +1,36 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 56,
+        "width": 142
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 54,
+            "name": "popup.view",
+            "w": 140,
+            "x": 1,
+            "y": 1
+        },
+        {
+            "h": 25,
+            "name": "popup.row.0",
+            "w": 140,
+            "x": 1,
+            "y": 1
+        },
+        {
+            "h": 25,
+            "name": "popup.row.1",
+            "w": 140,
+            "x": 1,
+            "y": 26
+        }
+    ]
+}

@@ -1,0 +1,190 @@
+{
+    "environment": {
+        "fontPx": 16,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 480,
+        "width": 348
+    },
+    "profile": "macos-dpr2-font16",
+    "regions": [
+        {
+            "h": 389,
+            "name": "songList",
+            "w": 340,
+            "x": 4,
+            "y": 65
+        },
+        {
+            "h": 26,
+            "name": "songListCategory",
+            "w": 223,
+            "x": 4,
+            "y": 35
+        },
+        {
+            "h": 18,
+            "name": "songListCount",
+            "w": 340,
+            "x": 4,
+            "y": 458
+        },
+        {
+            "h": 26,
+            "name": "songListSort",
+            "w": 113,
+            "x": 231,
+            "y": 35
+        },
+        {
+            "h": 27,
+            "name": "songs.search",
+            "w": 313,
+            "x": 4,
+            "y": 4
+        },
+        {
+            "h": 26,
+            "name": "songs.category",
+            "w": 223,
+            "x": 4,
+            "y": 35
+        },
+        {
+            "h": 26,
+            "name": "songs.sort",
+            "w": 113,
+            "x": 231,
+            "y": 35
+        },
+        {
+            "h": 389,
+            "name": "songs.list",
+            "w": 340,
+            "x": 4,
+            "y": 65
+        },
+        {
+            "h": 18,
+            "name": "songs.count",
+            "w": 340,
+            "x": 4,
+            "y": 458
+        },
+        {
+            "h": 18,
+            "name": "songs.row.0",
+            "w": 338,
+            "x": 5,
+            "y": 66
+        },
+        {
+            "h": 18,
+            "name": "songs.row.1",
+            "w": 338,
+            "x": 5,
+            "y": 84
+        },
+        {
+            "h": 19,
+            "name": "songs.row.2",
+            "w": 338,
+            "x": 5,
+            "y": 102
+        },
+        {
+            "h": 18,
+            "name": "songs.row.3",
+            "w": 338,
+            "x": 5,
+            "y": 121
+        },
+        {
+            "h": 18,
+            "name": "songs.row.4",
+            "w": 338,
+            "x": 5,
+            "y": 139
+        },
+        {
+            "h": 19,
+            "name": "songs.row.5",
+            "w": 338,
+            "x": 5,
+            "y": 157
+        },
+        {
+            "h": 18,
+            "name": "songs.row.6",
+            "w": 338,
+            "x": 5,
+            "y": 176
+        },
+        {
+            "h": 18,
+            "name": "songs.row.7",
+            "w": 338,
+            "x": 5,
+            "y": 194
+        },
+        {
+            "h": 18,
+            "name": "songs.row.8",
+            "w": 338,
+            "x": 5,
+            "y": 212
+        },
+        {
+            "h": 18,
+            "name": "songs.row.9",
+            "w": 338,
+            "x": 5,
+            "y": 230
+        },
+        {
+            "h": 18,
+            "name": "songs.row.10",
+            "w": 338,
+            "x": 5,
+            "y": 248
+        },
+        {
+            "h": 18,
+            "name": "songs.row.first",
+            "w": 338,
+            "x": 5,
+            "y": 66
+        },
+        {
+            "h": 18,
+            "name": "songs.row.second",
+            "w": 338,
+            "x": 5,
+            "y": 84
+        },
+        {
+            "h": 19,
+            "name": "songs.row.unregistered",
+            "w": 338,
+            "x": 5,
+            "y": 157
+        },
+        {
+            "h": 19,
+            "name": "songs.row.partial",
+            "w": 338,
+            "x": 5,
+            "y": 102
+        },
+        {
+            "h": 27,
+            "name": "songListSearch",
+            "w": 313,
+            "x": 4,
+            "y": 4
+        }
+    ]
+}

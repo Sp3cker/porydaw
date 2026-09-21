@@ -1,0 +1,50 @@
+{
+    "environment": {
+        "fontPx": 12,
+        "os": "macos",
+        "qt": "6.11.0"
+    },
+    "image": {
+        "dpr": 2,
+        "height": 87,
+        "width": 132
+    },
+    "profile": "macos-dpr2-font12",
+    "regions": [
+        {
+            "h": 19,
+            "name": "menu.row.0",
+            "w": 130,
+            "x": 1,
+            "y": 3
+        },
+        {
+            "h": 19,
+            "name": "menu.row.1",
+            "w": 130,
+            "x": 1,
+            "y": 22
+        },
+        {
+            "h": 5,
+            "name": "menu.row.2",
+            "w": 130,
+            "x": 1,
+            "y": 41
+        },
+        {
+            "h": 19,
+            "name": "menu.row.3",
+            "w": 130,
+            "x": 1,
+            "y": 46
+        },
+        {
+            "h": 19,
+            "name": "menu.row.4",
+            "w": 130,
+            "x": 1,
+            "y": 65
+        }
+    ]
+}

@@ -422,6 +422,11 @@ const std::vector<CheckDefinition> &catalog()
              // coordinator gating
              .argv = strings({"--voicegroupviewcachecheck"}),
              .handler = qtOnly<runVoicegroupViewCacheCheck>},
+            {.name = "songlistcheck",
+             // songs dock list: category buckets, search/fuzzy filtering, sort order, warning
+             // rows, selection tracking, keyboard routing, context-menu signal contract
+             .argv = strings({"--songlistcheck"}),
+             .handler = qtOnly<runSongListCheck>},
             {
                 .name = "audiocheck",
                 // audio telemetry: packed activity byte-order preservation and unpack consuming
