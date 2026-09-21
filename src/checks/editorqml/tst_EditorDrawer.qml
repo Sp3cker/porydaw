@@ -1745,6 +1745,7 @@ TestCase {
                 return false
             testCase.awaitVoiceModal("voicePicker", true)
         }
+        verify(waitForPolish(target.Window.window), pane + " completed layout before capture")
         var origin = target.mapToItem(testCase.surface, 0, 0)
         var url = bootstrap.profilePngUrl(pane)
         var saved = false
@@ -2680,7 +2681,7 @@ TestCase {
                   "the original confirmation is drawn with Cancel focused")
         var accept = findChild(testCase.surface, "automationPromptAccept")
         verify(accept, "the confirmation draws its explicit Delete action")
-        verify(waitForRendering(accept), "the confirmation's Delete control reaches a drawn frame")
+        verify(waitForPolish(accept.Window.window), "the confirmation completed layout before input")
         var clickPoint = accept.mapToItem(testCase.surface, accept.width / 2, accept.height / 2)
         console.log("DRAWER_CHECK_DELETE_POINT", clickPoint.x, clickPoint.y,
                     "surface", testCase.surface.width, testCase.surface.height,
@@ -2714,6 +2715,10 @@ TestCase {
                 return testCase.automationMenuRowItems().length
                     + testCase.automationMenuSeparatorItems().length === actions.length
             }, 2000, "the open menu has realized every published action and separator")
+            var menu = findChild(testCase.surface, name)
+            tryVerify(function() { return menu.activeFocus }, 1000,
+                      "the open menu acquired keyboard focus before input")
+            verify(waitForPolish(menu.Window.window), "the menu completed layout before input")
         }
     }
 
@@ -4276,6 +4281,7 @@ TestCase {
         wait(0)
         tryVerify(function() { return bootstrap.automationMenuOpen() }, 2000,
                   "the projected node opened its own menu")
+        testCase.awaitAutomationModal("automationMenu", true)
         var disabledRow = null
         var drawn = testCase.automationMenuRowItems()
         for (var d = 0; d < drawn.length; ++d) {
