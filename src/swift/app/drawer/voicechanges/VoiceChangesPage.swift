@@ -63,6 +63,12 @@ enum VoiceQtButton {
 public enum VoiceModifier {
     public static let alt = 0x0800_0000
 }
+
+private enum VoiceHintProfile {
+    static let horizontalScroll = 12
+    static let marker = 21
+}
+
 // MARK: - Page owner
 
 /// The production Voice Changes page. Every published value derives from the
@@ -113,6 +119,9 @@ public final class VoiceChangesPage: EditorDrawerPage {
     public var hoverText: String = ""
     public var hoverLabelRect: [String: QVariantSettable] = VoiceMarkerHandle.rect(0, 0, 0, 0)
     public var hoverTick: Double = 0
+    /// The current legacy lane hint: marker-specific while the pointer hits a
+    /// change rule, horizontal scrolling everywhere else in the plot.
+    public var hoverHintProfile: Int = VoiceHintProfile.horizontalScroll
     /// `Qt::SizeHorCursor` (3) while a marker drag is active, `Qt::ArrowCursor`
     /// (0) otherwise.
     public var cursorKind: Int = 0
@@ -525,10 +534,10 @@ public final class VoiceChangesPage: EditorDrawerPage {
     @discardableResult
     public func pointerRelease(x: Double, y: Double, button: Int) -> Bool {
         guard let session else { return false }
-        _ = x
         _ = y
         if button == VoiceQtButton.middle {
             cancelPan()
+            publishHoverHintProfile(marker: markerHit(at: x) != nil)
             return true
         }
         guard button == VoiceQtButton.left, let live = drag else { return false }
@@ -539,6 +548,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
             points: lanePoints())
         cancelDrag()
         if let mutation { commit(mutation) }
+        publishHoverHintProfile(marker: markerHit(at: x) != nil)
         return true
     }
 
@@ -812,8 +822,10 @@ public final class VoiceChangesPage: EditorDrawerPage {
             clearHover()
             return
         }
+        let hit = markerHit(at: x)
+        publishHoverHintProfile(marker: hit != nil)
         let pad = fontPx(VoiceChangesPagePolicy.spaceOneFactor)
-        if let hit = markerHit(at: x) {
+        if let hit {
             let identity = VoiceOccurrence(hit).text
             let lineX = xForTick(hit.tick)
             let rect = VoiceMarkerHandle.rect(lineX + pad, 0, max(0, plotWidth - lineX),
@@ -847,6 +859,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
     }
 
     private func clearHover() {
+        publishHoverHintProfile(marker: false)
         guard hoverIdentity != nil || hoverVisible || !hoverText.isEmpty || hoverTick != 0
         else { return }
         hoverIdentity = nil
@@ -854,6 +867,11 @@ public final class VoiceChangesPage: EditorDrawerPage {
         hoverVisible = false
         hoverTick = 0
         hoverLabelRect = VoiceMarkerHandle.rect(0, 0, 0, 0)
+    }
+
+    private func publishHoverHintProfile(marker: Bool) {
+        let profile = marker ? VoiceHintProfile.marker : VoiceHintProfile.horizontalScroll
+        if hoverHintProfile != profile { hoverHintProfile = profile }
     }
 
     // MARK: Internals: gesture teardown

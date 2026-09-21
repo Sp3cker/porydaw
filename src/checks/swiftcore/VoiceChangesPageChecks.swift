@@ -292,6 +292,11 @@ private func markerProjection(_ report: CheckReport, suite: DocumentSession,
                   message: "a marker hover publishes no background label")
     report.expectEqual(48, Tick(page.hoverTick), cppID: projectionID,
                        what: "the marker hover publishes its own tick")
+    report.expectEqual(21, page.hoverHintProfile, cppID: projectionID,
+                       what: "a marker hover advertises fine marker movement")
+    _ = page.pointerMove(x: fixture.markerX(96), y: 10, buttons: 0)
+    report.expectEqual(12, page.hoverHintProfile, cppID: projectionID,
+                       what: "leaving the marker restores horizontal-scroll instructions")
     page.pointerLeave()
     report.expect(!page.hoverVisible, cppID: projectionID,
                   message: "leaving the plot clears the hover")
@@ -1418,9 +1423,9 @@ private func auditionCapability(_ report: CheckReport, suite: DocumentSession,
     calls.removeAll()
     hold(programs[0])
     page.setPickerFilter(text: "__no_voice_can_match__")
-    page.cancelPicker()
     report.expectEqual([[first, 60, 112], [first, 60, 0]], calls,
                        cppID: auditionID, what: "filter invalidation releases the sounding program")
+    page.cancelPicker()
 
     calls.removeAll()
     _ = page.pointerDoubleClick(x: fixture.markerX(48), y: 10)
