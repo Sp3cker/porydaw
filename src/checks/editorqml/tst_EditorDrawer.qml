@@ -43,6 +43,15 @@ TestCase {
     // The test-owned page item the bootstrap's test pages resolve to.
     readonly property url testPageUrl: Qt.resolvedUrl("DrawerTestPage.qml")
 
+    // The lane's two phases, each in its own process: the production phase hosts
+    // the production Velocity page in the composition for the whole run, and the
+    // container phase releases that page's slot before the composition mounts so
+    // its container cases can host test pages in every kind. A phase's own cases
+    // skip in the other phase, and neither phase reuses another's QML content
+    // for a Swift owner it keeps.
+    readonly property bool containerPhase: bootstrap.lanePhase === "container"
+    readonly property bool productionPhase: !testCase.containerPhase
+
     // The historical store: one category, seven keys.
     readonly property var drawerKeys: ["automationVisible", "automationHeight",
                                        "velocityVisible", "velocityHeight",
@@ -124,6 +133,19 @@ TestCase {
             waited += 50
         }
         verify(session.songOpen, "the staged route101 song opened" + testCase.openDiagnostics())
+        // The container phase owns its own process: the production page releases
+        // its slot before the composition mounts, so the document-bound page
+        // owner's content is never loaded there and never outlives a QML item
+        // that consumed it.
+        if (testCase.containerPhase)
+            verify(bootstrap.detachProductionSection(velocityKind),
+                   "the container phase releases the production page before it mounts")
+        // One production composition for the document-bound owners' whole
+        // lifetime: the scene that consumed their QObject proxies is not
+        // destroyed for a case, exactly as the running application keeps its one
+        // composition while the document is presented. Cases reset its state
+        // explicitly; the scene goes in cleanupTestCase, after the host's close.
+        testCase.createSurface()
     }
 
     function openDiagnostics() {
@@ -149,9 +171,11 @@ TestCase {
         return count > 8 ? labels.join(",") + ",…" : labels.join(",")
     }
 
-    // Every case starts with no surface and no attachment: the drawer survives
-    // with chrome values only, so the previous case's pages are released here,
-    // after its surface was destroyed in cleanup().
+    // Every case starts with no test page attached: the drawer survives with
+    // chrome values only, so the previous case's test pages are released here
+    // through the container's own detach, which cancels synchronously. The
+    // document-bound production page stays in its slot for the run — the
+    // composition that consumed it is not torn down per case.
     function init() {
         bootstrap.detachTestSection(velocityKind)
         bootstrap.detachTestSection(voiceChangesKind)
@@ -165,31 +189,51 @@ TestCase {
         testCase.pageDestructions = 0
     }
 
-    // A case ends with its scene gone: the composition is settled first so the
-    // case's last publication has landed, then the surface is destroyed. Hiding
-    // it instead would be a scene hide, which cancels every attached page and
-    // would blur the cancellation the cases assert.
+    // A case ends by settling the one composition: the next case's init()
+    // releases this case's attachments through the container's own detach, so
+    // nothing the scene bound is destroyed to end a case.
     function cleanup() {
-        if (testCase.surface) {
-            var retired = testCase.surface
-            testCase.surface = null
-            wait(0)
-            retired.destroy()
-        }
+        wait(0)
     }
 
     // ---- production composition and published state ------------------------
 
-    function createSurface(preferenceLocation) {
+    // The one production composition, mounted in initTestCase for the whole
+    // document presentation. `createSurface` is its only mount.
+    function createSurface() {
         var item = surfaceComponent.createObject(testCase, {
             "width": testCase.width,
             "height": testCase.height,
             "applicationSession": session,
-            "drawerPreferenceLocation": preferenceLocation
+            "drawerPreferenceLocation": bootstrap.preferencesUrl("lane")
         })
         verify(item, "the production surface came up")
         testCase.surface = item
-        return item
+    }
+
+    // A case's chrome state, stated in full: an absent key would leave the
+    // previous case's value in place, exactly as the container's restore
+    // documents, and no case may start from another case's chrome.
+    function chromeState(values) {
+        var state = { "velocityVisible": false, "velocityHeight": 0,
+                      "automationVisible": false, "automationHeight": 0,
+                      "voiceChangesVisible": false, "voiceChangesHeight": 0,
+                      "activePage": "" }
+        for (var key in values)
+            state[key] = values[key]
+        return state
+    }
+
+    // Resets the one composition's chrome to this case's private store, the way
+    // a mount does: the store is seeded with the case's full state, the
+    // container is pointed at it, and the container's own restore applies it.
+    // Restoring records no preference change, so it writes nothing back.
+    function resetChrome(location, values) {
+        testCase.seedStore(location, testCase.chromeState(values))
+        testCase.surface.drawerPreferenceLocation = location
+        wait(0)
+        testCase.drawer().restoreStoredPreferences()
+        testCase.awaitRenderedLayout()
     }
 
     function presenter() { return testCase.surface.drawerPresenter }
@@ -642,12 +686,13 @@ TestCase {
     // With no page attached the container is honest and empty, even when the
     // store asks for a visible section: no height, no control, no page, no write.
     function test_noPageContributesNothing() {
+        // This phase's own process: the production page keeps its slot in the lane's own run.
+        if (testCase.productionPhase) skip("the container cases run in the lane's container child")
+
         var location = bootstrap.preferencesUrl("no-page")
-        testCase.seedStore(location, { "velocityVisible": true, "velocityHeight": 137,
-                                       "activePage": "velocity" })
+        testCase.resetChrome(location, { "velocityVisible": true, "velocityHeight": 137,
+                                         "activePage": "velocity" })
         var seeded = testCase.snapshotStore(location)
-        testCase.createSurface(location)
-        testCase.awaitRenderedLayout()
 
         compare(testCase.presenter().height, 0, "no page contributes no height")
         compare(testCase.presenter().barVisible, false, "no page claims a bar")
@@ -685,16 +730,17 @@ TestCase {
     // accessible contract holds, Return/Enter activate while bare Space stays
     // unclaimed, and the themed chrome is real rendered output.
     function test_hostedChromeAndStacking() {
+        // This phase's own process: the production page keeps its slot in the lane's own run.
+        if (testCase.productionPhase) skip("the container cases run in the lane's container child")
+
         var location = bootstrap.preferencesUrl("chrome")
-        testCase.seedStore(location, { "automationVisible": true, "automationHeight": 150,
-                                       "velocityVisible": true, "velocityHeight": 110,
-                                       "voiceChangesVisible": true, "voiceChangesHeight": 130,
-                                       "activePage": "automations" })
         verify(testCase.attachPage(testCase.velocityKind), "the velocity page attaches")
         verify(testCase.attachPage(testCase.voiceChangesKind), "the voice-changes page attaches")
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
-        testCase.createSurface(location)
-        testCase.awaitRenderedLayout()
+        testCase.resetChrome(location, { "automationVisible": true, "automationHeight": 150,
+                                         "velocityVisible": true, "velocityHeight": 110,
+                                         "voiceChangesVisible": true, "voiceChangesHeight": 130,
+                                         "activePage": "automations" })
 
         var presenter = testCase.presenter()
         compare(presenter.barVisible, true, "an available section keeps the bar")
@@ -798,10 +844,12 @@ TestCase {
     // releases its height and the roll grows, re-showing restores the same body
     // height, and the last hidden section leaves the bar and its toggles in place.
     function test_toggleRetainsStoredHeight() {
+        // This phase's own process: the production page keeps its slot in the lane's own run.
+        if (testCase.productionPhase) skip("the container cases run in the lane's container child")
+
         var location = bootstrap.preferencesUrl("stored-height")
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
-        testCase.createSurface(location)
-        testCase.awaitRenderedLayout()
+        testCase.resetChrome(location, { "automationVisible": true, "activePage": "automations" })
 
         var presenter = testCase.presenter()
         var kind = testCase.automationKind
@@ -853,10 +901,12 @@ TestCase {
     // consumed, a cancelled drag keeps the last applied height, and a host
     // shrink re-clamps without rewriting the stored height.
     function test_resizeClampAndCancellation() {
+        // This phase's own process: the production page keeps its slot in the lane's own run.
+        if (testCase.productionPhase) skip("the container cases run in the lane's container child")
+
         var location = bootstrap.preferencesUrl("resize")
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
-        testCase.createSurface(location)
-        testCase.awaitRenderedLayout()
+        testCase.resetChrome(location, { "automationVisible": true, "activePage": "automations" })
 
         var presenter = testCase.presenter()
         var kind = testCase.automationKind
@@ -938,18 +988,21 @@ TestCase {
                      "the stored height survived the host shrink")
     }
 
-    // The Voice-Changes to Automations spill while resizing, and the detach
-    // lifetime: a released page is dropped only after the surface that hosted it
-    // is gone.
+    // The Voice-Changes to Automations spill while resizing, and the release
+    // lifetime: releasing a page drops the content the composition hosted for it
+    // while the composition itself stays mounted for the document-bound owners it
+    // binds to.
     function test_voiceChangesSpillAndDetach() {
+        // This phase's own process: the production page keeps its slot in the lane's own run.
+        if (testCase.productionPhase) skip("the container cases run in the lane's container child")
+
         var location = bootstrap.preferencesUrl("voice-spill")
-        testCase.seedStore(location, { "automationVisible": true, "automationHeight": 100,
-                                       "voiceChangesVisible": true, "voiceChangesHeight": 60 })
         verify(testCase.attachPage(testCase.voiceChangesKind), "the voice-changes page attaches")
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
         bootstrap.setTestSectionMaximumBodyHeight(testCase.voiceChangesKind, 90)
-        testCase.createSurface(location)
-        testCase.awaitRenderedLayout()
+        testCase.resetChrome(location, { "automationVisible": true, "automationHeight": 100,
+                                         "voiceChangesVisible": true, "voiceChangesHeight": 60,
+                                         "activePage": "voiceChanges" })
 
         var presenter = testCase.presenter()
         var host = testCase.surface.height
@@ -996,18 +1049,15 @@ TestCase {
         testCase.releaseGrip(voiceKind)
         var automationAfterSpill = testCase.section(automationKind).bodyHeight
 
-        // A page is released only after the surface that hosted it is gone: the
-        // teardown destroys the hosted content but cancels nothing, the release
-        // then cancels once, and no key of a released kind is written. The
-        // spilled pair's own release records both its heights, so those writes are
-        // awaited before the teardown snapshot, which then describes a settled
-        // store the detach must leave unchanged. The composition is settled too,
-        // and nothing bridged is read through the dead surface afterwards: the
-        // remount below makes the same claims through a live one.
+        // Releasing the page drops the content the composition hosted for it: the
+        // container's own release cancels the page once, unloads its item, and
+        // writes no key of the released kind. The spilled pair's own writes are
+        // awaited first, so the snapshot describes a settled store the release
+        // must leave unchanged.
         testCase.awaitStoreKey(location, "automationHeight",
                                "number:" + Math.round(automationAfterSpill))
         testCase.awaitStoreKey(location, "voiceChangesHeight", "number:90")
-        var beforeTeardown = testCase.snapshotStore(location)
+        var beforeRelease = testCase.snapshotStore(location)
         var cancels = bootstrap.pageCancelCount
         tryVerify(function() { return testCase.pageItem(voiceKind) !== null }, 2000,
                   "the voice-changes section loads its page")
@@ -1015,20 +1065,16 @@ TestCase {
         verify(voicePage, "the voice-changes page is hosted")
         testCase.observePageDestruction(voicePage)
         wait(0)
-        testCase.surface.destroy()
-        testCase.surface = null
-        tryCompare(testCase, "pageDestructions", 1, 2000,
-                   "the teardown destroyed the hosted page content")
-        compare(bootstrap.pageCancelCount, cancels, "tearing the surface down releases no page")
 
         bootstrap.detachTestSection(voiceKind)
+        tryCompare(testCase, "pageDestructions", 1, 2000,
+                   "the release dropped the content the composition hosted for the page")
         compare(bootstrap.pageCancelCount, cancels + 1, "the release cancels the page once")
-        testCase.compareSnapshots(testCase.snapshotStore(location), beforeTeardown,
+        testCase.compareSnapshots(testCase.snapshotStore(location), beforeRelease,
                                  "releasing a page writes nothing")
 
-        // Remounting shows the surviving chrome, with the released kind absent
-        // and the automations section untouched.
-        testCase.createSurface(location)
+        // The live composition shows the surviving chrome, with the released kind
+        // absent and the automations section untouched.
         testCase.awaitRenderedLayout()
         compare(testCase.section(voiceKind).available, false, "the released kind stays unavailable")
         compare(testCase.toggle(voiceKind).visible, false, "no toggle for the released kind")
@@ -1038,18 +1084,20 @@ TestCase {
         compare(testCase.section(automationKind).visible, true, "and still visible")
         fuzzyCompare(testCase.section(automationKind).bodyHeight, automationAfterSpill, 0.01,
                      "and keeps the height the spill left it")
-        testCase.compareSnapshots(testCase.snapshotStore(location), beforeTeardown,
-                                 "remounting writes nothing")
+        testCase.compareSnapshots(testCase.snapshotStore(location), beforeRelease,
+                                 "the release writes nothing")
     }
 
     // Focus returns to the roll when nothing visible remains, showing a section
     // focuses its page scope, every transition cancels exactly once, and a page
-    // outlives both a hide and the teardown of its surface.
+    // outlives a hide until its own release.
     function test_focusReturnAndPageCancellation() {
+        // This phase's own process: the production page keeps its slot in the lane's own run.
+        if (testCase.productionPhase) skip("the container cases run in the lane's container child")
+
         var location = bootstrap.preferencesUrl("focus")
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
-        testCase.createSurface(location)
-        testCase.awaitRenderedLayout()
+        testCase.resetChrome(location, { "automationVisible": true, "activePage": "automation" })
 
         var cancels = bootstrap.pageCancelCount
         var automationKind = testCase.automationKind
@@ -1105,15 +1153,11 @@ TestCase {
         compare(testCase.pageItem(automationKind).enabled, true,
                 "a cancelled but visible page keeps operating")
 
-        // Teardown releases nothing; the release after it cancels each page once.
-        // The composition settles before it goes, so the teardown itself cancels
-        // nothing, and nothing bridged is read through the dead surface after.
-        wait(0)
-        testCase.surface.destroy()
-        testCase.surface = null
-        compare(bootstrap.pageCancelCount, cancels + 2, "tearing the surface down cancels nothing")
+        // Releasing a page cancels it exactly once while the composition stays
+        // mounted; the scene the page's items live in is the composition's own,
+        // and it is retired only at the host's close.
         bootstrap.detachTestSection(velocityKind)
-        compare(bootstrap.pageCancelCount, cancels + 3, "the release after teardown cancels once")
+        compare(bootstrap.pageCancelCount, cancels + 3, "the release after the hide cancels once")
         bootstrap.detachTestSection(automationKind)
         compare(bootstrap.pageCancelCount, cancels + 4, "and so does the remaining release")
     }
@@ -1123,18 +1167,19 @@ TestCase {
     // page name in the historical formats, sync() makes them readable, and the
     // scratch file is the only store touched.
     function test_preferencesRoundTrip() {
+        // This phase's own process: the production page keeps its slot in the lane's own run.
+        if (testCase.productionPhase) skip("the container cases run in the lane's container child")
+
         var location = bootstrap.preferencesUrl("round-trip")
-        testCase.seedStore(location, { "automationVisible": true, "automationHeight": 110,
-                                       "velocityVisible": true, "velocityHeight": 130,
-                                       "voiceChangesVisible": true, "voiceChangesHeight": 150,
-                                       "activePage": "velocity" })
-        var seeded = testCase.snapshotStore(location)
-        var defaultStore = testCase.snapshotStore("")
         verify(testCase.attachPage(testCase.velocityKind), "the velocity page attaches")
         verify(testCase.attachPage(testCase.voiceChangesKind), "the voice-changes page attaches")
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
-        testCase.createSurface(location)
-        testCase.awaitRenderedLayout()
+        testCase.resetChrome(location, { "automationVisible": true, "automationHeight": 110,
+                                         "velocityVisible": true, "velocityHeight": 130,
+                                         "voiceChangesVisible": true, "voiceChangesHeight": 150,
+                                         "activePage": "velocity" })
+        var seeded = testCase.snapshotStore(location)
+        var defaultStore = testCase.snapshotStore("")
 
         var presenter = testCase.presenter()
         var velocityKind = testCase.velocityKind
@@ -1225,12 +1270,15 @@ TestCase {
     // stays rendered, gutters and chrome stay clear, and position-only updates
     // rebuild nothing.
     function test_sharedPlayheadRendersRollAndVisibleBodies() {
+        // This phase's own process: the production page keeps its slot in the lane's own run.
+        if (testCase.productionPhase) skip("the container cases run in the lane's container child")
+
         var location = bootstrap.preferencesUrl("playhead-bodies")
         verify(testCase.attachPage(testCase.velocityKind), "the velocity page attaches")
         verify(testCase.attachPage(testCase.voiceChangesKind), "the voice-changes page attaches")
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
-        testCase.createSurface(location)
-        testCase.awaitRenderedLayout()
+        testCase.resetChrome(location, { "velocityVisible": true, "voiceChangesVisible": true,
+                                         "automationVisible": true, "activePage": "automation" })
         verify(bootstrap.pausePlayheadPolling(),
                "the lane holds the production polling task for a deterministic position")
 
@@ -1335,10 +1383,12 @@ TestCase {
     // out-of-viewport projection draws nothing, and scrolling back renders the
     // same position again.
     function test_sharedPlayheadHidesOutOfViewportAndReprojects() {
+        // This phase's own process: the production page keeps its slot in the lane's own run.
+        if (testCase.productionPhase) skip("the container cases run in the lane's container child")
+
         var location = bootstrap.preferencesUrl("playhead-viewport")
         verify(testCase.attachPage(testCase.velocityKind), "the velocity page attaches")
-        testCase.createSurface(location)
-        testCase.awaitRenderedLayout()
+        testCase.resetChrome(location, { "velocityVisible": true, "activePage": "velocity" })
         verify(bootstrap.pausePlayheadPolling(),
                "the lane holds the production polling task for a deterministic position")
         testCase.showSection(testCase.velocityKind)
@@ -1377,10 +1427,12 @@ TestCase {
     // page's own interaction, a live drawer resize and a live roll gesture, each
     // driven through the production owners, with a real pointer.
     function test_sharedPlayheadSuspendsFollowForEveryInteraction() {
+        // This phase's own process: the production page keeps its slot in the lane's own run.
+        if (testCase.productionPhase) skip("the container cases run in the lane's container child")
+
         var location = bootstrap.preferencesUrl("playhead-follow")
         verify(testCase.attachPage(testCase.velocityKind), "the velocity page attaches")
-        testCase.createSurface(location)
-        testCase.awaitRenderedLayout()
+        testCase.resetChrome(location, { "velocityVisible": true, "activePage": "velocity" })
         verify(bootstrap.pausePlayheadPolling(),
                "the lane holds the production polling task for a deterministic position")
         testCase.showSection(testCase.velocityKind)
@@ -1442,5 +1494,412 @@ TestCase {
         tryVerify(function() { return playhead.visible === false
                                         || testCase.playheadClip("sharedPlayheadRollClip").visible },
                   1000, "the drawn segment agrees with the published visibility")
+    }
+
+    // ---- the production Velocity page ---------------------------------------
+
+    // Every named descendant, in tree order: the page publishes one node group
+    // per note, so a case never assumes document order from a single lookup.
+    function collectByName(item, name, found) {
+        var collected = found || []
+        if (!item)
+            return collected
+        if (item.objectName === name)
+            collected.push(item)
+        for (var i = 0; i < item.children.length; ++i)
+            testCase.collectByName(item.children[i], name, collected)
+        return collected
+    }
+
+    function velocityPageItem() { return testCase.pageItem(testCase.velocityKind) }
+    function velocityPlot() { return findChild(testCase.velocityPageItem(), "velocityPlot") }
+    function velocityPlotInput() { return findChild(testCase.velocityPageItem(), "velocityPlotInput") }
+    function velocityRuler() { return findChild(testCase.velocityPageItem(), "velocityRuler") }
+    function velocityModel() { return testCase.surface.applicationSession.velocityPage() }
+
+    /// The drawn node fills of the hosted page, in tree order.
+    function velocityNodes() {
+        return testCase.collectByName(testCase.velocityPlot(), "velocityNodeFill", [])
+    }
+
+    /// The notes the production grid publishes, parsed from its own summary.
+    function gridNotes() {
+        return JSON.parse(testCase.surface.gridModel.noteSummary)
+    }
+
+    /// The one note the production page's own selection holds, or -1. The page's
+    /// projection is the live one: the grid's summary is only as fresh as the
+    /// grid's last publication.
+    function selectedNoteId() {
+        var ids = bootstrap.velocitySelectedNoteIds()
+        if (ids.length === 0 || ids.indexOf(",") >= 0)
+            return -1
+        return parseInt(ids, 10)
+    }
+
+    function noteVelocity(noteId) {
+        var notes = testCase.gridNotes()
+        for (var i = 0; i < notes.length; ++i) {
+            if (notes[i].id === noteId)
+                return notes[i].velocity
+        }
+        return -1
+    }
+
+    /// A real left press/release on one drawn node, which is the page's own
+    /// selection path.
+    function clickNode(node) {
+        var input = testCase.velocityPlotInput()
+        var center = node.mapToItem(input, node.width / 2, node.height / 2)
+        mouseClick(input, center.x, center.y, Qt.LeftButton)
+    }
+
+    /// Attaches and shows the production Velocity page. Every wait is tied to the
+    /// published or drawn property the case actually needs — the kind's
+    /// availability, its visibility, the hosted item, then the drawn size and the
+    /// nodes the page publishes for its own notes — instead of the container's
+    /// whole-layout gate, which also observes unrelated chrome. A case therefore
+    /// observes its own node state whatever the process has run before it.
+    function mountProductionVelocity(location, values) {
+        verify(bootstrap.attachProductionSection(testCase.velocityKind),
+               "the production Velocity page attaches to its slot")
+        testCase.resetChrome(location, values)
+        tryVerify(function() {
+            var toggle = testCase.toggle(testCase.velocityKind)
+            return toggle !== null && toggle.width > 0
+        }, 2000, "the published velocity toggle is drawn for the attached page (grid "
+                  + (testCase.surface.gridModel !== null)
+                  + ", presenterLayout=" + testCase.presenter().barHeight
+                  + ", gutter=" + testCase.presenter().plotOrigin + ")")
+        if (!testCase.section(testCase.velocityKind).visible)
+            testCase.clickToggle(testCase.velocityKind)
+        tryVerify(function() { return testCase.section(testCase.velocityKind).visible }, 2000,
+                  "the velocity section is visible")
+        tryVerify(function() { return testCase.velocityPageItem() !== null }, 2000,
+                  "the drawer hosts the production page item")
+        // The page pushes its drawn body to the owner, and the owner publishes the
+        // handles that body projects. Waiting on those two drawn facts is what
+        // makes a case's node reads its own state rather than a mount's timing.
+        tryVerify(function() {
+            var page = testCase.velocityPageItem()
+            return page !== null && page.width > 0 && page.height > 0
+        }, 2000, "the hosted production page took its drawn body size")
+        tryVerify(function() { return testCase.velocityNodes().length > 0 }, 2000,
+                  "the hosted production page drew a node per published handle ("
+                  + testCase.velocityNodes().length + " drawn, selected "
+                  + testCase.velocityModel().selectedCount + ")")
+        return testCase.velocityPageItem()
+    }
+
+    /// Renders one reference pane and records its metadata. The observed facts
+    /// must be the requested profile's, so a DPR or font mismatch fails here
+    /// rather than in a reviewer's eye.
+    function captureProfilePane(pane) {
+        var page = testCase.velocityPageItem()
+        var target = pane === "editor-drawer" ? testCase.drawer()
+                   : pane === "velocity-prompt"
+                     ? findChild(page, "velocityPromptCard")
+                   : page
+        if (!target)
+            return false
+        if (pane === "velocity-prompt") {
+            var model = testCase.velocityModel()
+            if (!model.promptOpen) {
+                testCase.surface.applicationSession.performGridCommand(bootstrap.setVelocityCommand())
+                wait(0)
+            }
+            if (!model.promptOpen)
+                return false
+        }
+        var origin = target.mapToItem(testCase.surface, 0, 0)
+        var url = bootstrap.profilePngUrl(pane)
+        var saved = false
+        target.grabToImage(function(result) { saved = result.saveToFile(url) })
+        tryVerify(function() { return saved }, 5000, pane + " rendered a PNG")
+        return bootstrap.writeProfileMetadata(pane, page.Screen.devicePixelRatio,
+                                              testCase.velocityModel().baseFontPx,
+                                              target.width, target.height,
+                                              origin.x, origin.y,
+                                              target.width, target.height)
+    }
+
+    // ---- production page cases ----------------------------------------------
+
+    // The production page mounts through the real presenter and renders its own
+    // composition: the shared gutter splits ruler and plot, every note of the
+    // track publishes a node, and the axis ladder is drawn.
+    function test_productionVelocityPageMountsAndRenders() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-velocity")
+        var page = testCase.mountProductionVelocity(location)
+        compare(String(testCase.section(testCase.velocityKind).contentUrl).length > 0, true,
+                "the kind publishes the production page URL")
+
+        var ruler = testCase.velocityRuler()
+        var plot = testCase.velocityPlot()
+        verify(ruler && plot, "the page composed its ruler and plot")
+        fuzzyCompare(ruler.width, testCase.surface.gridModel.keyboardWidth, 0.01,
+                     "the ruler is the shared gutter column")
+        fuzzyCompare(plot.x, ruler.width, 0.01, "the plot starts at the shared origin")
+        fuzzyCompare(plot.width, page.width - ruler.width, 0.01,
+                     "the plot spans the body beside the ruler")
+        fuzzyCompare(plot.height, page.height, 0.01, "the plot spans the body height")
+
+        var nodes = testCase.velocityNodes()
+        compare(nodes.length, testCase.gridNotes().length,
+                "every note of the primary track published a node")
+        verify(testCase.collectByName(ruler, "velocityTick", []).length
+                   + testCase.collectByName(ruler, "velocityGraduation", []).length > 0,
+               "the ruler rendered its value ladder")
+        var detent = findChild(page, "velocityDetent")
+        verify(detent, "the page composed its detent control")
+        compare(detent.Accessible.role, Accessible.Button, "the detent control is a button")
+        compare(detent.Accessible.checkable, true, "the detent control is checkable")
+        compare(detent.Accessible.checked, testCase.velocityModel().detentsEnabled,
+                "the detent control shows the page's own preference")
+    }
+
+    // Real pointer input on the drawn nodes: a selection click, then a vertical
+    // drag that previews and commits exactly one document transaction.
+    function test_productionVelocityPointerEdit() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-velocity-pointer")
+        testCase.mountProductionVelocity(location)
+        var nodes = testCase.velocityNodes()
+        verify(nodes.length > 0, "the page drew at least one node")
+        var notes = testCase.gridNotes()
+        compare(notes.length > 0, true, "the grid published its notes")
+
+        var input = testCase.velocityPlotInput()
+        var node = nodes[0]
+        var center = node.mapToItem(input, node.width / 2, node.height / 2)
+        mouseClick(input, center.x, center.y, Qt.LeftButton)
+        tryVerify(function() { return testCase.velocityModel().selectedCount === 1 },
+                  1000, "a node click selected exactly its own note")
+
+        var targetId = testCase.selectedNoteId()
+        verify(targetId >= 0, "the click left one note selected in the grid's own summary")
+        var before = testCase.noteVelocity(targetId)
+        var raised = center.y - 24
+        mousePress(input, center.x, center.y, Qt.LeftButton)
+        mouseMove(input, center.x, raised, -1, Qt.LeftButton)
+        compare(testCase.velocityModel().interactionActive, true,
+                "a live drag reports an active interaction to the container")
+        mouseRelease(input, center.x, raised, Qt.LeftButton)
+        tryVerify(function() {
+            return testCase.noteVelocity(targetId) !== before
+        }, 1000, "the released drag committed one velocity change")
+        compare(testCase.velocityModel().interactionActive, false,
+                "the release ended the page's interaction")
+    }
+
+    // The existing Set Velocity command opens the page's captured prompt, the
+    // field accepts a typed value into one transaction, and both the Escape and
+    // outside-dismissal paths close it without a write.
+    function test_productionVelocityPromptTransaction() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-velocity-prompt")
+        testCase.mountProductionVelocity(location)
+        var nodes = testCase.velocityNodes()
+        verify(nodes.length > 0, "the page drew at least one node")
+        testCase.clickNode(nodes[0])
+        var model = testCase.velocityModel()
+        tryVerify(function() { return model.selectedCount === 1 }, 1000,
+                  "the prompt case starts from one selected note")
+        var noteId = testCase.selectedNoteId()
+        verify(noteId >= 0, "the prompt case acts on the grid's selected note")
+        var before = testCase.noteVelocity(noteId)
+
+        testCase.surface.applicationSession.performGridCommand(bootstrap.setVelocityCommand())
+        tryVerify(function() { return model.promptOpen }, 1000,
+                  "the Set Velocity command opened the page's prompt")
+        var field = findChild(testCase.velocityPageItem(), "noteVelocityInput")
+        verify(field, "the prompt composed its text field")
+        tryVerify(function() { return field.activeFocus }, 1000,
+                  "the prompt took active focus in its field")
+        compare(field.text, String(before), "the prompt opened with the captured value")
+        keyClick(Qt.Key_9)
+        wait(0)
+        compare(model.promptDraft, "9", "typing replaced the selected draft (field '"
+                + field.text + "', draft '" + model.promptDraft + "')")
+        compare(testCase.noteVelocity(noteId), before, "typing committed nothing")
+        keyClick(Qt.Key_Return)
+        tryVerify(function() { return !model.promptOpen }, 1000, "Enter accepted the prompt")
+        tryVerify(function() { return testCase.noteVelocity(noteId) === 9 }, 1000,
+                  "the accepted value reached the captured note")
+
+        // Escape cancels with no write.
+        var accepted = testCase.noteVelocity(noteId)
+        testCase.surface.applicationSession.performGridCommand(bootstrap.setVelocityCommand())
+        tryVerify(function() { return model.promptOpen }, 1000, "the prompt reopened")
+        keyClick(Qt.Key_Escape)
+        tryVerify(function() { return !model.promptOpen }, 1000, "Escape closed the prompt")
+        compare(testCase.noteVelocity(noteId), accepted, "Escape wrote nothing")
+
+        // An outside press dismisses without a write. The probe lands in an
+        // empty plot column, so a leak past the underlay would be visible as a
+        // paint rather than hidden by the ruler's click-to-set.
+        testCase.surface.applicationSession.performGridCommand(bootstrap.setVelocityCommand())
+        tryVerify(function() { return model.promptOpen }, 1000, "the prompt reopened")
+        var underlay = findChild(testCase.velocityPageItem(), "velocityPromptUnderlay")
+        verify(underlay, "the prompt composed its dismissing underlay")
+        var empty = underlay.mapFromItem(testCase.velocityPlot(),
+                                         testCase.velocityPlot().width - 4,
+                                         testCase.velocityPlot().height - 4)
+        mouseClick(underlay, empty.x, empty.y, Qt.LeftButton)
+        tryVerify(function() { return !model.promptOpen }, 1000,
+                  "an outside press dismissed the prompt")
+        compare(testCase.noteVelocity(noteId), accepted, "the outside dismissal wrote nothing")
+    }
+
+    // Hiding the section cancels the page's live gesture without a write, and a
+    // stale document change cancels instead of retargeting.
+    function test_productionVelocityCancellation() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-velocity-cancel")
+        testCase.mountProductionVelocity(location)
+        var nodes = testCase.velocityNodes()
+        verify(nodes.length > 0, "the page drew at least one node")
+        var input = testCase.velocityPlotInput()
+        var node = nodes[0]
+        var center = node.mapToItem(input, node.width / 2, node.height / 2)
+        mousePress(input, center.x, center.y, Qt.LeftButton)
+        mouseMove(input, center.x, center.y - 24, -1, Qt.LeftButton)
+        var model = testCase.velocityModel()
+        compare(model.interactionActive, true, "the gesture is live before the hide")
+        var selected = model.selectedCount
+        compare(selected > 0, true, "the gesture owns a selection")
+
+        // The container's own hide path cancels the page synchronously.
+        testCase.clickToggle(testCase.velocityKind)
+        tryVerify(function() { return !testCase.section(testCase.velocityKind).visible }, 1000,
+                  "the section hid")
+        compare(model.interactionActive, false, "hiding the section cancelled the gesture")
+        mouseRelease(input, center.x, center.y - 24, Qt.LeftButton)
+        compare(model.interactionActive, false, "the released pointer committed nothing")
+        testCase.clickToggle(testCase.velocityKind)
+        tryVerify(function() { return testCase.section(testCase.velocityKind).visible }, 1000,
+                  "the section is visible again")
+    }
+
+    // The shared playhead: 128 distinct presentations inside one voice context
+    // rebuild no static velocity content, and every published presentation reaches
+    // the page's diagnostics through the session's own Swift fan-out. The case
+    // waits on those published facts with the suite's bounded settle pattern
+    // instead of assuming how many event-loop passes the delivery took.
+    function test_productionVelocityPlayheadPerformance() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-velocity-playhead")
+        testCase.mountProductionVelocity(location)
+        verify(bootstrap.pausePlayheadPolling(),
+               "the lane holds the production polling task for determinism")
+        // Warm up the playing context first: the stopped context resolves at the
+        // edit cursor, so the first playing presentation may legitimately cross
+        // into the span the loop then measures inside of. The Swift-owned
+        // observation entry is the production drive: the session's fan-out reaches
+        // the page inside this call, so the loop needs no event-loop sleeps.
+        bootstrap.presentPlayheadObservation(1000, 2)
+        var builds = bootstrap.velocityContentBuilds()
+        var presented = bootstrap.velocityPlayheadPresentations()
+        var published = bootstrap.publishedPlayheadPresentations()
+        var slot = bootstrap.velocityPresentedSlot()
+        // 128 distinct shared ticks, one per presentation: the presenter publishes
+        // every one of them and the page consumes every publication.
+        var updates = 128
+        for (var step = 1; step <= updates; ++step)
+            bootstrap.presentPlayheadObservation((1 + step) * 1000, 2)
+        var expected = published + updates
+        tryVerify(function() {
+            return bootstrap.publishedPlayheadPresentations() === expected
+        }, 2000, "the presenter published all " + updates + " shared presentations ("
+                  + (bootstrap.publishedPlayheadPresentations() - published) + ")")
+        tryVerify(function() {
+            return bootstrap.velocityPlayheadPresentations() === presented + updates
+        }, 2000, "every published presentation reached the page's diagnostics (page "
+                  + (bootstrap.velocityPlayheadPresentations() - presented) + ", presenter "
+                  + (bootstrap.publishedPlayheadPresentations() - published) + ")")
+        compare(bootstrap.velocityPresentedSlot(), slot,
+                "every presented tick stayed inside its own voice context")
+        compare(bootstrap.velocityContentBuilds(), builds,
+                "128 shared-playhead presentations rebuilt no velocity content")
+    }
+
+    // The page's unsupported-context diagnostic: the staged fixture's programs
+    // are parsed top-level voices, so the page must be editing exactly.
+    function test_productionVelocityContextIsExact() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-velocity-context")
+        testCase.mountProductionVelocity(location)
+        compare(bootstrap.velocityContextUnsupported(), false,
+                "the staged fixture resolves an exact top-level map")
+        compare(testCase.velocityModel().contextDiagnostic, "",
+                "an exact context publishes no diagnostic")
+    }
+
+    // The suite hands the document presentation back the way the host does at
+    // close, around the one composition the lane mounted: polling stops, the
+    // session cancels while the scene still exists, the scene is removed, and the
+    // acknowledgment — `detachGridScene()`'s own call — releases the page slot,
+    // the grid, the audio binding and the document session. Nothing QML still
+    // binds to is released before the scene is really gone, and the lane never
+    // relies on ApplicationSession's deinit for that release.
+    function cleanupTestCase() {
+        bootstrap.pausePlayheadPolling()
+        verify(bootstrap.hostClosing(),
+               "the session still presents its document while the scene exists")
+        var retired = testCase.surface
+        testCase.surface = null
+        verify(retired, "the lane mounted its one composition")
+        retired.destroy()
+        // The host removes the scene before it acknowledges the removal, so the
+        // composition is really gone — its bindings included — before the
+        // session releases the document-bound owners they read.
+        wait(0)
+        verify(bootstrap.acknowledgeSceneRemoval(),
+               "the session released its document presentation after the acknowledged"
+               + " scene removal")
+    }
+
+    // The reference profiles: one child process per required DPR/font profile
+    // renders the panes that profile is authoritative for. The ordinary run skips
+    // this case; the parent verifies the artifacts each child wrote.
+    function test_referenceProfileCapture() {
+        if (!bootstrap.profileActive)
+            skip("the reference capture runs in a dedicated profile child")
+        var location = bootstrap.preferencesUrl("profile-" + bootstrap.profileName)
+        var page = testCase.mountProductionVelocity(location)
+        // The profile's font is pushed through the production composition: the
+        // grid's base font is the font-relative geometry base the roll, the
+        // drawer chrome and this page all measure from.
+        testCase.surface.gridModel.baseFontPx = bootstrap.profileFontPx
+        testCase.surface.configureViewport()
+        wait(0)
+        var nodes = testCase.velocityNodes()
+        verify(nodes.length > 0, "the profile composition drew its nodes")
+        testCase.clickNode(nodes[0])
+        tryVerify(function() { return testCase.velocityModel().selectedCount === 1 }, 1000,
+                  "the profile composition shows a selected note")
+        compare(Math.round(Screen.devicePixelRatio), Math.round(bootstrap.profileDpr),
+                "the child renders at its profile's device pixel ratio")
+        compare(testCase.velocityModel().baseFontPx, bootstrap.profileFontPx,
+                "the page received the profile's base font")
+
+        var panes = bootstrap.profilePanes
+        for (var i = 0; i < panes.length; ++i)
+            verify(testCase.captureProfilePane(panes[i]),
+                   "captured the " + panes[i] + " pane at " + bootstrap.profileName)
+        compare(page.objectName, "velocityPage", "the capture composition is the production page")
     }
 }

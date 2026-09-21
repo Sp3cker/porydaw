@@ -6,6 +6,12 @@ final class NoteCommands {
     private let session: DocumentSession
     private let clipboard = GridClipboard()
 
+    /// The Set Velocity command's dispatch: the document-bound page owns the
+    /// prompt transaction, so this row asks for it instead of committing a value.
+    /// `true` means the request was accepted; the document is untouched either
+    /// way until the prompt's own acceptance runs.
+    var requestSetVelocity: (() -> Bool)?
+
     init(session: DocumentSession) {
         self.session = session
     }
@@ -14,7 +20,7 @@ final class NoteCommands {
         switch command {
         case .copy, .cut, .duplicate, .delete, .transposeUp, .transposeDown,
              .transposeUpOctave, .transposeDownOctave, .nudgeLeft, .nudgeRight,
-             .split, .join, .lengthenNote, .shortenNote:
+             .split, .join, .lengthenNote, .shortenNote, .setVelocity:
             return !selectedNotes().isEmpty
         case .paste, .selectAll, .muteTracks, .soloTracks,
              .pencilMode, .gridNarrow, .gridWiden, .gridTriplet:
@@ -27,6 +33,12 @@ final class NoteCommands {
     @discardableResult
     func execute(_ command: EditCommand, snapTicks: Tick, editCursor: Tick,
                  nextSubdivision: (Tick) -> Tick) -> Bool {
+        // Set Velocity is a prompt transaction, not a value commit: the row's
+        // dispatch asks the document-bound page to open its captured prompt and
+        // never touches the document here.
+        if command == .setVelocity {
+            return requestSetVelocity?() ?? false
+        }
         let before = session.document.revision
         switch command {
         case .copy:

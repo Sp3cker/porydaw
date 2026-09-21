@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawCore
 import QtBridge
 import QtBridgeCpp
 
@@ -24,6 +25,50 @@ enum EditorQmlLane {
             runLane(arguments: Array(CommandLine.arguments.dropFirst()))
         })
     }
+
+    /// One required reference profile: the DPR the child renders at and the base
+    /// font pixel size it pushes through the production grid, plus the panes that
+    /// profile is authoritative for.
+    struct ReferenceProfile {
+        let name: String
+        let dpr: Double
+        let fontPx: Int
+        let panes: [String]
+    }
+
+    /// The reference-image ledger this page owns: `velocity-lane` and
+    /// `editor-drawer` at macOS DPR 1/2 font 12/16, and `velocity-prompt` at DPR 2
+    /// font 12/16. One child process renders every pane whose ledger row names
+    /// its profile, so four children cover all ten captures.
+    static let referenceProfiles: [ReferenceProfile] = [
+        ReferenceProfile(name: "dpr1-font12", dpr: 1, fontPx: 12,
+                         panes: ["velocity-lane", "editor-drawer"]),
+        ReferenceProfile(name: "dpr1-font16", dpr: 1, fontPx: 16,
+                         panes: ["velocity-lane", "editor-drawer"]),
+        ReferenceProfile(name: "dpr2-font12", dpr: 2, fontPx: 12,
+                         panes: ["velocity-lane", "editor-drawer", "velocity-prompt"]),
+        ReferenceProfile(name: "dpr2-font16", dpr: 2, fontPx: 16,
+                         panes: ["velocity-lane", "editor-drawer", "velocity-prompt"]),
+    ]
+
+    /// The one suite case a profile child runs. Qt Quick Test selects a case by
+    /// its qualified `TestCase::function` name, so the child's payload names the
+    /// suite's own `name` property.
+    static let profileCaseName = "EditorDrawerLane::test_referenceProfileCapture"
+
+    /// The suite's second phase, in its own process: the container cases host
+    /// their own test pages in every kind, so their process releases the
+    /// document-bound production page's slot before the composition mounts. The
+    /// production phase — this process's own run — keeps that page in its slot
+    /// for the whole run. One phase's QML content is therefore never a later
+    /// phase's reused owner graph.
+    static let containerPhaseName = "container"
+
+    /// Recursion guard: a child never spawns further children.
+    private static let childEnvironmentKey = "PORYDAW_EDITOR_QML_PROFILE"
+
+    /// The container phase's own staging key, staged before any QML object exists.
+    private static let phaseEnvironmentKey = "PORYDAW_EDITOR_QML_PHASE"
 
     @MainActor
     private static func runLane(arguments: [String]) -> Int32 {
@@ -53,6 +98,72 @@ enum EditorQmlLane {
         // known before Qt Quick Test builds any QML object.
         EditorQmlBootstrap.stage(projectRoot: scratch)
 
+        if let profileName = ProcessInfo.processInfo.environment[childEnvironmentKey] {
+            // Profile child: one DPR, one font, the named profile case only. The
+            // scale factor is fixed before `QTestAppCpp` creates the application,
+            // which is the only moment it can be fixed at all.
+            guard let profile = referenceProfiles.first(where: { $0.name == profileName }) else {
+                return fail("unknown reference profile: \(profileName)")
+            }
+            setenv("QT_SCALE_FACTOR", "1", 0)
+            setenv("QT_SCALE_FACTOR", String(profile.dpr), 1)
+            EditorQmlBootstrap.stageProfile(profile: profile.name, dpr: profile.dpr,
+                                            fontPx: profile.fontPx, panes: profile.panes)
+            return runSuite(scratch: scratch, payload: [profileCaseName])
+        }
+
+        if ProcessInfo.processInfo.environment[phaseEnvironmentKey] != nil {
+            // Container child: the whole suite, with the production-phase cases
+            // skipped and the production page's slot released before the
+            // composition mounts.
+            EditorQmlBootstrap.stagePhase(containerPhaseName)
+            return runSuite(scratch: scratch, payload: payload)
+        }
+
+        let ordinary = runSuite(scratch: scratch, payload: payload)
+        guard ordinary == 0 else { return ordinary }
+        let container = runPhaseChild(scratch: scratch)
+        guard container == 0 else { return container }
+        return runProfileChildren(scratch: scratch)
+    }
+
+    /// The container phase's child process, verified by its own exit status: its
+    /// cases are the evidence, and this process reports the child's output when
+    /// it fails.
+    @MainActor
+    private static func runPhaseChild(scratch: String) -> Int32 {
+        print("editorqml-drawer: container phase child")
+        fflush(stdout)
+        let executable = CommandLine.arguments.first ?? entryName
+        var environment = ProcessInfo.processInfo.environment
+        environment[phaseEnvironmentKey] = containerPhaseName
+        let child = Process()
+        child.executableURL = URL(fileURLWithPath: executable)
+        child.arguments = [scratch]
+        child.environment = environment
+        let out = Pipe()
+        child.standardOutput = out
+        child.standardError = out
+        do {
+            try child.run()
+        } catch {
+            return fail("container phase: could not start the child (\(error))")
+        }
+        let data = out.fileHandleForReading.readDataToEndOfFile()
+        child.waitUntilExit()
+        let output = String(decoding: data, as: UTF8.self)
+        guard child.terminationReason != .uncaughtSignal, child.terminationStatus == 0 else {
+            return fail("container phase: child died with status \(child.terminationStatus)"
+                + " (signal \(child.terminationReason == .uncaughtSignal))\n" + output)
+        }
+        return 0
+    }
+
+    /// The ordinary suite: the lane's own single run of the production
+    /// composition. Everything the profile children need is passed through the
+    /// environment, so this construction stays the one Qt entry point.
+    @MainActor
+    private static func runSuite(scratch: String, payload: [String]) -> Int32 {
         var qTestApp = QTestAppCpp()
         qTestApp.setInputDir(EditorQmlPaths.testDirectory)
         qTestApp.setImportPath(EditorQmlPaths.qmlImportPath)
@@ -67,6 +178,97 @@ enum EditorQmlLane {
         var argv: [UnsafeMutablePointer<Int8>?] = laneArguments.map { strdup($0) }
         defer { argv.forEach { free($0) } }
         return qTestApp.runQtQuickTests(Int32(laneArguments.count), &argv)
+    }
+
+    /// One child per required profile, each rendering only the named profile case
+    /// in its own process, and each verified from its own artifacts: the PNG and
+    /// the metadata beside it must exist, and the metadata must name exactly the
+    /// profile the child was asked for. A missing or mismatched artifact fails the
+    /// lane; an offscreen capture is never presented as physical-DPR proof.
+    @MainActor
+    private static func runProfileChildren(scratch: String) -> Int32 {
+        let executable = CommandLine.arguments.first ?? entryName
+        var failures: [String] = []
+        print("editorqml-drawer: ordinary suite passed; capturing "
+            + "\(referenceProfiles.count) reference profiles")
+        fflush(stdout)
+        for profile in referenceProfiles {
+            print("editorqml-drawer: profile child \(profile.name)")
+            fflush(stdout)
+            var environment = ProcessInfo.processInfo.environment
+            environment[childEnvironmentKey] = profile.name
+            let child = Process()
+            child.executableURL = URL(fileURLWithPath: executable)
+            child.arguments = [scratch, "--qt", profileCaseName]
+            child.environment = environment
+            let out = Pipe()
+            child.standardOutput = out
+            child.standardError = out
+            do {
+                try child.run()
+            } catch {
+                failures.append("\(profile.name): could not start the profile child (\(error))")
+                continue
+            }
+            let data = out.fileHandleForReading.readDataToEndOfFile()
+            child.waitUntilExit()
+            let output = String(decoding: data, as: UTF8.self)
+            if child.terminationReason == .uncaughtSignal {
+                failures.append("\(profile.name): child died on signal "
+                    + "\(child.terminationStatus)\n\(output)")
+                continue
+            }
+            if child.terminationStatus != 0 {
+                failures.append("\(profile.name): child exited \(child.terminationStatus)\n\(output)")
+                continue
+            }
+            for pane in profile.panes {
+                print("editorqml-drawer: \(profile.name)/\(pane) captured")
+                let base = EditorQmlBootstrap.profileArtifactPath(scratch: scratch,
+                                                                  profile: profile.name,
+                                                                  pane: pane)
+                for path in [base + ".png", base + ".json"] where
+                    !FileManager.default.fileExists(atPath: path)
+                {
+                    failures.append("\(profile.name)/\(pane): missing artifact \(path)")
+                }
+                if let mismatch = profileMetadataMismatch(path: base + ".json",
+                                                          profile: profile.name, pane: pane) {
+                    failures.append("\(profile.name)/\(pane): \(mismatch)")
+                }
+            }
+        }
+        guard failures.isEmpty else {
+            return fail("reference profile captures failed:\n" + failures.joined(separator: "\n"))
+        }
+        return 0
+    }
+
+    /// What the pane's own metadata says when it is not the capture the profile
+    /// asked for, or `nil` when it is: the record must be readable, must name this
+    /// profile and pane, and must carry a positive image size. A pane that was
+    /// never captured, or captured under another profile, is never accepted on the
+    /// strength of the file's name.
+    private static func profileMetadataMismatch(path: String, profile: String,
+                                                pane: String) -> String? {
+        guard let data = FileManager.default.contents(atPath: path) else {
+            return "unreadable metadata"
+        }
+        guard let record = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+            return "metadata is not a JSON object"
+        }
+        guard record["profile"] as? String == profile else {
+            return "metadata names profile \(record["profile"].map { "\($0)" } ?? "nothing")"
+        }
+        guard record["pane"] as? String == pane else {
+            return "metadata names pane \(record["pane"].map { "\($0)" } ?? "nothing")"
+        }
+        guard let width = record["imageWidth"] as? Int, let height = record["imageHeight"] as? Int,
+              width > 0, height > 0
+        else {
+            return "metadata carries no rendered image size"
+        }
+        return nil
     }
 
     /// The lane's single entry: the route101 fixture set from
@@ -118,13 +320,200 @@ enum EditorQmlLane {
 @QtBridgeable
 public final class EditorQmlBootstrap: QmlInstantiableStatus {
     @QtIgnored private static var stagedProjectRoot = ""
+    @QtIgnored private static var stagedProfile = ""
+    @QtIgnored private static var stagedProfileDpr = 0.0
+    @QtIgnored private static var stagedProfileFontPx = 0
+    @QtIgnored private static var stagedProfilePanes: [String] = []
+    @QtIgnored private static var stagedPhase = ""
 
     static func stage(projectRoot: String) {
         stagedProjectRoot = projectRoot
     }
 
+    /// The reference profile this process renders: set only in a profile child,
+    /// before any QML object exists.
+    static func stageProfile(profile: String, dpr: Double, fontPx: Int, panes: [String]) {
+        stagedProfile = profile
+        stagedProfileDpr = dpr
+        stagedProfileFontPx = fontPx
+        stagedProfilePanes = panes
+    }
+
+    /// The lane phase this process runs: `""` for the production phase and
+    /// `"container"` for the container child. Staged before any QML object
+    /// exists, exactly like the profile, because the phase decides what the
+    /// composition mounts with.
+    static func stagePhase(_ phase: String) {
+        stagedPhase = phase
+    }
+
+    /// `"container"` in the container child, `""` in the production phase. Stored
+    /// because the bridged property table carries stored properties, and the
+    /// phase is fixed before this object exists.
+    public var lanePhase: String = EditorQmlBootstrap.stagedPhase
+
+    /// The artifact path stem for one profile pane, shared by the child that
+    /// writes it and the parent that verifies it.
+    static func profileArtifactPath(scratch: String, profile: String, pane: String) -> String {
+        URL(fileURLWithPath: scratch, isDirectory: true)
+            .appendingPathComponent("reference-\(profile)-\(pane)").path
+    }
+
     /// The runner's scratch directory, staged before Qt builds any QML object.
     public var projectRoot: String = EditorQmlBootstrap.stagedProjectRoot
+
+    // ---- reference profile capture -----------------------------------------
+
+    /// `true` only inside a profile child, so the ordinary single run skips the
+    /// capture case instead of multiplying the suite. Stored for the same reason
+    /// as `lanePhase`: the profile is staged before this object exists.
+    public var profileActive: Bool = !EditorQmlBootstrap.stagedProfile.isEmpty
+    public var profileName: String = EditorQmlBootstrap.stagedProfile
+    public var profileDpr: Double = EditorQmlBootstrap.stagedProfileDpr
+    public var profileFontPx: Int = EditorQmlBootstrap.stagedProfileFontPx
+    public var profilePanes: [String] = EditorQmlBootstrap.stagedProfilePanes
+
+    /// `file://` URL the pane's PNG is written to.
+    public func profilePngUrl(pane: String) -> String {
+        guard !pane.isEmpty else { return "" }
+        return URL(fileURLWithPath: EditorQmlBootstrap.profileArtifactPath(
+            scratch: projectRoot, profile: EditorQmlBootstrap.stagedProfile, pane: pane)).absoluteString
+            + ".png"
+    }
+
+    /// Records one pane's capture and fails it when the observed facts are not the
+    /// requested profile: the metadata beside the PNG is the evidence the parent
+    /// verifies, and a DPR or font mismatch never passes silently.
+    public func writeProfileMetadata(pane: String, observedDpr: Double, observedFontPx: Double,
+                                     imageWidth: Int, imageHeight: Int,
+                                     regionX: Int, regionY: Int,
+                                     regionWidth: Int, regionHeight: Int) -> Bool {
+        guard profileActive, !pane.isEmpty else { return false }
+        let requestedDpr = EditorQmlBootstrap.stagedProfileDpr
+        let requestedFont = Double(EditorQmlBootstrap.stagedProfileFontPx)
+        guard abs(observedDpr - requestedDpr) < 0.001,
+              abs(observedFontPx - requestedFont) < 0.001
+        else { return false }
+        let metadata: [String: Any] = [
+            "profile": EditorQmlBootstrap.stagedProfile,
+            "pane": pane,
+            "requestedDpr": requestedDpr,
+            "requestedFontPx": requestedFont,
+            "observedDpr": observedDpr,
+            "observedFontPx": observedFontPx,
+            "imageWidth": imageWidth,
+            "imageHeight": imageHeight,
+            "region": ["x": regionX, "y": regionY, "width": regionWidth, "height": regionHeight],
+            "capture": "offscreen composition grab (not physical-DPR proof)",
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: metadata,
+                                                     options: [.sortedKeys])
+        else { return false }
+        let path = EditorQmlBootstrap.profileArtifactPath(
+            scratch: projectRoot, profile: EditorQmlBootstrap.stagedProfile, pane: pane) + ".json"
+        return (try? data.write(to: URL(fileURLWithPath: path))) != nil
+    }
+
+    // ---- the document-bound page's own lifecycle ---------------------------
+
+    /// Detaches the current document's page from its kind's slot through the real
+    /// presenter, so a container-only case can attach its own test page. The page
+    /// owner stays retained by the session, exactly as it does across a hide.
+    public func detachProductionSection(kind: Int) -> Bool {
+        guard let session, let sectionKind = DrawerSectionKind(rawValue: kind) else { return false }
+        let page: EditorDrawerPage
+        switch sectionKind {
+        case .velocity: page = session.velocityPage()
+        case .automation, .voiceChanges: return false
+        }
+        session.drawerPresenter().detachSection(page)
+        return !session.drawerPresenter().section(kind: kind).available
+    }
+
+    /// Re-attaches the session's retained page to its slot. `true` means the
+    /// kind is available again.
+    public func attachProductionSection(kind: Int) -> Bool {
+        guard let session, let sectionKind = DrawerSectionKind(rawValue: kind) else { return false }
+        let page: EditorDrawerPage
+        switch sectionKind {
+        case .velocity: page = session.velocityPage()
+        case .automation, .voiceChanges: return false
+        }
+        session.drawerPresenter().attachSection(page)
+        return session.drawerPresenter().section(kind: kind).available
+    }
+
+    /// The host's own close path, first half: `RewriteWindow` invokes
+    /// `hostClosing()` and only then removes the Quick scene. Nothing is released
+    /// here — the scene still binds to the document-bound owners — so `true` means
+    /// the session still presents its document while the scene exists. The lane
+    /// destroys the scene between this call and `acknowledgeSceneRemoval()`,
+    /// which is the order the accepted lifecycle uses.
+    public func hostClosing() -> Bool {
+        guard let session else { return false }
+        session.hostClosing()
+        return session.songOpen
+    }
+
+    /// The host's own close path, second half: `RewriteWindow.detachGridScene()`
+    /// calls `acknowledgeGridDetached()` once the scene is gone, and the session
+    /// releases the page slot, the grid, the audio binding and the document
+    /// session exactly there. `true` means the session presents no document any
+    /// more.
+    public func acknowledgeSceneRemoval() -> Bool {
+        guard let session else { return false }
+        session.acknowledgeGridDetached()
+        return !session.songOpen
+    }
+
+    /// The document-bound Velocity page for the lane's Swift-side reads. The QML
+    /// cases reach the same object through `applicationSession.velocityPage()`,
+    /// which is the production accessor.
+    @QtIgnored
+    public func velocityPage() -> VelocityPage? { session?.velocityPage() }
+
+    /// `EditCommand.setVelocity`'s canonical value, so no case copies the table.
+    public func setVelocityCommand() -> Int { EditCommand.setVelocity.rawValue }
+
+    /// The page's content-build diagnostic: `UInt64` is not a bridge type, so the
+    /// lane reads it as a number it can compare.
+    public func velocityContentBuilds() -> Double {
+        Double(session?.velocityPage().contentBuildCount ?? 0)
+    }
+
+    /// The page's shared-playhead presentation diagnostic.
+    public func velocityPlayheadPresentations() -> Double {
+        Double(session?.velocityPage().playheadPresentationCount ?? 0)
+    }
+
+    /// The page's live selection as identity text: the lane's cases act on the
+    /// note the production selection path actually selected.
+    public func velocitySelectedNoteIds() -> String {
+        session?.velocityPage().selectedNoteIdText() ?? ""
+    }
+
+    /// The presented voice-context span's end tick: a playhead case presents
+    /// inside it so a rebuild can only come from a real content change.
+    public func velocityContextEndTick() -> Double {
+        Double(session?.velocityPage().presentedContextEndTick ?? TimeDefaults.noTick)
+    }
+
+    /// The presented voice-context slot, so a case can prove it never changed.
+    public func velocityPresentedSlot() -> Int {
+        session?.velocityPage().presentedContextSlot ?? -1
+    }
+
+    /// The shared presenter's own published-change count: the comparison baseline
+    /// for the page's diagnostic, because the presenter publishes only a changed
+    /// presentation.
+    public func publishedPlayheadPresentations() -> Double {
+        Double(session?.playheadPresenter().presentationCount ?? 0)
+    }
+
+    /// The page's published unsupported-context flag.
+    public func velocityContextUnsupported() -> Bool {
+        session?.velocityPage().contextUnsupported ?? false
+    }
 
     /// Every `cancelSectionInteraction()` the container performed on a test
     /// page this bootstrap created, detach-cancels included.

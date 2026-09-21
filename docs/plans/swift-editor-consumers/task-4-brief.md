@@ -19,7 +19,8 @@ Create:
 
 Modify:
 
-- `src/swift/app/ApplicationSession.swift`: create/retain/attach the document-bound page after audio/document/grid/playhead setup; refresh it from camera/playback/document changes; route audition and prompt command callbacks; synchronously cancel/detach it before document retirement.
+- `src/swift/app/ApplicationSession.swift`: create/retain/attach the document-bound page after audio/document/grid/playhead setup; refresh it from camera/playback/document changes; route audition and prompt command callbacks; cancel while the Quick scene exists, request detach, and release the page only after the host acknowledges scene removal.
+- `src/swift/app/SharedPlayhead.swift`: if needed, add one Swift-only presentation callback so `ApplicationSession` can fan shared clock updates into document-bound pages without QML calling back through transient bridge wrappers; preserve the existing QML-facing presenter contract.
 - `src/swift/app/NoteCommands.swift`: make `EditCommand.setVelocity` availability/dispatch explicit without committing a value before prompt acceptance.
 - `src/ui/songview/quick/swiftroll/PianoGrid.swift`: route the existing Set Velocity command to the page prompt through one Swift callback and preserve command availability publication.
 - `src/swift/app/CMakeLists.txt`: compile `VelocityPage.swift`.

@@ -148,6 +148,13 @@ public final class SharedPlayheadPresenter {
     @QtIgnored public private(set) var followEnabled = true
     /// Raised by a page that owns a prompt or a drag outside the grid/drawer.
     @QtIgnored public private(set) var explicitSuspension = false
+    /// One Swift-only notification per distinct presentation. `ApplicationSession`
+    /// installs it to fan the shared clock into document-bound pages in Swift;
+    /// reading the presenter from QML and calling a page's mutator back through
+    /// that bridge wrapper would route the page's clock through a transient
+    /// object. The QML-facing fields and signals below are unchanged, and this
+    /// callback never changes what the presenter publishes.
+    @QtIgnored public var onPresentation: ((SharedPlayheadPresentation) -> Void)?
 
     /// The polling lifecycle token: a new one per attach, and every observation
     /// carries the token of the generation that produced it. A task from a
@@ -189,11 +196,14 @@ public final class SharedPlayheadPresenter {
     }
 
     /// Cancels polling, drops the owners, and clears the attached presentation
-    /// synchronously while those owners still exist.
+    /// synchronously while those owners still exist. The presentation callback is
+    /// cleared first, so the empty presentation below never fans into a page whose
+    /// document is being released.
     @QtIgnored
     public func detach() {
         lifecycleToken &+= 1
         stopPolling()
+        onPresentation = nil
         session = nil
         audio = nil
         grid = nil
@@ -323,6 +333,9 @@ public final class SharedPlayheadPresenter {
         }
         if visible != presentation.visible { visible = presentation.visible }
         if playing != presentation.playing { playing = presentation.playing }
+        // The one Swift fan-out, after every QML-facing field is published so a
+        // callback reads the presentation it was notified about.
+        onPresentation?(presentation)
         return true
     }
 }

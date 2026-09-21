@@ -28,6 +28,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// the current document's owners on install, and cancelled before any of
     /// those owners is released.
     private let playhead: SharedPlayheadPresenter
+    /// The document-bound Velocity page: created with the document, attached
+    /// before the scene mounts, refreshed from the session's own publications,
+    /// and cancelled and released only after the host acknowledged detachment.
+    private var velocityPageOwner: VelocityPage?
     private var detachContinuation: CheckedContinuation<Void, Never>?
     private var isDisposed = false
     private var activeReplacementTask: Task<Void, Never>?
@@ -58,6 +62,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// Drawer chrome exists for the whole session, so unlike `gridPresenter()`
     /// this needs no open song and never fails.
     public func drawerPresenter() -> EditorDrawerPresenter { drawer }
+
+    /// The document-bound Velocity page. Like `gridPresenter()` it exists only
+    /// while a document presentation is installed.
+    public func velocityPage() -> VelocityPage {
+        guard let velocityPageOwner else {
+            preconditionFailure("Velocity page requested without an open song")
+        }
+        return velocityPageOwner
+    }
 
     /// The one shared playhead. Like the drawer it exists for the whole session;
     /// it publishes an empty, detached presentation until a document is bound.
@@ -102,15 +115,53 @@ public final class ApplicationSession: QmlInstantiableStatus {
         let continuation = detachContinuation
         detachContinuation = nil
         continuation?.resume()
+        // The close path cannot await the acknowledgment, so its release runs
+        // here: the host removed the scene, so no QML item binds to the owners
+        // this releases any more.
+        if isDisposed { releaseDocumentPresentation() }
     }
 
+    /// The host's close path, called before it destroys the Quick scene's engine.
+    /// Order is the accepted contract: cancel while the scene still exists, stop
+    /// presenting, and release nothing here — the surface still binds to the
+    /// document-bound owners until the host acknowledges scene removal through
+    /// `acknowledgeGridDetached()`, which is where the release happens.
     public func hostClosing() {
         isDisposed = true
         activeReplacementTask?.cancel()
-        // The host removes the Quick scene next; cancel while it still exists,
-        // and stop presenting before any document owner is released.
+        // Drops the page callback before any owner can retire, then clears the
+        // attached presentation synchronously.
         playhead.detach()
+        // Cancel while the scene exists: the drawer's resize session and every
+        // attached page's interaction end in the same call.
         drawer.inputCancelled(reason: GridCancelReason.hidden.rawValue)
+    }
+
+    /// Releases the document-bound presentation owners. Called from the
+    /// replacement path after it awaited the host's acknowledgment, and from the
+    /// close path's acknowledgment: never earlier, because the QML surface binds
+    /// to the grid, the page and the session until the scene is really gone.
+    private func releaseDocumentPresentation() {
+        if let page = velocityPageOwner {
+            drawer.detachSection(page)
+            page.detach()
+            velocityPageOwner = nil
+        }
+        grid?.detach()
+        grid = nil
+        audio?.unload()
+        let retiring = documentSession
+        documentSession = nil
+        songOpen = false
+        documentDirty = false
+        canUndo = false
+        canRedo = false
+        // The session's own close is the asynchronous remainder of the release;
+        // it is requested before the reference is dropped so the service worker
+        // is never left running behind an unreferenced session.
+        if let retiring {
+            Task { _ = await retiring.close() }
+        }
     }
 
     /// Starts project replacement without exposing async/throws through Qt.
@@ -290,11 +341,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
             presenter.onCommandAvailabilityChanged = { [weak self] in
                 self?.gridCommandAvailabilityChanged()
             }
-            replacement.onCameraChange = { [weak presenter, weak playhead] _ in
+            replacement.onCameraChange = { [weak self, weak presenter, weak playhead] _ in
                 presenter?.refreshCamera()
                 // The camera publication reprojects the retained authoritative
                 // tick: the same position, a new projection.
                 playhead?.refreshProjection()
+                self?.velocityPageOwner?.refreshCamera()
             }
             replacement.onPlayback = { [weak self] timeline in
                 do {
@@ -303,7 +355,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
                     self?.lastSaveError = String(describing: error)
                 }
             }
-            replacement.onChange = { [weak self, weak replacement, weak presenter, weak playhead] _ in
+            replacement.onChange = { [weak self, weak replacement, weak presenter,
+                                      weak playhead] _ in
                 guard let self, let replacement else { return }
                 presenter?.refreshFromSession()
                 // A document change may have rebuilt the timeline; re-read the
@@ -327,6 +380,25 @@ public final class ApplicationSession: QmlInstantiableStatus {
             // or superseded document.
             playhead.attach(session: replacement, audio: audio, grid: presenter, drawer: drawer)
             playhead.startPolling()
+            // The document-bound page is installed and attached before `songOpen`
+            // publishes, so the scene mounts with its page already in the slot.
+            let page = VelocityPage(baseFontPx: presenter.baseFontPx)
+            page.attach(session: replacement, palette: presenter.palette)
+            presenter.onSetVelocityRequested = { [weak page] in
+                page?.openSelectedVelocityPrompt() ?? false
+            }
+            presenter.onSessionStateChanged = { [weak page] in page?.refreshFromDocument() }
+            // The one Swift fan-out from the shared clock into the page: the
+            // production QML never reads the presenter or calls the page's
+            // mutator, so the page's context follows the shared tick through the
+            // owners that already exist. The callback is weak and is cleared by
+            // `SharedPlayheadPresenter.detach()` before this page retires.
+            playhead.onPresentation = { [weak page] presentation in
+                page?.refreshPlayhead(tick: presentation.tick,
+                                      playing: presentation.playing)
+            }
+            velocityPageOwner = page
+            drawer.attachSection(page)
             documentDirty = replacement.document.isDirty || replacement.bankDirty
             canUndo = replacement.document.history.canUndo
             canRedo = replacement.document.history.canRedo
@@ -355,6 +427,14 @@ public final class ApplicationSession: QmlInstantiableStatus {
             }
             grid?.detach()
             self.grid = nil
+        }
+        // The host acknowledged scene removal: the page's slot is dropped (its
+        // cancel already ran above, while the scene still existed) and its owner
+        // is released before the document session it reads.
+        if let page = velocityPageOwner {
+            drawer.detachSection(page)
+            page.detach()
+            velocityPageOwner = nil
         }
         if unloadAudio { audio?.unload() }
         if let documentSession {

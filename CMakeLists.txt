@@ -253,6 +253,8 @@ qt_add_resources(porydaw_app "drawer_qml"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/drawer"
     FILES
         src/ui/songview/quick/drawer/EditorDrawer.qml
+        src/ui/songview/quick/drawer/VelocityPage.qml
+        src/ui/songview/quick/drawer/VelocityPrompt.qml
 )
 
 qt_add_resources(porydaw_app "drawer_icons"

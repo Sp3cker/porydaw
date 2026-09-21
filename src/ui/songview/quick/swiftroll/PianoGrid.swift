@@ -42,6 +42,15 @@ public final class PianoGrid {
     @QtIgnored private var gesture: GridGesture?
     @QtIgnored private var selectionAtRightPress: Set<NoteID> = []
     @QtIgnored var onCommandAvailabilityChanged: (() -> Void)?
+    /// The Set Velocity row's dispatch: the document-bound page opens its own
+    /// prompt transaction. `true` means the request was accepted. Swift-only,
+    /// like the shared playhead's policy entries: no QML surface sees it.
+    @QtIgnored public var onSetVelocityRequested: (() -> Bool)?
+    /// The session facts document-bound pages derive from — document revision,
+    /// primary track, note selection and edit cursor. Fired only when one of them
+    /// really changed, so an unchanged refresh never republishes a page.
+    @QtIgnored public var onSessionStateChanged: (() -> Void)?
+    @QtIgnored private var lastSessionFingerprint: SessionFingerprint?
     @QtIgnored private var lastCommandAvailability: [Bool] = []
     @QtIgnored private var keyboardAuditionKey: Int?
     @QtIgnored var onAudition: ((Int, Int, Int) -> Void)?
@@ -111,6 +120,12 @@ public final class PianoGrid {
     public init(session: DocumentSession) {
         self.session = session
         commands = NoteCommands(session: session)
+        // The existing Set Velocity row asks its owner for the prompt instead of
+        // committing a value; the owner is the document-bound page the
+        // application session installs after this presenter exists.
+        commands.requestSetVelocity = { [weak self] in
+            self?.onSetVelocityRequested?() ?? false
+        }
         let count = session.document.engineTracks.usedTrackCount
         let initialTrack = min(max(0, session.selectedTrack ?? 0), max(0, count - 1))
         session.selectedTrack = count == 0 ? nil : initialTrack
@@ -781,6 +796,25 @@ public final class PianoGrid {
             lastCommandAvailability = availability
             onCommandAvailabilityChanged?()
         }
+        let fingerprint = SessionFingerprint(
+            revision: session.document.revision,
+            track: session.selectedTrack ?? -1,
+            selection: session.selectedNotes.map(\.rawValue).sorted(),
+            editCursor: session.editCursor)
+        if fingerprint != lastSessionFingerprint {
+            lastSessionFingerprint = fingerprint
+            onSessionStateChanged?()
+        }
         publishGeometry()
     }
+}
+
+/// The document/session facts a drawer page derives its projection from. Value
+/// equality is the whole publication rule: an unchanged refresh publishes
+/// nothing, so a page never rebuilds on a repeated equal grid publication.
+private struct SessionFingerprint: Equatable {
+    var revision: UInt64
+    var track: Int
+    var selection: [UInt64]
+    var editCursor: Tick
 }
