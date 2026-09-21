@@ -1,8 +1,9 @@
 ---
 name: keep-files-small
 description: "Guard against oversized and fragmented files — review cohesion above 600L"
-condition: "write|edit|ast_edit"
-scope: tool
+scope: "tool:edit, tool:write"
+condition: ".*"
+interruptMode: never
 ---
 
 Porydaw's agent pain is both oversized files and concepts scattered across
