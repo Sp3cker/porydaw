@@ -112,6 +112,7 @@ FocusScope {
         readonly property bool trackAvailable: false
         readonly property string plotMessage: ""
         readonly property bool isPencilMode: false
+        readonly property int hoverHintProfile: Shared.HintProfiles.Empty
         readonly property bool interactionActive: false
         readonly property double baseFontPx: 13
         readonly property double plotOrigin: 0
@@ -182,7 +183,7 @@ FocusScope {
             return
         page.pageModel.configureBody(page.plotWidth, page.height, page.plotOrigin,
                                      page.Screen.devicePixelRatio, page.baseFontPx,
-                                     page.styleHints ? page.styleHints.startDragDistance : 10)
+                                     Qt.styleHints.startDragDistance)
     }
 
     // Every fact `configureBody` publishes is a dependency: the owner's arrival,
@@ -199,6 +200,12 @@ FocusScope {
     Component.onCompleted: {
         page.pushBodyFacts()
         page.createModals()
+    }
+    Component.onDestruction: {
+        if (page.menu !== null)
+            page.menu.destroy()
+        if (page.prompt !== null)
+            page.prompt.destroy()
     }
 
     // The shared clock reaches this page in Swift: `ApplicationSession` fans the
@@ -534,10 +541,30 @@ FocusScope {
             onPositionChanged: (mouse) => page.pageModel.pointerMove(mouse.x, mouse.y,
                                                                     mouse.buttons,
                                                                     mouse.modifiers)
-            onReleased: (mouse) => mouse.accepted =
-                page.pageModel.pointerRelease(mouse.x, mouse.y, mouse.button, mouse.modifiers)
-            onCanceled: page.pageModel.cancelSectionInteraction()
+            onReleased: (mouse) => {
+                plotHint.settleRelease(plotInput.mapToItem(null, mouse.x, mouse.y))
+                mouse.accepted = page.pageModel.pointerRelease(
+                    mouse.x, mouse.y, mouse.button, mouse.modifiers)
+            }
+            onCanceled: {
+                plotHint.settleRelease(plotHint.point.scenePosition)
+                page.pageModel.cancelSectionInteraction()
+            }
             onExited: page.pageModel.pointerLeave()
+        }
+
+        // The plot is one mixed-profile input group. Its Swift hover
+        // publication selects node, origin-phantom, sweep or pencil help;
+        // the group retains that originating profile only for the MouseArea's
+        // real grab, then settles containment from the delivered release.
+        Shared.HoverHint {
+            id: plotHint
+
+            source: plot
+            hintService: page.hintService
+            scopeAllowed: page.hintScopeAllowed
+            gestureOwning: plotInput.pressed
+            profile: page.pageModel.hoverHintProfile
         }
 
         WheelHandler {
@@ -632,12 +659,9 @@ FocusScope {
         }
     }
 
-    /// Composes the two modal surfaces into the container's one modal layer, or
-    /// into the page when no layer was handed over, and the tap-tempo panel into
-    /// the page itself: production keeps the plot live while a session
-    /// accumulates, so a local panel takes only its own input. They are created
-    /// once and only re-pointed at the current document owner, so a case's modal
-    /// state is never a fresh object per interaction.
+    /// Creates the page-owned modals in the container's unclipped layer, or in
+    /// the page when there is no layer. Reparenting preserves their identity;
+    /// page teardown retires them even when the external layer survives.
     function createModals() {
         var host = page.modalHost !== null && page.modalHost !== undefined ? page.modalHost : page
         if (page.menu === null) {
