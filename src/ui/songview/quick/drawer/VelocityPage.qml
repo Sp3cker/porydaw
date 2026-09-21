@@ -17,6 +17,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import "../swiftroll"
+import ".." as Shared
 
 FocusScope {
     id: page
@@ -133,7 +134,7 @@ FocusScope {
             return
         page.pageModel.configureBody(page.width, page.height, page.plotOrigin,
                                  page.Screen.devicePixelRatio, page.baseFontPx,
-                                 page.styleHints ? page.styleHints.startDragDistance : 10)
+                                 Qt.styleHints.startDragDistance)
     }
 
     // Every fact `configureBody` publishes is a dependency: the owner's arrival,
@@ -231,10 +232,25 @@ FocusScope {
                 page.pageModel.pointerPress(mouse.x, mouse.y, page.rulerSurface, mouse.button,
                                         mouse.modifiers)
             onPositionChanged: (mouse) => page.pageModel.pointerMove(mouse.x, mouse.y, mouse.buttons)
-            onReleased: (mouse) => mouse.accepted =
-                page.pageModel.pointerRelease(mouse.x, mouse.y, mouse.button)
-            onCanceled: page.pageModel.cancelSectionInteraction()
+            onReleased: (mouse) => {
+                rulerHint.settleRelease(rulerInput.mapToItem(null, mouse.x, mouse.y))
+                mouse.accepted = page.pageModel.pointerRelease(mouse.x, mouse.y, mouse.button)
+            }
+            onCanceled: {
+                rulerHint.settleRelease(rulerHint.point.scenePosition)
+                page.pageModel.cancelSectionInteraction()
+            }
             onExited: page.pageModel.pointerLeave()
+        }
+
+        Shared.HoverHint {
+            id: rulerHint
+
+            source: ruler
+            hintService: page.hintService
+            scopeAllowed: page.hintScopeAllowed
+            gestureOwning: rulerInput.pressed
+            profile: Shared.HintProfiles.VelocityGutter
         }
 
         Accessible.role: Accessible.Column
@@ -396,10 +412,25 @@ FocusScope {
                 page.pageModel.pointerPress(mouse.x, mouse.y, page.plotSurface, mouse.button,
                                         mouse.modifiers)
             onPositionChanged: (mouse) => page.pageModel.pointerMove(mouse.x, mouse.y, mouse.buttons)
-            onReleased: (mouse) => mouse.accepted =
-                page.pageModel.pointerRelease(mouse.x, mouse.y, mouse.button)
-            onCanceled: page.pageModel.cancelSectionInteraction()
+            onReleased: (mouse) => {
+                plotHint.settleRelease(plotInput.mapToItem(null, mouse.x, mouse.y))
+                mouse.accepted = page.pageModel.pointerRelease(mouse.x, mouse.y, mouse.button)
+            }
+            onCanceled: {
+                plotHint.settleRelease(plotHint.point.scenePosition)
+                page.pageModel.cancelSectionInteraction()
+            }
             onExited: page.pageModel.pointerLeave()
+        }
+
+        Shared.HoverHint {
+            id: plotHint
+
+            source: plot
+            hintService: page.hintService
+            scopeAllowed: page.hintScopeAllowed
+            gestureOwning: plotInput.pressed
+            profile: Shared.HintProfiles.VelocityBackground
         }
 
         WheelHandler {

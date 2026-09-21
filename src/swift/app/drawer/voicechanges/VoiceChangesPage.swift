@@ -63,6 +63,12 @@ enum VoiceQtButton {
 public enum VoiceModifier {
     public static let alt = 0x0800_0000
 }
+
+private enum VoiceHintProfile {
+    static let horizontalScroll = 12
+    static let marker = 21
+}
+
 // MARK: - Page owner
 
 /// The production Voice Changes page. Every published value derives from the
@@ -113,6 +119,9 @@ public final class VoiceChangesPage: EditorDrawerPage {
     public var hoverText: String = ""
     public var hoverLabelRect: [String: QVariantSettable] = VoiceMarkerHandle.rect(0, 0, 0, 0)
     public var hoverTick: Double = 0
+    /// The current legacy lane hint: marker-specific while the pointer hits a
+    /// change rule, horizontal scrolling everywhere else in the plot.
+    public var hoverHintProfile: Int = VoiceHintProfile.horizontalScroll
     /// `Qt::SizeHorCursor` (3) while a marker drag is active, `Qt::ArrowCursor`
     /// (0) otherwise.
     public var cursorKind: Int = 0
@@ -657,6 +666,14 @@ public final class VoiceChangesPage: EditorDrawerPage {
         setPublished(&previewVisible, true)
         setPublished(&previewX, xForTick(live.previewTick))
         setPublished(&previewTick, Double(live.previewTick))
+    }
+
+    /// The current legacy lane hint: marker-specific while the pointer hits a
+    /// change rule, horizontal scrolling everywhere else in the plot.
+    @QtIgnored
+    func publishHoverHintProfile(marker: Bool) {
+        let profile = marker ? VoiceHintProfile.marker : VoiceHintProfile.horizontalScroll
+        if hoverHintProfile != profile { hoverHintProfile = profile }
     }
 
     /// The readout from live page facts: the cursor-only publication path, which

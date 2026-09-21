@@ -29,6 +29,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import "../swiftroll"
+import ".." as Shared
 
 FocusScope {
     id: page
@@ -91,6 +92,7 @@ FocusScope {
         readonly property bool hoverVisible: false
         readonly property string hoverText: ""
         readonly property var hoverLabelRect: ({ "x": 0, "y": 0, "width": 0, "height": 0 })
+        readonly property int hoverHintProfile: Shared.HintProfiles.HorizontalScroll
         readonly property var captionFont: ({})
         readonly property var titleFont: ({})
         readonly property double baseFontPx: 13
@@ -147,7 +149,7 @@ FocusScope {
             return
         page.pageModel.configureBody(page.width, page.height, page.plotOrigin,
                                      page.Screen.devicePixelRatio, page.baseFontPx,
-                                     page.styleHints ? page.styleHints.startDragDistance : 10)
+                                     Qt.styleHints.startDragDistance)
     }
 
     onModelChanged: {
@@ -430,10 +432,25 @@ FocusScope {
             onPositionChanged: (mouse) => page.pageModel.pointerMove(mouse.x, mouse.y,
                                                                      mouse.buttons,
                                                                      mouse.modifiers)
-            onReleased: (mouse) => mouse.accepted =
-                page.pageModel.pointerRelease(mouse.x, mouse.y, mouse.button)
-            onCanceled: page.pageModel.cancelSectionInteraction()
+            onReleased: (mouse) => {
+                plotHint.settleRelease(plotInput.mapToItem(null, mouse.x, mouse.y))
+                mouse.accepted = page.pageModel.pointerRelease(mouse.x, mouse.y, mouse.button)
+            }
+            onCanceled: {
+                plotHint.settleRelease(plotHint.point.scenePosition)
+                page.pageModel.cancelSectionInteraction()
+            }
             onExited: page.pageModel.pointerLeave()
+        }
+
+        Shared.HoverHint {
+            id: plotHint
+
+            source: plot
+            hintService: page.hintService
+            scopeAllowed: page.hintScopeAllowed
+            gestureOwning: plotInput.pressed
+            profile: page.pageModel.hoverHintProfile
         }
 
         WheelHandler {

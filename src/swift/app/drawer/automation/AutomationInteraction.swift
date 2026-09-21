@@ -47,14 +47,22 @@ public enum AutomationCursorKind: Int, Sendable {
     case closedHand = 4
 }
 
-/// One hover over the plot: the node under the pointer, or the background tick
-/// with the value the lane holds there.
+enum AutomationHoverHintTarget: Equatable, Sendable {
+    case background
+    case node
+    case originPhantom
+}
+
+/// One hover over the plot: the node under the pointer, its projected origin
+/// phantom, or the background tick with the value the lane holds there.
 public struct AutomationHover: Equatable, Sendable {
     public let parameter: AutomationParameter
     public let tick: Tick
     public let value: Int?
     public let text: String
     public let hasPoint: Bool
+    let hintTarget: AutomationHoverHintTarget
+    let nodeMarkersVisible: Bool
 
     static func resolve(
         x: Double,
@@ -65,14 +73,26 @@ public struct AutomationHover: Equatable, Sendable {
         pointHitRadius: Double,
         isPencilMode: Bool
     ) -> Self {
-        if (!isPencilMode || projection.markersVisible()),
-           let hit = lane.hitTest(x: x, y: y, radius: pointHitRadius) {
-            return Self(
-                parameter: facts.parameter,
-                tick: hit.tick,
-                value: hit.value,
-                text: facts.metadata.valueText(hit.value),
-                hasPoint: true)
+        let markersVisible = projection.markersVisible()
+        var hintTarget = AutomationHoverHintTarget.background
+        if !isPencilMode || markersVisible {
+            if let hit = lane.hitTest(x: x, y: y, radius: pointHitRadius) {
+                hintTarget = hit.x < 0 ? .originPhantom : .node
+                return Self(
+                    parameter: facts.parameter,
+                    tick: hit.tick,
+                    value: hit.value,
+                    text: facts.metadata.valueText(hit.value),
+                    hasPoint: true,
+                    hintTarget: hintTarget,
+                    nodeMarkersVisible: markersVisible)
+            }
+            if let phantom = lane.originPhantom {
+                let dy = phantom.point.y - y
+                if x * x + dy * dy <= pointHitRadius * pointHitRadius {
+                    hintTarget = .originPhantom
+                }
+            }
         }
         // The background tick is the fine lattice, or the insert cell while
         // the pencil is armed; the readout is the value the lane holds there.
@@ -86,7 +106,27 @@ public struct AutomationHover: Equatable, Sendable {
             tick: tick,
             value: held,
             text: held.map(facts.metadata.valueText) ?? "",
-            hasPoint: false)
+            hasPoint: false,
+            hintTarget: hintTarget,
+            nodeMarkersVisible: markersVisible)
+    }
+
+    static func hintTarget(
+        x: Double,
+        y: Double,
+        lane: AutomationLaneProjection,
+        pointHitRadius: Double
+    ) -> AutomationHoverHintTarget {
+        if let hit = lane.hitTest(x: x, y: y, radius: pointHitRadius) {
+            return hit.x < 0 ? .originPhantom : .node
+        }
+        if let phantom = lane.originPhantom {
+            let dy = phantom.point.y - y
+            if x * x + dy * dy <= pointHitRadius * pointHitRadius {
+                return .originPhantom
+            }
+        }
+        return .background
     }
 }
 
@@ -501,6 +541,7 @@ extension AutomationPage {
     func dispatchPointerMove(x: Double, y: Double, buttons: Int, modifiers: Int = 0) -> Bool {
         guard session != nil else { return false }
         hoverX = x
+        hoverY = y
         if panActive {
             guard buttons & AutomationQtButton.middle != 0 else {
                 endPan()

@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 // Shared typed menu renderer. The Swift-owned menu supplies rows and the
 // QML host delivers hover and activation; each level paints only its frame.
 // The drawer-wide modal layer owns outside presses and keyboard navigation.
@@ -45,7 +46,7 @@ Item {
     readonly property color pressedTextColor: appearance?.pressedText ?? hoverTextColor
     readonly property color disabledTextColor: appearance?.disabledText ?? textColor
     readonly property color separatorColor: appearance?.separator ?? "transparent"
-    readonly property font menuFont: appearance?.font ?? Qt.application.font
+    readonly property font menuFont: appearance?.font ?? Application.font
 
     // Current model-index lookup intentionally excludes ListView's pooled
     // delegates, which can outlive a model reset for reuse.
@@ -126,8 +127,8 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     visible: row.active
-                    color: panel.pressedRow === index ? panel.pressedBackgroundColor
-                          : panel.highlightedRow === index ? panel.hoverBackgroundColor
+                    color: panel.pressedRow === row.index ? panel.pressedBackgroundColor
+                          : panel.highlightedRow === row.index ? panel.hoverBackgroundColor
                           : "transparent"
                 }
 
@@ -179,7 +180,7 @@ Item {
                     verticalAlignment: Text.AlignVCenter
                     color: row.rowTextColor
                     font: panel.menuFont
-                    text: model.text
+                    text: row.model.text
                     textFormat: Text.PlainText
                     renderType: Text.NativeRendering
                     elide: Text.ElideRight
@@ -225,7 +226,7 @@ Item {
                     cursorShape: Qt.ArrowCursor
                     onHoveredChanged: {
                         if (hovered)
-                            panel.host.hoverRow(panel, index)
+                            panel.host.hoverRow(panel, row.index)
                     }
                 }
 
@@ -236,15 +237,15 @@ Item {
                         mouse.accepted = true
                         if (!row.active)
                             return
-                        panel.pressedRow = index
+                        panel.pressedRow = row.index
                     }
                     onReleased: (mouse) => {
-                        const releasedHere = panel.pressedRow === index
+                        const releasedHere = panel.pressedRow === row.index
                                              && mouse.x >= 0 && mouse.x < width
                                              && mouse.y >= 0 && mouse.y < height
                         panel.pressedRow = -1
                         if (releasedHere)
-                            panel.host.activateRow(panel, index)
+                            panel.host.activateRow(panel, row.index)
                     }
                     onCanceled: panel.pressedRow = -1
                 }
@@ -259,6 +260,6 @@ Item {
         }
 
         Accessible.role: Accessible.PopupMenu
-        Accessible.name: rootLevel ? qsTr("Menu") : qsTr("Submenu")
+        Accessible.name: panel.rootLevel ? qsTr("Menu") : qsTr("Submenu")
     }
 }

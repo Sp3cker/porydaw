@@ -25,8 +25,8 @@ Rectangle {
     Accessible.focusable: enabled
     Accessible.onPressAction: button.activate()
 
-    width: Math.max(labelWidth + 2 * appearance.buttonPadding, minimumWidth)
-    height: label.implicitHeight + 2 * appearance.buttonPadding
+    implicitWidth: Math.max(labelWidth + 2 * appearance.buttonPadding, minimumWidth)
+    implicitHeight: label.implicitHeight + 2 * appearance.buttonPadding
     color: tap.pressed ? appearance.pressedBackground : appearance.buttonBackground
     border.width: appearance.borderWidth
     border.color: activeFocus ? appearance.focus : appearance.outline
@@ -45,6 +45,7 @@ Rectangle {
         color: button.appearance.buttonText
         font: button.appearance.font
         text: button.text
+        textFormat: Text.PlainText
         renderType: Text.NativeRendering
     }
 
@@ -70,9 +71,6 @@ Rectangle {
     TapHandler {
         id: tap
 
-        onPressedChanged: console.log("PROMPT_BUTTON pressed", button.objectName, pressed)
-        onGrabChanged: (transition, point) =>
-            console.log("PROMPT_BUTTON grab", button.objectName, transition, point.position)
         onTapped: button.activate()
     }
 }

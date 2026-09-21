@@ -150,10 +150,10 @@ extension VoiceChangesPage {
     @discardableResult
     func dispatchPointerRelease(x: Double, y: Double, button: Int) -> Bool {
         guard let session else { return false }
-        _ = x
         _ = y
         if button == VoiceQtButton.middle {
             cancelPan()
+            publishHoverHintProfile(marker: markerHit(at: x) != nil)
             return true
         }
         guard button == VoiceQtButton.left, let live = drag else { return false }
@@ -164,6 +164,7 @@ extension VoiceChangesPage {
             points: lanePoints())
         cancelDrag()
         if let mutation { commit(mutation) }
+        publishHoverHintProfile(marker: markerHit(at: x) != nil)
         return true
     }
 
@@ -437,8 +438,10 @@ extension VoiceChangesPage {
             clearHover()
             return
         }
+        let hit = markerHit(at: x)
+        publishHoverHintProfile(marker: hit != nil)
         let pad = fontPx(VoiceChangesPagePolicy.spaceOneFactor)
-        if let hit = markerHit(at: x) {
+        if let hit {
             let identity = VoiceOccurrence(hit).text
             let lineX = xForTick(hit.tick)
             let rect = VoiceMarkerHandle.rect(lineX + pad, 0, max(0, plotWidth - lineX),
@@ -472,6 +475,7 @@ extension VoiceChangesPage {
     }
 
     private func clearHover() {
+        publishHoverHintProfile(marker: false)
         guard hoverIdentity != nil || hoverVisible || !hoverText.isEmpty || hoverTick != 0
         else { return }
         hoverIdentity = nil

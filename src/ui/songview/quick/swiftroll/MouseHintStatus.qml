@@ -21,6 +21,7 @@ Rectangle {
         font: Application.font
         color: root.statusPalette.windowText
         text: root.presenter.text
+        textFormat: Text.PlainText
         elide: Text.ElideRight
         verticalAlignment: Text.AlignVCenter
     }

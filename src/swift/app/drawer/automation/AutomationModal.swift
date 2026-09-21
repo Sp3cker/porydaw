@@ -181,8 +181,7 @@ extension AutomationPage {
                 AutomationMenuRowHandle(actionId: AutomationMenuAction.rangeCut.rawValue,
                                         text: "Cut", enabled: covered),
                 AutomationMenuRowHandle(actionId: AutomationMenuAction.rangePaste.rawValue,
-                                        text: "Paste", enabled: hasClipboard
-                                            && selectionCommandAvailable(command: .paste)),
+                                        text: "Paste", enabled: selectionCommandAvailable(command: .paste)),
                 AutomationMenuRowHandle(separator: true),
                 AutomationMenuRowHandle(actionId: AutomationMenuAction.rangeDelete.rawValue,
                                         text: "Delete", enabled: covered),

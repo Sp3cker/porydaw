@@ -27,11 +27,6 @@ FocusScope {
         childRow = -1
         if (showing) {
             forceActiveFocus(Qt.PopupFocusReason)
-            Qt.callLater(function() {
-                console.log("AUTOMATION_MENU_INITIAL", root.showing, root.currentRow,
-                            root.currentActionId(), root.model.menuRowCount, panel.rowCount,
-                            !!panel.rowItem(0), !!panel.rowItem(1))
-            })
         }
         else closed()
     }
@@ -80,11 +75,6 @@ FocusScope {
         onPressed: mouse => {
             const p = root.pageItem ? mapToItem(root.pageItem, mouse.x, mouse.y) : Qt.point(-1, -1)
             root.model.outsideMenuPress(p.x - root.model.plotOrigin, p.y, mouse.button)
-            Qt.callLater(function() {
-                console.log("AUTOMATION_MENU_OUTSIDE", root.showing, root.currentRow,
-                            root.currentActionId(), root.model.menuRowCount, panel.rowCount,
-                            !!panel.rowItem(0), !!panel.rowItem(1), p.x, p.y)
-            })
         }
     }
     Shared.QuickMenuPanel {
@@ -96,8 +86,12 @@ FocusScope {
         rootLevel: true
         rowObjectNamePrefix: "automationMenuRow_"
         rowHeight: root.rowHeight
-        checkX: 4; checkWidth: 14; textX: 22; textRight: 22
-        arrowRight: 5; arrowWidth: 10
+        checkX: Math.round(root.model.baseFontPx * 0.3)
+        checkWidth: Math.round(root.model.baseFontPx * 1.1)
+        textX: Math.round(root.model.baseFontPx * 1.7)
+        textRight: menuWidth - textX
+        arrowRight: menuWidth - Math.round(root.model.baseFontPx * 0.4)
+        arrowWidth: Math.round(root.model.baseFontPx * 0.8)
         menuWidth: Math.min(root.width, root.model.baseFontPx * 18)
         menuHeight: Math.min(root.height, root.model.menuRowCount * rowHeight + 2)
         x: Math.max(0, Math.min(root.anchor.x, root.width - menuWidth))
@@ -118,7 +112,10 @@ FocusScope {
         appearance: root.appearance
         rowObjectNamePrefix: "automationMenuChildRow_"
         rowHeight: root.rowHeight
-        checkX: 4; checkWidth: 14; textX: 22; textRight: 6
+        checkX: panel.checkX
+        checkWidth: panel.checkWidth
+        textX: panel.textX
+        textRight: menuWidth - Math.round(root.model.baseFontPx * 0.5)
         menuWidth: panel.menuWidth
         menuHeight: Math.min(root.height, root.model.menuChildRowCount * rowHeight + 2)
         x: panel.x + panel.width + width <= root.width
@@ -147,8 +144,8 @@ FocusScope {
         }
         else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
             activateRow(childOpen ? submenu : panel, childOpen ? childRow : currentRow)
-        else return
         event.accepted = true
     }
-    Keys.onShortcutOverride: event => event.accepted = event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+    Keys.onShortcutOverride: event => event.accepted = true
+    Keys.onReleased: event => event.accepted = true
 }

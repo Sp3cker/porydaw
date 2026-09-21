@@ -35,6 +35,15 @@ public enum AutomationPagePolicy {
     public static let accessibleName = "Automation"
 }
 
+/// Mouse-hint profile IDs owned by the shared profile catalog.
+private enum AutomationHintProfile {
+    static let empty = 0
+    static let node = 15
+    static let originPhantom = 16
+    static let sweep = 17
+    static let pencil = 18
+}
+
 @MainActor
 @QtBridgeable
 public final class AutomationPage: EditorDrawerPage {
@@ -104,7 +113,17 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored public private(set) var contextValue: Int?
     @QtIgnored public private(set) var playing = false
     /// The shared pencil tool's state, owned by the window's edit commands.
-    public var isPencilMode: Bool = false
+    @QtTracked public var isPencilMode: Bool = false {
+        willSet {
+            if newValue != isPencilMode {
+                publishHoverHintProfile(
+                    targetOverride: hoverHintTargetAtPointer(),
+                    pencilModeOverride: newValue)
+            }
+        }
+    }
+    /// The shared mouse-hint profile resolved for the plot's current hover.
+    public var hoverHintProfile: Int = AutomationHintProfile.empty
     public var plotFocused: Bool = false
 
     // MARK: Published primitives
@@ -320,6 +339,7 @@ public final class AutomationPage: EditorDrawerPage {
     var tapGuard: (revision: UInt64, parameter: AutomationParameter)?
     let tapClock = AutomationMonotonicClock()
     var hoverX: Double = 0
+    var hoverY: Double = 0
     var lastPresentation: (tick: Tick, playing: Bool)?
 
     // Published-model snapshots: the lane reads the same values the QML renders.
@@ -457,8 +477,39 @@ public final class AutomationPage: EditorDrawerPage {
     func applyHover(_ next: AutomationHover?, countingPublication: Bool) -> Bool {
         guard next != hover else { return false }
         hover = next
+        publishHoverHintProfile()
         if countingPublication { hoverBuildCount &+= 1 }
         return true
+    }
+
+    func hoverHintTargetAtPointer() -> AutomationHoverHintTarget? {
+        guard hover != nil, let projection else { return nil }
+        return AutomationHover.hintTarget(
+            x: hoverX, y: hoverY, lane: projection,
+            pointHitRadius: geometry.pointHitRadius)
+    }
+
+    func publishHoverHintProfile(
+        targetOverride: AutomationHoverHintTarget? = nil,
+        pencilModeOverride: Bool? = nil
+    ) {
+        let pencilMode = pencilModeOverride ?? isPencilMode
+        let profile: Int
+        if let hover {
+            let target = targetOverride ?? hover.hintTarget
+            switch (!pencilMode || hover.nodeMarkersVisible, target) {
+            case (true, .originPhantom):
+                profile = AutomationHintProfile.originPhantom
+            case (true, .node):
+                profile = AutomationHintProfile.node
+            default:
+                profile = pencilMode ? AutomationHintProfile.pencil
+                    : AutomationHintProfile.sweep
+            }
+        } else {
+            profile = AutomationHintProfile.empty
+        }
+        if hoverHintProfile != profile { hoverHintProfile = profile }
     }
 
     func applyPrompt(_ next: AutomationPromptTransaction?) {

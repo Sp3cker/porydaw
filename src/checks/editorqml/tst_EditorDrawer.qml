@@ -59,12 +59,21 @@ TestCase {
                                        "activePage"]
     readonly property string absentKey: "__absent__"
 
-    // Key traffic that crosses the drawer unclaimed and reaches the surface's
-    // ancestors. Production hands the bare Space key to the window transport;
-    // the lane proves only the controls' own claim policy.
+    // Parent counters observe ordinary unclaimed key presses. The real window
+    // shortcut below separately checks numeric focus at Qt's ShortcutOverride
+    // phase, before key-press propagation.
     property int spacePropagations: 0
     property int returnPropagations: 0
     property int leftPropagations: 0
+    property bool windowSpaceProbeActive: false
+    property int windowSpaceActivations: 0
+
+    Shortcut {
+        sequence: "Space"
+        context: Qt.WindowShortcut
+        enabled: testCase.windowSpaceProbeActive
+        onActivated: testCase.windowSpaceActivations += 1
+    }
 
     property var surface: null
     property real pressSceneY: 0
@@ -86,6 +95,43 @@ TestCase {
     Keys.onLeftPressed: (event) => {
         testCase.leftPropagations += 1
         event.accepted = true
+    }
+
+    function test_numericFieldWindowShortcutPriority_data() {
+        return [
+            { tag: "velocity", kind: testCase.velocityKind },
+            { tag: "automation", kind: testCase.automationKind }
+        ]
+    }
+
+    function test_numericFieldWindowShortcutPriority(data) {
+        if (testCase.containerPhase) skip("the production owner runs in its own process")
+        var location = bootstrap.preferencesUrl("numeric-space-" + data.tag)
+        var field
+        if (data.kind === testCase.velocityKind) {
+            testCase.mountProductionVelocity(location)
+            testCase.clickNode(testCase.velocityNodes()[0])
+            tryCompare(testCase.velocityModel(), "selectedCount", 1)
+            testCase.surface.applicationSession.performGridCommand(bootstrap.setVelocityCommand())
+            tryCompare(testCase.velocityModel(), "promptOpen", true)
+            field = findChild(testCase.velocityPageItem(), "noteVelocityInput")
+        } else {
+            testCase.mountProductionAutomation(location)
+            verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
+            verify(testCase.openAutomationNodeMenu(testCase.automationWrittenNodeIndex()))
+            verify(testCase.triggerAutomationMenuRow(1))
+            testCase.awaitAutomationModal("automationPrompt", true)
+            field = findChild(testCase.automationPageItem(), "automationPromptInput")
+        }
+        verify(field, "the real numeric field is mounted")
+        tryCompare(field, "activeFocus", true)
+        var draft = field.text
+        var expected = testCase.windowSpaceActivations + 1
+        testCase.windowSpaceProbeActive = true
+        keyClick(Qt.Key_Space)
+        tryCompare(testCase, "windowSpaceActivations", expected, 1000,
+                   "a focused numeric field yields Space to a real window shortcut")
+        compare(field.text, draft, "the transport key does not change numeric text")
     }
 
     // Production session creation: RewriteWindow.cpp builds
@@ -117,6 +163,27 @@ TestCase {
         id: storeComponent
 
         Settings { category: "editorDrawer" }
+    }
+
+    function test_automationModalsRetireWithPage() {
+        if (testCase.containerPhase) skip("the production owner runs in its own process")
+        testCase.mountProductionAutomation(bootstrap.preferencesUrl("automation-modal-lifetime"))
+        var loader = findChild(testCase.surface, "drawerBody_automation")
+        var host = findChild(testCase.surface, "drawerModalLayer")
+        verify(loader && host, "the production loader and external modal host are present")
+        verify(findChild(host, "automationMenu"), "the page creates its hosted menu")
+        verify(findChild(host, "automationPrompt"), "the page creates its hosted prompt")
+        bootstrap.cancelInput()
+        try {
+            loader.setSource("")
+            tryVerify(function() {
+                return !findChild(host, "automationMenu") && !findChild(host, "automationPrompt")
+            }, 1000, "unloading the page retires both modals while their host survives")
+        } finally {
+            loader.syncSource()
+            tryVerify(function() { return !!testCase.automationPageItem() }, 1000,
+                      "the existing document owner remounts through the same production loader")
+        }
     }
 
     // The staged route101 project and song open through the real production path:
@@ -202,6 +269,7 @@ TestCase {
     // releases this case's attachments through the container's own detach, so
     // nothing the scene bound is destroyed to end a case.
     function cleanup() {
+        testCase.windowSpaceProbeActive = false
         // A case ends by settling what it opened: every live page interaction ends
         // through the composition's own cancellation path, and both modal surfaces
         // are waited down to their drawn closed state, so the next case starts
@@ -1689,6 +1757,73 @@ TestCase {
         return testCase.velocityPageItem()
     }
 
+    function test_velocityHintsResumeAfterOutsideRelease() {
+        if (testCase.containerPhase) skip("the production owner runs in its own process")
+        testCase.mountProductionVelocity(bootstrap.preferencesUrl("velocity-hint-release"))
+        var input = testCase.velocityPlotInput()
+        var ruler = testCase.velocityRuler()
+        var status = findChild(testCase.surface, "mouseHintStatus")
+        var text = findChild(status, "mouseHintStatusText")
+        verify(status && text, "the production status strip is drawn")
+        tryCompare(testCase.surface, "hintWindowActive", true)
+        mouseMove(status, status.width / 2, status.height / 2)
+        tryCompare(text, "text", "")
+
+        var x = input.width / 2
+        var y = input.height / 2
+        mouseMove(input, x, y)
+        tryVerify(function() { return text.text.length > 0 }, 1000,
+                  "the plot supplies instructions before the gesture")
+        var plotInstructions = text.text
+        mouseMove(ruler, ruler.width / 2, ruler.height / 2)
+        tryVerify(function() {
+            return text.text.length > 0 && text.text !== plotInstructions
+        }, 1000, "the gutter advertises its different interaction")
+        mouseMove(input, x, y)
+        tryCompare(text, "text", plotInstructions)
+
+        // Keep x fixed so the middle-button grab changes no camera position.
+        var outside = input.mapFromItem(status, status.width / 2, status.height / 2)
+        mousePress(input, x, y, Qt.MiddleButton)
+        mouseMove(input, x, outside.y, -1, Qt.MiddleButton)
+        mouseRelease(input, x, outside.y, Qt.MiddleButton)
+        tryCompare(text, "text", "", 1000,
+                   "an outside release retires the originating plot instructions")
+        mouseMove(input, x, y)
+        tryCompare(text, "text", plotInstructions, 1000,
+                   "returning to the plot restores its instructions")
+    }
+
+    function test_automationHintsRetainGrabOrigin() {
+        if (testCase.containerPhase) skip("the production owner runs in its own process")
+        testCase.mountProductionAutomation(bootstrap.preferencesUrl("automation-hint-grab"))
+        verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
+        var node = testCase.automationLaneNodes()[testCase.automationWrittenNodeIndex()]
+        var point = testCase.automationNodePoint(node)
+        verify(point, "the written node has a drawn hit target")
+        var input = testCase.automationPlotInput()
+        var status = findChild(testCase.surface, "mouseHintStatus")
+        var text = findChild(status, "mouseHintStatusText")
+        verify(status && text, "the production status strip is drawn")
+        tryCompare(testCase.surface, "hintWindowActive", true)
+        mouseMove(status, status.width / 2, status.height / 2)
+        tryCompare(text, "text", "")
+        mouseMove(input, point.x, point.y)
+        tryVerify(function() { return text.text.length > 0 }, 1000,
+                  "the node advertises its interaction before the grab")
+        var instructions = text.text
+        var outside = input.mapFromItem(status, status.width / 2, status.height / 2)
+        mousePress(input, point.x, point.y, Qt.MiddleButton)
+        tryCompare(text, "text", instructions, 1000,
+                   "starting a grab retains the originating node instructions")
+        mouseMove(input, point.x, outside.y, -1, Qt.MiddleButton)
+        compare(text.text, instructions, "the originating instructions survive outside motion")
+        mouseRelease(input, point.x, outside.y, Qt.MiddleButton)
+        tryCompare(text, "text", "", 1000, "outside release retires the originating instructions")
+        mouseMove(input, point.x, point.y)
+        tryCompare(text, "text", instructions, 1000, "re-entry restores node instructions")
+    }
+
     /// Renders one reference pane and records its metadata. The observed facts
     /// must be the requested profile's, so a DPR or font mismatch fails here
     /// rather than in a reviewer's eye.
@@ -2682,17 +2817,6 @@ TestCase {
         var accept = findChild(testCase.surface, "automationPromptAccept")
         verify(accept, "the confirmation draws its explicit Delete action")
         verify(waitForPolish(accept.Window.window), "the confirmation completed layout before input")
-        var clickPoint = accept.mapToItem(testCase.surface, accept.width / 2, accept.height / 2)
-        console.log("DRAWER_CHECK_DELETE_POINT", clickPoint.x, clickPoint.y,
-                    "surface", testCase.surface.width, testCase.surface.height,
-                    "window", accept.Window.window.width, accept.Window.window.height)
-        for (var ancestor = accept; ancestor; ancestor = ancestor.parent) {
-            var bounds = ancestor.mapToItem(testCase.surface, 0, 0)
-            console.log("DRAWER_CHECK_DELETE_ANCESTOR", ancestor.objectName, String(ancestor),
-                        bounds.x, bounds.y, ancestor.width, ancestor.height,
-                        "visible", ancestor.visible, "enabled", ancestor.enabled,
-                        "clip", ancestor.clip, "z", ancestor.z)
-        }
         mouseClick(accept, accept.width / 2, accept.height / 2, Qt.LeftButton)
         tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
                   "the confirmation's acceptance closed the form")
@@ -4606,7 +4730,7 @@ TestCase {
         compare(bootstrap.automationTapCount(), 0, "the Space key registered no tap")
         testCase.resetAutomationTap()
 
-        // The open menu claims only Return/Enter.
+        // The original popup host contains Space without activating a command.
         var nodes = testCase.automationLaneNodes()
         verify(nodes.length > 0, "the Volume lane projects a written node")
         verify(testCase.rightClickAutomationNode(0), "the first drawn node has a centre")
@@ -4614,29 +4738,15 @@ TestCase {
                   "the node menu opened")
         testCase.awaitAutomationModal("automationMenu", true)
         keyClick(Qt.Key_Space)
-        tryVerify(function() { return testCase.spacePropagations === propagations + 1 }, 2000,
-                  "the automation menu leaves bare Space to the window transport")
+        compare(testCase.spacePropagations, propagations,
+                "the automation menu contains Space instead of leaking into transport")
+        compare(bootstrap.automationMenuOpen(), true, "Space leaves the menu open")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "menu keyboard input does not edit the song")
         keyClick(Qt.Key_Escape)
         tryVerify(function() { return !bootstrap.automationMenuOpen() }, 2000,
                   "Escape closed the menu")
 
-        // The prompt's own field is the explicit text-entry surface.
-        verify(testCase.openAutomationNodeMenu(testCase.automationWrittenNodeIndex()),
-               "the written node's menu opened")
-        verify(testCase.triggerAutomationMenuRow(1),
-               "the menu's Set Value row is the current one")
-        compare(bootstrap.automationPromptOpen(), true, "the prompt opened")
-        testCase.awaitAutomationModal("automationPrompt", true)
-        var field = findChild(testCase.automationPageItem(), "automationPromptInput")
-        verify(field, "the prompt composed its value field")
-        tryVerify(function() { return field.activeFocus }, 2000, "the field took active focus")
-        keyClick(Qt.Key_Space)
-        wait(0)
-        compare(testCase.spacePropagations, propagations + 1,
-                "the focused value field keeps Space out of the transport")
-        keyClick(Qt.Key_Escape)
-        tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
-                  "Escape closed the prompt")
         compare(bootstrap.automationMenuOpen(), false, "the case left no menu open")
         verify(bootstrap.cancelInput(), "the composition's own cancellation settles the page")
         compare(bootstrap.automationInteractionActive(), false,
