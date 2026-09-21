@@ -49,6 +49,14 @@ import PorydawCore
 // The four native MIME clipboard gaps stay separate: the clipboard cases below
 // cover only the in-process semantic payload.
 
+/// The QML modifier flags a check's `AutomationModifiers` stand for, so every
+/// case drives the production input route instead of a Swift-only shorthand.
+private func qtModifiers(_ modifiers: AutomationModifiers) -> Int {
+    (modifiers.shift ? AutomationQtModifier.shift : 0)
+        | (modifiers.fine ? AutomationQtModifier.alt : 0)
+        | (modifiers.snapValue ? AutomationQtModifier.control : 0)
+}
+
 private let catalogID = "swiftcore/AutomationPage::parameterCatalogAndMetadata"
 private let projectionID = "swiftcore/AutomationPage::laneProjection"
 private let identityID = "swiftcore/AutomationPage::pointIdentityAndStaleness"
@@ -155,9 +163,10 @@ private struct AutomationFixture {
         self.session = session
         self.document = document
         page = AutomationPage(baseFontPx: baseFontPx)
-        page.attach(session: session)
+        page.attach(session: session, palette: GridPalette())
         if plotted {
-            page.configureBody(width: 480, height: 120, devicePixelRatio: 1, baseFontPx: baseFontPx)
+            page.configureBody(width: 480, height: 120, gutter: 0, devicePixelRatio: 1,
+                               baseFontPx: baseFontPx, dragDistance: 10)
         }
         session.onChange = { [weak page] _ in page?.refreshFromDocument() }
         session.onCameraChange = { [weak page] _ in page?.refreshCamera() }
@@ -248,6 +257,32 @@ private struct AutomationFixture {
     }
 
     func undo() -> Bool { (try? runBlocking { try await session.undo() }) ?? false }
+
+    /// One node drag through the page's public pointer route, in plot
+    /// coordinates, carrying the raw Qt modifier bits a QML event supplies. The
+    /// pointer arms the drag with a travel past the activation distance and then
+    /// settles, so the drag's own delta lands the mapped value on `target` while
+    /// the tick keeps the press's column; `true` means the press itself was
+    /// taken. A release's return value is the commit's outcome, so a caller
+    /// asserts the lane it produced.
+    @discardableResult
+    func drag(_ parameter: AutomationParameter, from: (tick: Tick, value: Int),
+              to target: Int, armPixels: Double = 30, modifiers: Int) -> Bool {
+        let surface = AutomationInputSurface.plot.rawValue
+        let button = AutomationQtButton.left
+        let pressX = x(from.tick)
+        let pressY = y(parameter, from.value)
+        let targetY = y(parameter, target)
+        let pressed = page.pointerPress(x: pressX, y: pressY, surface: surface, button: button,
+                                        modifiers: modifiers)
+        let armY = pressY - armPixels
+        _ = page.pointerMove(x: pressX, y: armY, buttons: button, modifiers: modifiers)
+        _ = page.pointerMove(x: pressX, y: armY + (targetY - pressY), buttons: button,
+                             modifiers: modifiers)
+        _ = page.pointerRelease(x: pressX, y: armY + (targetY - pressY), button: button,
+                                modifiers: modifiers)
+        return pressed
+    }
 }
 
 @MainActor
@@ -296,6 +331,8 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     nodeDragAndPhantomOutcomes(report, suite: session, service: service)
     pointRangeAndPencilReplacements(report, suite: session, service: service)
     xcmdParity(report, suite: session, service: service)
+    tapTempoCadenceAndCommit(report, suite: session, service: service)
+    qtModifierMapping(report, suite: session, service: service)
 }
 
 // MARK: - Catalog and metadata
@@ -1199,7 +1236,7 @@ private func cancellationAndNoOps(_ report: CheckReport, suite: DocumentSession,
     let before = fixture.snapshot
 
     // A press and cancel writes nothing and ends every owned interaction.
-    report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64)),
+    report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64), surface: 1, button: 1),
                   cppID: cancelID, message: "a press on a node grabs it")
     report.expect(fixture.page.hasGesture && fixture.page.interactionActive, cppID: cancelID,
                   message: "the page publishes the live gesture")
@@ -1213,24 +1250,24 @@ private func cancellationAndNoOps(_ report: CheckReport, suite: DocumentSession,
                   message: "Escape with nothing to claim stays unhandled")
 
     // A stroke that never travelled commits nothing.
-    report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64)),
+    report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64), surface: 1, button: 1),
                   cppID: cancelID, message: "a second press grabs the node")
-    _ = fixture.page.pointerMove(x: fixture.x(24) + 12, y: fixture.y(fixture.panLane, 64))
-    _ = fixture.page.pointerRelease(x: fixture.x(24) + 12, y: fixture.y(fixture.panLane, 64))
+    _ = fixture.page.pointerMove(x: fixture.x(24) + 12, y: fixture.y(fixture.panLane, 64), buttons: 1)
+    _ = fixture.page.pointerRelease(x: fixture.x(24) + 12, y: fixture.y(fixture.panLane, 64), button: 1)
     report.expectEqual(before, fixture.snapshot, cppID: cancelID,
                        what: "an armed stroke that moved no node writes nothing")
 
     // Shift-held stationary release is a no-op; plain stationary release deletes.
     report.expect(fixture.page.pointerPress(x: fixture.x(120), y: fixture.y(fixture.panLane, 40),
-                                            modifiers: .init(shift: true)), cppID: cancelID,
+                                            surface: 1, button: 1, modifiers: qtModifiers(.init(shift: true))), cppID: cancelID,
                   message: "a Shift-held press grabs the node")
     _ = fixture.page.pointerRelease(x: fixture.x(120), y: fixture.y(fixture.panLane, 40),
-                                    modifiers: .init(shift: true))
+                                    button: 1, modifiers: qtModifiers(.init(shift: true)))
     report.expectEqual(before, fixture.snapshot, cppID: cancelID,
                        what: "a Shift-held stationary release deletes nothing")
-    report.expect(fixture.page.pointerPress(x: fixture.x(120), y: fixture.y(fixture.panLane, 40)),
+    report.expect(fixture.page.pointerPress(x: fixture.x(120), y: fixture.y(fixture.panLane, 40), surface: 1, button: 1),
                   cppID: cancelID, message: "a plain press grabs the node")
-    _ = fixture.page.pointerRelease(x: fixture.x(120), y: fixture.y(fixture.panLane, 40))
+    _ = fixture.page.pointerRelease(x: fixture.x(120), y: fixture.y(fixture.panLane, 40), button: 1)
     report.expectEqual(["24:64"], fixture.values(fixture.panLane), cppID: cancelID,
                        what: "a plain stationary release deletes the grabbed node")
     report.expect(fixture.undo(), cppID: cancelID, message: "the stationary delete is undoable")
@@ -1241,7 +1278,7 @@ private func cancellationAndNoOps(_ report: CheckReport, suite: DocumentSession,
 
     // A stale revision cancels the frozen interaction instead of retargeting it.
     let pressRevision = fixture.document.revision
-    report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64)),
+    report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64), surface: 1, button: 1),
                   cppID: cancelID, message: "a press freezes the current revision")
     report.expectEqual(pressRevision, fixture.page.frozenRevision ?? 0, cppID: cancelID,
                        what: "the frozen facts carry the revision")
@@ -1250,8 +1287,8 @@ private func cancellationAndNoOps(_ report: CheckReport, suite: DocumentSession,
     report.expect(!fixture.page.hasGesture, cppID: cancelID,
                   message: "a document change outside the gesture cancels it")
     let afterStale = fixture.snapshot
-    _ = fixture.page.pointerMove(x: fixture.x(24) + 40, y: fixture.y(fixture.panLane, 64))
-    _ = fixture.page.pointerRelease(x: fixture.x(24) + 40, y: fixture.y(fixture.panLane, 64))
+    _ = fixture.page.pointerMove(x: fixture.x(24) + 40, y: fixture.y(fixture.panLane, 64), buttons: 1)
+    _ = fixture.page.pointerRelease(x: fixture.x(24) + 40, y: fixture.y(fixture.panLane, 64), button: 1)
     report.expectEqual(afterStale, fixture.snapshot, cppID: cancelID,
                        what: "a cancelled stale gesture never writes on release")
 
@@ -1260,9 +1297,9 @@ private func cancellationAndNoOps(_ report: CheckReport, suite: DocumentSession,
     empty.activate(empty.panLane)
     let emptyBefore = empty.snapshot
     let pressX = empty.x(72)
-    report.expect(empty.page.pointerPress(x: pressX, y: 60), cppID: cancelID,
+    report.expect(empty.page.pointerPress(x: pressX, y: 60, surface: 1, button: 1), cppID: cancelID,
                   message: "a press on an empty lane starts a sweep")
-    report.expect(!empty.page.pointerRelease(x: pressX, y: 60), cppID: cancelID,
+    report.expect(!empty.page.pointerRelease(x: pressX, y: 60, button: 1), cppID: cancelID,
                   message: "a press that never travelled commits nothing")
     report.expectEqual(emptyBefore, empty.snapshot, cppID: cancelID,
                        what: "the parked press leaves the document alone")
@@ -1277,9 +1314,9 @@ private func cancellationAndNoOps(_ report: CheckReport, suite: DocumentSession,
     // A sub-threshold move leaves a frozen gesture alive but unchanged.
     let jitter = AutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     jitter.activate(jitter.panLane)
-    report.expect(jitter.page.pointerPress(x: jitter.x(24), y: jitter.y(jitter.panLane, 64)),
+    report.expect(jitter.page.pointerPress(x: jitter.x(24), y: jitter.y(jitter.panLane, 64), surface: 1, button: 1),
                   cppID: cancelID, message: "a press grabs the node")
-    _ = jitter.page.pointerMove(x: jitter.x(24) + 2, y: jitter.y(jitter.panLane, 64) + 2)
+    _ = jitter.page.pointerMove(x: jitter.x(24) + 2, y: jitter.y(jitter.panLane, 64) + 2, buttons: 1)
     report.expectEqual([Tick(24): 64], [jitter.page.previewPoints.first?.tick ?? 0:
                                             jitter.page.previewPoints.first?.value ?? 0],
                        cppID: cancelID,
@@ -1368,13 +1405,13 @@ private func contextAndPublicationDiagnostics(_ report: CheckReport, suite: Docu
     // Hover: a node publishes its own value text, the background the held value.
     let hoverBuilds = fixture.page.hoverBuildCount
     _ = fixture.page.pointerMove(x: fixture.x(96), y: fixture.y(fixture.volumeLane, 64),
-                                 pressed: false)
+                                 buttons: 0)
     report.expect(fixture.page.hover?.hasPoint == true, cppID: contextID,
                   message: "a hover on a node publishes the node")
     report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: contextID,
                        what: "a node hover reads out the node's value")
     _ = fixture.page.pointerMove(x: fixture.x(150), y: fixture.y(fixture.volumeLane, 20),
-                                 pressed: false)
+                                 buttons: 0)
     report.expect(fixture.page.hover?.hasPoint == false, cppID: contextID,
                   message: "a hover on the background publishes the tick")
     report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: contextID,
@@ -1628,15 +1665,15 @@ private func panNeutralSnap(_ report: CheckReport, suite: DocumentSession,
     let nodeX = fixture.x(24)
     let nodeY = fixture.y(fixture.panLane, 72)
     let modifiers = AutomationModifiers(snapValue: true)
-    report.expect(fixture.page.pointerPress(x: nodeX, y: nodeY, modifiers: modifiers),
+    report.expect(fixture.page.pointerPress(x: nodeX, y: nodeY, surface: 1, button: 1, modifiers: qtModifiers(modifiers)),
                   cppID: neutralSnapID, message: "a snapped press grabs the node under the pointer")
-    _ = fixture.page.pointerMove(x: nodeX + 12, y: nodeY, modifiers: modifiers)
+    _ = fixture.page.pointerMove(x: nodeX + 12, y: nodeY, buttons: 1, modifiers: qtModifiers(modifiers))
     report.expectEqual(Tick(24), fixture.page.previewPoints.first?.tick ?? 0, cppID: neutralSnapID,
                        what: "the armed preview keeps the node's own tick")
-    _ = fixture.page.pointerMove(x: nodeX + 12, y: nodeY, modifiers: modifiers)
+    _ = fixture.page.pointerMove(x: nodeX + 12, y: nodeY, buttons: 1, modifiers: qtModifiers(modifiers))
     report.expectEqual(64, fixture.page.previewPoints.first?.value ?? 0, cppID: neutralSnapID,
                        what: "the preview publishes the snapped neutral")
-    _ = fixture.page.pointerRelease(x: nodeX + 12, y: nodeY, modifiers: modifiers)
+    _ = fixture.page.pointerRelease(x: nodeX + 12, y: nodeY, button: 1, modifiers: qtModifiers(modifiers))
     report.expectEqual(["24:64"], fixture.values(fixture.panLane), cppID: neutralSnapID,
                        what: "the snapped release writes the neutral at the node's own tick")
 }
@@ -1954,11 +1991,11 @@ private func pointRangeAndPencilReplacements(_ report: CheckReport, suite: Docum
     committed.activate(committed.modulationLane)
     committed.page.isPencilMode = true
     let strokeY = committed.y(committed.modulationLane, 60)
-    report.expect(committed.page.pointerPress(x: committed.x(24), y: strokeY), cppID: pointRangeID,
+    report.expect(committed.page.pointerPress(x: committed.x(24), y: strokeY, surface: 1, button: 1), cppID: pointRangeID,
                   message: "the pencil press starts a stroke")
     report.expect(committed.page.isPainting, cppID: pointRangeID,
                   message: "the page publishes the painting gesture")
-    report.expect(committed.page.pointerRelease(x: committed.x(24), y: strokeY), cppID: pointRangeID,
+    report.expect(committed.page.pointerRelease(x: committed.x(24), y: strokeY, button: 1), cppID: pointRangeID,
                   message: "the pencil release commits")
     report.expectEqual(committedBefore.revision + 1, committed.document.revision, cppID: pointRangeID,
                        what: "one pencil press and release is one revision")
@@ -2004,4 +2041,203 @@ private func xcmdParity(_ report: CheckReport, suite: DocumentSession,
                        what: "the XCMD lane writes its projected replacement")
     report.expectEqual(before.revision + 1, fixture.document.revision, cppID: projectionID,
                        what: "one XCMD replacement is one revision")
+}
+
+private let tapTempoID = "swiftcore/AutomationPage::tapTempoCadenceAndCommit"
+private let modifierMappingID = "swiftcore/AutomationPage::qtModifierMapping"
+
+/// The pure tap-tempo session and the page's captured commit. A fixed cadence
+/// averages over the newest intervals only, a gap past the production distance
+/// starts a fresh session, and the idle window records exactly one tempo edit
+/// and one history entry — or nothing at all for a stale capture, a moved
+/// parameter and a draft that names the tempo already in place.
+@MainActor
+private func tapTempoCadenceAndCommit(_ report: CheckReport, suite: DocumentSession,
+                                      service: ProjectService) {
+    var cadence = AutomationTapTempoSession()
+    report.expectEqual(0, cadence.draftBpm, cppID: tapTempoID,
+                       what: "a fresh session holds no draft")
+    report.expect(!cadence.readyToCommit && cadence.idleCommitMs == AutomationTapTempoSession.gapMs,
+                  cppID: tapTempoID,
+                  message: "a draft-less session cannot commit and publishes the gap as its window")
+
+    cadence.registerTap(nowMs: 1000)
+    report.expect(cadence.tapCount == 1 && cadence.draftBpm == 0 && !cadence.readyToCommit,
+                  cppID: tapTempoID,
+                  message: "the first tap starts a session and names no tempo")
+
+    for step in 1...5 { cadence.registerTap(nowMs: 1000 + Int64(step) * 500) }
+    report.expectEqual(6, cadence.tapCount, cppID: tapTempoID,
+                       what: "six taps stand in the session")
+    report.expectEqual(120, cadence.draftBpm, cppID: tapTempoID,
+                       what: "a steady 500 ms cadence drafts 120 BPM")
+    report.expectEqual(750, cadence.idleCommitMs, cppID: tapTempoID,
+                       what: "1.5 tapped beats at 120 BPM is a 750 ms idle window")
+
+    // The mean clips to the newest window: four 600 ms taps after five 500 ms
+    // intervals average the newest eight intervals, and the oldest 500 ms
+    // interval no longer counts.
+    for step in 1...4 { cadence.registerTap(nowMs: 3500 + Int64(step) * 600) }
+    report.expectEqual(10, cadence.tapCount, cppID: tapTempoID,
+                       what: "ten taps stand in the session")
+    report.expectEqual(109, cadence.draftBpm, cppID: tapTempoID,
+                       what: "the draft is the clipped mean of the newest eight intervals")
+    report.expectEqual(826, cadence.idleCommitMs, cppID: tapTempoID,
+                       what: "1.5 tapped beats at 109 BPM is an 826 ms idle window")
+
+    // A tap past the gap distance is a new session, not a dropped interval.
+    cadence.registerTap(nowMs: 5900 + Int64(AutomationTapTempoSession.gapMs) + 1)
+    report.expect(cadence.tapCount == 1 && cadence.draftBpm == 0, cppID: tapTempoID,
+                  message: "a tap past the production idle gap starts a fresh session")
+    cadence.registerTap(nowMs: 8401)
+    report.expectEqual(120, cadence.draftBpm, cppID: tapTempoID,
+                       what: "the fresh session drafts from its own single interval")
+    cadence.reset()
+    report.expectEqual(AutomationTapTempoSession(), cadence, cppID: tapTempoID,
+                       what: "reset returns the session to its seed state")
+
+    let fixture = AutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    fixture.activate(fixture.panLane)
+    report.expectEqual(["0:120"], fixture.tempoValues, cppID: tapTempoID,
+                       what: "the staged document names 120 BPM at tick zero")
+    let before = fixture.snapshot
+
+    // A ready draft that already names the tick-zero tempo writes nothing.
+    for tap in 0...3 { fixture.page.tapTempoTap(atMilliseconds: 10 + Int64(tap) * 500) }
+    report.expectEqual(120, fixture.page.tapTempoSession.draftBpm, cppID: tapTempoID,
+                       what: "the tapped cadence named the tempo already in place")
+    report.expectEqual(4, fixture.page.tapTempoSession.tapCount, cppID: tapTempoID,
+                       what: "the taps stand in the page's own session")
+    report.expect(fixture.page.tapTempoActive, cppID: tapTempoID,
+                  message: "a live session is the page's interaction fact")
+    report.expect(!fixture.page.tapTempoIdleElapsed(), cppID: tapTempoID,
+                  message: "a draft that changes nothing commits nothing")
+    report.expectEqual(["0:120"], fixture.tempoValues, cppID: tapTempoID,
+                       what: "the no-op idle window left the stream alone")
+    report.expectEqual(before.revision, fixture.document.revision, cppID: tapTempoID,
+                       what: "the no-op idle window published no revision")
+    report.expect(!fixture.document.history.canUndo, cppID: tapTempoID,
+                  message: "the no-op idle window recorded no history entry")
+    report.expect(fixture.page.tapTempoSession.tapCount == 0 && !fixture.page.tapTempoActive,
+                  cppID: tapTempoID,
+                  message: "the idle window closed the session either way")
+
+    // A ready draft that changes the tempo is one edit and one history entry.
+    for tap in 0...3 { fixture.page.tapTempoTap(atMilliseconds: 20_000 + Int64(tap) * 400) }
+    report.expectEqual(150, fixture.page.tapTempoSession.draftBpm, cppID: tapTempoID,
+                       what: "a 400 ms cadence drafts 150 BPM")
+    report.expect(fixture.page.tapTempoIdleElapsed(), cppID: tapTempoID,
+                  message: "the idle window commits the ready draft")
+    report.expectEqual(["0:150"], fixture.tempoValues, cppID: tapTempoID,
+                       what: "the commit replaced the tick-zero tempo point")
+    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: tapTempoID,
+                       what: "the tempo edit published one revision")
+    report.expect(fixture.document.history.canUndo, cppID: tapTempoID,
+                  message: "the tempo edit recorded one history entry")
+    report.expect(fixture.undo(), cppID: tapTempoID, message: "the tempo edit undoes")
+    report.expectEqual(["0:120"], fixture.tempoValues, cppID: tapTempoID,
+                       what: "undo restored the previous tick-zero tempo")
+    report.expect(!fixture.document.history.canUndo, cppID: tapTempoID,
+                  message: "one tempo edit is exactly one history entry")
+    do {
+        _ = try runBlocking { try await fixture.session.redo() }
+    } catch {
+        report.fail(tapTempoID, "redo failed: \(error)")
+        return
+    }
+    report.expectEqual(["0:150"], fixture.tempoValues, cppID: tapTempoID,
+                       what: "redo put the committed tempo back on the stream")
+
+    // A capture whose own document moved on writes nothing.
+    for tap in 0...3 { fixture.page.tapTempoTap(atMilliseconds: 30_000 + Int64(tap) * 500) }
+    report.expectEqual(120, fixture.page.tapTempoSession.draftBpm, cppID: tapTempoID,
+                       what: "the stale session drafts a tempo the stream does not hold")
+    report.expect(fixture.page.openPrompt(tick: 48, value: 64), cppID: tapTempoID,
+                  message: "the intervening write opened its own prompt")
+    report.expect(fixture.page.acceptPrompt(displayedValue: 96), cppID: tapTempoID,
+                  message: "the intervening write committed")
+    let stale = fixture.document.revision
+    report.expect(!fixture.page.tapTempoIdleElapsed(), cppID: tapTempoID,
+                  message: "a capture whose document moved on commits nothing")
+    report.expectEqual(stale, fixture.document.revision, cppID: tapTempoID,
+                       what: "the stale idle window published no revision")
+    report.expectEqual(["0:150"], fixture.tempoValues, cppID: tapTempoID,
+                       what: "the stale draft never reached the tempo stream")
+    report.expect(fixture.page.tapTempoSession.tapCount == 0, cppID: tapTempoID,
+                  message: "the stale idle window closed the session")
+
+    // A session named its own parameter: switching it ends without a write.
+    for tap in 0...3 { fixture.page.tapTempoTap(atMilliseconds: 40_000 + Int64(tap) * 400) }
+    report.expect(fixture.page.tapTempoSession.tapCount > 0, cppID: tapTempoID,
+                  message: "the session started on the lane the taps named")
+    fixture.activate(fixture.volumeLane)
+    report.expect(!fixture.page.tapTempoIdleElapsed(), cppID: tapTempoID,
+                  message: "a session whose parameter moved on commits nothing")
+    report.expectEqual(["0:150"], fixture.tempoValues, cppID: tapTempoID,
+                       what: "the switched parameter left the tempo stream alone")
+}
+
+/// The Qt modifier bits QML carries and the policy they arm, both directions,
+/// plus one real pointer route driven by the raw bits a QML event supplies.
+@MainActor
+private func qtModifierMapping(_ report: CheckReport, suite: DocumentSession,
+                               service: ProjectService) {
+    report.expectEqual(AutomationModifiers(), AutomationQtModifier.automation(0), cppID: modifierMappingID,
+                       what: "no Qt bit arms no policy")
+    report.expectEqual(AutomationModifiers(shift: true),
+                       AutomationQtModifier.automation(AutomationQtModifier.shift), cppID: modifierMappingID,
+                       what: "Qt's shift bit arms the ramp and axis-lock policy")
+    report.expectEqual(AutomationModifiers(snapValue: true),
+                       AutomationQtModifier.automation(AutomationQtModifier.control),
+                       cppID: modifierMappingID,
+                       what: "Qt's control bit arms the value snap")
+    report.expectEqual(AutomationModifiers(fine: true),
+                       AutomationQtModifier.automation(AutomationQtModifier.alt), cppID: modifierMappingID,
+                       what: "Qt's alt bit arms the fine lattice")
+    report.expectEqual(AutomationModifiers(),
+                       AutomationQtModifier.automation(AutomationQtModifier.meta), cppID: modifierMappingID,
+                       what: "Qt's meta bit arms nothing")
+    report.expectEqual(AutomationModifiers(fine: true, snapValue: true, shift: true),
+                       AutomationQtModifier.automation(AutomationQtModifier.shift
+                                                       | AutomationQtModifier.control
+                                                       | AutomationQtModifier.alt),
+                       cppID: modifierMappingID,
+                       what: "the three policy bits compose through the same mapping")
+    for policy in [AutomationModifiers(), AutomationModifiers(fine: true),
+                   AutomationModifiers(snapValue: true), AutomationModifiers(shift: true),
+                   AutomationModifiers(fine: true, snapValue: true),
+                   AutomationModifiers(fine: true, shift: true),
+                   AutomationModifiers(snapValue: true, shift: true),
+                   AutomationModifiers(fine: true, snapValue: true, shift: true)] {
+        report.expectEqual(policy, AutomationQtModifier.automation(qtModifiers(policy)),
+                           cppID: modifierMappingID,
+                           what: "the Qt bits that policy composes to map back to it")
+    }
+
+    // The same mapping is the press route's own input: one pan drag inside the
+    // neutral radius lands on 64 only when the Qt control bit is carried.
+    let plain = AutomationFixture(suite: suite, service: service, pan: [(24, 80)])
+    plain.activate(plain.panLane)
+    let metadata = AutomationParameterMetadata(parameter: plain.panLane)
+    let height = 120.0
+    let radius = plain.page.geometry.neutralSnapRadius
+    let threshold = Int(Double(metadata.maximum - metadata.minimum) * radius / height)
+    report.expect(threshold > 1, cppID: modifierMappingID,
+                  message: "the neutral radius covers more than one value step")
+    let near = (metadata.neutral ?? (metadata.maximum + metadata.minimum) / 2)
+        + max(1, threshold - 1)
+    report.expect(plain.drag(plain.panLane, from: (24, 80), to: near, modifiers: 0),
+                  cppID: modifierMappingID,
+                  message: "the pointer route took the drag without a Qt modifier bit")
+    report.expectEqual(["24:\(near)"], plain.values(plain.panLane), cppID: modifierMappingID,
+                       what: "a drag without the Qt control bit keeps the dragged value")
+
+    let snapped = AutomationFixture(suite: suite, service: service, pan: [(24, 80)])
+    snapped.activate(snapped.panLane)
+    report.expect(snapped.drag(snapped.panLane, from: (24, 80), to: near,
+                               modifiers: AutomationQtModifier.control),
+                  cppID: modifierMappingID,
+                  message: "the pointer route took the drag carrying the Qt control bit")
+    report.expectEqual(["24:64"], snapped.values(snapped.panLane), cppID: modifierMappingID,
+                       what: "the Qt control bit a QML event carries lands the drag on the neutral")
 }

@@ -142,6 +142,8 @@ TestCase {
                    "the container phase releases the production velocity page before it mounts")
             verify(bootstrap.detachProductionSection(testCase.voiceChangesKind),
                    "the container phase releases the production voice page before it mounts")
+            verify(bootstrap.detachProductionSection(testCase.automationKind),
+                   "the container phase releases the production automation page before it mounts")
         }
         // One production composition for the document-bound owners' whole
         // lifetime: the scene that consumed their QObject proxies is not
@@ -207,6 +209,8 @@ TestCase {
         bootstrap.cancelInput()
         testCase.awaitVoiceModal("voicePicker", false)
         testCase.awaitVoiceModal("voiceChangeMenu", false)
+        testCase.awaitVoiceModal("automationPrompt", false)
+        testCase.awaitVoiceModal("automationMenu", false)
         wait(0)
     }
 
@@ -1616,6 +1620,8 @@ TestCase {
                      ? findChild(page, "velocityPromptCard")
                    : pane === "voice-picker"
                      ? findChild(testCase.surface, "drawerModalLayer")
+                   : pane === "automation-tabs"
+                     ? testCase.pageItem(testCase.automationKind)
                    : page
         if (!target)
             return false
@@ -1627,6 +1633,22 @@ TestCase {
             }
             if (!model.promptOpen)
                 return false
+        }
+        if (pane === "automation-tabs") {
+            // The reference pane is the production automation band: the selector,
+            // a parameter lane with written events, its nodes and the readout. The
+            // profile case has already mounted and shown the page.
+            var automationPage = testCase.pageItem(testCase.automationKind)
+            if (!automationPage)
+                return false
+            // A representative band: the Volume lane, with points written through
+            // the production sweep so the reference carries a curve and nodes.
+            var automationTab = bootstrap.automationVolumeIndex()
+            if (automationTab >= 0)
+                testCase.writeVolumeLanePoints(automationTab)
+            tryVerify(function() {
+                return findChild(automationPage, "automationPlot") !== null
+            }, 2000, "the profile composition drew the automation plot")
         }
         if (pane === "voice-picker") {
             var voice = testCase.voiceModel()
@@ -1648,6 +1670,8 @@ TestCase {
         return bootstrap.writeProfileMetadata(pane, page.Screen.devicePixelRatio,
                                               pane === "voice-picker"
                                               ? testCase.voiceModel().baseFontPx
+                                          : pane === "automation-tabs"
+                                              ? testCase.automationModel().baseFontPx
                                               : testCase.velocityModel().baseFontPx,
                                               target.width, target.height,
                                               origin.x, origin.y,
@@ -1877,6 +1901,493 @@ TestCase {
                 "the staged fixture resolves an exact top-level map")
         compare(testCase.velocityModel().contextDiagnostic, "",
                 "an exact context publishes no diagnostic")
+    }
+
+    // ---- the production Automation page -------------------------------------
+
+    function automationPageItem() { return testCase.pageItem(testCase.automationKind) }
+    function automationModel() { return testCase.surface.applicationSession.automationPage() }
+    function automationGutter() { return findChild(testCase.automationPageItem(), "automationGutter") }
+    function automationPlot() { return findChild(testCase.automationPageItem(), "automationPlot") }
+    function automationPlotInput() {
+        return findChild(testCase.automationPageItem(), "automationPlotInput")
+    }
+
+    /// Every named descendant whose objectName is exactly one of `names`, in tree
+    /// walk order. The page's own primitives carry child names that extend their
+    /// parent's, so an exact match is what keeps a tab's label out of the tab
+    /// count and a node's ring out of the node count.
+    function collectByNames(item, names, found) {
+        var collected = found || []
+        if (!item)
+            return collected
+        if (names.indexOf(String(item.objectName)) >= 0)
+            collected.push(item)
+        for (var i = 0; i < item.children.length; ++i)
+            testCase.collectByNames(item.children[i], names, collected)
+        return collected
+    }
+
+    /// The drawn selector tabs of the hosted page, in tree order.
+    function automationTabItems() {
+        return testCase.collectByNames(testCase.automationPageItem(),
+                                       testCase.automationTabNames(), [])
+    }
+
+    function automationTabNames() {
+        var names = []
+        var count = testCase.automationModel().tabCount
+        for (var i = 0; i < count; ++i)
+            names.push("automationParameterTab" + i)
+        return names
+    }
+
+    /// The drawn node markers of the hosted page, in tree order.
+    function automationNodeItems() {
+        return testCase.collectByNames(testCase.automationPageItem(),
+                                       ["automationNode", "automationNodePhantom"], [])
+    }
+
+    /// The drawn curve runs, in tree order: ghost runs first, the active curve
+    /// second, exactly as the page publishes them.
+    function automationCurveItems() {
+        return testCase.collectByNames(testCase.automationPageItem(),
+                                       ["automationCurve", "automationGhostCurve"], [])
+    }
+
+    /// The drawn ramps, in tree order.
+    function automationRampItems() {
+        return testCase.collectByNames(testCase.automationPageItem(),
+                                       ["automationRamp", "automationGhostRamp"], [])
+    }
+
+    /// The drawn menu rows of the *open* menu, and the separators beside them: a
+    /// closed menu keeps its last delegates in the tree, and a stale delegate is
+    /// not a row a case may click.
+    function automationMenuRowItems() {
+        var root = findChild(testCase.surface, "automationMenu")
+        if (!root || root.visible !== true)
+            return []
+        return testCase.collectByPrefix(root, "automationMenuRow_", [])
+    }
+
+    function automationMenuSeparatorItems() {
+        var root = findChild(testCase.surface, "automationMenu")
+        if (!root || root.visible !== true)
+            return []
+        return testCase.collectByPrefix(root, "automationMenuSeparator_", [])
+    }
+
+    /// Attaches and shows the production Automation page. Every wait is tied to
+    /// the drawn or published fact the case needs — the kind's availability, its
+    /// visibility, the hosted item and its drawn size, then the selector and the
+    /// readout the page composes — so a case observes its own state whatever ran
+    /// before it.
+    function mountProductionAutomation(location, values) {
+        verify(bootstrap.attachProductionSection(testCase.automationKind),
+               "the production Automation page attaches to its slot")
+        // The camera is shared with every page, so a mounted case starts from the
+        // lane's own park instead of inheriting wherever another case left it.
+        testCase.surface.gridModel.resetCameraScroll()
+        testCase.resetChrome(location, values)
+        tryVerify(function() {
+            var toggle = testCase.toggle(testCase.automationKind)
+            return toggle !== null && toggle.width > 0
+        }, 2000, "the published automation toggle is drawn for the attached page")
+        if (!testCase.section(testCase.automationKind).visible)
+            testCase.clickToggle(testCase.automationKind)
+        tryVerify(function() { return testCase.section(testCase.automationKind).visible }, 2000,
+                  "the automation section is visible")
+        tryVerify(function() { return testCase.automationPageItem() !== null }, 2000,
+                  "the drawer hosts the production Automation page item")
+        tryVerify(function() {
+            var page = testCase.automationPageItem()
+            return page !== null && page.width > 0 && page.height > 0
+        }, 2000, "the hosted production page took its drawn body size")
+        tryVerify(function() {
+            return testCase.automationTabItems().length
+                   === testCase.automationModel().tabCount
+        }, 2000, "the page drew one selector tab per published catalog parameter"
+                  + testCase.automationBridgeDiagnostics())
+        return testCase.automationPageItem()
+    }
+
+    /// What the hosted page's own QML really sees of the published owner, so a
+    /// bridge gap names itself instead of only failing a count.
+    function automationBridgeDiagnostics() {
+        var page = testCase.automationPageItem()
+        var lines = ["drawnTabs=" + testCase.automationTabItems().length,
+                     "publishedTabs=" + testCase.automationModel().tabCount]
+        if (page) {
+            lines.push("pageModel=" + (typeof page.pageModel))
+            lines.push("qmlTabs=" + (page.pageModel ? typeof page.pageModel.tabs : "n/a"))
+            lines.push("qmlTabCount=" + (page.pageModel ? page.pageModel.tabCount : -1))
+            lines.push("qmlNodeCount=" + (page.pageModel ? page.pageModel.nodeCount : -1))
+            lines.push("drawnTabs=" + page.selectorTabCount)
+        }
+        return " (" + lines.join("; ") + ")"
+    }
+
+    /// One drawn tab by its published index, or null.
+    function automationTab(index) {
+        var tabs = testCase.automationTabItems()
+        for (var i = 0; i < tabs.length; ++i) {
+            if (tabs[i].objectName === "automationParameterTab" + index)
+                return tabs[i]
+        }
+        return null
+    }
+
+    /// The labels of the drawn tabs, in tree order, so a case compares the
+    /// selector it can see against the catalog the page published.
+    function drawnAutomationTabLabels() {
+        var labels = []
+        var texts = testCase.collectByNames(testCase.automationPageItem(),
+                                           ["automationParameterTabText"], [])
+        for (var i = 0; i < texts.length; ++i)
+            labels.push(texts[i].text)
+        return labels.join(",")
+    }
+
+    /// The drawn tab that reports itself checked, or null.
+    function drawnAutomationActiveTab() {
+        var tabs = testCase.automationTabItems()
+        for (var i = 0; i < tabs.length; ++i) {
+            if (tabs[i].Accessible.checked)
+                return tabs[i]
+        }
+        return null
+    }
+
+    /// The tab index of the first per-track parameter whose lane carries written
+    /// events in the staged song, or -1. The selector's event pip is the drawn
+    /// oracle for the same fact.
+    function automationTabWithEvents() { return bootstrap.automationTabWithEvents() }
+
+    /// The tab index of the first per-track parameter whose lane is empty.
+    function automationEmptyTab() { return bootstrap.automationEmptyTab() }
+
+    /// One real click on a drawn selector tab, in its label area: the Tempo row
+    /// overlays its own Tap control on the tab's right edge, and the production
+    /// row is the whole control either way.
+    function clickAutomationTab(index, modifiers) {
+        var tab = testCase.automationTab(index)
+        verify(tab, "the selector drew tab " + index)
+        mouseClick(tab, tab.width * 0.2, tab.height / 2, Qt.LeftButton,
+                   modifiers === undefined ? Qt.NoModifier : modifiers)
+    }
+
+    /// Control-press on a drawn tab: the production ghost toggle entry.
+    function pressAutomationTabWithControl(index) {
+        var tab = testCase.automationTab(index)
+        verify(tab, "the selector drew tab " + index)
+        mouseClick(tab, tab.width * 0.2, tab.height / 2, Qt.LeftButton, Qt.ControlModifier)
+    }
+
+    /// One real right press on a drawn tab: the production context request.
+    function rightClickAutomationTab(index) {
+        var tab = testCase.automationTab(index)
+        verify(tab, "the selector drew tab " + index)
+        mouseClick(tab, tab.width * 0.2, tab.height / 2, Qt.RightButton)
+    }
+
+
+    /// The drawn fill of one node marker: the delegate itself fills the plot and
+    /// its children carry the projected position.
+    function automationNodeFill(handle) {
+        return handle ? findChild(handle, "automationNodeFill") : null
+    }
+
+    /// One drawn node marker's centre, in the plot input's own coordinates.
+    function automationNodePoint(handle) {
+        var input = testCase.automationPlotInput()
+        var fill = testCase.automationNodeFill(handle)
+        if (!fill)
+            return null
+        return fill.mapToItem(input, fill.width / 2, fill.height / 2)
+    }
+
+    /// The drawn node markers of the active lane whose projected tick matches, in
+    /// tree order: the projection publishes one marker per display point.
+    function automationNodesAtTick(tick) {
+        var nodes = testCase.automationNodeItems()
+        var matches = []
+        for (var i = 0; i < nodes.length; ++i) {
+            if (Math.abs(nodes[i].model.tick - tick) < 0.5
+                    && !nodes[i].model.phantom)
+                matches.push(nodes[i])
+        }
+        return matches
+    }
+
+    /// Whether the active lane's own hover reports a node under one plot point:
+    /// the page's own hit test answers, so a case never guesses the node radius.
+    function automationNodeUnderPoint(x, y) {
+        var input = testCase.automationPlotInput()
+        mouseMove(input, x, y, -1, Qt.NoButton, Qt.NoModifier)
+        wait(0)
+        var nodes = testCase.automationLaneNodes()
+        for (var i = 0; i < nodes.length; ++i) {
+            if (nodes[i].model.hovered === true)
+                return true
+        }
+        return false
+    }
+
+    /// A press point in empty space: a sweep, a band and a pencil press must all
+    /// start clear of every drawn node, so the candidates are checked against the
+    /// page's own hover before one is handed back.
+    function automationFreePoint() {
+        var input = testCase.automationPlotInput()
+        var candidates = [Math.round(input.height / 2), Math.round(input.height * 0.75), 4]
+        for (var x = 24; x < input.width - 4; x += 16) {
+            for (var c = 0; c < candidates.length; ++c) {
+                if (!testCase.automationNodeUnderPoint(x, candidates[c]))
+                    return { "x": x, "y": candidates[c] }
+            }
+        }
+        return null
+    }
+
+    /// A column at or after `step` that holds no drawn node of the active lane,
+    /// checked against the page's own hover at the row the caller will press.
+    function automationFreeColumn(step, row) {
+        var input = testCase.automationPlotInput()
+        var y = row === undefined ? Math.round(input.height / 2) : row
+        for (var x = step; x < input.width - 4; x += 16) {
+            if (!testCase.automationNodeUnderPoint(x, y))
+                return x
+        }
+        return -1
+    }
+
+    /// Writes the Volume lane through the production sweep, so a case that needs a
+    /// written occurrence creates one with real input instead of inheriting
+    /// whatever lane state another case left behind.
+    function writeVolumeLanePoints(tabIndex) {
+        testCase.clickAutomationTab(tabIndex)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === tabIndex }, 2000,
+                  "the Volume lane is active")
+        var free = testCase.automationFreePoint()
+        if (!free)
+            return false
+        var input = testCase.automationPlotInput()
+        testCase.dragAutomationPlot(free.x, free.y,
+                                    Math.min(input.width - 4, free.x + 120), free.y)
+        tryVerify(function() { return bootstrap.automationLaneEventCount() > 0 }, 2000,
+                  "the sweep left the Volume lane written events")
+        tryVerify(function() { return testCase.automationWrittenNodeIndex() >= 0 }, 2000,
+                  "the written Volume lane draws a written node")
+        return testCase.automationWrittenNodeIndex() >= 0
+    }
+
+    /// The index of the first drawn node that names a *written* occurrence: the
+    /// projected engine node's Delete row is published disabled by design.
+    function automationWrittenNodeIndex() {
+        var nodes = testCase.automationLaneNodes()
+        for (var i = 0; i < nodes.length; ++i) {
+            if (!nodes[i].model.projected)
+                return i
+        }
+        return -1
+    }
+
+    /// Every drawn node marker of the active lane, without the origin phantom.
+    function automationLaneNodes() {
+        var nodes = testCase.automationNodeItems()
+        var matches = []
+        for (var i = 0; i < nodes.length; ++i) {
+            if (!nodes[i].model.phantom)
+                matches.push(nodes[i])
+        }
+        return matches
+    }
+
+    /// One real press/move/release drag inside the page's own plot, in plot
+    /// coordinates, so every case drives the production pointer route.
+    function dragAutomationPlot(fromX, fromY, toX, toY, modifiers) {
+        var input = testCase.automationPlotInput()
+        var mods = modifiers === undefined ? Qt.NoModifier : modifiers
+        mousePress(input, fromX, fromY, Qt.LeftButton, mods)
+        // The first move past the slop arms the stroke; the second drafts it,
+        // exactly as the production sweep's own activation rule reads them.
+        mouseMove(input, (fromX + toX) / 2, (fromY + toY) / 2, -1, Qt.LeftButton, mods)
+        mouseMove(input, toX, toY, -1, Qt.LeftButton, mods)
+        mouseRelease(input, toX, toY, Qt.LeftButton, mods)
+    }
+
+    /// A time selection through the production range entry: a right press, a
+    /// travel and a right release, all in plot coordinates. The row is the case's
+    /// own: a right press on a node opens that node's menu instead of a band.
+    function automateRangeSelection(fromX, toX, row) {
+        var input = testCase.automationPlotInput()
+        var y = row === undefined ? input.height / 2 : row
+        mousePress(input, fromX, y, Qt.RightButton)
+        mouseMove(input, toX, y, -1, Qt.LeftButton)
+        mouseRelease(input, toX, y, Qt.RightButton)
+    }
+
+    /// One real node drag whose pointer arms on the pressed column and settles at
+    /// `settleY`: the production drag maps its own delta from where it armed, so
+    /// the pointer lands the value there through the row it settles on while the
+    /// tick keeps the press's column.
+    function dragAutomationPlotRow(x, pressY, armY, settleY, modifiers) {
+        var input = testCase.automationPlotInput()
+        var mods = modifiers === undefined ? Qt.NoModifier : modifiers
+        mousePress(input, x, pressY, Qt.LeftButton, mods)
+        mouseMove(input, x, armY, -1, Qt.LeftButton, mods)
+        mouseMove(input, x, armY + (settleY - pressY), -1, Qt.LeftButton, mods)
+        mouseRelease(input, x, armY + (settleY - pressY), Qt.LeftButton, mods)
+    }
+
+    /// The plot row whose mapped value is `value`, derived from two drawn nodes of
+    /// the active lane: the projection is linear in y, so two drawn centres name
+    /// the whole scale without the case copying any page policy.
+    function automationRowForValue(value) {
+        var known = []
+        var nodes = testCase.automationLaneNodes()
+        for (var i = 0; i < nodes.length && known.length < 2; ++i) {
+            if (nodes[i].model.value === undefined || nodes[i].model.y === undefined)
+                continue
+            known.push({ "y": nodes[i].model.y, "value": nodes[i].model.value })
+        }
+        if (known.length < 2 || known[0].value === known[1].value)
+            return -1
+        var scale = (known[1].y - known[0].y) / (known[0].value - known[1].value)
+        return known[0].y + (known[0].value - value) * scale
+    }
+
+    /// Empties one parameter's lane through the lane menu's own destructive row
+    /// and its captured confirmation, so a case that needs a known-empty lane
+    /// builds it with real input instead of assuming what the staged song holds.
+    function clearAutomationLane(tabIndex) {
+        testCase.openAutomationTabMenu(tabIndex)
+        if (!bootstrap.automationMenuOpen())
+            return false
+        if (!testCase.triggerAutomationMenuRow(6))
+            return false
+        tryVerify(function() { return bootstrap.automationPromptOpen() }, 2000,
+                  "the destructive row opened the captured confirmation")
+        keyClick(Qt.Key_Return)
+        tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
+                  "the confirmation's acceptance closed the form")
+        tryVerify(function() { return bootstrap.automationLaneEventCount() === 0 }, 2000,
+                  "the accepted confirmation emptied the lane")
+        return bootstrap.automationLaneEventCount() === 0
+    }
+
+    /// The visible automation modal produced by the page's own publications, and
+    /// a wait for the drawn state a case is about to hit.
+    function awaitAutomationModal(name, expected) {
+        tryVerify(function() {
+            var item = findChild(testCase.surface, name)
+            return expected ? (item !== null && item.visible === true)
+                            : (item === null || item.visible === false)
+        }, 2000, name + " visibility is " + expected)
+    }
+
+    /// The lane menu of one parameter tab: the production selector's context
+    /// request, opened with a real right click on the drawn tab.
+    function openAutomationTabMenu(index) {
+        wait(0)
+        var tab = testCase.automationTab(index)
+        verify(tab, "the selector drew tab " + index)
+        mouseClick(tab, tab.width * 0.2, tab.height / 2, Qt.LeftButton)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === index }, 1000,
+                  "a left press reaches the selector's own activation")
+        mousePress(tab, tab.width * 0.2, tab.height / 2, Qt.RightButton)
+        var opened = bootstrap.automationMenuOpen()
+        mouseRelease(tab, tab.width * 0.2, tab.height / 2, Qt.RightButton)
+        verify(opened || bootstrap.automationMenuOpen(),
+               "the tab's context request opened the lane menu")
+        testCase.awaitAutomationModal("automationMenu", true)
+    }
+
+    /// The drawn preview markers of a live gesture.
+    function automationPreviewItems() {
+        return testCase.collectByNames(testCase.automationPageItem(),
+                                       ["automationPreviewNode"], [])
+    }
+
+    /// A right press on the drawn node at one index, re-derived from the current
+    /// projection: a committed edit moves a node's own value axis, so a case that
+    /// reuses an old centre would press empty space.
+    function rightClickAutomationNode(index) {
+        wait(0)
+        var nodes = testCase.automationLaneNodes()
+        if (index >= nodes.length)
+            return null
+        var point = testCase.automationNodePoint(nodes[index])
+        if (!point)
+            return null
+        mouseClick(testCase.automationPlotInput(), point.x, point.y, Qt.RightButton)
+        return point
+    }
+
+    /// The open menu's current row action id, read from the drawn panel itself.
+    function currentAutomationMenuAction() {
+        var root = findChild(testCase.surface, "automationMenu")
+        return root && root.visible === true ? root.currentActionId() : -1
+    }
+
+    /// One row activation through the menu's own keyboard contract: the panel
+    /// walks its drawn rows with the arrow keys and activates the current one with
+    /// Return, so the action is named by the row that really holds it.
+    function triggerAutomationMenuRow(actionId) {
+        for (var attempt = 0; attempt < 8; ++attempt) {
+            if (testCase.currentAutomationMenuAction() === actionId) {
+                keyClick(Qt.Key_Return)
+                return true
+            }
+            keyClick(Qt.Key_Down)
+        }
+        return false
+    }
+
+    /// The node's own menu and one of its rendered rows in one turn: a document
+    /// write landing between the press and the activation legitimately retires the
+    /// captured menu, so the pair is exercised without an intervening settle and
+    /// the caller can assert what the activation itself did.
+    function activateAutomationNodeMenuRow(nodeIndex, actionId) {
+        return testCase.openAutomationNodeMenu(nodeIndex)
+            && testCase.triggerAutomationMenuRow(actionId)
+    }
+
+    /// Opens the drawn node's own menu with a real right press, and gives the panel
+    /// exactly one bounded pass to publish the rows the keyboard then walks —
+    /// never an open-ended poll, which is a window for an unrelated document write
+    /// to retire the capture.
+    function openAutomationNodeMenu(nodeIndex) {
+        var point = testCase.rightClickAutomationNode(nodeIndex)
+        if (!point)
+            return false
+        var wasOpen = bootstrap.automationMenuOpen()
+        wait(0)
+        return wasOpen && testCase.currentAutomationMenuAction() >= 0
+    }
+
+    /// One real click on a drawn menu row by its captured action id: the row's own
+    /// delegate hands the page that same action, so a list model never has to be
+    /// indexed from JavaScript.
+    function clickAutomationMenuRow(actionId) {
+        var published = bootstrap.automationMenuActions().split(",")
+        var rows = testCase.automationMenuRowItems()
+        for (var i = 0; i < rows.length; ++i) {
+            // The delegate's own record, checked against the capture the page
+            // really published: a reused delegate whose model moved on is not a
+            // row this case may click.
+            if (rows[i].model.actionId === actionId && published.indexOf(String(actionId)) >= 0) {
+                mouseClick(rows[i], rows[i].width / 2, rows[i].height / 2, Qt.LeftButton)
+                return true
+            }
+        }
+        return false
+    }
+
+    /// The lane's own cancel of the live tap session: no commit, no draft.
+    function resetAutomationTap() {
+        testCase.automationModel().resetTapTempo()
+        wait(0)
     }
 
     // ---- the production Voice Changes page ----------------------------------
@@ -2505,6 +3016,961 @@ TestCase {
         compare(model.interactionActive, false, "the case left no interaction behind")
     }
 
+    // The production Automation page mounts through the real presenter and
+    // renders its own composition: the shared gutter splits the selector from the
+    // plot, every catalog parameter publishes a tab, the lane's written events
+    // publish nodes, the value axis and the context readout are drawn, and the
+    // selector's accessible contract holds.
+    function test_productionAutomationPageMountsAndRenders() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-automation")
+        var page = testCase.mountProductionAutomation(location)
+        compare(String(testCase.section(testCase.automationKind).contentUrl).length > 0, true,
+                "the kind publishes the production page URL")
+        compare(page.objectName, "automationPage", "the hosted item is the production page")
+
+        var gutter = testCase.automationGutter()
+        var plot = testCase.automationPlot()
+        verify(gutter && plot, "the page composed its selector column and plot")
+        fuzzyCompare(gutter.width, testCase.surface.gridModel.keyboardWidth, 0.01,
+                     "the selector column is the shared gutter")
+        fuzzyCompare(plot.x, gutter.width, 0.01, "the plot starts at the shared origin")
+        fuzzyCompare(plot.width, page.width - gutter.width, 0.01,
+                     "the plot spans the body beside the selector")
+        fuzzyCompare(plot.height, page.height, 0.01, "the plot spans the body height")
+
+        var model = testCase.automationModel()
+        compare(testCase.automationTabItems().length, model.tabCount,
+                "every catalog parameter drew a selector tab")
+        compare(testCase.drawnAutomationTabLabels(), bootstrap.automationTabLabels(),
+                "the drawn selector matches the published catalog labels")
+
+        // The selector's own facts: one active tab, one pip per lane with events,
+        // and the accessible contract of a checkable button.
+        var activeTab = testCase.drawnAutomationActiveTab()
+        verify(activeTab, "the active parameter's tab is drawn")
+        compare(activeTab.Accessible.role, Accessible.Button, "a tab publishes the button role")
+        compare(activeTab.Accessible.checkable, true, "a tab is checkable")
+        compare(activeTab.Accessible.checked, true, "the active tab reports itself checked")
+        compare(String(activeTab.Accessible.name).length > 0, true,
+                "a tab publishes its accessible name ('" + activeTab.Accessible.name + "')")
+        var tempoTab = testCase.automationTab(model.tabCount - 1)
+        verify(tempoTab, "the Tempo tab is drawn last")
+        compare(bootstrap.automationTabLabels().split(",").slice(-1)[0],
+                testCase.collectByNames(tempoTab, ["automationParameterTabText"], [])[0].text,
+                "the last catalog parameter is the Tempo row the selector drew")
+        compare(tempoTab.Accessible.checked, false, "the Tempo row is not active yet")
+        var tapControl = findChild(tempoTab, "automationTempoTapButton")
+        verify(tapControl, "the Tempo row composed its Tap control")
+        compare(tapControl.Accessible.role, Accessible.Button, "the Tap control is a button")
+        compare(tapControl.Accessible.name, "Tap tempo", "the Tap control names its action")
+
+        // The plot's own facts: the grid, the value axis and the lane's nodes.
+        verify(findChild(page, "automationGridLines"), "the page composed its time grid")
+        verify(findChild(page, "automationValueLines"), "the page composed its value axis")
+        verify(findChild(page, "automationReadout"), "the page composed its context readout")
+        verify(findChild(page, "automationHoverLabel"), "the page composed its hover label")
+        verify(findChild(page, "automationPreviewLabel"), "the page composed its gesture readout")
+        verify(findChild(page, "automationRangeBand"), "the page composed its range band")
+        verify(findChild(page, "automationPlotMessage"), "the page composed its plot message")
+        compare(plot.Accessible.name, "Automation", "the plot publishes its accessible name")
+        compare(String(plot.Accessible.description).length > 0, true,
+                "the plot publishes the page's readout as its description")
+
+        var tabWithEvents = testCase.automationTabWithEvents()
+        verify(tabWithEvents >= 0, "the staged song gives one parameter written events")
+        testCase.clickAutomationTab(tabWithEvents)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex()
+                                       === tabWithEvents }, 2000,
+                  "the tab click switched the active parameter (index "
+                  + bootstrap.automationActiveParameterIndex() + " of " + tabWithEvents + ")")
+        tryVerify(function() { return testCase.automationNodeItems().length
+                                       === testCase.automationModel().nodeCount }, 2000,
+                  "the active lane drew one marker per published node ("
+                  + testCase.automationNodeItems().length + " drawn of "
+                  + testCase.automationModel().nodeCount + ")")
+        compare(testCase.automationNodeItems().length > 0, true,
+                "the lane with written events drew its nodes")
+        compare(testCase.automationCurveItems().length > 0, true,
+                "the lane with written events drew its curve")
+        compare(findChild(page, "automationReadout").visible, true,
+                "the readout is drawn while the lane holds a value at the shared tick")
+    }
+
+    // A parameter switch is view-only, and the selector's Control press is the
+    // production ghost entry: a tab with events pins its curve, the active tab
+    // clears every pin, and a tab without events refuses.
+    function test_productionAutomationTabSwitchAndGhosts() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-automation-tabs")
+        testCase.mountProductionAutomation(location)
+        var model = testCase.automationModel()
+        var trackTab = testCase.automationTabWithEvents()
+        var emptyTab = testCase.automationEmptyTab()
+        verify(trackTab >= 0 && emptyTab >= 0,
+               "the staged song offers an occupied and an empty parameter lane")
+        var revisionBefore = model.interactionActive
+        testCase.clickAutomationTab(trackTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === trackTab }, 2000,
+                  "the pointer switched the active parameter")
+
+        // The explicit selection survives a parameter switch, and the switch
+        // writes nothing to the document.
+        var ticksBefore = bootstrap.automationLaneTicks()
+        var bandRow = testCase.automationFreePoint()
+        verify(bandRow, "the lane leaves a pointer row clear of every drawn node")
+        testCase.automationModel().dismissMenu()
+        wait(0)
+        var bandInput = testCase.automationPlotInput()
+        // The band's ends snap to the document's own lattice, so the range covers
+        // the rest of the visible plot rather than a pixel span that may not leave
+        // the bar the press landed in.
+        var bandFrom = bandRow.x
+        var bandTo = bandInput.width - 4
+        mousePress(bandInput, bandFrom, bandRow.y, Qt.RightButton)
+        compare(model.bandVisible, true, "the right press started the range band")
+        // The page's own release resolves the band's end from the release column,
+        // so the range is the right button's press and release alone.
+        mouseMove(bandInput, bandTo, bandRow.y, -1, Qt.LeftButton)
+        compare(model.bandVisible, true, "the band stayed visible until its release")
+        mouseRelease(bandInput, bandTo, bandRow.y, Qt.RightButton)
+        var selected = bootstrap.automationSelectionRange()
+        compare(selected.length > 0, true,
+                "the right-button band published the explicit selection ('" + selected
+                + "' from " + bandFrom + " to " + bandTo + " in a "
+                + bandInput.width + "-wide plot)")
+        var bounds = selected.split(":")
+        compare(parseInt(bounds[0]) < parseInt(bounds[1]), true,
+                "the published band spans a tick range (" + selected + ")")
+        testCase.clickAutomationTab(emptyTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === emptyTab }, 2000,
+                  "a second tab click switched again")
+        testCase.clickAutomationTab(trackTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === trackTab }, 2000,
+                  "the tab switched back")
+        compare(bootstrap.automationLaneTicks(), ticksBefore,
+                "switching parameters wrote nothing to the lane")
+        compare(bootstrap.automationSelectionRange(), selected,
+                "the explicit selection survives a parameter switch")
+        compare(model.interactionActive, revisionBefore,
+                "a parameter switch leaves no interaction live")
+
+        // Control press on another row pins its curve as a ghost and toggles it
+        // off again; the active row's own Control press is the rule that clears
+        // every pin. The page publishes the pinned set throughout.
+        var ghostTab = model.tabCount - 1
+        testCase.pressAutomationTabWithControl(ghostTab)
+        tryVerify(function() { return bootstrap.automationGhostParameters().length > 0 }, 2000,
+                  "the Control press pinned the Tempo row as a ghost")
+        tryVerify(function() {
+            var drawn = testCase.automationCurveItems()
+            return drawn.length > 0
+        }, 2000, "the selector drew the active curve over its ghost")
+        compare(bootstrap.automationLaneTicks(), ticksBefore,
+                "pinning a ghost wrote nothing to the lane")
+        testCase.pressAutomationTabWithControl(ghostTab)
+        tryVerify(function() { return bootstrap.automationGhostParameters().length === 0 }, 2000,
+                  "a second Control press cleared the pin")
+        testCase.pressAutomationTabWithControl(ghostTab)
+        tryVerify(function() { return bootstrap.automationGhostParameters().length > 0 }, 2000,
+                  "a third Control press pinned it again")
+        testCase.pressAutomationTabWithControl(trackTab)
+        tryVerify(function() { return bootstrap.automationGhostParameters().length === 0 }, 2000,
+                  "the active row's own Control press cleared every pin")
+        compare(bootstrap.automationLaneTicks(), ticksBefore,
+                "the ghost pins still wrote nothing to the lane")
+    }
+
+    // The five reopened domain rows through real input: a drag sweep steps its
+    // lattice and restores the trailing held value, a Shift sweep ramps, a Pan
+    // drag snaps to the neutral, a node drag moves one occurrence (and a
+    // Shift-held stationary release deletes nothing), and a pencil stroke writes
+    // its point range.
+    function test_productionAutomationDomainRowsThroughInput() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-automation-rows")
+        testCase.mountProductionAutomation(location)
+        var model = testCase.automationModel()
+        var input = testCase.automationPlotInput()
+        var volumeTab = bootstrap.automationVolumeIndex()
+        verify(volumeTab >= 0, "the catalog publishes the Volume parameter")
+        testCase.clickAutomationTab(volumeTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === volumeTab }, 2000,
+                  "the Volume lane is active")
+
+        // a) A drag sweep over the lane: every crossed lattice tick is written,
+        // and the trailing held value is restored one step past the release.
+        var before = bootstrap.automationLaneValues()
+        var nodes = testCase.automationLaneNodes()
+        compare(nodes.length > 1, true,
+                "the Volume lane projects more than one display point (" + nodes.length + ")")
+        var free = testCase.automationFreePoint()
+        verify(free, "the lane leaves an empty press point for a sweep ("
+               + testCase.automationLaneNodes().length + " nodes)")
+        mousePress(input, free.x, free.y, Qt.LeftButton)
+        mouseMove(input, Math.min(input.width - 4, free.x + 80), free.y, -1, Qt.LeftButton)
+        mouseMove(input, Math.min(input.width - 4, free.x + 160), free.y, -1, Qt.LeftButton)
+        tryVerify(function() { return testCase.automationPreviewItems().length > 0 }, 1000,
+                  "the moving sweep published its draft markers")
+        mouseRelease(input, Math.min(input.width - 4, free.x + 160), free.y, Qt.LeftButton)
+        var swept = bootstrap.automationLaneValues()
+        compare(swept !== before, true,
+                "the released sweep committed a document change (" + swept + " of " + before + ")")
+        compare(bootstrap.automationLaneTicks().split(",").length > 1, true,
+                "sweepSteppingAndRampFinish: the swept lane carries more than one written tick")
+
+        // b) A Shift sweep is the ramp: its end value differs from its anchor.
+        testCase.dragAutomationPlot(free.x, free.y, Math.min(input.width - 4, free.x + 220),
+                                    free.y < input.height / 2 ? input.height * 0.8
+                                                              : input.height * 0.2,
+                                    Qt.ShiftModifier)
+        compare(bootstrap.automationLaneValues() !== swept, true,
+                "sweepSteppingAndRampFinish: the ramp sweep committed a document change")
+        compare(session.canUndo, true, "the ramp sweep reached the document history")
+
+        // c) The Pan lane's neutral snap: the case empties the lane, writes two
+        // of its own rows, and the Control-armed drag settles just inside the
+        // neutral radius — the same drag without the modifier keeps the pointer's
+        // own value, so the snap is the modifier's own work.
+        var panTab = bootstrap.automationPanIndex()
+        verify(panTab >= 0, "the catalog publishes the Pan parameter")
+        verify(testCase.clearAutomationLane(panTab), "the Pan lane starts empty")
+        var highColumn = testCase.automationFreeColumn(24)
+        verify(highColumn > 0, "the empty Pan lane leaves a column for its first row")
+        testCase.dragAutomationPlot(highColumn, Math.round(input.height * 0.15),
+                                    Math.min(input.width - 4, highColumn + 96),
+                                    Math.round(input.height * 0.15))
+        tryVerify(function() { return bootstrap.automationLaneEventCount() > 0 }, 2000,
+                  "the Pan sweep wrote its first row")
+        var lowColumn = testCase.automationFreeColumn(highColumn + 140)
+        verify(lowColumn > 0, "the lane leaves a column for its second row")
+        testCase.dragAutomationPlot(lowColumn, Math.round(input.height * 0.85),
+                                    Math.min(input.width - 4, lowColumn + 96),
+                                    Math.round(input.height * 0.85))
+        tryVerify(function() { return testCase.automationLaneNodes().length > 1 }, 2000,
+                  "the Pan lane projects both written rows")
+        var neutralRow = testCase.automationRowForValue(64)
+        compare(neutralRow > 0, true,
+                "the drawn rows name the neutral's own row (" + Math.round(neutralRow) + ")")
+        var panNodes = testCase.automationLaneNodes()
+        var panItem = null
+        for (var p = 0; p < panNodes.length; ++p) {
+            if (!panNodes[p].model.projected && Math.abs(panNodes[p].model.value - 64) >= 20) {
+                panItem = panNodes[p]
+                break
+            }
+        }
+        verify(panItem, "the written Pan lane draws a node away from the neutral ("
+               + panNodes.length + " drawn)")
+        var panPoint = testCase.automationNodePoint(panItem)
+        verify(panPoint, "the Pan node projects a drawn centre")
+        var panTick = String(panItem.model.tick)
+        var panValue = panItem.model.value
+        var panBefore = bootstrap.automationLaneValues()
+        compare(panBefore.indexOf(panTick + ":64") >= 0, false,
+                "the dragged Pan node starts away from the neutral (" + panTick + ":"
+                + panValue + " of " + panBefore + ")")
+        var settleRow = neutralRow + 2
+        testCase.dragAutomationPlotRow(panPoint.x, panPoint.y, panPoint.y - 30, settleRow)
+        var unsnapped = bootstrap.automationLaneValues()
+        compare(unsnapped !== panBefore, true,
+                "the same drag without the modifier moved the node (" + panTick + ":"
+                + panValue + " of " + panBefore + " became " + unsnapped + ")")
+        compare(unsnapped.indexOf(panTick + ":64") >= 0, false,
+                "the same drag without the modifier keeps the pointer's own value ("
+                + unsnapped + ")")
+        verify(bootstrap.requestAutomationUndo(), "the production undo completed (error='"
+               + session.lastSaveError + "')")
+        compare(bootstrap.automationLaneValues(), panBefore, "Undo restored the written Pan lane")
+        var restored = testCase.automationWrittenNodeIndex()
+        panPoint = restored < 0 ? null
+                                : testCase.automationNodePoint(testCase.automationLaneNodes()[restored])
+        verify(panPoint, "the restored Pan lane draws its node again")
+        testCase.dragAutomationPlotRow(panPoint.x, panPoint.y, panPoint.y - 30, settleRow,
+                                       Qt.ControlModifier)
+        var snapped = bootstrap.automationLaneValues()
+        compare(snapped.indexOf(panTick + ":64") >= 0, true,
+                "panNeutralSnap: the Control-armed drag committed the neutral 64 at the node's own"
+                + " tick (" + snapped + ")")
+        compare(snapped.split(",").length, panBefore.split(",").length,
+                "the snap moved the value without adding or dropping an occurrence")
+
+        // d) A node drag on the Volume lane moves one occurrence, and a
+        // Shift-held stationary release deletes nothing.
+        testCase.clickAutomationTab(volumeTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === volumeTab }, 2000,
+                  "the Volume lane is active again")
+        var dragged = testCase.automationLaneNodes()
+        verify(dragged.length > 0, "the swept Volume lane still projects nodes")
+        var first = testCase.automationNodePoint(dragged[0])
+        var valuesBefore = bootstrap.automationLaneValues()
+        testCase.dragAutomationPlot(first.x, first.y, first.x, first.y - 30)
+        compare(bootstrap.automationLaneValues() !== valuesBefore, true,
+                "nodeDragAndPhantomOutcomes: the released node drag moved its value ("
+                + bootstrap.automationLaneValues() + ")")
+        var afterMove = bootstrap.automationLaneValues()
+        var shiftNode = testCase.automationNodePoint(testCase.automationLaneNodes()[0])
+        testCase.dragAutomationPlot(shiftNode.x, shiftNode.y, shiftNode.x, shiftNode.y,
+                                    Qt.ShiftModifier)
+        compare(bootstrap.automationLaneValues(), afterMove,
+                "nodeDragAndPhantomOutcomes: a Shift-held stationary release deletes nothing")
+
+        // e) The pencil tool: a stroke writes the point range it crossed.
+        var pencilNode = testCase.automationNodePoint(testCase.automationLaneNodes()[0])
+        model.isPencilMode = true
+        wait(0)
+        var beforeStroke = bootstrap.automationLaneValues()
+        testCase.dragAutomationPlot(pencilNode.x, pencilNode.y, pencilNode.x + 24, pencilNode.y + 6)
+        compare(bootstrap.automationLaneValues() !== beforeStroke, true,
+                "pointRangeAndPencilReplacements: the pencil stroke committed its range ("
+                + bootstrap.automationLaneValues() + ")")
+        model.isPencilMode = false
+        wait(0)
+        compare(session.canUndo, true, "the stroke reached the document history")
+    }
+
+    // The point menu and the prompt: a right press on a node opens its own typed
+    // rows, Set Value opens the captured value form, a typed draft commits one
+    // transaction, and both cancel paths write nothing and leave no frozen state.
+    function test_productionAutomationPromptTransaction() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-automation-prompt")
+        testCase.mountProductionAutomation(location)
+        var model = testCase.automationModel()
+        var volumeTab = bootstrap.automationVolumeIndex()
+        verify(testCase.writeVolumeLanePoints(volumeTab),
+               "the case created a written Volume lane with a real sweep")
+        var input = testCase.automationPlotInput()
+        var nodes = testCase.automationLaneNodes()
+        verify(nodes.length > 0, "the Volume lane projects a written node")
+        var valuesBefore = bootstrap.automationLaneValues()
+
+        // The node's own menu, driven by a real right press.
+        var writtenIndex = testCase.automationWrittenNodeIndex()
+        verify(writtenIndex >= 0, "the Volume lane draws a written node")
+        verify(testCase.rightClickAutomationNode(writtenIndex), "the written node has a centre")
+        tryVerify(function() { return bootstrap.automationMenuOpen() }, 2000,
+                  "the right press on the node opened its menu")
+        testCase.awaitAutomationModal("automationMenu", true)
+        compare(bootstrap.automationMenuActions(), "1,2",
+                "the point menu publishes Set Value and Delete")
+        var panel = findChild(testCase.surface, "automationMenuPanel")
+        verify(panel, "the menu composed its panel")
+        compare(panel.Accessible.role, Accessible.PopupMenu, "the panel publishes the popup-menu role")
+        var rows = testCase.automationMenuRowItems()
+        compare(rows.length, 2, "the point menu drew its two rows")
+        compare(rows[0].Accessible.role, Accessible.MenuItem, "a row publishes the menu-item role")
+        compare(String(rows[0].Accessible.name).length > 0, true,
+                "a row publishes its accessible name ('" + rows[0].Accessible.name + "')")
+
+        // Set Value opens the captured form.
+        compare(bootstrap.automationMenuActions().indexOf("1") >= 0, true,
+                "the captured point menu publishes Set Value ("
+                + bootstrap.automationMenuActions() + ")")
+        verify(testCase.triggerAutomationMenuRow(1), "the Set Value row is the current one")
+        compare(bootstrap.automationPromptOpen(), true,
+                "Set Value opened the captured form")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        var field = findChild(testCase.automationPageItem(), "automationPromptInput")
+        verify(field, "the prompt composed its value field")
+        tryVerify(function() { return field.activeFocus }, 2000,
+                  "the prompt took active focus in its field")
+        compare(model.promptDraft.length > 0, true, "the prompt opened with the captured value")
+        compare(String(model.promptTitle).length > 0, true, "the prompt publishes its captured title")
+
+        // A typed draft commits exactly one transaction.
+        field.selectAll()
+        keyClick(Qt.Key_9)
+        wait(0)
+        compare(model.promptDraft, "9", "typing replaced the selected draft (field '"
+                + field.text + "', draft '" + model.promptDraft + "')")
+        compare(bootstrap.automationLaneValues(), valuesBefore, "typing committed nothing")
+        keyClick(Qt.Key_Return)
+        tryVerify(function() { return !model.promptOpen }, 2000, "Enter accepted the prompt")
+        tryVerify(function() { return bootstrap.automationLaneValues() !== valuesBefore }, 2000,
+                  "the accepted value reached the captured node ("
+                  + bootstrap.automationLaneValues() + ")")
+        compare(bootstrap.automationFrozenRevision() < 0, true,
+                "an accepted prompt leaves no frozen revision behind")
+
+        // An out-of-domain draft stays open with its error and writes nothing.
+        // The field's own validator refuses such keystrokes interactively, so the
+        // draft also arrives the way a paste would: through the form's own route.
+        verify(testCase.openAutomationNodeMenu(testCase.automationWrittenNodeIndex()),
+               "the written node's menu reopened for the draft case")
+        verify(testCase.triggerAutomationMenuRow(1), "the Set Value row is the current one")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        field = findChild(testCase.automationPageItem(), "automationPromptInput")
+        verify(field, "the prompt composed its value field again")
+        var invalid = String(Number(model.promptMaximum) + 1)
+        var promptValues = bootstrap.automationLaneValues()
+        var promptRevision = bootstrap.automationDocumentRevision()
+        var undoBefore = session.canUndo
+        field.selectAll()
+        for (var digit = 0; digit < invalid.length; ++digit)
+            keyClick(Qt.Key_0 + Number(invalid.charAt(digit)))
+        wait(0)
+        compare(field.text, invalid,
+                "the field took the out-of-domain digits (" + invalid + ")")
+        compare(String(model.promptError).length > 0, true,
+                "the typed out-of-domain draft publishes its error ('" + model.promptError + "')")
+        keyClick(Qt.Key_Return)
+        wait(0)
+        compare(bootstrap.automationPromptOpen(), true,
+                "the refused acceptance left the prompt open")
+        compare(bootstrap.automationLaneValues(), promptValues,
+                "the refused acceptance wrote nothing")
+        compare(bootstrap.automationDocumentRevision(), promptRevision,
+                "the refused acceptance published no revision")
+        compare(session.canUndo, undoBefore, "the refused acceptance recorded no history entry")
+        model.updatePromptDraft(String(Number(model.promptMaximum) - 1))
+        wait(0)
+        compare(model.promptError, "", "a valid draft through the same route clears the error")
+        keyClick(Qt.Key_Return)
+        tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
+                  "the valid draft accepted through the form's own route")
+
+        // Escape cancels with no write, and leaves no frozen revision.
+        var accepted = bootstrap.automationLaneValues()
+        verify(testCase.openAutomationNodeMenu(testCase.automationWrittenNodeIndex()),
+               "the written node's menu reopened")
+        verify(testCase.triggerAutomationMenuRow(1),
+               "the reopened menu's Set Value row is the current one")
+        compare(bootstrap.automationPromptOpen(), true,
+                "the prompt reopened")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        compare(bootstrap.automationFrozenRevision() >= 0, true,
+                "an open prompt holds the revision it captured")
+        keyClick(Qt.Key_Escape)
+        tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
+                  "Escape closed the prompt")
+        compare(bootstrap.automationLaneValues(), accepted, "Escape wrote nothing")
+        compare(bootstrap.automationFrozenRevision(), -1,
+                "a cancelled prompt leaves no frozen revision behind")
+        verify(bootstrap.cancelInput(), "the composition's own cancellation settles the page")
+        compare(bootstrap.automationInteractionActive(), false,
+                "the cancelled page reports no interaction")
+
+        // An outside press dismisses without a write.
+        verify(testCase.openAutomationNodeMenu(testCase.automationWrittenNodeIndex()),
+               "the written node's menu opened once more")
+        verify(testCase.triggerAutomationMenuRow(1),
+               "the menu's Set Value row is the current one once more")
+        compare(bootstrap.automationPromptOpen(), true,
+                "the prompt reopened once more")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        var underlay = findChild(testCase.surface, "automationPromptUnderlay")
+        verify(underlay, "the prompt composed its dismissing underlay")
+        mouseClick(underlay, 4, 4, Qt.LeftButton)
+        tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
+                  "an outside press dismissed the prompt")
+        compare(bootstrap.automationLaneValues(), accepted, "the outside dismissal wrote nothing")
+        compare(bootstrap.automationFrozenRevision(), -1,
+                "the dismissed prompt left no frozen revision either")
+    }
+
+    // The point menu's Delete and the lane menu's own commands: a written node is
+    // deletable, the projected engine node's row is disabled and never acts, the
+    // lane menu publishes the production labels, and an unavailable row is
+    // refused rather than silently reported as done.
+    function test_productionAutomationMenusAndLaneCommands() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-automation-menus")
+        testCase.mountProductionAutomation(location)
+        var model = testCase.automationModel()
+        var volumeTab = bootstrap.automationVolumeIndex()
+        verify(testCase.writeVolumeLanePoints(volumeTab),
+               "the case created a written Volume lane with a real sweep")
+        var input = testCase.automationPlotInput()
+        var nodes = testCase.automationLaneNodes()
+        verify(nodes.length > 0, "the Volume lane projects a written node")
+        var ticksBefore = bootstrap.automationLaneTicks()
+
+        // The lane menu of the active tab: Copy CC lane, Paste CC lane (replace),
+        // Clear events and Delete automation events.
+        testCase.openAutomationTabMenu(volumeTab)
+        var actions = bootstrap.automationMenuActions().split(",")
+        compare(actions.length >= 5, true,
+                "the lane menu publishes its production rows (" + actions.join("/") + ")")
+        compare(actions.indexOf("5") >= 0, true, "the lane menu publishes Clear events")
+        compare(actions.indexOf("6") >= 0, true,
+                "the CC lane menu publishes Delete automation events")
+        compare(testCase.automationMenuSeparatorItems().length, 1,
+                "the lane menu drew its separator")
+        for (var a = 0; a < actions.length; ++a) {
+            if (actions[a] === "-1")
+                continue
+            compare(testCase.automationMenuRowItems().filter(function(item) {
+                return item.objectName === "automationMenuRow_" + actions[a]
+            }).length, 1, "the menu drew exactly one row for action " + actions[a])
+        }
+        compare(testCase.automationMenuRowItems().length,
+                actions.length - testCase.automationMenuSeparatorItems().length,
+                "the menu drew one action row per published action ("
+                + testCase.automationMenuRowItems().length + " of " + actions.length + ")")
+
+        // Copy CC lane fills the accepted clipboard, which enables Paste.
+        verify(testCase.triggerAutomationMenuRow(3), "the Copy CC lane row is reachable")
+        wait(0)
+        compare(bootstrap.automationLaneClipAvailable(), true,
+                "Copy CC lane filled the accepted clipboard for this parameter")
+        testCase.openAutomationTabMenu(volumeTab)
+        verify(testCase.triggerAutomationMenuRow(4), "the Paste CC lane (replace) row is reachable")
+        tryVerify(function() { return !bootstrap.automationMenuOpen() }, 2000,
+                  "the paste consumed the menu")
+
+        // Clear events writes the lane empty; the point menu's disabled Delete on
+        // a projected node is refused without a write.
+        var clearedBefore = bootstrap.automationLaneEventCount()
+        testCase.openAutomationTabMenu(volumeTab)
+        verify(testCase.triggerAutomationMenuRow(5), "the Clear events row is reachable")
+        tryVerify(function() { return !bootstrap.automationMenuOpen() }, 2000,
+                  "the clear consumed the menu")
+        compare(clearedBefore > 0, true, "the lane held written events before the clear")
+        tryVerify(function() { return bootstrap.automationLaneEventCount() === 0 }, 2000,
+                  "Clear events left the lane empty")
+
+        // Delete through the rendered row removes exactly the captured occurrence:
+        // a written occurrence's row, because the projected engine node's row is
+        // published disabled — and the clear above emptied the lane, so this case
+        // writes its own points again with a real sweep.
+        verify(testCase.writeVolumeLanePoints(volumeTab),
+               "the case wrote the lane again for the delete step")
+        var writtenIndex = testCase.automationWrittenNodeIndex()
+        verify(writtenIndex >= 0, "the Volume lane draws a written node")
+        ticksBefore = bootstrap.automationLaneTicks()
+        verify(testCase.rightClickAutomationNode(writtenIndex), "the written node has a centre")
+        tryVerify(function() { return bootstrap.automationMenuOpen() }, 2000,
+                  "the node menu opened")
+        testCase.awaitAutomationModal("automationMenu", true)
+        verify(testCase.clickAutomationMenuRow(2), "the Delete row is drawn")
+        tryVerify(function() { return bootstrap.automationLaneTicks() !== ticksBefore }, 2000,
+                  "the rendered Delete row removed the captured occurrence ("
+                  + bootstrap.automationLaneTicks() + " of " + ticksBefore + ")")
+        compare(bootstrap.automationMenuOpen(), false, "activating a row consumes the menu")
+        compare(session.canUndo, true, "the deletion reached the document's history")
+
+        // Delete automation events: the destructive lane row opens the page's
+        // captured confirmation (the sibling `cc-delete-confirm` form), and its
+        // acceptance is the one write that empties the lane.
+        verify(testCase.writeVolumeLanePoints(volumeTab),
+               "the case wrote the lane again for the confirmation")
+        var beforeConfirmation = bootstrap.automationLaneEventCount()
+        compare(beforeConfirmation > 0, true, "the lane carries events before the confirmation")
+        testCase.openAutomationTabMenu(volumeTab)
+        verify(testCase.triggerAutomationMenuRow(6), "the Delete automation events row is reachable")
+        compare(bootstrap.automationPromptOpen(), true,
+                "the destructive row opened the captured confirmation")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        compare(testCase.automationModel().promptKind, 1,
+                "the open form is the lane-delete confirmation")
+        compare(String(testCase.automationModel().promptMessage).indexOf("written events") >= 0, true,
+                "the confirmation names the captured event count ('"
+                + testCase.automationModel().promptMessage + "')")
+        compare(String(testCase.automationModel().promptTitle), "Delete automation events",
+                "the confirmation publishes its captured title")
+        keyClick(Qt.Key_Return)
+        tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
+                  "the confirmation's acceptance closed the form")
+        tryVerify(function() { return bootstrap.automationLaneEventCount() === 0 }, 2000,
+                  "the accepted confirmation emptied the lane")
+
+        // A projected engine node: the case writes a lane whose first occurrence
+        // is after tick zero, so the visible tick-zero column draws the engine's
+        // own projection — its Delete row is published disabled and an activation
+        // attempt performs nothing.
+        testCase.clickAutomationTab(volumeTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === volumeTab }, 2000,
+                  "the Volume lane is active for the projection")
+        var row = testCase.automationFreePoint()
+        verify(row, "the lane leaves a pointer row clear of every drawn node")
+        // A sweep across the second half of the visible plot: its occurrences all
+        // start well after tick zero, which is the column the projection needs.
+        var farColumn = testCase.automationFreeColumn(Math.round(input.width * 0.45), row.y)
+        verify(farColumn > 0, "the lane leaves a column clear of every node past its middle")
+        testCase.dragAutomationPlot(farColumn, row.y,
+                                    Math.min(input.width - 4, farColumn + 96), row.y)
+        tryVerify(function() { return bootstrap.automationLaneEventCount() > 0 }, 2000,
+                  "the sweep left the Volume lane written events")
+        compare(bootstrap.automationLaneTicks().split(",").indexOf("0"), -1,
+                "the written lane starts after tick zero (" + bootstrap.automationLaneTicks() + ")")
+        var projected = null
+        var atZero = testCase.automationNodesAtTick(0)
+        for (var z = 0; z < atZero.length; ++z) {
+            if (atZero[z].model.projected === true)
+                projected = atZero[z]
+        }
+        verify(projected, "the visible tick-zero column draws the projected engine node ("
+               + atZero.length + " drawn at tick zero)")
+        var projectedPoint = testCase.automationNodePoint(projected)
+        verify(projectedPoint, "the projected node projects a drawn centre")
+        mouseClick(input, projectedPoint.x, projectedPoint.y, Qt.RightButton)
+        wait(0)
+        tryVerify(function() { return bootstrap.automationMenuOpen() }, 2000,
+                  "the projected node opened its own menu")
+        var disabledRow = null
+        var drawn = testCase.automationMenuRowItems()
+        for (var d = 0; d < drawn.length; ++d) {
+            if (drawn[d].objectName === "automationMenuRow_2")
+                disabledRow = drawn[d]
+        }
+        verify(disabledRow, "the projected node's Delete row is drawn")
+        compare(disabledRow.model.enabled, false,
+                "the projected engine node's Delete row is published disabled")
+        var beforeDisabled = bootstrap.automationLaneTicks()
+        testCase.clickAutomationMenuRow(2)
+        wait(0)
+        compare(bootstrap.automationLaneTicks(), beforeDisabled,
+                "a disabled Delete row performs nothing")
+        testCase.automationModel().dismissMenu()
+        wait(0)
+    }
+
+    // The Tempo row's Tap control through real input: a pointer tap and a
+    // keyboard tap register on the control, the page averages the tapped
+    // intervals, cancelling the session writes nothing, and the idle window
+    // lands exactly one tempo edit and one history entry.
+    function test_productionAutomationTapTempoThroughInput() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-automation-tap")
+        testCase.mountProductionAutomation(location)
+        var model = testCase.automationModel()
+        var tempoTab = testCase.automationTab(model.tabCount - 1)
+        verify(tempoTab, "the Tempo row is drawn in the selector")
+        var tapControl = findChild(tempoTab, "automationTempoTapButton")
+        verify(tapControl, "the Tempo row composed its Tap control")
+        var tempoBefore = bootstrap.automationTempoBpm()
+        verify(tempoBefore > 0, "the staged song names a tick-zero tempo (" + tempoBefore + ")")
+        var revisionBefore = bootstrap.automationDocumentRevision()
+        var undoBefore = session.canUndo
+        compare(String(tapControl.Accessible.name).length > 0, true,
+                "the Tap control publishes its accessible name ('" + tapControl.Accessible.name + "')")
+
+        // A real pointer press on the Tap control registers one tap at the event
+        // boundary, and the panel publishes the live session.
+        mouseClick(tapControl, tapControl.width / 2, tapControl.height / 2, Qt.LeftButton)
+        tryVerify(function() { return bootstrap.automationTapCount() >= 1 }, 2000,
+                  "the pointer tap registered a tap")
+        compare(bootstrap.automationInteractionActive(), true,
+                "a live tap session is the page's interaction fact")
+        compare(bootstrap.automationDocumentRevision(), revisionBefore,
+                "tapping writes nothing to the document")
+        compare(session.canUndo, undoBefore, "tapping records no history entry")
+
+        // The keyboard's own tap: Return on the focused control.
+        testCase.focusControl(tapControl)
+        keyClick(Qt.Key_Return)
+        wait(0)
+        compare(bootstrap.automationTapCount() >= 1, true,
+                "Return on the focused Tap control registered a tap")
+        verify(bootstrap.automationTapIdleCommitMs() > 0,
+               "the panel published its idle commit window ("
+               + bootstrap.automationTapIdleCommitMs() + " ms)")
+
+        // Cancelling the session takes the draft with it and writes nothing.
+        testCase.resetAutomationTap()
+        compare(bootstrap.automationTapCount(), 0, "the cancel cleared the tap session")
+        compare(bootstrap.automationTempoBpm(), tempoBefore,
+                "a cancelled session wrote no tempo")
+        compare(bootstrap.automationDocumentRevision(), revisionBefore,
+                "a cancelled session published no revision")
+        compare(session.canUndo, undoBefore, "a cancelled session recorded no history entry")
+
+        // One deterministic cadence: the draft is the tapped average, and the
+        // idle window commits that tempo as exactly one edit and one entry. The
+        // gaps are chosen so the draft cannot name the tempo already in place.
+        var gapMs = (tempoBefore === 150) ? 500 : 400
+        var taps = 4
+        var expectedDraft = (tempoBefore === 150) ? 120 : 150
+        verify(bootstrap.automationTapCadence(gapMs, taps),
+               "the production tap route took the cadence")
+        compare(bootstrap.automationTapDraftBpm(), expectedDraft,
+                "the draft is the tapped average (" + bootstrap.automationTapDraftBpm() + ")")
+        compare(bootstrap.automationTapCount(), taps, "the session holds every tap")
+        verify(bootstrap.automationTapIdleElapsed(), "the idle window committed the ready draft")
+        tryVerify(function() { return bootstrap.automationTempoBpm() === expectedDraft }, 2000,
+                  "the tick-zero tempo now names the tapped tempo ("
+                  + bootstrap.automationTempoBpm() + ")")
+        compare(session.canUndo, true, "the tempo edit recorded one history entry")
+        compare(bootstrap.automationDocumentRevision() > revisionBefore, true,
+                "the tempo edit published its own revision")
+        compare(bootstrap.automationTapCount(), 0, "the commit cleared the session")
+        compare(bootstrap.automationInteractionActive(), false,
+                "the committed session left no interaction live")
+        var committedRevision = bootstrap.automationDocumentRevision()
+        compare(committedRevision > revisionBefore, true,
+                "the tempo edit published one revision")
+        verify(bootstrap.requestAutomationUndo(), "the production undo completed (error='"
+               + session.lastSaveError + "')")
+        compare(bootstrap.automationTempoBpm(), tempoBefore,
+                "Undo restored the previous tick-zero tempo")
+        compare(session.canUndo, undoBefore, "the tempo edit was exactly one history entry")
+        verify(bootstrap.requestAutomationRedo(), "the production redo completed (error='"
+               + session.lastSaveError + "')")
+        compare(bootstrap.automationTempoBpm(), expectedDraft, "Redo restored the tapped tempo")
+        compare(bootstrap.automationDocumentRevision() >= committedRevision, true,
+                "the undo and redo each published their own revision")
+
+        // The panel's own readout is driven by the published session, and a
+        // single tap is not commit-ready.
+        verify(bootstrap.automationTapCadence(500, 3), "the production tap route took 500 ms gaps")
+        compare(model.tapTempoTapCount, 3, "the panel publishes the live tap count")
+        compare(model.tapTempoActive, true, "the panel publishes the live session")
+        compare(bootstrap.automationTempoBpm(), expectedDraft,
+                "a live session writes nothing until its idle window")
+        testCase.resetAutomationTap()
+        verify(bootstrap.automationTapCadence(500, 1), "the production tap route took a lone tap")
+        compare(bootstrap.automationTapCount(), 1, "the lone tap stands in the session")
+        verify(!bootstrap.automationTapIdleElapsed(),
+               "a lone tap's idle window commits nothing")
+        compare(bootstrap.automationTempoBpm(), expectedDraft,
+                "a lone tap left the tempo stream alone")
+    }
+
+    // Mounted follow, cancellation ownership and history round trips: a playhead
+    // observation re-projects without rebuilding static content, the page's own
+    // gestures, modals and tap sessions are the only interactions that suspend
+    // follow, the composition's cancellation reaches the page's capture without a
+    // write, and one edit round-trips through Undo and Redo.
+    function test_productionAutomationFollowAndCancellation() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-automation-follow")
+        testCase.mountProductionAutomation(location)
+        var input = testCase.automationPlotInput()
+        var volumeTab = bootstrap.automationVolumeIndex()
+        verify(volumeTab >= 0, "the catalog publishes the Volume parameter")
+        verify(bootstrap.pausePlayheadPolling(),
+               "the lane holds the production polling task for a deterministic position")
+        var grid = testCase.surface.gridModel
+        // ApplicationSession.playPause()'s playing transport raw value.
+        var playing = 2
+        var farSample = 100000000
+        grid.resetCameraScroll()
+        var parked = grid.cameraScrollX
+
+        // One playhead observation follows, and the page re-projects without
+        // rebuilding any of its static content.
+        var builds = bootstrap.automationContentBuilds()
+        var presentations = bootstrap.automationPlayheadPresentations()
+        testCase.presentPlayhead(farSample, playing)
+        tryVerify(function() { return grid.cameraScrollX !== parked }, 1000,
+                  "an idle page lets follow scroll the camera")
+        compare(bootstrap.automationPlayheadPresentations() > presentations, true,
+                "the page received the shared presentation")
+        compare(bootstrap.automationContentBuilds() > builds, true,
+                "the follow scroll moved the shared camera and re-projected the lane")
+
+        // The same observation with the camera already at its target publishes
+        // nothing at all, so no static content is rebuilt.
+        builds = bootstrap.automationContentBuilds()
+        presentations = bootstrap.automationPlayheadPresentations()
+        testCase.presentPlayhead(farSample, playing)
+        compare(bootstrap.automationContentBuilds(), builds,
+                "an unchanged shared-playhead observation rebuilds no static content")
+
+        // A pointer merely resting on the plot is a hover, not an interaction.
+        grid.setCameraHScroll(parked)
+        var hovers = bootstrap.automationHoverBuilds()
+        builds = bootstrap.automationContentBuilds()
+        mouseMove(input, input.width - 4, input.height - 4, -1, Qt.NoButton, Qt.NoModifier)
+        tryVerify(function() { return bootstrap.automationHoverBuilds() > hovers }, 1000,
+                  "the pointer resting on the plot published its hover")
+        compare(bootstrap.automationInteractionActive(), false,
+                "a hover is not the page's interaction")
+        testCase.presentPlayhead(farSample, playing)
+        tryVerify(function() { return grid.cameraScrollX !== parked }, 1000,
+                  "a hover never suspends follow")
+
+        // A live gesture suspends follow, and its release resumes it.
+        var free = testCase.automationFreePoint()
+        verify(free, "the lane leaves an empty press point for a live gesture")
+        mousePress(input, free.x, free.y, Qt.LeftButton)
+        compare(bootstrap.automationInteractionActive(), true,
+                "the live press is the page's interaction")
+        compare(bootstrap.automationFrozenRevision() >= 0, true,
+                "the live gesture froze the revision it captured")
+        grid.setCameraHScroll(parked)
+        builds = bootstrap.automationContentBuilds()
+        testCase.presentPlayhead(farSample, playing)
+        compare(grid.cameraScrollX, parked, "a live gesture suspends follow")
+        compare(bootstrap.automationContentBuilds(), builds,
+                "an observation under a live gesture rebuilds no static content")
+        mouseRelease(input, free.x, free.y, Qt.LeftButton)
+        compare(bootstrap.automationInteractionActive(), false,
+                "the released gesture left no interaction live")
+        testCase.presentPlayhead(farSample, playing)
+        tryVerify(function() { return grid.cameraScrollX !== parked }, 1000,
+                  "releasing the gesture lets the next observation follow")
+
+        // An open menu suspends follow, and dismissing it resumes.
+        testCase.openAutomationTabMenu(volumeTab)
+        compare(bootstrap.automationMenuOpen(), true, "the lane menu is open")
+        compare(bootstrap.automationInteractionActive(), true,
+                "an open menu is the page's interaction")
+        grid.setCameraHScroll(parked)
+        testCase.presentPlayhead(farSample, playing)
+        compare(grid.cameraScrollX, parked, "the open menu suspends follow")
+        keyClick(Qt.Key_Escape)
+        tryVerify(function() { return !bootstrap.automationMenuOpen() }, 2000,
+                  "Escape closed the menu")
+        testCase.presentPlayhead(farSample, playing)
+        tryVerify(function() { return grid.cameraScrollX !== parked }, 1000,
+                  "dismissing the menu lets the next observation follow")
+
+        // The composition's own cancellation reaches the page's capture: a live
+        // gesture and an open modal both end with nothing written.
+        var revisionBefore = bootstrap.automationDocumentRevision()
+        var ticksBefore = bootstrap.automationLaneTicks()
+        mousePress(input, free.x, free.y, Qt.LeftButton)
+        compare(bootstrap.automationFrozenRevision() >= 0, true,
+                "the cancelled gesture froze the revision it captured")
+        verify(bootstrap.cancelInput(), "the composition cancelled the live gesture")
+        compare(bootstrap.automationFrozenRevision(), -1,
+                "the cancelled gesture left no frozen revision behind")
+        compare(bootstrap.automationInteractionActive(), false, "the cancelled gesture ended")
+        compare(bootstrap.automationDocumentRevision(), revisionBefore,
+                "the cancelled gesture wrote nothing")
+        compare(bootstrap.automationLaneTicks(), ticksBefore,
+                "the cancelled gesture left the lane alone")
+        mouseRelease(input, free.x, free.y, Qt.LeftButton)
+
+        testCase.openAutomationTabMenu(volumeTab)
+        compare(bootstrap.automationMenuOpen(), true, "the lane menu opened again")
+        verify(bootstrap.cancelInput(), "the composition cancelled the open menu")
+        compare(bootstrap.automationMenuOpen(), false, "the cancelled menu closed")
+        compare(bootstrap.automationFrozenRevision(), -1,
+                "the cancelled menu left no frozen revision behind")
+        compare(bootstrap.automationDocumentRevision(), revisionBefore,
+                "the cancelled menu wrote nothing")
+
+        // One edit round-trips: the case empties the lane, writes its own
+        // occurrences, and the page republishes what Undo and Redo restore.
+        verify(testCase.clearAutomationLane(volumeTab), "the case emptied the lane for the round trip")
+        var cleared = bootstrap.automationLaneValues()
+        verify(testCase.writeVolumeLanePoints(volumeTab), "the case wrote the lane")
+        var written = bootstrap.automationLaneValues()
+        compare(written !== cleared, true, "the write changed the emptied lane")
+        var writtenTicks = bootstrap.automationLaneTicks()
+        compare(written.length > 0, true, "the write reached the published lane")
+        compare(session.canUndo, true, "the write reached the document history (error='"
+                + session.lastSaveError + "')")
+        verify(bootstrap.requestAutomationUndo(), "the production undo completed (error='"
+               + session.lastSaveError + "')")
+        compare(bootstrap.automationLaneValues(), cleared,
+                "Undo republished the emptied lane the page draws from")
+        var undone = bootstrap.automationLaneValues()
+        verify(bootstrap.requestAutomationRedo(), "the production redo completed (error='"
+               + session.lastSaveError + "')")
+        compare(bootstrap.automationLaneValues(), written, "Redo republished the committed lane")
+        compare(bootstrap.automationLaneTicks(), writtenTicks,
+                "Redo restored the committed ticks")
+        compare(testCase.automationLaneNodes().length > 0, true,
+                "the redrawn lane projects the restored occurrences")
+        verify(bootstrap.requestAutomationUndo(), "the second production undo completed")
+        compare(bootstrap.automationLaneValues(), undone,
+                "a second Undo restored the state before the write")
+
+        // The camera is shared with every other page: the case hands it back at
+        // the scroll the lane's own mounts start from.
+        testCase.presentPlayhead(0, 0)
+        grid.resetCameraScroll()
+        compare(grid.cameraScrollX, parked, "the case handed the shared camera back")
+    }
+
+    // Bare Space priority: the selector, the plot, the open menu and the tap
+    // panel all leave it to the window transport, and the prompt's own text field
+    // is the one explicit text-entry surface that consumes it.
+    function test_productionAutomationSpacePriority() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-automation-space")
+        testCase.mountProductionAutomation(location)
+        var model = testCase.automationModel()
+        var propagations = testCase.spacePropagations
+
+        // The plot leaves bare Space to the transport.
+        testCase.automationPlot().forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Space)
+        tryVerify(function() { return testCase.spacePropagations === propagations + 1 }, 2000,
+                  "the automation plot leaves bare Space to the window transport")
+
+        // A selector tab claims only Return/Enter.
+        var volumeTab = bootstrap.automationVolumeIndex()
+        verify(testCase.writeVolumeLanePoints(volumeTab),
+               "the case created a written Volume lane with a real sweep")
+        var tab = testCase.automationTab(volumeTab)
+        verify(tab, "the selector drew the Volume tab")
+        testCase.focusControl(tab)
+        keyClick(Qt.Key_Space)
+        tryVerify(function() { return testCase.spacePropagations === propagations + 2 }, 2000,
+                  "a focused selector tab leaves bare Space to the transport")
+        keyClick(Qt.Key_Return)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === volumeTab }, 2000,
+                  "Return activates the focused tab")
+
+        // The Tempo row's Tap control claims only Return/Enter.
+        var tempoTab = testCase.automationTab(model.tabCount - 1)
+        var tapControl = findChild(tempoTab, "automationTempoTapButton")
+        verify(tapControl, "the Tempo row composed its Tap control")
+        testCase.focusControl(tapControl)
+        keyClick(Qt.Key_Space)
+        tryVerify(function() { return testCase.spacePropagations === propagations + 3 }, 2000,
+                  "the Tap control leaves bare Space to the window transport")
+        compare(bootstrap.automationTapCount(), 0, "the Space key registered no tap")
+        testCase.resetAutomationTap()
+
+        // The open menu claims only Return/Enter.
+        var nodes = testCase.automationLaneNodes()
+        verify(nodes.length > 0, "the Volume lane projects a written node")
+        verify(testCase.rightClickAutomationNode(0), "the first drawn node has a centre")
+        tryVerify(function() { return bootstrap.automationMenuOpen() }, 2000,
+                  "the node menu opened")
+        testCase.awaitAutomationModal("automationMenu", true)
+        keyClick(Qt.Key_Space)
+        tryVerify(function() { return testCase.spacePropagations === propagations + 4 }, 2000,
+                  "the automation menu leaves bare Space to the window transport")
+        keyClick(Qt.Key_Escape)
+        tryVerify(function() { return !bootstrap.automationMenuOpen() }, 2000,
+                  "Escape closed the menu")
+
+        // The prompt's own field is the explicit text-entry surface.
+        verify(testCase.openAutomationNodeMenu(testCase.automationWrittenNodeIndex()),
+               "the written node's menu opened")
+        verify(testCase.triggerAutomationMenuRow(1),
+               "the menu's Set Value row is the current one")
+        compare(bootstrap.automationPromptOpen(), true, "the prompt opened")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        var field = findChild(testCase.automationPageItem(), "automationPromptInput")
+        verify(field, "the prompt composed its value field")
+        tryVerify(function() { return field.activeFocus }, 2000, "the field took active focus")
+        keyClick(Qt.Key_Space)
+        wait(0)
+        compare(testCase.spacePropagations, propagations + 4,
+                "the focused value field keeps Space out of the transport")
+        keyClick(Qt.Key_Escape)
+        tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
+                  "Escape closed the prompt")
+        compare(bootstrap.automationMenuOpen(), false, "the case left no menu open")
+        verify(bootstrap.cancelInput(), "the composition's own cancellation settles the page")
+        compare(bootstrap.automationInteractionActive(), false,
+                "the cancelled page reports no interaction")
+    }
+
     // The suite hands the document presentation back the way the host does at
     // close, around the one composition the lane mounted: polling stops, the
     // session cancels while the scene still exists, the scene is removed, and the
@@ -2553,6 +4019,9 @@ TestCase {
         testCase.surface.gridModel.baseFontPx = bootstrap.profileFontPx
         testCase.surface.configureViewport()
         wait(0)
+        verify(bootstrap.attachProductionSection(testCase.automationKind),
+               "the profile composition attaches the production Automation page")
+        testCase.showSection(testCase.automationKind)
         var nodes = testCase.velocityNodes()
         verify(nodes.length > 0, "the profile composition drew its nodes")
         testCase.clickNode(nodes[0])
@@ -2568,7 +4037,10 @@ TestCase {
         var panes = bootstrap.profilePanes
         for (var i = 0; i < panes.length; ++i)
             verify(testCase.captureProfilePane(panes[i]),
-                   "captured the " + panes[i] + " pane at " + bootstrap.profileName)
+                   "captured the " + panes[i] + " pane at " + bootstrap.profileName
+                   + " (dpr " + Screen.devicePixelRatio + " of " + bootstrap.profileDpr
+                   + ", automationFont " + testCase.automationModel().baseFontPx
+                   + " of " + bootstrap.profileFontPx + ")")
         compare(page.objectName, "velocityPage", "the capture composition is the production page")
     }
 }

@@ -36,6 +36,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// page, attached to its own section slot and fanned the one shared
     /// playhead presentation beside it.
     private var voiceChangesPageOwner: VoiceChangesPage?
+    /// The document-bound Automation page: same lifetime again, attached to its
+    /// own section slot before the scene mounts and fanned the same shared
+    /// playhead presentation.
+    private var automationPageOwner: AutomationPage?
     private var detachContinuation: CheckedContinuation<Void, Never>?
     private var isDisposed = false
     private var activeReplacementTask: Task<Void, Never>?
@@ -83,6 +87,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
             preconditionFailure("Voice Changes page requested without an open song")
         }
         return voiceChangesPageOwner
+    }
+
+    /// The document-bound Automation page, with the same document lifetime as the
+    /// other two pages.
+    public func automationPage() -> AutomationPage {
+        guard let automationPageOwner else {
+            preconditionFailure("Automation page requested without an open song")
+        }
+        return automationPageOwner
     }
 
     /// The one shared playhead. Like the drawer it exists for the whole session;
@@ -155,6 +168,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// close path's acknowledgment: never earlier, because the QML surface binds
     /// to the grid, the page and the session until the scene is really gone.
     private func releaseDocumentPresentation() {
+        if let page = automationPageOwner {
+            drawer.detachSection(page)
+            page.detach()
+            automationPageOwner = nil
+        }
         if let page = voiceChangesPageOwner {
             drawer.detachSection(page)
             page.detach()
@@ -375,6 +393,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 playhead?.refreshProjection()
                 self?.velocityPageOwner?.refreshCamera()
                 self?.voiceChangesPageOwner?.refreshCamera()
+                self?.automationPageOwner?.refreshCamera()
             }
             replacement.onPlayback = { [weak self] timeline in
                 do {
@@ -394,6 +413,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 // track, bank and history changes reach both owners here.
                 self.velocityPageOwner?.refreshFromDocument()
                 self.voiceChangesPageOwner?.refreshFromDocument()
+                self.automationPageOwner?.refreshFromDocument()
                 self.documentDirty = replacement.document.isDirty || replacement.bankDirty
                 self.canUndo = replacement.document.history.canUndo
                 self.canRedo = replacement.document.history.canRedo
@@ -419,6 +439,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
             page.attach(session: replacement, palette: presenter.palette)
             let voicePage = VoiceChangesPage(baseFontPx: presenter.baseFontPx)
             voicePage.attach(session: replacement, palette: presenter.palette)
+            let automationPage = AutomationPage(baseFontPx: presenter.baseFontPx)
+            automationPage.attach(session: replacement, palette: presenter.palette)
             presenter.onSetVelocityRequested = { [weak page] in
                 page?.openSelectedVelocityPrompt() ?? false
             }
@@ -429,16 +451,20 @@ public final class ApplicationSession: QmlInstantiableStatus {
             // that already exist. One callback fans both pages — the session
             // installs no second closure — and `SharedPlayheadPresenter.detach()`
             // clears it before either page retires.
-            playhead.onPresentation = { [weak page, weak voicePage] presentation in
+            playhead.onPresentation = { [weak page, weak voicePage, weak automationPage] presentation in
                 page?.refreshPlayhead(tick: presentation.tick,
                                       playing: presentation.playing)
                 voicePage?.refreshPlayhead(tick: presentation.tick,
                                            playing: presentation.playing)
+                automationPage?.refreshPlayhead(tick: presentation.tick,
+                                                playing: presentation.playing)
             }
             velocityPageOwner = page
             voiceChangesPageOwner = voicePage
+            automationPageOwner = automationPage
             drawer.attachSection(page)
             drawer.attachSection(voicePage)
+            drawer.attachSection(automationPage)
             documentDirty = replacement.document.isDirty || replacement.bankDirty
             canUndo = replacement.document.history.canUndo
             canRedo = replacement.document.history.canRedo
@@ -471,6 +497,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
         // The host acknowledged scene removal: each page's slot is dropped (its
         // cancel already ran above, while the scene still existed) and its owner
         // is released before the document session it reads.
+        if let page = automationPageOwner {
+            drawer.detachSection(page)
+            page.detach()
+            automationPageOwner = nil
+        }
         if let page = voiceChangesPageOwner {
             drawer.detachSection(page)
             page.detach()
