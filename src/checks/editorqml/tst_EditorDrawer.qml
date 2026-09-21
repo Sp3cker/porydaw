@@ -1529,6 +1529,49 @@ TestCase {
         return collected
     }
 
+    // ---- visible text contract ------------------------------------------
+
+    // "Text doesn't show / button labels missing" presents as geometry that
+    // is correct with ink that is not: a page on its transparent
+    // fallbackPalette, or label strings the owner never published. No case
+    // asserted ink before, so every production mount below audits it.
+    function isEffectivelyVisible(item) {
+        for (var current = item; current; current = current.parent) {
+            if (!current.visible)
+                return false
+        }
+        return true
+    }
+
+    // Every QQuickText under the root, in tree order. Text, TextInput and
+    // TextEdit all expose text/color/font, but only the editors carry the
+    // read-only `length`, so it admits exactly Text.
+    function collectVisibleTexts(item, found) {
+        var collected = found || []
+        if (!item || !item.children)
+            return collected
+        if (item.text !== undefined && item.color !== undefined && item.font !== undefined
+                && item.length === undefined && testCase.isEffectivelyVisible(item))
+            collected.push(item)
+        for (var i = 0; i < item.children.length; ++i)
+            testCase.collectVisibleTexts(item.children[i], collected)
+        return collected
+    }
+
+    // The sign-off gate: the mounted composition drew text at all, and every
+    // visible run carries opaque ink. Returns the runs for the label-content
+    // assertions the case adds itself.
+    function auditVisibleTextInk(root, what) {
+        var texts = testCase.collectVisibleTexts(root, [])
+        verify(texts.length > 0, what + ": the mounted composition drew text at all")
+        for (var i = 0; i < texts.length; ++i) {
+            verify(texts[i].color.a > 0,
+                   what + ": opaque ink for '" + texts[i].objectName + "' ('"
+                   + texts[i].text + "')")
+        }
+        return texts
+    }
+
     function velocityPageItem() { return testCase.pageItem(testCase.velocityKind) }
     function velocityPlot() { return findChild(testCase.velocityPageItem(), "velocityPlot") }
     function velocityPlotInput() { return findChild(testCase.velocityPageItem(), "velocityPlotInput") }
@@ -1718,6 +1761,11 @@ TestCase {
         compare(detent.Accessible.checkable, true, "the detent control is checkable")
         compare(detent.Accessible.checked, testCase.velocityModel().detentsEnabled,
                 "the detent control shows the page's own preference")
+        var detentTexts = testCase.collectVisibleTexts(detent, [])
+        verify(detentTexts.length > 0, "the detent control labels itself")
+        compare(String(detentTexts[0].text).length > 0, true,
+                "the detent control draws its label ('" + detentTexts[0].text + "')")
+        testCase.auditVisibleTextInk(page, "velocity page")
     }
 
     // Real pointer input on the drawn nodes: a selection click, then a vertical
@@ -1782,6 +1830,14 @@ TestCase {
         verify(field, "the prompt composed its text field")
         tryVerify(function() { return field.activeFocus }, 1000,
                   "the prompt took active focus in its field")
+        var velocityCard = findChild(testCase.surface, "velocityPromptCard")
+        verify(velocityCard, "the prompt composed its card")
+        compare(String(findChild(velocityCard, "velocityPromptTitle").text).length > 0, true,
+                "the prompt draws its title")
+        var velocityCardLabels = testCase.collectVisibleTexts(velocityCard, []).map(function(t) { return t.text })
+        verify(velocityCardLabels.indexOf("OK") >= 0, "the prompt draws its OK label")
+        verify(velocityCardLabels.indexOf("Cancel") >= 0, "the prompt draws its Cancel label")
+        testCase.auditVisibleTextInk(velocityCard, "velocity prompt")
         compare(field.text, String(before), "the prompt opened with the captured value")
         keyClick(Qt.Key_9)
         wait(0)
@@ -2600,6 +2656,9 @@ TestCase {
                 "the insertion published exactly one more drawn marker rule")
         compare(findChild(page, "voiceReadout").visible, true,
                 "the readout is drawn for the presented track")
+        compare(String(findChild(page, "voiceReadout").text).length > 0, true,
+                "the readout draws the presented track's context")
+        testCase.auditVisibleTextInk(page, "voice page")
     }
 
     // Real pointer input on the drawn composition: the double-click picker entry,
@@ -2628,6 +2687,11 @@ TestCase {
         testCase.awaitVoiceModal("voicePicker", true)
         tryVerify(function() { return field.activeFocus }, 1000,
                   "the picker took focus in its search field")
+        var picker = findChild(testCase.surface, "voicePicker")
+        verify(picker, "the picker composed its production surface")
+        compare(findChild(testCase.surface, "voicePickerTitle").text, model.pickerTitle,
+                "the picker draws its title")
+        testCase.auditVisibleTextInk(picker, "voice picker")
         testCase.typeProgram(0)
         tryVerify(function() { return model.pickerFilter === "000" }, 1000,
                   "the typed text reached the page's filter (filter '"
@@ -2663,6 +2727,7 @@ TestCase {
         testCase.awaitVoiceModal("voiceChangeMenu", true)
         var panel = findChild(testCase.surface, "voiceMenuPanel")
         verify(panel, "the menu composed its panel")
+        testCase.auditVisibleTextInk(panel, "voice context menu")
         compare(panel.Accessible.role, Accessible.PopupMenu,
                 "the panel publishes the popup-menu role")
         var changeRow = findChild(testCase.surface, "voiceMenuRow_1")
@@ -3101,6 +3166,7 @@ TestCase {
                 "the lane with written events drew its curve")
         compare(findChild(page, "automationReadout").visible, true,
                 "the readout is drawn while the lane holds a value at the shared tick")
+        testCase.auditVisibleTextInk(page, "automation page")
     }
 
     // A parameter switch is view-only, and the selector's Control press is the
@@ -3374,6 +3440,10 @@ TestCase {
         compare(rows[0].Accessible.role, Accessible.MenuItem, "a row publishes the menu-item role")
         compare(String(rows[0].Accessible.name).length > 0, true,
                 "a row publishes its accessible name ('" + rows[0].Accessible.name + "')")
+        testCase.auditVisibleTextInk(panel, "automation point menu")
+        var menuRowTexts = testCase.collectVisibleTexts(rows[0], [])
+        compare(menuRowTexts.length > 0 && String(menuRowTexts[0].text).length > 0, true,
+                "the menu draws its row label ('" + (menuRowTexts.length > 0 ? menuRowTexts[0].text : "") + "')")
 
         // Set Value opens the captured form.
         compare(bootstrap.automationMenuActions().indexOf("1") >= 0, true,
@@ -3389,6 +3459,14 @@ TestCase {
                   "the prompt took active focus in its field")
         compare(model.promptDraft.length > 0, true, "the prompt opened with the captured value")
         compare(String(model.promptTitle).length > 0, true, "the prompt publishes its captured title")
+        var autoPrompt = findChild(testCase.surface, "automationPrompt")
+        verify(autoPrompt, "the prompt composed its production surface")
+        compare(findChild(autoPrompt, "automationPromptTitle").text, model.promptTitle,
+                "the prompt draws its captured title")
+        var autoCardLabels = testCase.collectVisibleTexts(autoPrompt, []).map(function(t) { return t.text })
+        verify(autoCardLabels.indexOf("OK") >= 0, "the prompt draws its OK label")
+        verify(autoCardLabels.indexOf("Cancel") >= 0, "the prompt draws its Cancel label")
+        testCase.auditVisibleTextInk(autoPrompt, "automation prompt")
 
         // A typed draft commits exactly one transaction.
         field.selectAll()
