@@ -563,3 +563,141 @@ reference; source-only preservation is not counted as current-path coverage.
 Unproved cases keep that gate open. Existing integrated grid work is checkpointed
 without claiming full T8 acceptance, its benchmark, or its remaining surface
 matrix. Stop here for the user-owned T8 test-ownership planning boundary.
+
+## Bounded T8 closure — controller execution, 2026-09-20
+
+This dispatch verifies the already-converted grid; it does not convert it again.
+The separately reviewed pure-camera preparation was checkpointed and pushed as
+`d3e49a3a`, after its focused `projectSession` run passed all 30 camera assertions.
+The camera remains unconnected to `DocumentSession`, `PianoGrid` and QML.
+
+### Explicit controller decisions and coverage gate
+
+The user/controller answered **“Approve the ten exclusions”** for the five
+`automation-domain/*` and five `vgsavecheck/*` existing absent-UI recommendations,
+and **“Accept bounded closure with gaps”** for the two negative native clipboard
+facets below. These decisions supersede a requirement to close those two rows
+before accepting this bounded T8 dispatch; they do not authorize retirement.
+
+- The 43 core-classified T8 rows now comprise **31 verified, 10 explicitly
+  approved exclusions, and 2 pending**. The original 29 verified rows, including
+  their evidence, remain unchanged and were not re-run.
+- The ten approved exclusions retain `runEvidence: null`: absent automation and
+  voicegroup-editor gestures did not execute. Existing Swift domain/history
+  coverage is separate, not an assertion that their old UI ran.
+- `clipcheck/ClipCheckTest::songViewEditKeyPaste` is mapped to the executed
+  `selectionkey/SwiftRollGatedTest::hostClipboardRoundTripAndReplacement`.
+  Its production-view shortcut and replacement-widget shortcut assert pasted
+  note values, selected notes, edit-cursor advancement and undo/redo.
+- `clipmimecheck/ClipMimeTest::clipboardRoutesClipMime` combines its unchanged,
+  accepted T7 Swift decoder/rescaler evidence with that same newly executed
+  host case's actual QMimeData format/payload and production Copy/Paste route.
+  This is composition of explicit assertions, not promotion by a catalog alias.
+- `clipmimecheck/ClipMimeTest::foreignClipboardIsNotClip` and
+  `clipmimecheck/ClipMimeTest::malformedCustomMimeReportsDecodeFailure` remain
+  **pending**. Neither the positive host case nor in-memory malformed decoding
+  proves their absent-native-MIME/failure-routing facets. Their original source
+  and prior partial evidence remain; no new native support was added.
+- All 293 T8 rows remain accounted for: the 43 above, 37 unchanged verified
+  native-integration rows, and 213 grid/window-input rows retaining their
+  individual pending reasons. No native smoke screenshot blanket-promotes them.
+  The full inventory remains 845 rows: 455 verified, 291 pending, 59 deferred-ui,
+  40 excluded. These totals do not independently approve untouched dispositions.
+
+**7B/core/oracle retirement remains blocked.** Bounded T8 acceptance with the two
+pending rows is not global core-milestone acceptance or permission to delete
+protected sources.
+
+### Executed commands and reusable evidence
+
+```sh
+deno task build:app
+deno task verify --filter selectionkey --verbose --qt hostClipboardRoundTripAndReplacement -o build/t8-clipboard-host.log,txt
+```
+
+Both passed. The named host case produced **3 passed, 0 failed, 0 skipped**
+including initialization/cleanup. Raw log: `build/t8-clipboard-host.log`;
+SHA-256 `92dfda62c4055921306f9da909abc0b53a45857c2f0455c606ea5b0e3193d662`.
+The current manifest contains 24 catalog entries, not the brief's historical 18.
+
+No fresh headless scenario was needed: the remaining unproved facets were native
+input/MIME routes or controller-owned absent-UI decisions, while their existing
+headless semantics retain the accepted T7 evidence. No full Swift, T7 battery,
+other window-mode aliases, raster matrix or whole-manifest rerun was used merely
+to reconfirm recorded results. No assertion bodies or application sources changed.
+
+### Review acceptance and evidence limits
+
+Independent T8 review returned **Spec PASS / Task quality Approved**, with no
+critical findings. The controller accepts `clipboardRoutesClipMime` as verified
+by the two documented evidence legs: real native MIME payload preservation and
+the previously accepted Swift decode/rescale assertions. This is not a claim
+that a single native run transported a 24-TPQN clip and decoded it at 48 TPQN.
+That combined scenario remains unexecuted; the verified disposition records
+composed contract coverage, not an end-to-end rescaled-transport run.
+
+The controller also ratifies reuse of the accepted headless evidence rather
+than a redundant fresh headless run: the remaining gaps are the two explicitly
+pending native negative routes, not untested headless semantics. Neither
+decision relaxes the blocked core/oracle retirement gate or authorizes new
+native testing support. The review's optional evidence-schema normalization is
+outside this bounded task.
+
+### Actual-window smoke
+
+The built `porydaw.app/Contents/MacOS/porydaw` was launched through the supervised
+process tool with `--project build/t8-app-smoke-jlq9eog_ --song mus_route101`.
+The private project was staged from the existing manifest's 17 declared
+`swiftrollgated` fixture files, not from a user's project or an expired
+runner-owned scratch path. The smoke used the null audio backend.
+
+Observed through ordinary OS pointer/keyboard input and captured native windows:
+the loaded themed notes; drawing; both resize edges; movement; a same-pitch
+neighbor visibly trimmed by an extending note; right-drag selection and Delete;
+keyboard Copy/Paste; keyboard Undo/Redo restoring the exact pre-/post-move MIDI
+bytes; Escape cancelling an unfinished draw without changing saved MIDI; actual
+vertical pan and time zoom; Save, ordinary native close, and reopen with the
+edited long note and trimmed neighbor preserved.
+
+Playback was triggered by actual Space input, not by directly invoking Play in
+the debugger. Observation at the existing `pd_audio_service_play` entry point
+showed the Swift `ApplicationSession` call stack; stepping out changed native
+transport from 0 to 2. Continuing advanced the existing playhead to 101622
+samples. A second Space reached `pd_audio_service_pause` and left transport 1.
+Only existing getters were inspected; no API, hook or test driver was added.
+This proves the edited reopened song's null-backend transport, not audible output.
+The debugger detached, and both native close operations exited 0.
+
+Captures are retained under `build/t8-native-smoke/`: `initial.png`, `drawn.png`,
+`resized.png`, `navigation.png`, `zoom-observed.png`, `neighbor.png`, `pan.png`,
+and `reopened.png`. The saved MIDI SHA-256, unchanged by reopen/close, is
+`13af1a39d0ea77f66106694152c9516fa439c4dec1d4e567489029629bb0e8ea`.
+This is an actual-window smoke at the current theme/font, not a new DPR/font,
+fractional-scroll, text/clipping, whole-image or ghost-parity matrix.
+
+### Conditional obsolete-source retirement
+
+Only the explicitly listed empty `src/ui/songview/quick/swiftgrid/` directory was
+removed; it contained no tracked files. The following old check directories stay
+**uncompiled and unregistered** because complete meaningful-case replacement
+evidence or an explicit disposition is still missing:
+
+| Source | Case-by-case disposition |
+| --- | --- |
+| `swiftdocfeed` | `fixtureMutationHistoryAndTeardown`: direct mutation/history evidence is retained, but old feed teardown/publication has no complete mapping. `unsignedTicksAndRawSignaturePrecedence`: raw-signature/domain evidence is retained, but old snapshot precedence is unmapped. `sessionFeedTransitionsMasksAndReconciliation`: selection/session semantics are partially covered, not the old reconciliation/mask contract. `actualSwiftReceiverGuard`: obsolete transport plumbing, not a new acceptance test. Keep the group; no exclusion was self-approved. |
+| `swiftcommands` | `registryRoutingAndOutcomeContract` and `swiftSubmissionGuard`: obsolete pipe/registry guards, not acceptance. `noteIntentValidationAndUndoGranularity`, `batchMoveAndResizeUndoGranularity`, `trackIntentValidationAndRouting`: recorded Swift domain/history evidence covers behavior in part, not a proved complete old matrix. `sessionIntentsLeaveUndoStackUntouched`: direct session evidence is retained without claiming the old pipe/revision contract. `addRoundTripsThroughDocumentFeed`: direct state/rendering replaces the architecture, not a proved callback contract. Keep the group pending complete mapping/disposition. |
+| `swiftbandkeys` | `testCommandIdArrivalThroughBandKeyPath`, `testProductionKeyOwnership`, `testEligibilityGatingWithAndWithoutSelection`, `testGestureActiveBlocking`, `testAutoRepeatConsumption`, `testFallbackWhenUnhandled`, `testCancelReasonsMidGesture`, `testPointerWheelLeaveForwarding`, `testPressDeclineRules`: existing production assertions cover portions, not the complete old ordinal/verdict, fallback, cancellation and forwarding contracts. All nine retain their pending reasons. |
+| `swiftqtml` | `testPresenterPropertyBinding`, `testInPlaceRowMutation`, `testRowReplacement`, `testInsertRemovePreservesTargets`, `testReorderTargetsIntendedRow`, `testResetWithStaleQmlReference`, `testPendingMutationThenTeardown`, `testObjectReturnCapability`: production session replacement is not proof of these generic model/delegate/capability cases. All eight remain source-only and pending. |
+| `swiftrollbench` | `testScrollZoomFrameCadence`, represented by both historical bench rows: no registered or executed replacement; no benchmark or frame-cost claim. Retain uncompiled rather than inventing a driver or exclusion. |
+
+The current compiled source lists contain none of these old check directories or
+deleted transport modules. Stale references inside preserved, uncompiled legacy
+views are not live application dependencies and were not destructively stripped
+to make a text search empty. `TrackHeaders.swift` remains untouched, unbuilt
+reference source. No core/oracle file, native check, fixture registration or
+working native boundary was removed.
+
+This is the stop after bounded T8. Camera/session integration, a QML test runner,
+the velocity surface and window-shell migration require the next controller
+dispatch. The velocity menu/shortcut integration remains a planning decision;
+there is no new dispatcher or native exception.

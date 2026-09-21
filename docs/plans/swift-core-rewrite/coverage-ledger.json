@@ -486,15 +486,15 @@
       "classification": "in-scope core behavior",
       "dueTask": 8,
       "swiftTargets": "No retained automation drawer exists in the terminal single-grid scope.",
-      "status": "pending",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Controller adjudication required at Task 8 terminal reconciliation.",
+        "approved": true,
+        "requiredReview": "Explicit user/controller approval received in the T8 dispatch, 2026-09-20.",
         "rationale": "Legacy automation-drawer gesture presentation is absent UI, not core document behavior.",
-        "decision": "Recommended for exclusion; not yet controller-approved."
+        "decision": "User approved the ten existing absent-UI exclusions. No execution of the absent UI is claimed; existing Swift domain evidence remains separate."
       },
-      "pendingGap": "Awaiting controller approval of Task 8 exclusion recommendation."
+      "pendingGap": null
     },
     {
       "cppId": "automation-domain/AutomationDomainTest::panNeutralSnap",
@@ -505,15 +505,15 @@
       "classification": "in-scope core behavior",
       "dueTask": 8,
       "swiftTargets": "No retained automation drawer exists in the terminal single-grid scope.",
-      "status": "pending",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Controller adjudication required at Task 8 terminal reconciliation.",
+        "approved": true,
+        "requiredReview": "Explicit user/controller approval received in the T8 dispatch, 2026-09-20.",
         "rationale": "Legacy automation-drawer gesture presentation is absent UI, not core document behavior.",
-        "decision": "Recommended for exclusion; not yet controller-approved."
+        "decision": "User approved the ten existing absent-UI exclusions. No execution of the absent UI is claimed; existing Swift domain evidence remains separate."
       },
-      "pendingGap": "Awaiting controller approval of Task 8 exclusion recommendation."
+      "pendingGap": null
     },
     {
       "cppId": "automation-domain/AutomationDomainTest::pointRangeAndPencilReplacements",
@@ -524,15 +524,15 @@
       "classification": "in-scope core behavior",
       "dueTask": 8,
       "swiftTargets": "No retained automation drawer exists in the terminal single-grid scope.",
-      "status": "pending",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Controller adjudication required at Task 8 terminal reconciliation.",
+        "approved": true,
+        "requiredReview": "Explicit user/controller approval received in the T8 dispatch, 2026-09-20.",
         "rationale": "Legacy automation-drawer gesture presentation is absent UI, not core document behavior.",
-        "decision": "Recommended for exclusion; not yet controller-approved."
+        "decision": "User approved the ten existing absent-UI exclusions. No execution of the absent UI is claimed; existing Swift domain evidence remains separate."
       },
-      "pendingGap": "Awaiting controller approval of Task 8 exclusion recommendation."
+      "pendingGap": null
     },
     {
       "cppId": "automation-domain/AutomationDomainTest::rangesAndSelection",
@@ -585,15 +585,15 @@
       "classification": "in-scope core behavior",
       "dueTask": 8,
       "swiftTargets": "No retained automation drawer exists in the terminal single-grid scope.",
-      "status": "pending",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Controller adjudication required at Task 8 terminal reconciliation.",
+        "approved": true,
+        "requiredReview": "Explicit user/controller approval received in the T8 dispatch, 2026-09-20.",
         "rationale": "Legacy automation-drawer gesture presentation is absent UI, not core document behavior.",
-        "decision": "Recommended for exclusion; not yet controller-approved."
+        "decision": "User approved the ten existing absent-UI exclusions. No execution of the absent UI is claimed; existing Swift domain evidence remains separate."
       },
-      "pendingGap": "Awaiting controller approval of Task 8 exclusion recommendation."
+      "pendingGap": null
     },
     {
       "cppId": "automation-domain/AutomationDomainTest::sweepSteppingAndRampFinish",
@@ -604,15 +604,15 @@
       "classification": "in-scope core behavior",
       "dueTask": 8,
       "swiftTargets": "No retained automation drawer exists in the terminal single-grid scope.",
-      "status": "pending",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Controller adjudication required at Task 8 terminal reconciliation.",
+        "approved": true,
+        "requiredReview": "Explicit user/controller approval received in the T8 dispatch, 2026-09-20.",
         "rationale": "Legacy automation-drawer gesture presentation is absent UI, not core document behavior.",
-        "decision": "Recommended for exclusion; not yet controller-approved."
+        "decision": "User approved the ten existing absent-UI exclusions. No execution of the absent UI is claimed; existing Swift domain evidence remains separate."
       },
-      "pendingGap": "Awaiting controller approval of Task 8 exclusion recommendation."
+      "pendingGap": null
     },
     {
       "cppId": "automation-domain/AutomationDomainTest::xcmdCanonicalEdits",
@@ -1174,12 +1174,19 @@
       "observableAssertions": "notes/lanes/tempo/scope/track creation, no-op and undo granularity exact per function",
       "classification": "in-scope core behavior",
       "dueTask": 8,
-      "swiftTargets": "swiftcore/SwiftCoreTest::timeEdits \u2192 runClipboardEditingSuite (headless, emits original cppId)",
-      "status": "pending",
-      "runEvidence": null,
+      "swiftTargets": "selectionkey/SwiftRollGatedTest::hostClipboardRoundTripAndReplacement: src/checks/swiftrollgated/clipboardchecks.cpp",
+      "status": "verified",
+      "runEvidence": {
+        "command": "deno task verify --filter selectionkey --verbose --qt hostClipboardRoundTripAndReplacement -o build/t8-clipboard-host.log,txt",
+        "revision": "d3e49a3a",
+        "result": "PASS: named production-window clipboard case, 3 Qt slots including initialization/cleanup, 0 failed, 0 skipped",
+        "log": "build/t8-clipboard-host.log",
+        "logSha256": "92dfda62c4055921306f9da909abc0b53a45857c2f0455c606ea5b0e3193d662",
+        "executedCppId": "selectionkey/SwiftRollGatedTest::hostClipboardRoundTripAndReplacement"
+      },
       "exclusionReview": null,
-      "pendingGap": "Original view-key paste route has no executed equivalent; semantic paste alone is insufficient.",
-      "reconciliationNotes": "HeadlessCoverageDecision confirms pending. Preserve original regression protection; T8 ownership amendment has not started."
+      "pendingGap": null,
+      "reconciliationNotes": "The actual production view Copy/Paste shortcut and replacement QWidget shortcut executed. Assertions prove inserted note values, selection, cursor advancement and undo/redo. This replaces the obsolete SongView route by observable behavior, not a catalog alias; original source remains protected."
     },
     {
       "cppId": "clipcheck/ClipCheckTest::tiledTimePasteUndoesOneTileAtATime",
@@ -1234,11 +1241,11 @@
       "source": "src/checks/clipboard/clipmime_test.cpp:228",
       "fixturesAndInputs": "clipboard routing and 14 malformed named rows",
       "operations": "recognize/decode clipboard MIME",
-      "observableAssertions": "foreign text rejected; malformed data fails with correct custom-MIME verdict; no partial clip",
+      "observableAssertions": "Custom MIME preserves the clip and its source TPQN; decoding/rescaling to 48 TPQN yields the expected span and note duration.",
       "classification": "in-scope core behavior",
       "dueTask": 8,
-      "swiftTargets": "swiftcore/timeEdits: src/checks/swiftcore/TimeChecks.swift",
-      "status": "pending",
+      "swiftTargets": "swiftcore/timeEdits: src/checks/swiftcore/TimeChecks.swift; selectionkey/SwiftRollGatedTest::hostClipboardRoundTripAndReplacement: src/checks/swiftrollgated/clipboardchecks.cpp",
+      "status": "verified",
       "runEvidence": {
         "command": "deno task verify --filter swiftcore --verbose --qt -maxwarnings 0 -o build/t7-core-final-identities.log,txt",
         "revision": "T7 bounded acceptance working tree after 322bcd4051669f4dfa432b0e68f57bd56577b31d",
@@ -1248,11 +1255,19 @@
         "review": "HeadlessCoverageDecision: source/input/outcome review approved the executed Swift assertion scope; ClipboardSemanticGate reused for clipboard-editing semantics.",
         "executedCppId": "clipmimecheck/ClipMimeTest::clipboardRoutesClipMime",
         "referenceLog": "build/t7-reference-clipmime.log",
-        "referenceRevision": "0c1d3cd583cf98a81c8bb048eee47815c5e4db1a"
+        "referenceRevision": "0c1d3cd583cf98a81c8bb048eee47815c5e4db1a",
+        "nativeTransport": {
+          "command": "deno task verify --filter selectionkey --verbose --qt hostClipboardRoundTripAndReplacement -o build/t8-clipboard-host.log,txt",
+          "revision": "d3e49a3a",
+          "result": "PASS: named production-window clipboard case, 3 Qt slots including initialization/cleanup, 0 failed, 0 skipped",
+          "log": "build/t8-clipboard-host.log",
+          "logSha256": "92dfda62c4055921306f9da909abc0b53a45857c2f0455c606ea5b0e3193d662",
+          "executedCppId": "selectionkey/SwiftRollGatedTest::hostClipboardRoundTripAndReplacement"
+        }
       },
       "exclusionReview": null,
-      "pendingGap": "Executed Swift decoder/rescaler assertions are accepted, but original native MIME transport/failure-routing facets are not proved by these assertions. Keep whole case pending and preserve legacy protection.",
-      "reconciliationNotes": "Controller conservatively leaves the complete case open despite bounded decoder approval; no full native-transport or retirement claim."
+      "pendingGap": null,
+      "reconciliationNotes": "Composite proof: retain the accepted T7 decoder/rescaler execution unchanged and add the executed real QMimeData format/payload, production Copy/Paste and replacement-view transport assertions. No claim is made for the separate foreign-clipboard or malformed-custom-MIME failure-routing cases."
     },
     {
       "cppId": "clipmimecheck/ClipMimeTest::codecRoundTrips[plain_note_clip]",
@@ -1315,7 +1330,7 @@
       "runEvidence": null,
       "exclusionReview": null,
       "pendingGap": "Foreign plain-text clipboard with custom MIME absent has no executed equivalent; malformed custom MIME is different.",
-      "reconciliationNotes": "HeadlessCoverageDecision confirms pending. Preserve original regression protection; T8 ownership amendment has not started."
+      "reconciliationNotes": "User/controller explicitly accepted bounded T8 closure with this row still pending on 2026-09-20. No exclusion or executed replacement is claimed. Preserve the original native case; the core/oracle retirement gate remains blocked for the next controller plan."
     },
     {
       "cppId": "clipmimecheck/ClipMimeTest::malformedCustomMimeReportsDecodeFailure",
@@ -1340,7 +1355,7 @@
       },
       "exclusionReview": null,
       "pendingGap": "Executed Swift decoder/rescaler assertions are accepted, but original native MIME transport/failure-routing facets are not proved by these assertions. Keep whole case pending and preserve legacy protection.",
-      "reconciliationNotes": "Controller conservatively leaves the complete case open despite bounded decoder approval; no full native-transport or retirement claim."
+      "reconciliationNotes": "User/controller explicitly accepted bounded T8 closure with this row still pending on 2026-09-20. Existing decoder evidence does not prove native malformed-MIME failure routing. No exclusion or complete replacement is claimed; preserve the original case and keep core/oracle retirement blocked."
     },
     {
       "cppId": "clipmimecheck/ClipMimeTest::malformedPayloads[garbage_bytes]",
@@ -13568,15 +13583,15 @@
       "classification": "in-scope core behavior",
       "dueTask": 8,
       "swiftTargets": "No retained voicegroup editor exists in the terminal single-grid scope.",
-      "status": "pending",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Controller adjudication required at Task 8 terminal reconciliation.",
+        "approved": true,
+        "requiredReview": "Explicit user/controller approval received in the T8 dispatch, 2026-09-20.",
         "rationale": "Legacy voicegroup-editor transport gestures are absent UI; bank domain/history remains covered by Swift core checks.",
-        "decision": "Recommended for exclusion; not yet controller-approved."
+        "decision": "User approved the ten existing absent-UI exclusions. No execution of the absent UI is claimed; existing Swift domain/history evidence remains separate."
       },
-      "pendingGap": "Awaiting controller approval of Task 8 exclusion recommendation."
+      "pendingGap": null
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
@@ -13881,15 +13896,15 @@
       "classification": "in-scope core behavior",
       "dueTask": 8,
       "swiftTargets": "No retained voicegroup editor exists in the terminal single-grid scope.",
-      "status": "pending",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Controller adjudication required at Task 8 terminal reconciliation.",
+        "approved": true,
+        "requiredReview": "Explicit user/controller approval received in the T8 dispatch, 2026-09-20.",
         "rationale": "Legacy voicegroup-editor transport gestures are absent UI; bank domain/history remains covered by Swift core checks.",
-        "decision": "Recommended for exclusion; not yet controller-approved."
+        "decision": "User approved the ten existing absent-UI exclusions. No execution of the absent UI is claimed; existing Swift domain/history evidence remains separate."
       },
-      "pendingGap": "Awaiting controller approval of Task 8 exclusion recommendation."
+      "pendingGap": null
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline[drag-up]",
@@ -13900,15 +13915,15 @@
       "classification": "in-scope core behavior",
       "dueTask": 8,
       "swiftTargets": "No retained voicegroup editor exists in the terminal single-grid scope.",
-      "status": "pending",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Controller adjudication required at Task 8 terminal reconciliation.",
+        "approved": true,
+        "requiredReview": "Explicit user/controller approval received in the T8 dispatch, 2026-09-20.",
         "rationale": "Legacy voicegroup-editor transport gestures are absent UI; bank domain/history remains covered by Swift core checks.",
-        "decision": "Recommended for exclusion; not yet controller-approved."
+        "decision": "User approved the ten existing absent-UI exclusions. No execution of the absent UI is claimed; existing Swift domain/history evidence remains separate."
       },
-      "pendingGap": "Awaiting controller approval of Task 8 exclusion recommendation."
+      "pendingGap": null
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline[precision-drag]",
@@ -13919,15 +13934,15 @@
       "classification": "in-scope core behavior",
       "dueTask": 8,
       "swiftTargets": "No retained voicegroup editor exists in the terminal single-grid scope.",
-      "status": "pending",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Controller adjudication required at Task 8 terminal reconciliation.",
+        "approved": true,
+        "requiredReview": "Explicit user/controller approval received in the T8 dispatch, 2026-09-20.",
         "rationale": "Legacy voicegroup-editor transport gestures are absent UI; bank domain/history remains covered by Swift core checks.",
-        "decision": "Recommended for exclusion; not yet controller-approved."
+        "decision": "User approved the ten existing absent-UI exclusions. No execution of the absent UI is claimed; existing Swift domain/history evidence remains separate."
       },
-      "pendingGap": "Awaiting controller approval of Task 8 exclusion recommendation."
+      "pendingGap": null
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline[set-value]",
@@ -13938,15 +13953,15 @@
       "classification": "in-scope core behavior",
       "dueTask": 8,
       "swiftTargets": "No retained voicegroup editor exists in the terminal single-grid scope.",
-      "status": "pending",
+      "status": "excluded",
       "runEvidence": null,
       "exclusionReview": {
-        "approved": false,
-        "requiredReview": "Controller adjudication required at Task 8 terminal reconciliation.",
+        "approved": true,
+        "requiredReview": "Explicit user/controller approval received in the T8 dispatch, 2026-09-20.",
         "rationale": "Legacy voicegroup-editor transport gestures are absent UI; bank domain/history remains covered by Swift core checks.",
-        "decision": "Recommended for exclusion; not yet controller-approved."
+        "decision": "User approved the ten existing absent-UI exclusions. No execution of the absent UI is claimed; existing Swift domain/history evidence remains separate."
       },
-      "pendingGap": "Awaiting controller approval of Task 8 exclusion recommendation."
+      "pendingGap": null
     },
     {
       "cppId": "vgsavecheck/VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks",
