@@ -6,9 +6,9 @@ import QtBridge
 // `src/ui/editordrawer/voicechangearea/` (`voicechangearea.cpp`,
 // `voicechangemenu.cpp`) and the rendering half in
 // `src/ui/songview/quick/voicechangequick.cpp` for behaviour. Pure lane rules,
-// scene projection and stale-target transaction drafting live in the sibling
-// responsibility files; this page publishes their results and sequences QML
-// interaction. It owns no camera, clock, viewport, history or document lookup:
+// static scene computation and stale-target transaction drafting live in the
+// sibling responsibility files; this page publishes their results and sequences
+// QML interaction. It owns no camera, clock, viewport, history or document lookup:
 // every mutation goes through one existing `SongDocument` lane operation.
 //
 // Ownership: `ApplicationSession` creates the page for the current document,
@@ -143,7 +143,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
             auditionDiagnostic = auditionAvailable ? "" : "Voice audition is unavailable."
         }
     }
-    @QtIgnored private var soundingProgram: UInt8?
+    @QtIgnored var soundingProgram: UInt8?
 
     // MARK: Published models
 
@@ -195,9 +195,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
     /// does not exist.
     @QtIgnored
     public func contextLabel(at slot: Int) -> String {
-        let views = slotViews()
-        guard views.indices.contains(slot) else { return "" }
-        return VoiceLanePolicy.label(slot: slot, view: views[slot])
+        VoiceChangesScene.sceneContextLabel(slot: slot, slots: slotViews())
     }
 
     /// The presented context span's end tick: the boundary a later presentation
@@ -208,23 +206,23 @@ public final class VoiceChangesPage: EditorDrawerPage {
             ?? TimeDefaults.noTick
     }
 
-    @QtIgnored private weak var session: DocumentSession?
+    @QtIgnored weak var session: DocumentSession?
     @QtIgnored private var palette = GridPalette()
     @QtIgnored private var caption: VoiceCaption?
     @QtIgnored private var title: VoiceCaption?
     @QtIgnored private var published: [VoiceMarkerHandle] = []
-    @QtIgnored private var pickerRowSnapshots: [VoicePickerRowHandle] = []
-    @QtIgnored private var drag: VoiceDragState?
-    @QtIgnored private var panRevision: UInt64?
-    @QtIgnored private var previousX: Double = 0
-    @QtIgnored private var picker: VoicePickerState?
-    @QtIgnored private var menu: VoiceMenuState?
-    @QtIgnored private var hoverIdentity: String?
-    @QtIgnored private var dragDistance: Double = 10
+    @QtIgnored var pickerRowSnapshots: [VoicePickerRowHandle] = []
+    @QtIgnored var drag: VoiceDragState?
+    @QtIgnored var panRevision: UInt64?
+    @QtIgnored var previousX: Double = 0
+    @QtIgnored var picker: VoicePickerState?
+    @QtIgnored var menu: VoiceMenuState?
+    @QtIgnored var hoverIdentity: String?
+    @QtIgnored var dragDistance: Double = 10
     @QtIgnored private var contextTick: Tick = 0
     @QtIgnored private var playing = false
     @QtIgnored private var lastContextKey: VoiceContextKey?
-    @QtIgnored private let pickerCache = VoicePickerProjectionCache()
+    @QtIgnored let pickerCache = VoicePickerProjectionCache()
     @QtIgnored private var metricsKey: MetricsKey?
     @QtIgnored private var cachedMetrics: GridMetrics?
     @QtIgnored private var entriesRevision: UInt64?
@@ -238,11 +236,6 @@ public final class VoiceChangesPage: EditorDrawerPage {
         var dpr: Double
         var width: Double
         var height: Double
-    }
-
-    private struct VoiceContextKey: Equatable {
-        var slot: Int
-        var playing: Bool
     }
 
     public init(baseFontPx: Double = VoiceChangesPagePolicy.seedBaseFontPx) {
@@ -278,10 +271,11 @@ public final class VoiceChangesPage: EditorDrawerPage {
     public func detach() {
         cancelSectionInteraction()
         session = nil
+        let scene = VoiceChangesSceneSnapshot.detached
         publishMarkers([])
-        VoiceChangesProjection.syncRects(heldSpans, [])
-        VoiceChangesProjection.syncRects(gridLines, [])
-        VoiceChangesProjection.syncTexts(gutterTexts, [])
+        publishSpans(scene.spans)
+        publishGrid(scene.gridLines)
+        publishGutter(scene.gutterTexts)
     }
 
     // MARK: Composition input
@@ -397,538 +391,156 @@ public final class VoiceChangesPage: EditorDrawerPage {
         }
     }
 
+    // MARK: Qt-facing input
+
+    // `@QtBridgeable` registers class-body members only, so every entry point
+    // QML or the checks call stays declared here as a one-line forward into
+    // `VoiceChangesInteraction.swift`, which owns each behavior and the
+    // interaction state it reads.
+
     // MARK: Page seam
 
-    /// The page's local Escape: an open picker, menu, drag, pan or hover claims
-    /// the key; otherwise it stays unhandled for the shared routing.
     public func handleEscape() -> Bool {
-        if picker != nil || menu != nil {
-            dismissModal()
-            return true
-        }
-        if drag != nil || panRevision != nil {
-            cancelSectionInteraction()
-            return true
-        }
-        guard hoverIdentity != nil || hoverVisible else { return false }
-        clearHover()
-        return true
+        return dispatchEscape()
     }
 
-    /// Ends every interaction the page owns without committing anything. Called
-    /// synchronously by the container before a hide, a replace or a global
-    /// cancellation publishes.
     public func cancelSectionInteraction() {
-        cancelDrag()
-        cancelPan()
-        cancelPicker()
-        dismissVoiceMenu()
-        clearHover()
-        refreshInteractionPublished()
+        cancelAllInteractions()
     }
 
     // MARK: Pointer input
 
-    /// One press. `true` means the page consumed it. A press while a picker or
-    /// menu is open dismisses it and starts nothing: the dismissal never
-    /// retargets the captured occurrence.
     @discardableResult
     public func pointerPress(x: Double, y: Double, surface: Int, button: Int,
                              modifiers: Int) -> Bool {
-        guard session != nil, let input = VoiceInputSurface(rawValue: surface) else { return false }
-        if picker != nil || menu != nil {
-            dismissModal()
-            previousX = x
-            return true
-        }
-        if input == .gutter {
-            clearHover()
-            return false
-        }
-        previousX = x
-        switch button {
-        case VoiceQtButton.right:
-            // Capture before any signal-producing step: the target is fixed from
-            // live state, so nothing after the capture can drift it.
-            guard let target = captureTarget(at: x) else { return true }
-            openMenu(target, anchorX: x, anchorY: max(0, y))
-            return true
-        case VoiceQtButton.middle:
-            clearHover()
-            panRevision = session?.document.revision
-            refreshInteractionPublished()
-            return true
-        case VoiceQtButton.left:
-            clearHover()
-            let hit = markerHit(at: x)
-            guard let hit else {
-                selectedIdentity = ""
-                refreshInteractionPublished()
-                projectMarkers(markerEntries())
-                return true
-            }
-            let occurrence = VoiceOccurrence(hit)
-            selectedIdentity = occurrence.text
-            let target = VoiceChangesTransactions.capture(
-                revision: session?.document.revision ?? 0,
-                track: session?.selectedTrack ?? -1,
-                tick: occurrence.tick,
-                occurrence: occurrence)
-            drag = VoiceChangesTransactions.drag(target: target, pressX: x)
-            refreshInteractionPublished()
-            projectMarkers(markerEntries())
-            return true
-        default:
-            return false
-        }
+        return dispatchPointerPress(x: x, y: y, surface: surface, button: button, modifiers: modifiers)
     }
 
-    /// One move: the frozen drag drafts its preview tick, a pan scrolls the
-    /// shared camera, and otherwise the pointer is hover only. `modifiers` is the
-    /// drag's own: the alt modifier switches the preview to the clock lattice.
     @discardableResult
     public func pointerMove(x: Double, y: Double, buttons: Int, modifiers: Int = 0) -> Bool {
-        guard session != nil else { return false }
-        _ = y
-        _ = buttons
-        if var live = drag {
-            if !live.active {
-                guard abs(x - live.pressX) >= dragDistance else { return true }
-                live.active = true
-                clearHover()
-            }
-            let tick = snapTick(at: x, fine: modifiers & VoiceModifier.alt != 0)
-            let changed = tick != live.previewTick
-            live.previewTick = tick
-            drag = live
-            cursorKind = 3
-            if changed {
-                projectMarkers(markerEntries(),
-                               reuseGeometry: true)
-                publishTransient()
-            }
-            return true
-        }
-        if panRevision != nil {
-            let delta = x - previousX
-            previousX = x
-            if delta != 0, let session {
-                session.mutateCamera { $0.setHScroll($0.snapshot.scrollX - delta) }
-            }
-            return true
-        }
-        updateHover(at: x)
-        return true
+        return dispatchPointerMove(x: x, y: y, buttons: buttons, modifiers: modifiers)
     }
 
-    /// One release: the drag's only document mutation, and a pan's end.
     @discardableResult
     public func pointerRelease(x: Double, y: Double, button: Int) -> Bool {
-        guard let session else { return false }
-        _ = x
-        _ = y
-        if button == VoiceQtButton.middle {
-            cancelPan()
-            return true
-        }
-        guard button == VoiceQtButton.left, let live = drag else { return false }
-        let mutation = VoiceChangesTransactions.move(
-            live,
-            revision: session.document.revision,
-            track: currentTrack(session) ?? -1,
-            points: lanePoints())
-        cancelDrag()
-        if let mutation { commit(mutation) }
-        return true
+        return dispatchPointerRelease(x: x, y: y, button: button)
     }
 
-    /// The pointer left: hover clears, a live gesture keeps its frozen state.
     public func pointerLeave() {
-        guard drag == nil, panRevision == nil else { return }
-        clearHover()
+        dispatchPointerLeave()
     }
 
-    /// One double-click: the legacy direct picker entry. It captures the same
-    /// guarded target the context menu's own rows hand over.
     @discardableResult
     public func pointerDoubleClick(x: Double, y: Double) -> Bool {
-        guard session != nil else { return false }
-        _ = y
-        guard let target = captureTarget(at: x) else { return true }
-        openPicker(target)
-        return true
+        return dispatchPointerDoubleClick(x: x, y: y)
     }
 
     // MARK: Picker
 
-    /// Draft filtering: presentation only, over the current bank's labels.
     public func setPickerFilter(text: String) {
-        guard var live = picker else { return }
-        let filter = String(text.prefix(64))
-        guard filter != live.filter else { return }
-        live.filter = filter
-        pickerCache.resolve(filter: filter)
-        live.program = pickerCache.programs.first ?? -1
-        picker = live
-        publishPicker()
+        dispatchSetPickerFilter(text: text)
     }
 
-    /// Row selection from the list's own press.
     public func selectPickerRow(index: Int) {
-        guard let live = picker else { return }
-        pickerCache.resolve(filter: live.filter)
-        let programs = pickerCache.programs
-        selectPickerProgram(programs.indices.contains(index) ? programs[index] : -1)
+        dispatchSelectPickerRow(index: index)
     }
-
 
     public func pressAndHoldPickerRow(index: Int) {
-        guard let live = picker, let session,
-              VoiceChangesTransactions.isCurrent(
-                  live.target, revision: session.document.revision,
-                  track: session.selectedTrack ?? -1),
-              pickerRowSnapshots.indices.contains(index)
-        else {
-            releasePickerAudition()
-            return
-        }
-        let program = pickerRowSnapshots[index].program
-        selectPickerProgram(program)
-        guard let audition = onAuditionVoice, let voice = UInt8(exactly: program),
-              voice < 128 else { return }
-        releasePickerAudition()
-        soundingProgram = voice
-        audition(voice, 60, 112)
+        dispatchPressAndHoldPickerRow(index: index)
     }
 
     public func releasePickerAudition() {
-        guard let program = soundingProgram else { return }
-        soundingProgram = nil
-        onAuditionVoice?(program, 60, 0)
-    }
-    /// Arrow navigation over the filtered rows.
-    public func movePickerSelection(delta: Int) {
-        guard let live = picker else { return }
-        pickerCache.resolve(filter: live.filter)
-        let programs = pickerCache.programs
-        guard !programs.isEmpty else { return }
-        guard let current = pickerCache.indices[live.program] else {
-            selectPickerProgram(programs[0])
-            return
-        }
-        selectPickerProgram(programs[min(max(current + delta, 0), programs.count - 1)])
+        dispatchReleasePickerAudition()
     }
 
-    /// Acceptance: one existing lane operation for the captured target — a value
-    /// replacement when the document still holds an occurrence at the captured
-    /// tick, an insertion otherwise — or nothing at all. `true` means a write
-    /// happened.
-    ///
-    /// The only refusal besides a stale capture is production's own:
-    /// `VoicePicker::accept` returns early when no row matches, so a program slot
-    /// the bank holds no parsed voice for is still selectable — the band then
-    /// draws that program's number with its blank truth, exactly as the legacy
-    /// projection does.
-    ///
-    /// A captured marker is replaced only while the document still holds exactly
-    /// that occurrence: the occurrence's own value is the one the picked slot
-    /// replaces, and a lane the document rebuilt under the capture writes
-    /// nothing. The captured *tick* is the insertion target only for a capture
-    /// that had no occurrence at all (the empty-lane arm), which is exactly the
-    /// legacy `addLanePoint(track, lane, tick, voice)` case.
+    public func movePickerSelection(delta: Int) {
+        dispatchMovePickerSelection(delta: delta)
+    }
+
     @discardableResult
     public func acceptPicker() -> Bool {
-        guard let live = picker, live.program >= 0 else { return false }
-        let selected = live.program
-        let target = live.target
-        let slotCount = slotViews().count
-        cancelPicker()
-        guard let session, let track = currentTrack(session),
-              let mutation = VoiceChangesTransactions.picker(
-                  target,
-                  program: selected,
-                  slotCount: slotCount,
-                  revision: session.document.revision,
-                  track: track,
-                  points: session.projectionCache.lanePoints(track: track, lane: .voice))
-        else { return false }
-        commit(mutation)
-        return true
+        return dispatchAcceptPicker()
     }
 
-    /// Dismissal: capture, filter, row draft and current program drop without a
-    /// write.
     public func cancelPicker() {
-        releasePickerAudition()
-        guard picker != nil else { return }
-        picker = nil
-        pickerOpen = false
-        pickerTitle = ""
-        pickerFilter = ""
-        pickerIndex = -1
-        pickerHasMatch = false
-        syncPickerRows([])
-        refreshInteractionPublished()
+        dispatchCancelPicker()
     }
 
     // MARK: Context menu
 
-    /// One typed row activation. Every path revalidates the captured
-    /// document/track/point identity first, and a stale pick writes nothing.
     @discardableResult
     public func activateMenuAction(actionId: Int) -> Bool {
-        guard let live = menu else { return false }
-        dismissVoiceMenu()
-        guard let session, let track = currentTrack(session),
-              VoiceChangesTransactions.isCurrent(
-                  live.target, revision: session.document.revision, track: track)
-        else { return false }
-        switch actionId {
-        case VoiceChangesPagePolicy.changeVoiceAction,
-             VoiceChangesPagePolicy.insertVoiceChangeAction:
-            openPicker(live.target)
-            return true
-        case VoiceChangesPagePolicy.deleteMarkerAction:
-            guard let mutation = VoiceChangesTransactions.delete(
-                live.target,
-                revision: session.document.revision,
-                track: track,
-                points: session.projectionCache.lanePoints(track: track, lane: .voice))
-            else { return false }
-            commit(mutation)
-            return true
-        default:
-            return false
-        }
+        return dispatchActivateMenuAction(actionId: actionId)
     }
 
-    /// One rendered row activation by its published index: the page maps the row
-    /// it published to its typed action, so no QML surface has to read a bridged
-    /// row object back across the boundary.
     @discardableResult
     public func activateMenuRow(index: Int) -> Bool {
-        let rows = menuRows.asArray
-        guard rows.indices.contains(index) else { return false }
-        return activateMenuAction(actionId: rows[index].actionId)
+        return dispatchActivateMenuRow(index: index)
     }
 
-    /// Outside dismissal and the menu's own Escape: no action, no write.
     public func dismissVoiceMenu() {
-        guard menu != nil else { return }
-        menu = nil
-        menuOpen = false
-        VoiceChangesProjection.syncMenuRows(menuRows, [])
-        refreshInteractionPublished()
+        dispatchDismissVoiceMenu()
     }
 
-    /// Dismisses whichever modal surface is open. The press that dismisses
-    /// activates neither a row nor a slot.
     public func dismissModal() {
-        cancelPicker()
-        dismissVoiceMenu()
-    }
-
-    // MARK: Internals: capture
-
-    private func currentTrack(_ session: DocumentSession) -> Int? {
-        guard let track = session.selectedTrack, track >= 0,
-              track < session.timeline.tracks.count else { return nil }
-        return track
-    }
-
-    /// `VoiceChangeArea::captureTargetAt`: the marker under the press, or the
-    /// snapped tick of the press itself.
-    private func captureTarget(at x: Double) -> VoiceTarget? {
-        guard let session, let track = currentTrack(session) else { return nil }
-        let hit = markerHit(at: x)
-        return VoiceChangesTransactions.capture(
-            revision: session.document.revision,
-            track: track,
-            tick: hit?.tick ?? snapTick(at: x),
-            occurrence: hit.map(VoiceOccurrence.init))
-    }
-
-    /// The page's only document-commit path. Transaction policy validates and
-    /// drafts semantic edits; the document owner applies each through its
-    /// existing lane operation and therefore remains the history owner.
-    private func commit(_ mutation: VoiceLaneMutation) {
-        guard let session else { return }
-        switch mutation {
-        case let .move(track, occurrence, tick):
-            session.document.moveLanePoints(
-                track: track, lane: .voice,
-                moves: [LanePointMove(point: occurrence.point, tick: tick,
-                                      value: occurrence.value)])
-        case let .replace(track, occurrence, value):
-            session.document.moveLanePoints(
-                track: track, lane: .voice,
-                moves: [LanePointMove(point: occurrence.point, tick: occurrence.tick,
-                                      value: value)])
-        case let .insert(track, tick, value):
-            session.document.writeLane(
-                track: track, lane: .voice, from: tick, through: tick,
-                points: [LaneWrite(tick: tick, value: value)])
-        case let .delete(track, occurrence):
-            session.document.deleteLanePoints(
-                track: track, lane: .voice, points: [occurrence.point])
-        }
-    }
-
-    private func openPicker(_ target: VoiceTarget) {
-        releasePickerAudition()
-        let filter = ""
-        let initial = target.occurrence?.value
-            ?? VoiceLanePolicy.slot(firstProgram: firstProgram(), tick: target.tick,
-                                    points: lanePoints())
-        pickerCache.resolve(filter: filter)
-        let visible = pickerCache.programs
-        picker = VoiceChangesTransactions.openPicker(
-            target: target,
-            filter: filter,
-            program: visible.contains(initial) ? initial : (visible.first ?? -1))
-        pickerOpen = true
-        pickerTitle = picker?.title ?? ""
-        pickerFilter = filter
-        refreshInteractionPublished()
-        publishPicker()
-    }
-
-    private func openMenu(_ target: VoiceTarget, anchorX: Double, anchorY: Double) {
-        menu = VoiceChangesTransactions.openMenu(target: target)
-        menuOpen = true
-        menuX = anchorX
-        menuY = anchorY
-        VoiceChangesProjection.syncMenuRows(
-            menuRows, VoiceChangesProjection.menuRows(for: target))
-        refreshInteractionPublished()
-    }
-
-    // MARK: Internals: hover
-
-    /// `VoiceChangeArea::updateHover`: a hovered marker publishes its own tick
-    /// and no label; a background hover publishes the snapped tick's slot label.
-    private func updateHover(at x: Double) {
-        guard plotWidth > 0, plotHeight > 0, session != nil else {
-            clearHover()
-            return
-        }
-        let pad = fontPx(VoiceChangesPagePolicy.spaceOneFactor)
-        if let hit = markerHit(at: x) {
-            let identity = VoiceOccurrence(hit).text
-            let lineX = xForTick(hit.tick)
-            let rect = VoiceMarkerHandle.rect(lineX + pad, 0, max(0, plotWidth - lineX),
-                                              plotHeight)
-            guard hoverIdentity != identity || hoverVisible || !hoverText.isEmpty
-                || !VoiceMarkerHandle.rectMatches(hoverLabelRect, rect)
-            else { return }
-            hoverIdentity = identity
-            hoverTick = Double(hit.tick)
-            hoverText = ""
-            hoverVisible = false
-            hoverLabelRect = rect
-            return
-        }
-        let tick = snapTick(at: x)
-        let slot = VoiceLanePolicy.slot(firstProgram: firstProgram(), tick: tick,
-                                        points: lanePoints())
-        let label = VoiceLanePolicy.hoverLabel(contextLabel(at: slot))
-        guard !label.isEmpty else {
-            clearHover()
-            return
-        }
-        let lineX = xForTick(tick)
-        hoverIdentity = nil
-        hoverTick = Double(tick)
-        setPublished(&hoverText, label)
-        setPublishedRect(&hoverLabelRect,
-                         VoiceMarkerHandle.rect(lineX + pad, 0, max(0, plotWidth - lineX),
-                                                plotHeight))
-        setPublished(&hoverVisible, true)
-    }
-
-    private func clearHover() {
-        guard hoverIdentity != nil || hoverVisible || !hoverText.isEmpty || hoverTick != 0
-        else { return }
-        hoverIdentity = nil
-        hoverText = ""
-        hoverVisible = false
-        hoverTick = 0
-        hoverLabelRect = VoiceMarkerHandle.rect(0, 0, 0, 0)
-    }
-
-    // MARK: Internals: gesture teardown
-
-    private func cancelDrag() {
-        guard drag != nil else { return }
-        drag = nil
-        cursorKind = 0
-        refreshInteractionPublished()
-        projectMarkers(markerEntries())
-        publishTransient()
-    }
-
-    private func cancelPan() {
-        guard panRevision != nil else { return }
-        panRevision = nil
-        refreshInteractionPublished()
-    }
-
-    /// Re-derives the published interaction gate from the page's own state.
-    private func refreshInteractionPublished() {
-        let active = drag != nil || panRevision != nil || picker != nil || menu != nil
-        if interactionActive != active { interactionActive = active }
-        setPublished(&selectedIdentity, drag?.identity ?? selectedIdentity)
+        dispatchDismissModal()
     }
 
     // MARK: Internals: projection
 
-    private func lanePoints() -> [LanePoint] {
+    @QtIgnored
+    func lanePoints() -> [LanePoint] {
         guard let session, let track = currentTrack(session) else { return [] }
         return session.projectionCache.lanePoints(track: track, lane: .voice)
     }
 
-    private func firstProgram() -> Int {
+    @QtIgnored
+    func firstProgram() -> Int {
         guard let session, let track = currentTrack(session) else { return -1 }
         return session.timeline.tracks[track].firstProgram
     }
 
-    private func slotViews() -> [BankSlotView] { session?.bankSlots ?? [] }
+    @QtIgnored
+    func slotViews() -> [BankSlotView] { session?.bankSlots ?? [] }
 
-    private func xForTick(_ tick: Tick) -> Double {
+    /// The page's binding of the scene's plot rules to the live session: the
+    /// shared camera, the cached grid metrics and the document's own clock
+    /// lattice. The rules themselves live in `VoiceChangesScene`.
+    @QtIgnored
+    func xForTick(_ tick: Tick) -> Double {
         guard let session else { return 0 }
-        return session.camera.displayX(tick: Double(tick), origin: 0, dpr: devicePixelRatio)
+        return VoiceChangesScene.xForTick(tick, camera: session.camera,
+                                          devicePixelRatio: devicePixelRatio)
     }
 
-    /// `VoiceChangeArea`'s snap seam: the shared grid's editing lattice for a
-    /// plain drag, and the legacy alt-fine clock lattice while the modifier is
-    /// held — `Grid::snapTick(rawTick, modifiers & Qt::AltModifier)`.
-    private func snapTick(at x: Double, fine: Bool = false) -> Tick {
+    @QtIgnored
+    func snapTick(at x: Double, fine: Bool = false) -> Tick {
         guard let session else { return 0 }
-        let raw = max(0, session.camera.tickAtContentX(max(0, x)))
-        guard !fine else {
-            return TimelineSnapPolicy.fineSnap(
-                raw, clockTicks: TimelineSnapPolicy.clockTicks(
-                    division: session.document.ticksPerBeat,
-                    extendedClocks: session.document.state.config.extendedClocks))
-        }
-        return Tick(max(0, gridMetrics(session).snapTick(raw, camera: session.camera)))
+        return VoiceChangesScene.snapTick(
+            at: x, fine: fine, camera: session.camera, metrics: gridMetrics(session),
+            division: session.document.ticksPerBeat,
+            extendedClocks: session.document.state.config.extendedClocks)
     }
 
-    private func markerHit(at x: Double) -> LanePoint? {
-        VoiceLanePolicy.marker(at: x, points: lanePoints(),
-                               displayX: { self.xForTick($0) },
-                               hitRadius: fontPx(VoiceChangesPagePolicy.markerHitRadiusFactor))
+    @QtIgnored
+    func markerHit(at x: Double) -> LanePoint? {
+        guard let session else { return nil }
+        return VoiceChangesScene.markerHit(
+            at: x, points: lanePoints(), camera: session.camera,
+            devicePixelRatio: devicePixelRatio,
+            hitRadius: fontPx(VoiceChangesPagePolicy.markerHitRadiusFactor))
     }
 
     private func effectiveContextTick() -> Tick {
         guard let session else { return 0 }
-        return playing ? contextTick : session.editCursor
+        return VoiceChangesScene.effectiveContextTick(playing: playing,
+                                                     presentedTick: contextTick,
+                                                     editCursor: session.editCursor)
     }
 
     private func contextKey(at tick: Tick) -> VoiceContextKey {
-        let slot = VoiceLanePolicy.slot(firstProgram: firstProgram(), tick: tick,
-                                        points: lanePoints())
-        return VoiceContextKey(slot: slot, playing: playing)
+        VoiceChangesScene.contextKey(tick: tick, firstProgram: firstProgram(),
+                                     points: lanePoints(), playing: playing)
     }
 
     // MARK: Content rebuild
@@ -938,14 +550,55 @@ public final class VoiceChangesPage: EditorDrawerPage {
     private func rebuildContent() {
         guard let session, plotHeight > 0 || plotWidth > 0 else { return }
         contentBuildCount &+= 1
-        trackAvailable = currentTrack(session) != nil
-        publishGutter()
         let entries = markerEntries()
-        publishSpans(entries)
-        publishGrid()
-        projectMarkers(entries)
-        publishReadout()
+        let snapshot = VoiceChangesSceneSnapshot.build(
+            sceneInput(session, entries: entries), palette: palette, title: title,
+            caption: caption)
+        trackAvailable = snapshot.trackAvailable
+        publishGutter(snapshot.gutterTexts)
+        publishSpans(snapshot.spans)
+        publishGrid(snapshot.gridLines)
+        projectMarkers(snapshot.entries)
+        publishReadout(snapshot.readout)
         publishTransient()
+    }
+
+    /// The page's own facts for one scene build: the lane, the bank, the track,
+    /// the body geometry and the live interaction, over the marker entries the
+    /// caller already projected.
+    private func sceneInput(_ session: DocumentSession,
+                            entries: [VoiceProjectionEntry]) -> VoiceChangesSceneInput {
+        let track = currentTrack(session)
+        let pad = fontPx(VoiceChangesPagePolicy.spaceOneFactor)
+        return VoiceChangesSceneInput(
+            points: lanePoints(),
+            entries: entries,
+            slots: slotViews(),
+            track: track ?? 0,
+            firstProgram: firstProgram(),
+            lengthTicks: session.timeline.lengthTicks,
+            trackAvailable: track != nil,
+            gutterTitle: gutterTitle,
+            contextTick: effectiveContextTick(),
+            plotOrigin: plotOrigin,
+            plotWidth: plotWidth,
+            plotHeight: plotHeight,
+            devicePixelRatio: devicePixelRatio,
+            pad: pad,
+            gap: max(fontPx(VoiceChangesPagePolicy.hoverPaintPaddingFactor), pad),
+            stairLimit: fontPx(VoiceChangesPagePolicy.spaceFourFactor),
+            camera: session.camera,
+            metrics: gridMetrics(session),
+            division: session.document.ticksPerBeat,
+            extendedClocks: session.document.state.config.extendedClocks,
+            interaction: interactionSnapshot())
+    }
+
+    /// The live interaction one rebuild reads: the frozen drag, the hovered
+    /// occurrence and the pressed selection.
+    private func interactionSnapshot() -> VoiceInteractionSnapshot {
+        VoiceInteractionSnapshot(drag: drag, hoverIdentity: hoverIdentity,
+                                 selectedIdentity: selectedIdentity)
     }
 
 
@@ -959,104 +612,42 @@ public final class VoiceChangesPage: EditorDrawerPage {
         setPublishedFont(&titleFont, title.fontMap)
     }
 
-    /// The gutter's two lines, vertically centered: the title, then the change
-    /// summary the legacy band publishes while a track is presented.
-    private func publishGutter() {
-        VoiceChangesProjection.syncTexts(gutterTexts, VoiceChangesProjection.gutterTexts(
-            VoiceGutterProjectionInput(
-                plotHeight: plotHeight,
-                plotOrigin: plotOrigin,
-                title: gutterTitle,
-                summary: trackAvailable ? countSummary() : nil,
-                titleFont: titleFont,
-                captionFont: captionFont,
-                titleHeight: title?.height ?? 0,
-                captionHeight: caption?.height ?? 0,
-                titleColor: palette.primaryText,
-                captionColor: palette.secondaryText)))
+    /// Applies the scene's gutter lines: the title, then the change summary the
+    /// legacy band publishes while a track is presented.
+    private func publishGutter(_ values: [SceneText]) {
+        VoiceChangesProjection.syncTexts(gutterTexts, values)
     }
 
-    private func countSummary() -> String {
-        let count = lanePoints().count
-        return count == 0 ? "no voice set · double-click to add"
-            : "\(count) change(s) · double-click to edit"
+    /// Applies the scene's held spans: one rect per program section, from the
+    /// previous change to this one, then the tail to the song's end.
+    private func publishSpans(_ values: [SceneRect]) {
+        VoiceChangesProjection.syncRects(heldSpans, values)
     }
 
-    /// One held-span rect per program section, exactly the legacy walk: a span
-    /// from the previous change to this one, then the tail to the song's end.
-    private func publishSpans(_ entries: [VoiceProjectionEntry]) {
-        guard let session, plotHeight > 0, plotWidth > 0, trackAvailable else {
-            VoiceChangesProjection.syncRects(heldSpans, [])
-            return
-        }
-        let track = currentTrack(session) ?? 0
-        let held = PaletteMath.hex(PaletteMath.trackIdentityOklab(track), alpha: 18)
-        VoiceChangesProjection.syncRects(
-            heldSpans, VoiceChangesProjection.spans(VoiceSpanProjectionInput(
-            entries: entries,
-            firstProgram: firstProgram(),
-            lengthTicks: session.timeline.lengthTicks,
-            plotWidth: plotWidth,
-            plotHeight: plotHeight,
-            color: held,
-            displayX: { self.xForTick($0) })))
+    /// Applies the scene's vertical grid: the roll's own subdivision, beat,
+    /// fine-beat and bar lines, through the same grid metrics.
+    private func publishGrid(_ values: [SceneRect]) {
+        VoiceChangesProjection.syncRects(gridLines, values)
     }
 
-    /// The vertical grid over the visible plot: the roll's own subdivision,
-    /// beat, fine-beat and bar lines, through the same grid metrics.
-    private func publishGrid() {
-        guard let session, plotHeight > 0, plotWidth > 0, trackAvailable else {
-            VoiceChangesProjection.syncRects(gridLines, [])
-            return
-        }
-        VoiceChangesProjection.syncRects(gridLines, VoiceChangesProjection.grid(
-            metrics: gridMetrics(session),
-            camera: session.camera,
-            plotWidth: plotWidth,
-            plotHeight: plotHeight,
-            colors: VoiceGridProjectionColors(
-                subdivision1: palette.gridLineSub1,
-                subdivision2: palette.gridLineSub2,
-                subdivision3: palette.gridLineSub3,
-                bar: palette.gridLineBar,
-                beat: palette.gridLineBeat,
-                fineBeat: palette.gridLineBeatFine),
-            displayX: { self.xForTick($0) }))
-    }
-
-    /// The marker projection: one marker rule and one label box per entry, with
-    /// the legacy elision, stair placement and offscreen rule.
-    private func projectMarkers(_ entries: [VoiceProjectionEntry], reuseGeometry: Bool = false) {
+    /// The marker projection: the scene computes one marker rule and one label
+    /// box per entry from the page's own geometry, and the page publishes them
+    /// through its model seam while keeping the geometry lookup a repaint reuses.
+    @QtIgnored
+    func projectMarkers(_ entries: [VoiceProjectionEntry], reuseGeometry: Bool = false) {
         if !reuseGeometry { markerLookup.removeAll(keepingCapacity: true) }
-        guard plotWidth > 0, plotHeight > 0, trackAvailable, let session, let caption else {
+        guard let session else {
             publishMarkers([])
             return
         }
-        let track = currentTrack(session) ?? 0
-        let pad = fontPx(VoiceChangesPagePolicy.spaceOneFactor)
-        let gap = max(fontPx(VoiceChangesPagePolicy.hoverPaintPaddingFactor), pad)
-        let selection = drag?.identity ?? (selectedIdentity.isEmpty ? nil : selectedIdentity)
-        publishMarkers(VoiceChangesProjection.markers(VoiceMarkerProjectionInput(
-            entries: entries,
-            slots: slotViews(),
-            plotWidth: plotWidth,
-            plotHeight: plotHeight,
-            pad: pad,
-            gap: gap,
-            stairLimit: fontPx(VoiceChangesPagePolicy.spaceFourFactor),
-            physicalPixel: physicalPixel(devicePixelRatio),
-            labelColor: palette.primaryText,
-            lineColor: PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(track)],
-            selectedIdentity: selection,
-            hoverIdentity: hoverIdentity,
-            previewIdentity: drag?.active == true ? drag?.identity : nil,
-            caption: caption,
-            displayX: { self.xForTick($0) }),
+        publishMarkers(VoiceChangesScene.markers(
+            sceneInput(session, entries: entries), palette: palette, caption: caption,
             reusing: markerLookup))
     }
 
     /// The drag's transient: where the frozen occurrence currently drafts.
-    private func publishTransient() {
+    @QtIgnored
+    func publishTransient() {
         guard let live = drag, live.active else {
             setPublished(&previewVisible, false)
             setPublished(&previewX, 0)
@@ -1068,29 +659,36 @@ public final class VoiceChangesPage: EditorDrawerPage {
         setPublished(&previewTick, Double(live.previewTick))
     }
 
-    /// The readout: the effective context's label, right-aligned in the plot.
-    /// The page always publishes it; the QML draws it while a track is
-    /// presented, exactly as the legacy band does.
+    /// The readout from live page facts: the cursor-only publication path, which
+    /// applies it without a rebuild.
     private func publishReadout() {
-        let projection = VoiceChangesProjection.readout(
+        publishReadout(VoiceChangesScene.readout(
             firstProgram: firstProgram(),
             tick: effectiveContextTick(),
             points: lanePoints(),
             slots: slotViews(),
             pad: fontPx(VoiceChangesPagePolicy.spaceOneFactor),
             plotWidth: plotWidth,
-            plotHeight: plotHeight)
-        setPublished(&contextSlot, projection.slot)
-        setPublished(&contextBlank, projection.blank)
-        setPublished(&contextSymbol, projection.symbol)
-        setPublished(&readoutText, projection.text)
+            plotHeight: plotHeight))
+    }
+
+    /// Applies the scene's readout values: the effective context's label,
+    /// right-aligned in the plot. The page always publishes them; the QML draws
+    /// them while a track is presented, exactly as the legacy band does.
+    private func publishReadout(_ values: VoiceReadoutValues) {
+        setPublished(&contextSlot, values.slot)
+        setPublished(&contextBlank, values.blank)
+        setPublished(&contextSymbol, values.symbol)
+        setPublished(&readoutText, values.text)
         setPublished(&readoutVisible, trackAvailable)
-        setPublishedRect(&readoutRect, projection.rect)
+        setPublishedRect(&readoutRect,
+                         VoiceMarkerHandle.rect(values.x, values.y, values.width, values.height))
     }
 
     // MARK: Internals: picker publication
 
-    private func publishPicker() {
+    @QtIgnored
+    func publishPicker() {
         guard let live = picker else {
             syncPickerRows([])
             return
@@ -1124,7 +722,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
     }
 
 
-    private func selectPickerProgram(_ program: Int) {
+    @QtIgnored
+    func selectPickerProgram(_ program: Int) {
         guard var live = picker, live.program != program else { return }
         live.program = program
         picker = live
@@ -1142,18 +741,23 @@ public final class VoiceChangesPage: EditorDrawerPage {
         syncModel(markers, values, matches: { $0.matches($1) })
     }
 
-    private func markerEntries() -> [VoiceProjectionEntry] {
+    /// The marker entries one repaint draws: the document's own entries from the
+    /// page's revision/track cache, with the frozen drag's preview applied.
+    @QtIgnored
+    func markerEntries() -> [VoiceProjectionEntry] {
         guard let session, let track = currentTrack(session) else { return [] }
         if entriesRevision != session.document.revision || entriesTrack != track {
             cachedEntries = VoiceChangesProjection.entries(points: lanePoints())
             entriesRevision = session.document.revision
             entriesTrack = track
         }
-        return VoiceChangesProjection.moving(cachedEntries, drag: drag)
+        return VoiceChangesScene.projectedEntries(
+            cachedEntries, interaction: interactionSnapshot())
     }
 
 
-    private func syncPickerRows(_ values: [VoicePickerRowHandle]) {
+    @QtIgnored
+    func syncPickerRows(_ values: [VoicePickerRowHandle]) {
         let samePrograms = pickerRowSnapshots.count == values.count
             && zip(pickerRowSnapshots, values).allSatisfy { pair in
                 pair.0.program == pair.1.program
@@ -1172,15 +776,17 @@ public final class VoiceChangesPage: EditorDrawerPage {
 
     /// Writes one published primitive only when it really changed, so a repeated
     /// equal publication emits nothing.
-    private func setPublished<Value: Equatable>(_ storage: inout Value, _ value: Value) {
+    @QtIgnored
+    func setPublished<Value: Equatable>(_ storage: inout Value, _ value: Value) {
         if storage != value { storage = value }
     }
 
     /// The variant-typed records compare through their published spelling:
     /// `[String: QVariantSettable]` is not `Equatable`, and an equal record must
     /// leave its storage untouched.
-    private func setPublishedRect(_ storage: inout [String: QVariantSettable],
-                                 _ value: [String: QVariantSettable]) {
+    @QtIgnored
+    func setPublishedRect(_ storage: inout [String: QVariantSettable],
+                          _ value: [String: QVariantSettable]) {
         if !VoiceMarkerHandle.rectMatches(storage, value) { storage = value }
     }
 
@@ -1191,7 +797,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
 
     // MARK: Internals: shared metrics
 
-    private func fontPx(_ multiplier: Double) -> Double {
+    @QtIgnored
+    func fontPx(_ multiplier: Double) -> Double {
         multiplier == 0 ? 0 : max(1, (baseFontPx * multiplier).rounded())
     }
 
