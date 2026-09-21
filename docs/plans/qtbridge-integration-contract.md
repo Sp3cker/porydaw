@@ -54,6 +54,50 @@ begin/endInsert/RemoveRows, `reset(to:)` to begin/endResetModel
 no stable key — in-place row reuse is client policy (prefix diff in
 `GridScene.swift:129`).
 
+### Prospective: in-process Qt Quick Test hosting (recorded 2026-09-20, prospective)
+
+Recorded so a later task does not claim a capability this pin does not have. Nothing
+here is verified runtime capability, and none of it authorizes implementation.
+
+- `Sources/QtBridge/QTest.swift` (`QmlTestModule`, `QtQuickTestConfiguration`,
+  `QtQuickTestRunner`) exists in the pinned source but is **not** in
+  `QTBRIDGE_SWIFT_SOURCES` (`Sources/QtBridge/CMakeLists.txt:4-22`), so
+  `QtQuickTestRunner` is not part of the compiled QtBridge module. Do not treat it
+  as an available entry point.
+- Available instead: `QtBridgeCpp.QTestAppCpp`
+  (`Sources/QtBridgeCpp/include/qtestappcpp.h`, compiled from
+  `Sources/QtBridgeCpp/qtestappcpp.cpp`) exposes `setImportPath`, `setPluginsPath`,
+  `setInputDir`, `setTestName`, `registerQmlSingleton(uri, major, minor, name,
+  QObjectProxy)` → `qmlRegisterSingletonInstance`, and
+  `runQtQuickTests(argc, argv)` → `quick_test_main`. A Swift consumer reaches it with
+  `import QtBridgeCpp` plus `QObjectBuildable.objectHolder.proxy`
+  (`Sources/QtBridge/QObjectBuildable.swift`), which is the sequence `QTest.swift`
+  performs internally. `QtBridgeCpp` links `Qt6::Core/Gui/Qml/Quick` but **not**
+  `Qt6::QuickTest`, so a consumer that pulls `qtestappcpp.o` in must link
+  `Qt6::QuickTest` itself; header resolution works today because the Qt frameworks
+  share one `-F` path.
+- The production grid scene receives its session as a **context property**
+  (`RewriteWindow::attachGridScene`, `RewriteWindow.cpp:457`). Qt Quick Test creates
+  its own view, `quick_test_main` accepts no setup object, and unqualified QML names
+  resolve against the component's context rather than ancestor properties — so a QML
+  test view cannot supply that name merely by adding an ancestor property. This
+  does not require a new native test host: the camera/drawer plan extracts the real
+  root/input composition into property-injected `EditorSurface.qml`, leaving
+  `SwiftRollOverlay.qml` as its production context adapter. Component tests can
+  exercise that same composition, with no copied handlers. Native action/keymap
+  dispatch and actual window destruction still require separately identified
+  native-window evidence.
+- A prospective Swift Qt Quick Test executable can use the existing
+  `QTestAppCpp` directly and link `Qt6::QuickTest`; no C++ bootstrap, production
+  `setInitialProperties` hook or QtBridge patch is required. `setTestName` names
+  the report only: use `-input` to select the intended test file. Its path setters
+  must be configured because `runQtQuickTests` overwrites both import/plugin
+  environment variables. Open asynchronous production sessions only after the
+  Qt event loop runs, not by waiting before `runQtQuickTests`.
+- The active [camera/drawer plan](swift-editor-consumers/plan.md) and its briefs
+  decide whether/when this test executable is needed. These inspected capabilities
+  do not claim a target, command or runtime result already exists.
+
 ## Lifetime contract
 
 Before implementation acceptance, fill an ownership table for the application/workspace, document/session, Swift presenter, collection, row objects, Qt proxies, and observer/callback registrations. For each name: creator, lifecycle owner, other retaining references, isolation context, invalidation event, release condition, and teardown ordering. Do not substitute 'Qt manages it' for an owner.
@@ -93,6 +137,16 @@ replacement and close with `TypeError`/`ReferenceError` warnings treated as
 failures; `swiftqtml` passed, and the subsequent focused `selectionkey` run passed
 after removing a redundant click from its unrelated keyboard-gesture setup.
 The bounded lifetime/input quality re-review approved this protocol.
+
+**Follow-on rename (recorded 2026-09-20, prospective).** The editor-consumers plan
+extends this same protocol to two presenters: `aboutToReleaseGrid` /
+`acknowledgeGridDetached` are renamed to `aboutToReleaseEditor` /
+`acknowledgeEditorDetached` with the native caller migrated, close admission (gate
+check/reservation, stop admitting new operations) happens before the emit,
+cancellation runs between admission and the emit, and presenter release, audio unload
+and session close stay behind the acknowledgment. The protocol, its ordering and the
+queued-emission constraint are unchanged; nothing here authorizes a synchronous
+replacement, an earlier release or a new native lifecycle helper.
 
 Open lifetime facts the probe must observe rather than assume: delegate
 retention of removed rows (QML may cache items), pending-notification

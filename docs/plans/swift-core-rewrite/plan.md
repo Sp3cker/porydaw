@@ -1,16 +1,69 @@
 # Swift core rewrite → piano grid
 
-**Current execution boundary:** finish the bounded T7 acceptance checkpoint and
-push, then stop before any further T8 work. The user must first amend T8 test
-ownership: Swift assertions own application semantics; QML tests exercise QML
-interactions through real Swift presenters; C++ checks protect genuine native
-boundaries. Preserve existing regression protection until equivalent replacement
-assertions execute. This checkpoint is not global core/oracle retirement approval.
+**Current execution boundary:** T7 is accepted and checkpointed at `97dc7fea`.
+T8 test ownership is now amended (this revision): Swift assertions own application
+semantics; QML tests exercise QML interactions through real Swift presenters;
+native checks protect genuine native boundaries. T8 itself is therefore a
+verification, coverage-closure and obsolete-source-retirement task — the grid
+conversion it was written for is present at the checkpoint. See
+[task-8-brief.md](task-8-brief.md). Frozen native boundary for this and every later
+task: existing working native support stays; only deletions and minimal mechanical
+boundary maintenance are allowed; no new C++ API, helper, controller, test driver,
+test bootstrap or native responsibility without explicit user approval. This
+checkpoint is not global core/oracle retirement approval.
 
-Status: implementation underway. The coverage reconciliation, Swift 6.4 and
-test-language amendments apply before acceptance of affected work; none
-requires restarting the implementation. This replaces the M1/M2 sequence in
-[swift-ownership-cutover](../swift-ownership-cutover/plan.md).
+Status: implementation underway; T8 acceptance pending. The coverage
+reconciliation, Swift 6.4 and test-language amendments apply before acceptance of
+affected work; none requires restarting the implementation. This replaces the M1/M2
+sequence in [swift-ownership-cutover](../swift-ownership-cutover/plan.md).
+
+## T8 amendment record (planning revision, 2026-09-20)
+
+Scope: the bounded T8 closure and the follow-on
+[camera integration and editor drawer plan](../swift-editor-consumers/plan.md).
+The later user-directed sequence supersedes the earlier velocity-first proposal:
+integrate the camera, then establish the drawer container before its editor pages.
+These are planning amendments, not new execution evidence. Earlier review/evidence
+blocks below keep their original meaning and revision.
+
+What the amendment establishes:
+
+- **Already present at `97dc7fea`** (verified by inspection, not re-implemented
+  here): `PorydawApp` membership for the grid sources and
+  `ApplicationSession`/`DocumentSession`; `PianoGrid(session:)` returned by
+  `ApplicationSession.gridPresenter()` and consumed by `SwiftRollOverlay.qml`;
+  `NoteCommands.swift`/`Clipboard.swift` with the two native clipboard calls
+  declared in `src/app/native_host.h:15-16`, implemented in
+  `RewriteWindow.cpp:734-757`, imported at `Clipboard.swift:572,579`; the retained
+  real-window suite `src/checks/swiftrollgated/*` (13 slots) driving
+  `RewriteWindow`; the four windowed catalog names sharing one handler
+  (`checkcatalog.cpp:158`); the static `swiftcore` entry with the rich-bank fixture
+  list (`checkcatalog.cpp:146`); the Swift check envelope
+  `src/checks/support/corecheck/{core_check.h,tst_swiftcore.*}` with eleven suites.
+- **Deleted at the checkpoint:** the `quick/swiftgrid/` sources,
+  `SgdDocument/SgcCommands/SgcKeys/Tick.swift`, their modules and registrations.
+  The old `swiftdocfeed`, `swiftcommands`, `swiftbandkeys`, `swiftqtml` and
+  `swiftrollbench` sources remain on disk **uncompiled**; T8 retires the ones whose
+  cases are mapped (see the brief), and frame-cost benchmarking is not registered
+  in the manifest at all.
+- **Follow-on scope:** camera integration consumes the accepted pure Swift camera;
+  drawer readiness then establishes the Swift/QML container before velocity or any
+  other page. No voice-kind query, velocity transaction, native menu/action/palette
+  expansion or whole-window rewrite is prescribed by that follow-on. Existing
+  project/audio/clipboard services remain unchanged. The earlier View-menu blocker
+  belonged to the superseded full-velocity scope, not to camera or drawer readiness.
+- **Test ownership:** camera integration reuses direct Swift checks, retained native
+  regression protection and real-window smoke. Drawer component checks use real
+  production Swift/QML through existing QtBridge; any prospective Swift test target
+  and command are specified by that brief. No new C++ test bootstrap or scenario
+  suite is authorized, and this does not reopen T7's executed evidence.
+- **Ledger composition at this revision:** the 43 `dueTask 8` rows classified
+  "in-scope core behavior" are **29 verified and 14 pending** — five
+  `automation-domain/*` and five `vgsavecheck/*` rows carry unapproved exclusion
+  recommendations, and four `clipcheck`/`clipmimecheck` rows have no executed
+  equivalent for their native MIME transport/routing facets. The T8 brief now states
+  this composition, executes only the pending remainder, and preserves the verified
+  rows' recorded evidence instead of implying the whole 43 need fresh runs.
 
 ## Scope and stop
 
@@ -304,8 +357,11 @@ roundtrip --filter loopcheck --filter primecheck --filter trackactivitycheck
 --filter exportcheck --verbose` → run_checks PASS. Ledger adjudication:
 845 rows, 0 unapproved exclusions (30 excluded, 59 deferred-ui); T1 20 rows
 + history-transition rows promoted with fresh-run evidence. 7B (oracle/core
-deletion) blocked until T8's 43 core rows pass headless, per the case-by-case
-retirement gate.
+deletion) blocked until T8 adjudicates its 43 in-scope-core rows: 29 verified on
+recorded evidence, 14 pending (10 unapproved exclusion recommendations — five
+`automation-domain/*`, five `vgsavecheck/*` — and four `clipcheck`/`clipmimecheck`
+rows without executed equivalents for their native MIME transport/routing facets),
+per the case-by-case retirement gate.
 
 ## Reticle visual regression evidence (controller, 2026-09-20)
 
@@ -562,7 +618,10 @@ reference; source-only preservation is not counted as current-path coverage.
 **No global core/oracle retirement or full core-milestone approval is claimed.**
 Unproved cases keep that gate open. Existing integrated grid work is checkpointed
 without claiming full T8 acceptance, its benchmark, or its remaining surface
-matrix. Stop here for the user-owned T8 test-ownership planning boundary.
+matrix. The user-owned T8 test-ownership boundary is resolved by the
+[T8 amendment record](#t8-amendment-record-planning-revision-2026-09-20) above;
+T8 proceeds as verification/coverage/retirement under
+[task-8-brief.md](task-8-brief.md), still without a benchmark claim.
 
 ## Bounded T8 closure — controller execution, 2026-09-20
 

@@ -324,6 +324,11 @@ suites at their observable contracts: pure Swift-domain assertions move to Swift
 native interaction assertions remain where native access is required. Calling
 Swift through a C wrapper does not by itself make a test native integration.
 No new C++ domain checks or permanent reverse Swift-operation adapter.
+After this rewrite is accepted, the follow-on
+[camera/drawer verification ownership](../swift-editor-consumers/spec.md#verification-ownership)
+keeps new semantic assertions in Swift and new component interaction coverage in
+QML, while retaining native-boundary regression protection; it does not reopen
+this task's placement for the core rewrite.
 
 Acceptance review rejects any Core type/signature/conformance/access-control or
 compiler-setting change justified only by C/C++ harness compatibility. Prove
