@@ -334,6 +334,7 @@ void SwiftRollGatedTest::hostClipboardRoundTripAndReplacement()
     const QByteArray copiedPayload = mime->data(QLatin1String(kClipMimeType));
     QVERIFY(!copiedPayload.isEmpty());
     const QJsonDocument copiedDocument = QJsonDocument::fromJson(copiedPayload);
+    QVERIFY(copiedDocument.isObject());
     const QJsonObject copied = copiedDocument.object();
     QCOMPARE(copied.value(QStringLiteral("format")).toInt(), 1);
     QCOMPARE(copied.value(QStringLiteral("ticksPerBeat")).toInt(),

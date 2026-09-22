@@ -231,6 +231,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
             // publication may reach a page proxy it has already released.
             tab.workspace.suspendCallbacks()
         }
+        // Closed-but-page-alive workspaces are not in allTabs, yet their
+        // sessions can still publish into the dying scene.
+        for tab in pendingReleases.values {
+            tab.workspace.suspendCallbacks()
+        }
         if songTabs.tabCount == 0 {
             emptyDrawerPresenter.inputCancelled(reason: GridCancelReason.hidden.rawValue)
         }
@@ -312,6 +317,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     func tabsDidChange() {
         refreshDocumentState()
+        // The selected workspace's grid owns command availability; switching
+        // tabs swaps it, so the window's Edit-menu enabled states must refresh.
+        gridCommandAvailabilityChanged()
     }
 
     /// A tab is about to leave the strip. Its workspace is retained here until
@@ -426,6 +434,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// whose page has not reported yet is not awaited here: the row removal is
     /// what destroys that page.
     private func awaitTabCloses() async {
+        // Pages report destruction asynchronously, and a retire is only enqueued
+        // once its page reports — so the chain grows while reports land. Waiting
+        // on the chain as it stands now would return before the late reports'
+        // retires run, letting the outgoing service stop first. Wait until every
+        // released workspace has been retired, then drain the finished chain.
+        while !pendingReleases.isEmpty {
+            await retireChain?.value
+            await Task.yield()
+        }
         await retireChain?.value
     }
 
@@ -441,8 +458,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// Starts a project switch: every tab is asked to close first, and the switch
     /// runs once the strip is empty. A refusal cancels the switch.
     private func requestProjectSwitch(path: String, label: String?) {
-        guard pendingProjectSwitch == nil else { return }
+        // A close-all walk already running for an earlier open is generic: the
+        // latest request wins, and the in-flight walk resolves into it.
         guard songTabs.tabCount > 0 else {
+            pendingProjectSwitch = nil
             startProjectSwitch(path: path, label: label)
             return
         }

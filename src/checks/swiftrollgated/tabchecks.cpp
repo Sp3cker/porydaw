@@ -40,6 +40,7 @@ using tabcheck::TabMetrics;
 using tabcheck::tabMetricsFor;
 using tabcheck::TabNote;
 using tabcheck::TabScene;
+using tabcheck::writeSongBytes;
 
 void SwiftRollGatedTest::songTabsGeometryAndSelection()
 {
@@ -685,4 +686,8 @@ void SwiftRollGatedTest::songTabsDirtyCancelDiscardSave()
                    note.duration == saved.duration;
         });
     QVERIFY2(persisted, "the saved song does not carry the note the user drew");
+    // The save wrote the shared scratch song: put its bytes back so a later slot
+    // in this suite does not inherit the drawn note.
+    QVERIFY2(writeSongBytes(otherSongPath, otherSongBefore),
+             "could not restore the scratch song the save overwrote");
 }

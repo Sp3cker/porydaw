@@ -317,9 +317,15 @@ public final class SongTabsController {
     /// turn and reporting the walk's verdict once it is settled.
     @QtIgnored
     func startCloseAll() {
-        guard !isClosingAll, pendingCloseId == -1 else { return }
+        guard !isClosingAll else { return }
+        // A single-tab close or reload gate may already be up when the host asks
+        // to close everything. Refusing would strand the host's pending close:
+        // no allTabsClosed/closeCancelled would ever fire. Adopt the gate — its
+        // answer drives advanceCloseAll — and drop any reload so the walk owns
+        // the outcome.
+        reloadId = -1
         isClosingAll = true
-        advanceCloseAll()
+        if pendingCloseId == -1 { advanceCloseAll() }
     }
 
     // MARK: - Whole-strip release

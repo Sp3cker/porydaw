@@ -83,6 +83,7 @@ int pixelsDifferingFrom(const QImage &image, const QRectF &logicalRegion, const 
 QQuickItem *captionOf(QQuickItem *button);
 QString songPath(const QString &projectRoot, const QString &label);
 QByteArray songBytes(const QString &path);
+bool writeSongBytes(const QString &path, const QByteArray &bytes);
 
 class TabScene
 {

@@ -134,6 +134,13 @@ QByteArray songBytes(const QString &path)
     return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray{};
 }
 
+bool writeSongBytes(const QString &path, const QByteArray &bytes)
+{
+    QFile file(path);
+    return file.open(QIODevice::WriteOnly | QIODevice::Truncate) &&
+           file.write(bytes) == bytes.size();
+}
+
 bool TabScene::open(const QString &projectRoot, const QString &songLabel, QString *error)
 {
     if (!m_window.isReady()) {

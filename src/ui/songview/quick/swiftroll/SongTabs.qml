@@ -285,6 +285,7 @@ Item {
                 controller: root.controller
                 visible: model.display === root.controller.selectedPage
                 enabled: visible
+                focus: visible
             }
         }
 
